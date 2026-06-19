@@ -32,7 +32,16 @@ export class ProductsService {
     const { page = 1, limit = 10, category, brand, minPrice, maxPrice, status, sort, q } = query;
     const filter: any = { isDeleted: false };
 
-    if (category) filter.category = category;
+    if (category) {
+      try {
+        const categoryModel = this.productModel.db.model('Category');
+        const subCategories = await categoryModel.find({ parentId: category }).exec();
+        const categoryIds = [category, ...subCategories.map(c => c._id)];
+        filter.category = { $in: categoryIds };
+      } catch (err) {
+        filter.category = category;
+      }
+    }
     if (brand) filter.brand = brand;
     if (status) filter.status = status;
     if (minPrice || maxPrice) {

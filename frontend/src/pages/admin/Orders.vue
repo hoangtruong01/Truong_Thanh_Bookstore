@@ -222,7 +222,7 @@ async function fetchOrders() {
   loading.value = true
   try {
     const res = await orderService.getAll()
-    orders.value = res.data
+    orders.value = res.data.data
     if (orders.value.length > 0 && !selectedOrder.value) {
       selectOrder(orders.value[0])
     }

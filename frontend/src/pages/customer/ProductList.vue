@@ -101,37 +101,12 @@
 
         <div v-else class="space-y-8">
           <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
-            <div v-for="prod in products" :key="prod._id" class="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-lg transition-all flex flex-col group relative">
-              <span v-if="getDiscountPercent(prod.price, prod.discountPrice) > 0" class="absolute top-4 left-4 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full z-10">
-                -{{ getDiscountPercent(prod.price, prod.discountPrice) }}%
-              </span>
-              <div class="aspect-square bg-slate-50 rounded-xl overflow-hidden mb-4 relative">
-                <img :src="prod.images[0] || 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-              </div>
-              <h3 class="text-sm font-bold text-slate-800 line-clamp-2 min-h-[40px] group-hover:text-blue-700 transition-colors">
-                <router-link :to="`/products/${prod._id}`">{{ prod.name }}</router-link>
-              </h3>
-              <div class="mt-2 flex items-center justify-between">
-                <div class="flex flex-col">
-                  <template v-if="prod.discountPrice > 0">
-                    <span class="text-base font-extrabold text-blue-700">{{ formatCurrency(prod.discountPrice) }}</span>
-                    <span class="text-xs text-slate-400 line-through">{{ formatCurrency(prod.price) }}</span>
-                  </template>
-                  <template v-else>
-                    <span class="text-base font-extrabold text-slate-800">{{ formatCurrency(prod.price) }}</span>
-                  </template>
-                </div>
-                <div class="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
-                  <span class="text-xs font-bold text-yellow-700">{{ prod.rating || 5 }}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 text-yellow-500">
-                    <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
-                  </svg>
-                </div>
-              </div>
-              <button @click="addToCart(prod)" class="mt-4 w-full bg-slate-900 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors flex items-center justify-center gap-2">
-                Thêm vào giỏ
-              </button>
-            </div>
+            <ProductCard
+              v-for="prod in products"
+              :key="prod._id"
+              :product="prod"
+              @add-to-cart="addToCart"
+            />
           </div>
 
           <!-- Pagination -->
@@ -167,7 +142,7 @@ import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
 import { productService } from '@/services/product.service'
 import { categoryService } from '@/services/category.service'
-import { formatCurrency, getDiscountPercent } from '@/utils/helpers'
+import ProductCard from '@/components/ProductCard.vue'
 import type { Product, Category } from '@/types'
 
 const route = useRoute()
@@ -217,12 +192,12 @@ async function fetchProducts() {
       q: searchQuery.value || undefined,
       minPrice: minPrice.value || undefined,
       maxPrice: maxPrice.value || undefined,
-      sortBy: sortBy.value,
+      sort: sortBy.value,
     }
     const res: any = await productService.getAll(params)
-    products.value = res.data
-    totalProducts.value = res.total || res.data.length
-    totalPages.value = res.totalPages || 1
+    products.value = res.data.data
+    totalProducts.value = res.data.total || res.data.data.length
+    totalPages.value = res.data.totalPages || 1
   } catch (err) {
     toast.error('Lỗi khi tải danh sách sản phẩm')
   } finally {
@@ -257,5 +232,9 @@ function changePage(page: number) {
 function addToCart(product: Product) {
   cartStore.addToCart(product)
   toast.success(`Đã thêm "${product.name}" vào giỏ hàng`)
+}
+
+function formatNumber(num: number) {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 </script>

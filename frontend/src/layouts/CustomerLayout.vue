@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen flex flex-col bg-slate-50">
     <!-- Top Bar -->
-    <div class="bg-[#dc2626] text-white text-xs py-2 text-center font-medium uppercase tracking-wider">
-      ⚡ Miễn phí giao hàng cho đơn từ 299K • Đổi trả dễ dàng ⚡
+    <div class="bg-[#dc2626] text-white text-[11px] py-1.5 text-center font-medium tracking-wide flex items-center justify-center gap-1.5">
+      <span>🚚</span> Miễn phí giao hàng cho đơn từ 299K
     </div>
 
     <!-- Main Header -->
@@ -28,7 +28,7 @@
                 <input
                   v-model="searchQuery"
                   type="text"
-                  placeholder="Tìm kiếm, sổ tay, giấy A4, kẹp giấy..."
+                  placeholder="Tìm bút, sổ tay, giấy A4, kẹp giấy..."
                   class="w-full bg-slate-100 border border-slate-200 rounded-full py-2.5 pl-5 pr-28 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:border-transparent transition-all placeholder:text-slate-400"
                 />
                 <button type="submit" class="absolute right-1 top-1/2 -translate-y-1/2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold px-4 py-2 rounded-full transition-colors cursor-pointer">
@@ -95,12 +95,24 @@
 
       <!-- Categories Navigation -->
       <nav class="bg-white border-t border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-6 overflow-x-auto whitespace-nowrap scrollbar-none h-12">
-          <router-link to="/" class="text-sm font-semibold text-slate-700 hover:text-[#dc2626] py-3.5 border-b-2 border-transparent hover:border-[#dc2626] transition-colors">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none h-14">
+          <router-link
+            to="/"
+            :class="[
+              'text-sm font-semibold px-3.5 py-1.5 rounded-full transition-colors',
+              isRouteActive('/') ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            ]"
+          >
             Tất cả sản phẩm
           </router-link>
           <template v-for="cat in parentCategories" :key="cat._id">
-            <router-link :to="`/products?category=${cat._id}`" class="text-sm font-semibold text-slate-700 hover:text-[#dc2626] py-3.5 border-b-2 border-transparent hover:border-[#dc2626] transition-colors">
+            <router-link
+              :to="`/products?category=${cat._id}`"
+              :class="[
+                'text-sm font-semibold px-3.5 py-1.5 rounded-full transition-colors',
+                isCategoryActive(cat._id) ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              ]"
+            >
               {{ cat.name }}
             </router-link>
           </template>
@@ -158,7 +170,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
 import { categoryService } from '@/services/category.service'
@@ -167,6 +179,7 @@ import type { Category } from '@/types'
 const authStore = useAuthStore()
 const cartStore = useCartStore()
 const router = useRouter()
+const route = useRoute()
 
 const searchQuery = ref('')
 const parentCategories = ref<Category[]>([])
@@ -184,6 +197,14 @@ function handleSearch() {
   if (searchQuery.value.trim()) {
     router.push(`/products?q=${encodeURIComponent(searchQuery.value.trim())}`)
   }
+}
+
+function isRouteActive(path: string) {
+  return route.path === path && !route.query.category
+}
+
+function isCategoryActive(categoryId: string) {
+  return route.path === '/products' && route.query.category === categoryId
 }
 </script>
 

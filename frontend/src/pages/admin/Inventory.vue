@@ -204,17 +204,17 @@ function selectStock(stk: Inventory) {
 }
 
 function getProductName(stk: Inventory) {
-  return typeof stk.product === 'object' ? stk.product.name : 'Sản phẩm không rõ'
+  return (stk.product && typeof stk.product === 'object') ? stk.product.name : 'Sản phẩm không rõ'
 }
 
 // Product Sku helper
 function getProductSku(stk: Inventory) {
-  return typeof stk.product === 'object' ? stk.product.sku : ''
+  return (stk.product && typeof stk.product === 'object') ? stk.product.sku : ''
 }
 
 // Product Image helper
 function getProductImage(stk: Inventory) {
-  return typeof stk.product === 'object' ? stk.product.images?.[0] : ''
+  return (stk.product && typeof stk.product === 'object') ? stk.product.images?.[0] : ''
 }
 
 async function submitAdjustment() {
@@ -269,8 +269,8 @@ function getInventoryStatusLabel(status: string, current: number, min: number) {
   return 'Đủ hàng'
 }
 
-function getProductPlaceholder(prodName: string) {
-  const name = prodName.toLowerCase()
+function getProductPlaceholder(prodName?: string) {
+  const name = (prodName || '').toLowerCase()
   if (name.includes('bút') || name.includes('viết') || name.includes('chì')) {
     return {
       gradient: 'bg-gradient-to-br from-red-400 to-rose-500',

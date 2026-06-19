@@ -1,420 +1,322 @@
 <template>
-  <div class="space-y-12 pb-24 bg-[#fcfcfc] overflow-hidden">
-    <!-- Hero Banner Redesign (Matches Screenshot) -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-      <div class="relative overflow-hidden rounded-[24px] bg-gradient-to-r from-[#e11d48] via-[#f97316] to-[#f59e0b] text-white px-8 py-14 md:py-18 flex flex-col justify-center shadow-lg">
-        <!-- Floating shapes/glows -->
-        <div class="absolute -right-10 -bottom-10 w-80 h-80 bg-white/10 rounded-full blur-2xl"></div>
-        <div class="absolute -left-10 -top-10 w-60 h-60 bg-white/10 rounded-full blur-2xl"></div>
-        
-        <div class="relative max-w-2xl space-y-6 z-10">
-          <div class="inline-flex items-center gap-1.5 bg-white/15 border border-white/25 text-white text-[11px] font-bold px-4 py-1.5 rounded-full backdrop-blur-md w-fit">
-            <span>Khuyến mãi tuần này</span>
-          </div>
-          
-          <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-none uppercase">
-            SIÊU ƯU ĐÃI<br/>
-            <span class="text-white">VĂN PHÒNG PHẨM</span>
-          </h1>
-          
-          <p class="text-white/95 text-xs sm:text-base font-medium leading-relaxed max-w-lg">
-            Mua sắm dụng cụ học tập & văn phòng giá tốt mỗi ngày
-          </p>
-          
-          <div class="pt-2 flex flex-wrap gap-4">
-            <router-link to="/products" class="bg-white hover:bg-slate-50 text-[#dc2626] font-extrabold py-3 px-6 rounded-full shadow-lg shadow-black/10 transition-all text-xs flex items-center gap-2 group cursor-pointer">
-              <span>Mua ngay</span>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 group-hover:translate-x-1 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
-            </router-link>
-            <router-link to="/products?discounted=true" class="bg-transparent hover:bg-white/10 border border-white/35 text-white font-extrabold py-3 px-6 rounded-full transition-all text-xs flex items-center gap-2 cursor-pointer">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.753 2.481.162l5.586-5.586a1.725 1.725 0 0 0 .162-2.481l-9.58-9.581A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>
-              <span>Xem khuyến mãi</span>
-            </router-link>
-          </div>
+  <div class="space-y-0 pb-0 bg-[#fcfcfc] overflow-hidden">
+    <!-- Chapter 1: Immersive Hero Section (Matches visual excellence request) -->
+    <div class="relative min-h-[85vh] flex items-center justify-center bg-gradient-to-br from-[#1e1b4b] via-[#311042] to-[#450a0a] text-white overflow-hidden py-20 px-4">
+      <!-- Floating decorative shapes -->
+      <div class="absolute -right-20 -bottom-20 w-120 h-120 bg-rose-600/20 rounded-full blur-3xl animate-pulse-soft"></div>
+      <div class="absolute -left-20 -top-20 w-100 h-100 bg-orange-600/20 rounded-full blur-3xl animate-pulse-soft delay-1000"></div>
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.03)_0%,transparent_80%)]"></div>
+
+      <div class="relative max-w-4xl mx-auto text-center space-y-8 z-10">
+        <div class="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 text-white text-[11px] font-bold px-4 py-1.5 rounded-full backdrop-blur-md w-fit mx-auto animate-float">
+          <span>✨ Siêu Ưu Đãi Mùa Tựu Trường</span>
         </div>
+
+        <h1 class="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight leading-none uppercase hero-text">
+          Khởi nguồn<br/>
+          <span class="bg-gradient-to-r from-orange-400 via-rose-500 to-amber-500 bg-clip-text text-transparent">Sự Sáng Tạo</span>
+        </h1>
+
+        <p class="text-slate-300 text-sm sm:text-lg max-w-2xl mx-auto leading-relaxed reveal">
+          Khám phá bộ sưu tập dụng cụ học tập & văn phòng phẩm Trường Thành chất lượng vượt trội, đồng hành trên con đường chinh phục đỉnh cao tri thức.
+        </p>
+
+        <div class="pt-4 flex flex-wrap justify-center gap-4 reveal delay-100">
+          <router-link to="/products" class="bg-gradient-to-r from-[#e11d48] to-[#f97316] hover:from-[#f43f5e] hover:to-[#fb923c] text-white font-extrabold py-4.5 px-8 rounded-full shadow-lg shadow-rose-600/30 transition-all text-sm flex items-center gap-2 group cursor-pointer">
+            <span>Mua sắm ngay</span>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 group-hover:translate-x-1 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
+          </router-link>
+          <router-link to="/products?discounted=true" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-extrabold py-4.5 px-8 rounded-full transition-all text-sm flex items-center gap-2 cursor-pointer backdrop-blur-md">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.753 2.481.162l5.586-5.586a1.725 1.725 0 0 0 .162-2.481l-9.58-9.581A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>
+            <span>Bộ Sưu Tập Giảm Giá</span>
+          </router-link>
+        </div>
+      </div>
+
+      <!-- Scroll hint -->
+      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-60">
+        <span class="text-[10px] tracking-[0.2em] uppercase font-bold text-slate-400">Cuộn xuống</span>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 animate-bounce text-slate-400"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
       </div>
     </div>
 
-    <!-- Main Content Container -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-      
-      <!-- Featured Categories (Matches Screenshot) -->
-      <section class="space-y-4">
-        <div>
-          <h2 class="text-xl font-bold text-slate-900 tracking-tight">Danh mục nổi bật</h2>
-          <p class="text-xs text-slate-500">Khám phá thế giới văn phòng phẩm</p>
+    <!-- Chapter 2: Editorial Brand Story Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <!-- Visual component -->
+        <div class="relative reveal-left">
+          <div class="aspect-video sm:aspect-square bg-gradient-to-tr from-rose-500 to-orange-400 rounded-3xl overflow-hidden shadow-2xl relative">
+            <div class="absolute inset-0 bg-black/20 mix-blend-multiply"></div>
+            <div class="absolute inset-4 border border-white/20 rounded-2xl"></div>
+            <div class="absolute bottom-8 left-8 right-8 text-white space-y-2">
+              <span class="text-xs font-black tracking-widest uppercase text-amber-300">Trường Thành Bookstore</span>
+              <h3 class="text-xl font-bold">"Nơi chắp cánh cho những ước mơ sáng tạo lớn"</h3>
+            </div>
+          </div>
         </div>
-        <div class="grid grid-cols-3 sm:grid-cols-6 gap-4">
+
+        <!-- Narrative content -->
+        <div class="space-y-6 lg:pl-6 reveal-right">
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Về chúng tôi</span>
+          <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            Chất lượng tuyệt đối, dịch vụ tận tâm từ năm 2016
+          </h2>
+          <p class="text-slate-600 text-sm leading-relaxed">
+            Chúng tôi hiểu rằng mỗi nét bút vẽ ra, mỗi trang sổ lật mở đều là khởi đầu của một ý tưởng tuyệt vời. Trường Thành Stationery luôn nỗ lực tuyển chọn và mang đến những dòng sản phẩm tốt nhất thế giới với mức giá dễ tiếp cận nhất.
+          </p>
+
+          <div class="grid grid-cols-2 gap-6 pt-4">
+            <div class="border-l-2 border-[#dc2626] pl-4 space-y-1">
+              <span class="text-2xl font-black text-slate-900">100%</span>
+              <p class="text-xs text-slate-500 font-medium">Hàng chính hãng</p>
+            </div>
+            <div class="border-l-2 border-[#dc2626] pl-4 space-y-1">
+              <span class="text-2xl font-black text-slate-900">24/7</span>
+              <p class="text-xs text-slate-500 font-medium">Hỗ trợ nhanh chóng</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chapter 3: Horizontal Carousel Categories -->
+    <section class="bg-slate-100 py-24 overflow-hidden">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div class="reveal flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Khám phá danh mục</span>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">Sáng tạo không giới hạn</h2>
+          </div>
+          <p class="text-xs text-slate-500 max-w-xs">Chọn danh mục văn phòng phẩm phù hợp với nhu cầu học tập và làm việc của bạn.</p>
+        </div>
+
+        <!-- Snap carousel scroll container -->
+        <div class="category-scroll pb-6 scrollbar-none reveal delay-100">
           <router-link
             v-for="(cat, idx) in parentCategories"
             :key="cat._id"
             :to="`/products?category=${cat._id}`"
-            class="bg-white border border-slate-100 rounded-2xl p-4 text-center hover:shadow-md hover:border-slate-200 transition-all flex flex-col items-center group cursor-pointer"
+            class="bg-white border border-slate-200/60 rounded-3xl p-6 text-center hover:shadow-xl hover:border-slate-300 transition-all flex flex-col items-center justify-between group cursor-pointer h-72 shadow-xs snap-align-start"
           >
-            <!-- Colored Circle Card -->
-            <div :class="`w-14 h-14 rounded-2xl ${getCategoryStyle(idx).bg} flex items-center justify-center mb-3 group-hover:scale-105 transition-transform shadow-xs`">
-              <!-- Render category image or fallback icon -->
-              <img v-if="cat.image" :src="cat.image" class="w-8 h-8 object-contain" />
-              <span v-else class="text-2xl">{{ getCategoryStyle(idx).icon }}</span>
-            </div>
-            <span class="text-xs font-bold text-slate-800 group-hover:text-[#dc2626] transition-colors leading-tight">{{ cat.name }}</span>
-          </router-link>
-        </div>
-      </section>
-
-      <!-- Best Selling Products (Matches Screenshot) -->
-      <section class="space-y-4">
-        <div class="flex items-end justify-between">
-          <div>
-            <h2 class="text-xl font-bold text-slate-900 tracking-tight">🔥 Sản phẩm bán chạy</h2>
-            <p class="text-xs text-slate-500">Khách hàng yêu thích nhất</p>
-          </div>
-          <router-link to="/products" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
-            <span>Xem tất cả</span>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
-          </router-link>
-        </div>
-
-        <div v-if="loadingBest" class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <div v-for="n in 4" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse">
-            <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-            <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-            <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-          </div>
-        </div>
-
-        <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <div
-            v-for="prod in bestSelling"
-            :key="prod._id"
-            class="bg-white border border-slate-200/80 rounded-2xl p-4 hover:shadow-md hover:border-slate-300 transition-all flex flex-col group relative"
-          >
-            <!-- Discount Badge -->
-            <span v-if="getDiscountPercent(prod.price, prod.discountPrice) > 0" class="absolute top-6 left-6 bg-[#dc2626] text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 shadow-xs">
-              -{{ getDiscountPercent(prod.price, prod.discountPrice) }}%
-            </span>
-
-            <!-- Image/Placeholder Container (Matches Screenshot) -->
-            <div class="aspect-square bg-slate-50/70 rounded-xl overflow-hidden mb-4 relative flex items-center justify-center">
-              <img v-if="prod.images && prod.images.length > 0" :src="prod.images[0]" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div v-else :class="`w-full h-full ${getProductPlaceholder(prod.name).gradient} flex items-center justify-center group-hover:scale-105 transition-transform duration-500`">
-                <!-- SVG Icon fallback matching screenshot -->
-                <svg v-if="getProductPlaceholder(prod.name).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
+            <div class="flex flex-col items-center space-y-4">
+              <!-- Animated Circle Card -->
+              <div :class="['w-16 h-16 rounded-full bg-gradient-to-br flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-md', getCategoryStyle(idx).gradient]">
+                <svg v-if="getCategoryStyle(idx).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
                   <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
                 </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'document'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'calculator'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008ZM2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm11.379-3.379a.75.75 0 0 0-1.06 1.06l1.25 1.25a.75.75 0 0 0 1.06-1.06l-1.25-1.25Z" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'folder'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-19.5 0A2.25 2.25 0 0 0 4.5 15h15a2.25 2.25 0 0 0 2.25-2.25m-19.5 0v.225C2.25 14.28 3.52 15 5.04 15h13.92c1.52 0 2.79-.72 2.79-2.025v-.225M3 9V6a3 3 0 0 1 3-3h3.75a3 3 0 0 1 2.25 1.025L13.5 6h6.75A3 3 0 0 1 23 9v2.25m-20.25 0h17.5" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'briefcase'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .994-.806 1.8-1.8 1.8H5.55c-.994 0-1.8-.806-1.8-1.8v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H5.184c-.267 0-.523-.093-.717-.258m16.5 0V8.706c0-1.08-.768-2.014-1.837-2.174a47.79 47.79 0 0 0-3.413-.387m-7.5 0V5.25A2.25 2.25 0 0 1 10.5 3h3a2.25 2.25 0 0 1 2.25 2.25v.819M6.75 7.5v.75m0-1.5h10.5M6.75 7.5H4.25m13 0h2.5M6.75 7.5v8.25M17.25 7.5v8.25M3 16.5h18" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'academic'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
+                <svg v-else-if="getCategoryStyle(idx).icon === 'academic'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M12 21v-4.5" />
                 </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.753 2.481.162l5.586-5.586a1.725 1.725 0 0 0 .162-2.481l-9.58-9.581A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
+                <svg v-else-if="getCategoryStyle(idx).icon === 'briefcase'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .994-.806 1.8-1.8 1.8H5.55c-.994 0-1.8-.806-1.8-1.8v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H5.184c-.267 0-.523-.093-.717-.258m16.5 0V8.706c0-1.08-.768-2.014-1.837-2.174a47.79 47.79 0 0 0-3.413-.387m-7.5 0V5.25A2.25 2.25 0 0 1 10.5 3h3a2.25 2.25 0 0 1 2.25 2.25v.819M6.75 7.5v.75m0-1.5h10.5M6.75 7.5H4.25m13 0h2.5M6.75 7.5v8.25M17.25 7.5v8.25M3 16.5h18" />
+                </svg>
+                <svg v-else-if="getCategoryStyle(idx).icon === 'document'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+                <svg v-else-if="getCategoryStyle(idx).icon === 'paint'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387m11.378-3.479a3 3 0 0 0-5.78-.87 2.25 2.25 0 0 1-2.4 1.992 4.5 4.5 0 0 0 8.4 1.122c0-.083-.008-.165-.02-.244Zm-10.87-4.135a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387M15.75 12c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Zm0-4.5c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Z" />
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008ZM2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm11.379-3.379a.75.75 0 0 0-1.06 1.06l1.25 1.25a.75.75 0 0 0 1.06-1.06l-1.25-1.25Z" />
                 </svg>
               </div>
+              <h3 class="text-sm font-extrabold text-slate-800 group-hover:text-[#dc2626] transition-colors leading-tight">{{ cat.name }}</h3>
             </div>
-
-            <!-- Title -->
-            <h3 class="text-xs font-bold text-slate-800 line-clamp-2 min-h-[36px] group-hover:text-[#dc2626] transition-colors leading-tight">
-              <router-link :to="`/products/${prod._id}`">{{ prod.name }}</router-link>
-            </h3>
-
-            <!-- Price & Info (Matches Screenshot) -->
-            <div class="mt-2 flex flex-col gap-1">
-              <div class="flex items-baseline gap-2">
-                <template v-if="prod.discountPrice > 0">
-                  <span class="text-sm font-bold text-red-600">{{ formatCurrency(prod.discountPrice) }}</span>
-                  <span class="text-[10px] text-slate-400 line-through">{{ formatCurrency(prod.price) }}</span>
-                </template>
-                <template v-else>
-                  <span class="text-sm font-bold text-red-600">{{ formatCurrency(prod.price) }}</span>
-                </template>
-              </div>
-              
-              <div class="flex items-center justify-between text-[10px] text-slate-400">
-                <div class="flex items-center gap-0.5 text-yellow-600 font-bold">
-                  ★ {{ prod.rating || '4.8' }}
-                </div>
-                <div>
-                  Đã bán {{ formatNumber(prod.sold || Math.floor(Math.random() * 500) + 900) }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Add to Cart (Matches Screenshot) -->
-            <button @click="addToCart(prod)" class="mt-3 w-full bg-[#ffebd5] hover:bg-[#dc2626] text-[#c2410c] hover:text-white font-extrabold py-2 px-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1 border border-[#fed7aa] cursor-pointer">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" /></svg>
-              <span>Thêm vào giỏ</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Discounted Products (Matches Screenshot) -->
-      <section class="space-y-4">
-        <div class="flex items-end justify-between">
-          <div>
-            <h2 class="text-xl font-bold text-slate-900 tracking-tight">🏷️ Đang giảm giá</h2>
-            <p class="text-xs text-slate-500">Săn deal sốc mỗi ngày</p>
-          </div>
-          <router-link to="/products?discounted=true" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
-            <span>Xem tất cả</span>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+            
+            <span class="text-[11px] font-bold text-slate-400 group-hover:text-[#dc2626] transition-colors inline-flex items-center gap-1">
+              <span>Xem sản phẩm</span>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3 h-3"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+            </span>
           </router-link>
         </div>
+      </div>
+    </section>
 
-        <div v-if="loadingDiscount" class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <div v-for="n in 4" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 animate-pulse space-y-4">
-            <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-            <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-            <div class="h-6 bg-slate-200 rounded w-1/3"></div>
+    <!-- Chapter 4: Best Sellers Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
+      <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
+        <div>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Mọi người yêu thích</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">🔥 Sản phẩm bán chạy</h2>
+        </div>
+        <router-link to="/products" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
+          <span>Xem tất cả</span>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+        </router-link>
+      </div>
+
+      <div v-if="loadingBest" class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <div v-for="n in 4" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse">
+          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
+          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
+          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
+        </div>
+      </div>
+
+      <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <ProductCard
+          v-for="(prod, index) in bestSelling"
+          :key="prod._id"
+          :product="prod"
+          :class="['reveal-scale', `delay-${(index % 4) * 100}`]"
+          @add-to-cart="addToCart"
+        />
+      </div>
+    </section>
+
+    <!-- Chapter 5: Editorial Visual Break -->
+    <section class="relative min-h-[50vh] flex items-center justify-center bg-slate-900 text-white overflow-hidden py-16 px-4">
+      <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-25" style="background-image: url('https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80');"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent"></div>
+      
+      <div class="relative max-w-3xl mx-auto text-center space-y-6 z-10 reveal">
+        <span class="text-xs font-bold text-amber-400 tracking-[0.3em] uppercase">Không Gian Cảm Hứng</span>
+        <h2 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
+          Nâng tầm góc làm việc & học tập của bạn
+        </h2>
+        <p class="text-slate-300 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
+          Góc làm việc gọn gàng, dụng cụ chất lượng là chiếc chìa khóa vạn năng khơi dậy động lực sáng tạo mỗi ngày. Hãy cùng Trường Thành trang trí không gian của bạn.
+        </p>
+        <div class="pt-2">
+          <router-link to="/products" class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs py-3 px-6 rounded-full transition-all cursor-pointer">
+            <span>Tìm cảm hứng</span>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3" /></svg>
+          </router-link>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chapter 6: Deal Zone (Urgency) -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
+      <div class="reveal flex flex-col sm:flex-row sm:items-end justify-between border-b border-slate-100 pb-4 gap-4">
+        <div>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Đừng bỏ lỡ</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">🏷️ Deal Sốc Giờ Vàng</h2>
+        </div>
+        <!-- countdown -->
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Kết thúc sau:</span>
+          <div class="flex items-center gap-1 text-xs font-mono font-bold text-white bg-slate-900 px-3 py-1.5 rounded-lg">
+            <span>02</span>:<span>45</span>:<span>18</span>
           </div>
         </div>
+      </div>
 
-        <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <div
-            v-for="prod in discounted"
-            :key="prod._id"
-            class="bg-white border border-slate-200/80 rounded-2xl p-4 hover:shadow-md hover:border-slate-300 transition-all flex flex-col group relative"
-          >
-            <!-- Discount Badge -->
-            <span class="absolute top-6 left-6 bg-[#dc2626] text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 shadow-xs">
-              -{{ getDiscountPercent(prod.price, prod.discountPrice) }}%
-            </span>
-
-            <!-- Image/Placeholder Container -->
-            <div class="aspect-square bg-slate-50/70 rounded-xl overflow-hidden mb-4 relative flex items-center justify-center">
-              <img v-if="prod.images && prod.images.length > 0" :src="prod.images[0]" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div v-else :class="`w-full h-full ${getProductPlaceholder(prod.name).gradient} flex items-center justify-center group-hover:scale-105 transition-transform duration-500`">
-                <!-- SVG Icon fallback matching screenshot -->
-                <svg v-if="getProductPlaceholder(prod.name).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'document'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'calculator'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008ZM2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm11.379-3.379a.75.75 0 0 0-1.06 1.06l1.25 1.25a.75.75 0 0 0 1.06-1.06l-1.25-1.25Z" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'folder'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-19.5 0A2.25 2.25 0 0 0 4.5 15h15a2.25 2.25 0 0 0 2.25-2.25m-19.5 0v.225C2.25 14.28 3.52 15 5.04 15h13.92c1.52 0 2.79-.72 2.79-2.025v-.225M3 9V6a3 3 0 0 1 3-3h3.75a3 3 0 0 1 2.25 1.025L13.5 6h6.75A3 3 0 0 1 23 9v2.25m-20.25 0h17.5" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'briefcase'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .994-.806 1.8-1.8 1.8H5.55c-.994 0-1.8-.806-1.8-1.8v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H5.184c-.267 0-.523-.093-.717-.258m16.5 0V8.706c0-1.08-.768-2.014-1.837-2.174a47.79 47.79 0 0 0-3.413-.387m-7.5 0V5.25A2.25 2.25 0 0 1 10.5 3h3a2.25 2.25 0 0 1 2.25 2.25v.819M6.75 7.5v.75m0-1.5h10.5M6.75 7.5H4.25m13 0h2.5M6.75 7.5v8.25M17.25 7.5v8.25M3 16.5h18" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'academic'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M12 21v-4.5" />
-                </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.753 2.481.162l5.586-5.586a1.725 1.725 0 0 0 .162-2.481l-9.58-9.581A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
-                </svg>
-              </div>
-            </div>
-
-            <!-- Title -->
-            <h3 class="text-xs font-bold text-slate-800 line-clamp-2 min-h-[36px] group-hover:text-[#dc2626] transition-colors leading-tight">
-              <router-link :to="`/products/${prod._id}`">{{ prod.name }}</router-link>
-            </h3>
-
-            <!-- Price & Info -->
-            <div class="mt-2 flex flex-col gap-1">
-              <div class="flex items-baseline gap-2">
-                <span class="text-sm font-bold text-red-600">{{ formatCurrency(prod.discountPrice) }}</span>
-                <span class="text-[10px] text-slate-400 line-through">{{ formatCurrency(prod.price) }}</span>
-              </div>
-              
-              <div class="flex items-center justify-between text-[10px] text-slate-400">
-                <div class="flex items-center gap-0.5 text-yellow-600 font-bold">
-                  ★ {{ prod.rating || '4.8' }}
-                </div>
-                <div>
-                  Đã bán {{ formatNumber(prod.sold || Math.floor(Math.random() * 400) + 100) }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Add to Cart Button -->
-            <button @click="addToCart(prod)" class="mt-3 w-full bg-[#ffebd5] hover:bg-[#dc2626] text-[#c2410c] hover:text-white font-extrabold py-2 px-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1 border border-[#fed7aa] cursor-pointer">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" /></svg>
-              <span>Thêm vào giỏ</span>
-            </button>
-          </div>
+      <div v-if="loadingDiscount" class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <div v-for="n in 4" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse">
+          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
+          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
+          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
         </div>
-      </section>
+      </div>
 
-      <!-- Combo văn phòng (Matches Screenshot) -->
-      <section class="space-y-4">
-        <div class="flex items-end justify-between">
+      <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <ProductCard
+          v-for="(prod, index) in discounted"
+          :key="prod._id"
+          :product="prod"
+          :class="['reveal-scale', `delay-${(index % 4) * 100}`]"
+          @add-to-cart="addToCart"
+        />
+      </div>
+    </section>
+
+    <!-- Combo Văn Phòng & Story Card Section -->
+    <section class="bg-slate-50 py-24">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div class="reveal flex items-end justify-between border-b border-slate-200 pb-4">
           <div>
-            <h2 class="text-xl font-bold text-slate-900 tracking-tight">📦 Combo văn phòng</h2>
-            <p class="text-xs text-slate-500">Tiết kiệm hơn khi mua combo</p>
+            <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Tiết kiệm thông minh</span>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">📦 Combo văn phòng</h2>
           </div>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <div
-            v-for="prod in combos"
+          <ProductCard
+            v-for="(prod, index) in combos"
             :key="prod._id"
-            class="bg-white border border-slate-200/80 rounded-2xl p-4 hover:shadow-md hover:border-slate-300 transition-all flex flex-col group relative"
-          >
-            <!-- Discount Badge -->
-            <span v-if="getDiscountPercent(prod.price, prod.discountPrice) > 0" class="absolute top-6 left-6 bg-[#dc2626] text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 shadow-xs">
-              -{{ getDiscountPercent(prod.price, prod.discountPrice) }}%
-            </span>
-
-            <!-- Image/Placeholder Container -->
-            <div class="aspect-square bg-slate-50/70 rounded-xl overflow-hidden mb-4 relative flex items-center justify-center">
-              <img v-if="prod.images && prod.images.length > 0" :src="prod.images[0]" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div v-else :class="`w-full h-full ${getProductPlaceholder(prod.name).gradient} flex items-center justify-center group-hover:scale-105 transition-transform duration-500`">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .994-.806 1.8-1.8 1.8H5.55c-.994 0-1.8-.806-1.8-1.8v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H5.184c-.267 0-.523-.093-.717-.258m16.5 0V8.706c0-1.08-.768-2.014-1.837-2.174a47.79 47.79 0 0 0-3.413-.387m-7.5 0V5.25A2.25 2.25 0 0 1 10.5 3h3a2.25 2.25 0 0 1 2.25 2.25v.819M6.75 7.5v.75m0-1.5h10.5M6.75 7.5H4.25m13 0h2.5M6.75 7.5v8.25M17.25 7.5v8.25M3 16.5h18" />
-                </svg>
-              </div>
+            :product="prod"
+            :class="['reveal-scale', `delay-${(index % 4) * 100}`]"
+            @add-to-cart="addToCart"
+          />
+          
+          <!-- Promo Narrative Card -->
+          <div class="col-span-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white flex flex-col justify-between relative overflow-hidden shadow-md group reveal-right delay-200 min-h-[250px]">
+            <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-xl group-hover:scale-110 transition-transform"></div>
+            <div class="space-y-2 relative z-10">
+              <span class="text-[10px] font-black tracking-widest uppercase bg-white/20 px-2 py-0.5 rounded">Khuyên Dùng</span>
+              <h3 class="text-xl sm:text-2xl font-black leading-tight">Bộ Học Tập Trọn Gói<br/>Dành Cho Học Sinh Lớp 1-12</h3>
+              <p class="text-white/80 text-xs max-w-sm">Mua trọn bộ đầy đủ bút viết, thước kẻ, sổ ghi chép, máy tính bỏ túi giảm thêm 15% tổng đơn.</p>
             </div>
+            <router-link to="/products?q=combo" class="w-fit bg-slate-950 text-white font-extrabold text-xs py-3 px-5 rounded-xl transition-all hover:bg-slate-800 relative z-10 cursor-pointer">
+              Xem combo ngay
+            </router-link>
+          </div>
+        </div>
+      </div>
+    </section>
 
-            <!-- Title -->
-            <h3 class="text-xs font-bold text-slate-800 line-clamp-2 min-h-[36px] group-hover:text-[#dc2626] transition-colors leading-tight">
-              <router-link :to="`/products/${prod._id}`">{{ prod.name }}</router-link>
-            </h3>
+    <!-- New Arrivals Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
+      <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
+        <div>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Vừa Cập Bến</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">✨ Hàng mới về</h2>
+        </div>
+        <router-link to="/products?sort=newest" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
+          <span>Xem tất cả</span>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+        </router-link>
+      </div>
 
-            <!-- Price & Info -->
-            <div class="mt-2 flex flex-col gap-1">
-              <div class="flex items-baseline gap-2">
-                <template v-if="prod.discountPrice > 0">
-                  <span class="text-sm font-bold text-red-600">{{ formatCurrency(prod.discountPrice) }}</span>
-                  <span class="text-[10px] text-slate-400 line-through">{{ formatCurrency(prod.price) }}</span>
-                </template>
-                <template v-else>
-                  <span class="text-sm font-bold text-red-600">{{ formatCurrency(prod.price) }}</span>
-                </template>
-              </div>
-              
-              <div class="flex items-center justify-between text-[10px] text-slate-400">
-                <div class="flex items-center gap-0.5 text-yellow-600 font-bold">
-                  ★ {{ prod.rating || '4.8' }}
-                </div>
-                <div>
-                  Đã bán {{ formatNumber(prod.sold || Math.floor(Math.random() * 300) + 150) }}
-                </div>
-              </div>
-            </div>
+      <div v-if="loadingNew" class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <div v-for="n in 4" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse">
+          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
+          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
+          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
+        </div>
+      </div>
 
-            <!-- Add to Cart Button -->
-            <button @click="addToCart(prod)" class="mt-3 w-full bg-[#ffebd5] hover:bg-[#dc2626] text-[#c2410c] hover:text-white font-extrabold py-2 px-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1 border border-[#fed7aa] cursor-pointer">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" /></svg>
-              <span>Thêm vào giỏ</span>
+      <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <ProductCard
+          v-for="(prod, index) in newProducts"
+          :key="prod._id"
+          :product="prod"
+          :class="['reveal-scale', `delay-${(index % 4) * 100}`]"
+          @add-to-cart="addToCart"
+        />
+      </div>
+    </section>
+
+    <!-- Chapter 7: Testimonials & Closing Newsletter -->
+    <section class="bg-gradient-to-b from-slate-950 to-slate-900 text-white py-24 overflow-hidden border-b border-slate-800">
+      <div class="max-w-4xl mx-auto px-4 text-center space-y-8 reveal">
+        <span class="text-xs font-bold text-[#dc2626] tracking-[0.3em] uppercase">Khách Hàng Nói Gì</span>
+        
+        <blockquote class="text-lg sm:text-2xl font-medium italic text-slate-100 leading-relaxed">
+          "Trường Thành Stationery có bộ dịch vụ khách hàng cực tốt. Tôi đặt mua combo văn phòng cho doanh nghiệp và được hỗ trợ in khắc logo, chất lượng bút và sổ tay thì cực kỳ đẳng cấp."
+        </blockquote>
+        
+        <div class="space-y-1">
+          <p class="font-extrabold text-sm text-white">Anh Hoàng Long</p>
+          <p class="text-xs text-slate-400">CEO & Founder, Long Tech Media</p>
+        </div>
+
+        <div class="pt-6 border-t border-slate-800 max-w-md mx-auto space-y-4">
+          <h3 class="text-sm font-bold tracking-wider text-slate-300 uppercase">Đăng ký nhận tin tức & khuyến mãi</h3>
+          <form @submit.prevent class="flex gap-2">
+            <input
+              type="email"
+              placeholder="Email của bạn..."
+              class="flex-grow bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
+            />
+            <button type="submit" class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-colors cursor-pointer">
+              Đăng ký
             </button>
-          </div>
+          </form>
         </div>
-      </section>
-
-      <!-- New Arrivals (Matches Screenshot) -->
-      <section class="space-y-4">
-        <div class="flex items-end justify-between">
-          <div>
-            <h2 class="text-xl font-bold text-slate-900 tracking-tight">✨ Hàng mới về</h2>
-            <p class="text-xs text-slate-500">Vừa cập bến</p>
-          </div>
-          <router-link to="/products?sort=newest" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
-            <span>Xem tất cả</span>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
-          </router-link>
-        </div>
-
-        <div v-if="loadingNew" class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <div v-for="n in 4" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 animate-pulse space-y-4">
-            <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-            <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-            <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-          </div>
-        </div>
-
-        <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-          <div
-            v-for="prod in newProducts"
-            :key="prod._id"
-            class="bg-white border border-slate-200/80 rounded-2xl p-4 hover:shadow-md hover:border-slate-300 transition-all flex flex-col group relative"
-          >
-            <!-- Discount Badge -->
-            <span v-if="getDiscountPercent(prod.price, prod.discountPrice) > 0" class="absolute top-6 left-6 bg-[#dc2626] text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 shadow-xs">
-              -{{ getDiscountPercent(prod.price, prod.discountPrice) }}%
-            </span>
-
-            <!-- Image/Placeholder Container -->
-            <div class="aspect-square bg-slate-50/70 rounded-xl overflow-hidden mb-4 relative flex items-center justify-center">
-              <img v-if="prod.images && prod.images.length > 0" :src="prod.images[0]" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div v-else :class="`w-full h-full ${getProductPlaceholder(prod.name).gradient} flex items-center justify-center group-hover:scale-105 transition-transform duration-500`">
-                <!-- SVG Icon fallback matching screenshot -->
-                <svg v-if="getProductPlaceholder(prod.name).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'document'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'calculator'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008ZM2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm11.379-3.379a.75.75 0 0 0-1.06 1.06l1.25 1.25a.75.75 0 0 0 1.06-1.06l-1.25-1.25Z" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'folder'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-19.5 0A2.25 2.25 0 0 0 4.5 15h15a2.25 2.25 0 0 0 2.25-2.25m-19.5 0v.225C2.25 14.28 3.52 15 5.04 15h13.92c1.52 0 2.79-.72 2.79-2.025v-.225M3 9V6a3 3 0 0 1 3-3h3.75a3 3 0 0 1 2.25 1.025L13.5 6h6.75A3 3 0 0 1 23 9v2.25m-20.25 0h17.5" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'briefcase'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .994-.806 1.8-1.8 1.8H5.55c-.994 0-1.8-.806-1.8-1.8v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H5.184c-.267 0-.523-.093-.717-.258m16.5 0V8.706c0-1.08-.768-2.014-1.837-2.174a47.79 47.79 0 0 0-3.413-.387m-7.5 0V5.25A2.25 2.25 0 0 1 10.5 3h3a2.25 2.25 0 0 1 2.25 2.25v.819M6.75 7.5v.75m0-1.5h10.5M6.75 7.5H4.25m13 0h2.5M6.75 7.5v8.25M17.25 7.5v8.25M3 16.5h18" />
-                </svg>
-                <svg v-else-if="getProductPlaceholder(prod.name).icon === 'academic'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M12 21v-4.5" />
-                </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.753 2.481.162l5.586-5.586a1.725 1.725 0 0 0 .162-2.481l-9.58-9.581A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
-                </svg>
-              </div>
-            </div>
-
-            <!-- Title -->
-            <h3 class="text-xs font-bold text-slate-800 line-clamp-2 min-h-[36px] group-hover:text-[#dc2626] transition-colors leading-tight">
-              <router-link :to="`/products/${prod._id}`">{{ prod.name }}</router-link>
-            </h3>
-
-            <!-- Price & Info -->
-            <div class="mt-2 flex flex-col gap-1">
-              <div class="flex items-baseline gap-2">
-                <template v-if="prod.discountPrice > 0">
-                  <span class="text-sm font-bold text-red-600">{{ formatCurrency(prod.discountPrice) }}</span>
-                  <span class="text-[10px] text-slate-400 line-through">{{ formatCurrency(prod.price) }}</span>
-                </template>
-                <template v-else>
-                  <span class="text-sm font-bold text-red-600">{{ formatCurrency(prod.price) }}</span>
-                </template>
-              </div>
-              
-              <div class="flex items-center justify-between text-[10px] text-slate-400">
-                <div class="flex items-center gap-0.5 text-yellow-600 font-bold">
-                  ★ {{ prod.rating || '4.8' }}
-                </div>
-                <div>
-                  Đã bán {{ formatNumber(prod.sold || Math.floor(Math.random() * 300) + 120) }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Add to Cart Button -->
-            <button @click="addToCart(prod)" class="mt-3 w-full bg-[#ffebd5] hover:bg-[#dc2626] text-[#c2410c] hover:text-white font-extrabold py-2 px-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1 border border-[#fed7aa] cursor-pointer">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" /></svg>
-              <span>Thêm vào giỏ</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-    </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -425,10 +327,13 @@ import { useCartStore } from '@/stores/cart'
 import { productService } from '@/services/product.service'
 import { categoryService } from '@/services/category.service'
 import { formatCurrency, getDiscountPercent } from '@/utils/helpers'
+import ProductCard from '@/components/ProductCard.vue'
+import { useScrollReveal } from '@/composables/useScrollReveal'
 import type { Product, Category } from '@/types'
 
 const cartStore = useCartStore()
 const toast = useToast()
+const { observeNewElements } = useScrollReveal()
 
 const parentCategories = ref<Category[]>([])
 const bestSelling = ref<Product[]>([])
@@ -441,12 +346,12 @@ const loadingNew = ref(true)
 
 // Mapped styling system for highlighting categories in home layout
 const categoryStyles = [
-  { bg: 'bg-red-50 hover:bg-red-100 border-red-100', text: 'text-red-600', icon: '✏️' },
-  { bg: 'bg-orange-50 hover:bg-orange-100 border-orange-100', text: 'text-orange-600', icon: '🎒' },
-  { bg: 'bg-blue-50 hover:bg-blue-100 border-blue-100', text: 'text-blue-600', icon: '💼' },
-  { bg: 'bg-green-50 hover:bg-green-100 border-green-100', text: 'text-green-600', icon: '📄' },
-  { bg: 'bg-pink-50 hover:bg-pink-100 border-pink-100', text: 'text-pink-600', icon: '🎨' },
-  { bg: 'bg-purple-50 hover:bg-purple-100 border-purple-100', text: 'text-purple-600', icon: '📟' }
+  { gradient: 'from-rose-400 to-pink-500', icon: 'pencil' },
+  { gradient: 'from-amber-400 to-orange-500', icon: 'academic' },
+  { gradient: 'from-blue-400 to-sky-500', icon: 'briefcase' },
+  { gradient: 'from-emerald-400 to-teal-500', icon: 'document' },
+  { gradient: 'from-fuchsia-400 to-purple-500', icon: 'paint' },
+  { gradient: 'from-indigo-400 to-purple-500', icon: 'calculator' }
 ]
 
 function getCategoryStyle(index: number) {
@@ -493,68 +398,63 @@ onMounted(async () => {
   } finally {
     loadingNew.value = false
   }
+
+  // Trigger observer scroll reveal setup once the items are in the DOM
+  setTimeout(() => {
+    observeNewElements()
+  }, 150)
 })
 
 function addToCart(product: Product) {
   cartStore.addToCart(product, 1)
   toast.success(`Đã thêm "${product.name}" vào giỏ hàng`)
 }
-
-function formatNumber(num: number) {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-}
-
-function getProductPlaceholder(prodName: string) {
-  const name = prodName.toLowerCase()
-  if (name.includes('bút') || name.includes('viết') || name.includes('chì')) {
-    return {
-      gradient: 'bg-gradient-to-br from-red-400 to-rose-500',
-      icon: 'pencil'
-    }
-  }
-  if (name.includes('giấy') || name.includes('sổ') || name.includes('vở') || name.includes('tập') || name.includes('note')) {
-    return {
-      gradient: 'bg-gradient-to-br from-emerald-400 to-teal-500',
-      icon: 'document'
-    }
-  }
-  if (name.includes('máy tính') || name.includes('casio')) {
-    return {
-      gradient: 'bg-gradient-to-br from-indigo-400 to-purple-500',
-      icon: 'calculator'
-    }
-  }
-  if (name.includes('hồ sơ') || name.includes('bìa') || name.includes('kẹp') || name.includes('keo') || name.includes('thước')) {
-    return {
-      gradient: 'bg-gradient-to-br from-blue-400 to-sky-500',
-      icon: 'folder'
-    }
-  }
-  if (name.includes('combo') || name.includes('văn phòng')) {
-    return {
-      gradient: 'bg-gradient-to-br from-blue-500 to-indigo-600',
-      icon: 'briefcase'
-    }
-  }
-  if (name.includes('học sinh') || name.includes('tiểu học') || name.includes('bộ dụng cụ')) {
-    return {
-      gradient: 'bg-gradient-to-br from-amber-400 to-orange-500',
-      icon: 'academic'
-    }
-  }
-  return {
-    gradient: 'bg-gradient-to-br from-pink-400 to-rose-500',
-    icon: 'tag'
-  }
-}
 </script>
 
 <style scoped>
+.category-scroll {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.category-scroll > * {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+  width: 180px;
+}
+
+@media (min-width: 640px) {
+  .category-scroll > * {
+    width: 220px;
+  }
+}
+
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+.hero-text {
+  animation: hero-reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes hero-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
 }
 </style>

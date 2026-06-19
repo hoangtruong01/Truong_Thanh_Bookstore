@@ -14,10 +14,10 @@
   --color-border: #e2e8f0;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* Center wrapper fix for Tailwind v4 logical property override */
+.mx-auto {
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 html {

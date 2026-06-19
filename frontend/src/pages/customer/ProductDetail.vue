@@ -22,8 +22,31 @@
       <div class="bg-white border border-slate-200 rounded-3xl p-8 grid grid-cols-1 md:grid-cols-2 gap-12 shadow-xs">
         <!-- Gallery -->
         <div class="space-y-4">
-          <div class="aspect-square bg-slate-50 rounded-2xl overflow-hidden border border-slate-100">
-            <img :src="selectedImage || 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400'" class="w-full h-full object-cover" />
+          <div class="aspect-square bg-slate-50/70 rounded-2xl overflow-hidden border border-slate-100 relative flex items-center justify-center">
+            <img v-if="selectedImage" :src="selectedImage" class="w-full h-full object-cover" />
+            <div v-else :class="`w-full h-full ${getProductPlaceholder(product.name).gradient} flex items-center justify-center`">
+              <svg v-if="getProductPlaceholder(product.name).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-white/90">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+              </svg>
+              <svg v-else-if="getProductPlaceholder(product.name).icon === 'document'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-white/90">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              </svg>
+              <svg v-else-if="getProductPlaceholder(product.name).icon === 'calculator'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-white/90">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008ZM2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm11.379-3.379a.75.75 0 0 0-1.06 1.06l1.25 1.25a.75.75 0 0 0 1.06-1.06l-1.25-1.25Z" />
+              </svg>
+              <svg v-else-if="getProductPlaceholder(product.name).icon === 'folder'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-white/90">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-19.5 0A2.25 2.25 0 0 0 4.5 15h15a2.25 2.25 0 0 0 2.25-2.25m-19.5 0v.225C2.25 14.28 3.52 15 5.04 15h13.92c1.52 0 2.79-.72 2.79-2.025v-.225M3 9V6a3 3 0 0 1 3-3h3.75a3 3 0 0 1 2.25 1.025L13.5 6h6.75A3 3 0 0 1 23 9v2.25m-20.25 0h17.5" />
+              </svg>
+              <svg v-else-if="getProductPlaceholder(product.name).icon === 'briefcase'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-white/90">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .994-.806 1.8-1.8 1.8H5.55c-.994 0-1.8-.806-1.8-1.8v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H5.184c-.267 0-.523-.093-.717-.258m16.5 0V8.706c0-1.08-.768-2.014-1.837-2.174a47.79 47.79 0 0 0-3.413-.387m-7.5 0V5.25A2.25 2.25 0 0 1 10.5 3h3a2.25 2.25 0 0 1 2.25 2.25v.819M6.75 7.5v.75m0-1.5h10.5M6.75 7.5H4.25m13 0h2.5M6.75 7.5v8.25M17.25 7.5v8.25M3 16.5h18" />
+              </svg>
+              <svg v-else-if="getProductPlaceholder(product.name).icon === 'academic'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-white/90">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M12 21v-4.5" />
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-white/90">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.753 2.481.162l5.586-5.586a1.725 1.725 0 0 0 .162-2.481l-9.58-9.581A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
+              </svg>
+            </div>
           </div>
           <div v-if="product.images.length > 1" class="flex gap-3 overflow-x-auto py-1">
             <button
@@ -117,7 +140,7 @@
           <!-- Action Buttons -->
           <div class="flex gap-4 pt-4">
             <button
-              @click="addToCart"
+              @click="addToCart()"
               :disabled="product.stock === 0"
               class="flex-1 bg-blue-700 hover:bg-blue-800 text-white font-bold py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed text-sm uppercase tracking-wider"
             >
@@ -140,28 +163,12 @@
       <section v-if="relatedProducts.length > 0" class="space-y-6">
         <h2 class="text-xl font-extrabold text-slate-900">Sản phẩm liên quan</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div v-for="related in relatedProducts" :key="related._id" class="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-lg transition-all flex flex-col group relative">
-            <span v-if="getDiscountPercent(related.price, related.discountPrice) > 0" class="absolute top-4 left-4 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full z-10">
-              -{{ getDiscountPercent(related.price, related.discountPrice) }}%
-            </span>
-            <div class="aspect-square bg-slate-50 rounded-xl overflow-hidden mb-4 relative">
-              <img :src="related.images[0] || 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-            </div>
-            <h3 class="text-sm font-bold text-slate-800 line-clamp-2 min-h-[40px] group-hover:text-blue-700 transition-colors">
-              <router-link :to="`/products/${related._id}`">{{ related.name }}</router-link>
-            </h3>
-            <div class="mt-2 flex items-center justify-between">
-              <div class="flex flex-col">
-                <template v-if="related.discountPrice > 0">
-                  <span class="text-base font-extrabold text-blue-700">{{ formatCurrency(related.discountPrice) }}</span>
-                  <span class="text-xs text-slate-400 line-through">{{ formatCurrency(related.price) }}</span>
-                </template>
-                <template v-else>
-                  <span class="text-base font-extrabold text-slate-800">{{ formatCurrency(related.price) }}</span>
-                </template>
-              </div>
-            </div>
-          </div>
+          <ProductCard
+            v-for="related in relatedProducts"
+            :key="related._id"
+            :product="related"
+            @add-to-cart="addToCart"
+          />
         </div>
       </section>
     </div>
@@ -174,6 +181,7 @@ import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
 import { productService } from '@/services/product.service'
+import ProductCard from '@/components/ProductCard.vue'
 import { formatCurrency, getDiscountPercent } from '@/utils/helpers'
 import type { Product } from '@/types'
 
@@ -226,10 +234,61 @@ function validateQuantity() {
   }
 }
 
-function addToCart() {
-  if (product.value) {
+function addToCart(prod?: Product) {
+  if (prod) {
+    cartStore.addToCart(prod, 1)
+    toast.success(`Đã thêm "${prod.name}" vào giỏ hàng`)
+  } else if (product.value) {
     cartStore.addToCart(product.value, quantity.value)
     toast.success(`Đã thêm ${quantity.value} "${product.value.name}" vào giỏ hàng`)
+  }
+}
+
+function formatNumber(num: number) {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+
+function getProductPlaceholder(prodName?: string) {
+  const name = (prodName || '').toLowerCase()
+  if (name.includes('bút') || name.includes('viết') || name.includes('chì')) {
+    return {
+      gradient: 'bg-gradient-to-br from-red-400 to-rose-500',
+      icon: 'pencil'
+    }
+  }
+  if (name.includes('giấy') || name.includes('sổ') || name.includes('vở') || name.includes('tập') || name.includes('note')) {
+    return {
+      gradient: 'bg-gradient-to-br from-emerald-400 to-teal-500',
+      icon: 'document'
+    }
+  }
+  if (name.includes('máy tính') || name.includes('casio')) {
+    return {
+      gradient: 'bg-gradient-to-br from-indigo-400 to-purple-500',
+      icon: 'calculator'
+    }
+  }
+  if (name.includes('hồ sơ') || name.includes('bìa') || name.includes('kẹp') || name.includes('keo') || name.includes('thước')) {
+    return {
+      gradient: 'bg-gradient-to-br from-blue-400 to-sky-500',
+      icon: 'folder'
+    }
+  }
+  if (name.includes('combo') || name.includes('văn phòng')) {
+    return {
+      gradient: 'bg-gradient-to-br from-blue-500 to-indigo-600',
+      icon: 'briefcase'
+    }
+  }
+  if (name.includes('học sinh') || name.includes('tiểu học') || name.includes('bộ dụng cụ')) {
+    return {
+      gradient: 'bg-gradient-to-br from-amber-400 to-orange-500',
+      icon: 'academic'
+    }
+  }
+  return {
+    gradient: 'bg-gradient-to-br from-pink-400 to-rose-500',
+    icon: 'paint'
   }
 }
 </script>

@@ -94,7 +94,7 @@
                 <div class="min-w-0">
                   <p class="font-extrabold truncate max-w-[200px] text-slate-800 leading-tight">{{ prod.name }}</p>
                   <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
-                    {{ typeof prod.category === 'object' ? prod.category.name : 'Khác' }}
+                    {{ (prod.category && typeof prod.category === 'object') ? prod.category.name : 'Khác' }}
                   </p>
                 </div>
               </td>
@@ -202,8 +202,8 @@ async function fetchProducts() {
       q: searchQuery.value || undefined,
       category: selectedCategory.value || undefined,
     })
-    products.value = res.data
-    totalPages.value = res.totalPages || 1
+    products.value = res.data.data
+    totalPages.value = res.data.totalPages || 1
   } catch (err) {
     toast.error('Lỗi khi tải danh sách sản phẩm')
   } finally {
@@ -261,8 +261,8 @@ function getProductStatusLabel(status: string) {
     : 'Ngừng bán'
 }
 
-function getProductPlaceholder(prodName: string) {
-  const name = prodName.toLowerCase()
+function getProductPlaceholder(prodName?: string) {
+  const name = (prodName || '').toLowerCase()
   if (name.includes('bút') || name.includes('viết') || name.includes('chì')) {
     return {
       gradient: 'bg-gradient-to-br from-red-400 to-rose-500',
