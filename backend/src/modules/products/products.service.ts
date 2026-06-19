@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { CreateProductDto, UpdateProductDto, ProductQueryDto } from './dto/product.dto';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
+import { InventoryStatus } from '../../common/enums';
 
 @Injectable()
 export class ProductsService {
@@ -25,7 +26,32 @@ export class ProductsService {
   async create(dto: CreateProductDto): Promise<ProductDocument> {
     const slug = dto.slug || this.generateSlug(dto.name);
     const product = new this.productModel({ ...dto, slug });
-    return product.save();
+    const savedProduct = await product.save();
+
+    // Automatically create inventory entry
+    try {
+      const inventoryModel = this.productModel.db.model('Inventory');
+      const currentStock = savedProduct.stock || 0;
+      let status = InventoryStatus.IN_STOCK;
+      if (currentStock <= 0) {
+        status = InventoryStatus.OUT_OF_STOCK;
+      } else if (currentStock <= 10) {
+        status = InventoryStatus.LOW_STOCK;
+      }
+
+      await inventoryModel.create({
+        product: savedProduct._id,
+        currentStock,
+        minStock: 10,
+        maxStock: 1000,
+        status,
+        lastUpdated: new Date(),
+      });
+    } catch (err) {
+      console.error('Failed to auto-create inventory for new product:', err);
+    }
+
+    return savedProduct;
   }
 
   async findAll(query: ProductQueryDto): Promise<PaginatedResult<ProductDocument>> {

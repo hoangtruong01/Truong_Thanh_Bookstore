@@ -10,11 +10,9 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-20 gap-4">
           <!-- Logo -->
-          <router-link to="/" class="flex items-center gap-2 flex-shrink-0">
+          <router-link to="/" class="flex items-center gap-2.5 flex-shrink-0">
             <!-- Icon TT -->
-            <div class="w-8 h-8 rounded-lg bg-[#dc2626] flex items-center justify-center text-white font-extrabold text-lg tracking-tighter">
-              TT
-            </div>
+            <img src="@/assets/logo.jpg" class="w-10 h-10 rounded-full object-cover border border-slate-200" alt="Trường Thành Logo" />
             <div class="flex flex-col leading-none">
               <span class="text-lg font-black text-[#dc2626] tracking-tight">TRƯỜNG THÀNH</span>
               <span class="text-[9px] font-bold text-slate-500 tracking-widest uppercase">Stationery</span>

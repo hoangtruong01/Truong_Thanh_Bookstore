@@ -224,7 +224,7 @@ async function submitAdjustment() {
   try {
     const prodId = typeof selectedStock.value.product === 'object' ? selectedStock.value.product._id : selectedStock.value.product
     const payload = {
-      productId: prodId,
+      product: prodId,
       quantity: adjustQty.value,
       note: adjustNote.value,
     }

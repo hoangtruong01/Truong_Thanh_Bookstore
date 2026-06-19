@@ -3,11 +3,9 @@
     <!-- Sidebar (Matches Screenshot: light background) -->
     <aside class="w-64 bg-white border-r border-slate-200 flex flex-col shadow-xs flex-shrink-0">
       <!-- Sidebar Header / Logo -->
-      <div class="h-20 flex items-center px-6 border-b border-slate-200 gap-2 bg-white">
+      <div class="h-20 flex items-center px-6 border-b border-slate-200 gap-2.5 bg-white">
         <!-- Emblem -->
-        <div class="w-7 h-7 rounded-lg bg-[#dc2626] flex items-center justify-center text-white font-extrabold text-sm tracking-tighter">
-          TT
-        </div>
+        <img src="@/assets/logo.jpg" class="w-8.5 h-8.5 rounded-full object-cover border border-slate-200" alt="Trường Thành Logo" />
         <div class="flex flex-col leading-none">
           <span class="text-sm font-black text-[#dc2626] tracking-tight uppercase">TRƯỜNG THÀNH</span>
           <span class="text-[8px] font-bold text-slate-400 tracking-wider uppercase">ADMIN PANEL</span>
