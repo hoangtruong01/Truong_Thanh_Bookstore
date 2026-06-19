@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import {
   Inventory, InventoryDocument,
   InventoryTransaction, InventoryTransactionDocument,
@@ -35,11 +35,12 @@ export class InventoryService {
   }
 
   async importStock(dto: InventoryTransactionDto, userId?: string): Promise<InventoryDocument> {
-    let inventory = await this.inventoryModel.findOne({ product: dto.product }).exec();
+    const productObjectId = new Types.ObjectId(dto.product);
+    let inventory = await this.inventoryModel.findOne({ product: productObjectId }).exec();
 
     if (!inventory) {
       inventory = new this.inventoryModel({
-        product: dto.product,
+        product: productObjectId,
         currentStock: dto.quantity,
       });
     } else {
@@ -50,12 +51,12 @@ export class InventoryService {
     inventory.lastUpdated = new Date();
     await inventory.save();
 
-    // Update product stock
-    await this.productsService.updateStock(dto.product, dto.quantity);
+    // Set product stock to match inventory currentStock
+    await this.productsService.setStock(dto.product.toString(), inventory.currentStock);
 
     // Log transaction
     await this.transactionModel.create({
-      product: dto.product,
+      product: productObjectId,
       type: InventoryTransactionType.IMPORT,
       quantity: dto.quantity,
       note: dto.note,
@@ -66,7 +67,8 @@ export class InventoryService {
   }
 
   async exportStock(dto: InventoryTransactionDto, userId?: string): Promise<InventoryDocument> {
-    const inventory = await this.inventoryModel.findOne({ product: dto.product }).exec();
+    const productObjectId = new Types.ObjectId(dto.product);
+    const inventory = await this.inventoryModel.findOne({ product: productObjectId }).exec();
     if (!inventory) throw new NotFoundException('Inventory record not found');
 
     inventory.currentStock = Math.max(0, inventory.currentStock - dto.quantity);
@@ -74,10 +76,11 @@ export class InventoryService {
     inventory.lastUpdated = new Date();
     await inventory.save();
 
-    await this.productsService.updateStock(dto.product, -dto.quantity);
+    // Set product stock to match inventory currentStock
+    await this.productsService.setStock(dto.product.toString(), inventory.currentStock);
 
     await this.transactionModel.create({
-      product: dto.product,
+      product: productObjectId,
       type: InventoryTransactionType.EXPORT,
       quantity: dto.quantity,
       note: dto.note,
@@ -88,16 +91,15 @@ export class InventoryService {
   }
 
   async adjustStock(dto: AdjustInventoryDto, userId?: string): Promise<InventoryDocument> {
-    let inventory = await this.inventoryModel.findOne({ product: dto.product }).exec();
+    const productObjectId = new Types.ObjectId(dto.product);
+    let inventory = await this.inventoryModel.findOne({ product: productObjectId }).exec();
 
     if (!inventory) {
       inventory = new this.inventoryModel({
-        product: dto.product,
+        product: productObjectId,
         currentStock: dto.quantity,
       });
     } else {
-      const diff = dto.quantity - inventory.currentStock;
-      await this.productsService.updateStock(dto.product, diff);
       inventory.currentStock = dto.quantity;
     }
 
@@ -105,8 +107,11 @@ export class InventoryService {
     inventory.lastUpdated = new Date();
     await inventory.save();
 
+    // Set product stock to match inventory currentStock
+    await this.productsService.setStock(dto.product.toString(), inventory.currentStock);
+
     await this.transactionModel.create({
-      product: dto.product,
+      product: productObjectId,
       type: InventoryTransactionType.ADJUST,
       quantity: dto.quantity,
       note: dto.note,

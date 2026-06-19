@@ -135,7 +135,7 @@ const navItems = [
   { name: 'AdminDashboard', label: 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
   { name: 'AdminProducts', label: 'Sản phẩm', to: '/admin/products', icon: ProductsIcon },
   { name: 'AdminOrders', label: 'Đơn hàng', to: '/admin/orders', icon: OrdersIcon },
-  { name: 'AdminInventory', label: 'Tồn kho', to: '/admin/inventory', icon: InventoryIcon },
+  { name: 'AdminInventory', label: 'Kho', to: '/admin/inventory', icon: InventoryIcon },
   { name: 'AdminCategories', label: 'Danh mục', to: '/admin/categories', icon: CategoriesIcon },
   { name: 'AdminCustomers', label: 'Khách hàng', to: '/admin/customers', icon: CustomersIcon },
   { name: 'AdminPromotions', label: 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon },

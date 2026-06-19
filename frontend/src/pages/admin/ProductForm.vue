@@ -97,7 +97,7 @@
         </div>
 
         <div>
-          <label class="text-xs font-bold text-slate-700">Tồn kho ban đầu *</label>
+          <label class="text-xs font-bold text-slate-700">Số lượng kho ban đầu *</label>
           <input
             v-model.number="form.stock"
             type="number"

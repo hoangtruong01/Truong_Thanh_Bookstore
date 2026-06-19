@@ -64,7 +64,7 @@
               <th class="py-4 px-6">Sản phẩm</th>
               <th class="py-4 px-6">SKU</th>
               <th class="py-4 px-6">Giá</th>
-              <th class="py-4 px-6">Tồn kho</th>
+              <th class="py-4 px-6">Kho</th>
               <th class="py-4 px-6">Đã bán</th>
               <th class="py-4 px-6">Trạng thái</th>
               <th class="py-4 px-6 text-right">Thao tác</th>

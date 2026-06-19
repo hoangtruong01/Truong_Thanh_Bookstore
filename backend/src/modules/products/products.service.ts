@@ -189,7 +189,49 @@ export class ProductsService {
   }
 
   async updateStock(id: string, quantity: number): Promise<void> {
-    await this.productModel.findByIdAndUpdate(id, { $inc: { stock: quantity } }).exec();
+    const updated = await this.productModel.findByIdAndUpdate(id, { $inc: { stock: quantity } }, { new: true }).exec();
+    if (updated) {
+      try {
+        const inventoryModel = this.productModel.db.model('Inventory');
+        const minStock = 10;
+        let status = InventoryStatus.IN_STOCK;
+        if (updated.stock <= 0) {
+          status = InventoryStatus.OUT_OF_STOCK;
+        } else if (updated.stock <= minStock) {
+          status = InventoryStatus.LOW_STOCK;
+        }
+        await inventoryModel.findOneAndUpdate(
+          { product: id },
+          { currentStock: updated.stock, status, lastUpdated: new Date() },
+          { upsert: true }
+        ).exec();
+      } catch (err) {
+        // Ignore if model not registered
+      }
+    }
+  }
+
+  async setStock(id: string, quantity: number): Promise<void> {
+    const updated = await this.productModel.findByIdAndUpdate(id, { stock: quantity }, { new: true }).exec();
+    if (updated) {
+      try {
+        const inventoryModel = this.productModel.db.model('Inventory');
+        const minStock = 10;
+        let status = InventoryStatus.IN_STOCK;
+        if (updated.stock <= 0) {
+          status = InventoryStatus.OUT_OF_STOCK;
+        } else if (updated.stock <= minStock) {
+          status = InventoryStatus.LOW_STOCK;
+        }
+        await inventoryModel.findOneAndUpdate(
+          { product: id },
+          { currentStock: updated.stock, status, lastUpdated: new Date() },
+          { upsert: true }
+        ).exec();
+      } catch (err) {
+        // Ignore
+      }
+    }
   }
 
   async incrementSold(id: string, quantity: number): Promise<void> {
