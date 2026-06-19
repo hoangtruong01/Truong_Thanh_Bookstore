@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { CreateProductDto, UpdateProductDto, ProductQueryDto } from './dto/product.dto';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
@@ -61,11 +61,18 @@ export class ProductsService {
     if (category) {
       try {
         const categoryModel = this.productModel.db.model('Category');
-        const subCategories = await categoryModel.find({ parentId: category }).exec();
-        const categoryIds = [category, ...subCategories.map(c => c._id)];
+        const subCategories = await categoryModel.find({ parentId: new Types.ObjectId(category) }).exec();
+        const categoryIds = [
+          new Types.ObjectId(category),
+          ...subCategories.map(c => c._id),
+        ];
         filter.category = { $in: categoryIds };
       } catch (err) {
-        filter.category = category;
+        try {
+          filter.category = new Types.ObjectId(category);
+        } catch {
+          filter.category = category;
+        }
       }
     }
     if (brand) filter.brand = brand;
