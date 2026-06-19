@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col bg-slate-50">
     <!-- Top Bar -->
-    <div class="bg-blue-800 text-white text-xs py-2 text-center font-medium uppercase tracking-wider">
+    <div class="bg-[#dc2626] text-white text-xs py-2 text-center font-medium uppercase tracking-wider">
       ⚡ Miễn phí giao hàng cho đơn từ 299K • Đổi trả dễ dàng ⚡
     </div>
 
@@ -11,41 +11,60 @@
         <div class="flex items-center justify-between h-20 gap-4">
           <!-- Logo -->
           <router-link to="/" class="flex items-center gap-2 flex-shrink-0">
-            <span class="text-2xl font-black bg-gradient-to-r from-blue-700 to-indigo-800 bg-clip-text text-transparent tracking-tight">
-              TRƯỜNG THÀNH
-            </span>
-            <span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide">
-              Stationery
-            </span>
+            <!-- Icon TT -->
+            <div class="w-8 h-8 rounded-lg bg-[#dc2626] flex items-center justify-center text-white font-extrabold text-lg tracking-tighter">
+              TT
+            </div>
+            <div class="flex flex-col leading-none">
+              <span class="text-lg font-black text-[#dc2626] tracking-tight">TRƯỜNG THÀNH</span>
+              <span class="text-[9px] font-bold text-slate-500 tracking-widest uppercase">Stationery</span>
+            </div>
           </router-link>
 
           <!-- Search Bar -->
           <div class="flex-1 max-w-xl hidden md:block">
             <form @submit.prevent="handleSearch" class="relative">
-              <input
-                v-model="searchQuery"
-                type="text"
-                placeholder="Tìm kiếm dụng cụ học tập, văn phòng phẩm..."
-                class="w-full bg-slate-100 border-none rounded-full py-2.5 pl-5 pr-12 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-slate-400"
-              />
-              <button type="submit" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-blue-700">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m21-21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
-                </svg>
-              </button>
+              <div class="relative w-full">
+                <input
+                  v-model="searchQuery"
+                  type="text"
+                  placeholder="Tìm kiếm, sổ tay, giấy A4, kẹp giấy..."
+                  class="w-full bg-slate-100 border border-slate-200 rounded-full py-2.5 pl-5 pr-28 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:border-transparent transition-all placeholder:text-slate-400"
+                />
+                <button type="submit" class="absolute right-1 top-1/2 -translate-y-1/2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold px-4 py-2 rounded-full transition-colors cursor-pointer">
+                  Tìm kiếm
+                </button>
+              </div>
             </form>
           </div>
 
           <!-- Utility Icons -->
           <div class="flex items-center gap-6">
+            <!-- Notifications -->
+            <button class="relative text-slate-700 hover:text-[#dc2626] transition-colors cursor-pointer">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+              </svg>
+            </button>
+
+            <!-- Cart -->
+            <router-link to="/cart" class="relative text-slate-700 hover:text-[#dc2626] flex items-center gap-1 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+              </svg>
+              <span v-if="cartStore.itemsCount > 0" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {{ cartStore.itemsCount }}
+              </span>
+            </router-link>
+
             <!-- Account -->
             <div class="relative">
               <template v-if="authStore.isAuthenticated">
                 <div class="flex items-center gap-2 cursor-pointer group">
-                  <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold border border-blue-200">
+                  <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-[#dc2626] font-bold border border-red-100">
                     {{ authStore.user?.fullName.charAt(0).toUpperCase() }}
                   </div>
-                  <span class="text-sm font-medium text-slate-700 group-hover:text-blue-700 max-w-[120px] truncate hidden lg:block">
+                  <span class="text-sm font-medium text-slate-700 group-hover:text-[#dc2626] max-w-[120px] truncate hidden lg:block transition-colors">
                     {{ authStore.user?.fullName }}
                   </span>
                   <!-- Dropdown Menu -->
@@ -62,7 +81,7 @@
                 </div>
               </template>
               <template v-else>
-                <router-link to="/login" class="flex items-center gap-1.5 text-slate-700 hover:text-blue-700 font-medium text-sm">
+                <router-link to="/login" class="flex items-center gap-1.5 text-slate-700 hover:text-[#dc2626] font-medium text-sm transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                   </svg>
@@ -70,31 +89,18 @@
                 </router-link>
               </template>
             </div>
-
-            <!-- Cart -->
-            <router-link to="/cart" class="relative text-slate-700 hover:text-blue-700 flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
-              </svg>
-              <span v-if="cartStore.itemsCount > 0" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                {{ cartStore.itemsCount }}
-              </span>
-            </router-link>
           </div>
         </div>
       </div>
 
       <!-- Categories Navigation -->
-      <nav class="bg-slate-50 border-t border-slate-200">
+      <nav class="bg-white border-t border-slate-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-6 overflow-x-auto whitespace-nowrap scrollbar-none h-12">
-          <router-link to="/" class="text-sm font-semibold text-slate-700 hover:text-blue-700 py-3.5 border-b-2 border-transparent hover:border-blue-700">
-            Trang Chủ
-          </router-link>
-          <router-link to="/products" class="text-sm font-semibold text-slate-700 hover:text-blue-700 py-3.5 border-b-2 border-transparent hover:border-blue-700">
-            Tất Cả Sản Phẩm
+          <router-link to="/" class="text-sm font-semibold text-slate-700 hover:text-[#dc2626] py-3.5 border-b-2 border-transparent hover:border-[#dc2626] transition-colors">
+            Tất cả sản phẩm
           </router-link>
           <template v-for="cat in parentCategories" :key="cat._id">
-            <router-link :to="`/products?category=${cat._id}`" class="text-sm font-semibold text-slate-700 hover:text-blue-700 py-3.5 border-b-2 border-transparent hover:border-blue-700">
+            <router-link :to="`/products?category=${cat._id}`" class="text-sm font-semibold text-slate-700 hover:text-[#dc2626] py-3.5 border-b-2 border-transparent hover:border-[#dc2626] transition-colors">
               {{ cat.name }}
             </router-link>
           </template>
