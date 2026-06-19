@@ -27,12 +27,31 @@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
       <!-- Orders List (Matches Screenshot) -->
       <div class="xl:col-span-2 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+        <!-- Search box -->
+        <div class="p-4 border-b border-slate-100 flex gap-4 items-center">
+          <div class="relative flex-grow">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
+            </span>
+            <input
+              v-model="orderQuery"
+              type="text"
+              placeholder="Tìm kiếm theo mã đơn, tên khách hàng, số điện thoại..."
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold transition-all placeholder:text-slate-400"
+            />
+          </div>
+        </div>
+
         <div v-if="loading" class="p-8 animate-pulse space-y-4">
           <div v-for="n in 5" :key="n" class="h-12 bg-slate-100 rounded-xl w-full"></div>
         </div>
 
+        <div v-else-if="orders.length === 0" class="p-16 text-center text-slate-400 font-bold text-xs uppercase tracking-wider">
+          Chưa có đơn hàng nào trong hệ thống.
+        </div>
+
         <div v-else-if="filteredOrders.length === 0" class="p-16 text-center text-slate-400 font-bold text-xs uppercase tracking-wider">
-          Không có đơn hàng nào trong trạng thái này.
+          Không tìm thấy đơn hàng nào phù hợp.
         </div>
 
         <div v-else class="overflow-x-auto">
@@ -233,9 +252,21 @@ async function fetchOrders() {
   }
 }
 
+const orderQuery = ref('')
+
 const filteredOrders = computed(() => {
-  if (currentTab.value === 'ALL') return orders.value
-  return orders.value.filter(o => o.orderStatus === currentTab.value)
+  let list = orders.value
+  if (currentTab.value !== 'ALL') {
+    list = list.filter(o => o.orderStatus === currentTab.value)
+  }
+  if (!orderQuery.value) return list
+  const q = orderQuery.value.toLowerCase().trim()
+  return list.filter(o => {
+    const code = (o.orderCode || '').toLowerCase()
+    const name = (o.customerName || '').toLowerCase()
+    const phone = (o.phone || '').toLowerCase()
+    return code.includes(q) || name.includes(q) || phone.includes(q)
+  })
 })
 
 function selectTab(tabVal: string) {

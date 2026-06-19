@@ -20,12 +20,31 @@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
       <!-- Promotions List -->
       <div class="xl:col-span-2 bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+        <!-- Search box -->
+        <div class="p-4 border-b border-slate-100 flex gap-4 items-center">
+          <div class="relative flex-grow">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
+            </span>
+            <input
+              v-model="promoQuery"
+              type="text"
+              placeholder="Tìm kiếm mã giảm giá theo mã hoặc tên chương trình..."
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white text-slate-700 font-semibold transition-all placeholder:text-slate-400"
+            />
+          </div>
+        </div>
+
         <div v-if="loading" class="p-8 animate-pulse space-y-4">
           <div v-for="n in 5" :key="n" class="h-12 bg-slate-100 rounded-xl w-full"></div>
         </div>
 
         <div v-else-if="promotions.length === 0" class="p-16 text-center text-slate-400 font-medium">
           Chưa có mã giảm giá nào trong hệ thống.
+        </div>
+
+        <div v-else-if="filteredPromotions.length === 0" class="p-16 text-center text-slate-400 font-medium">
+          Không tìm thấy mã giảm giá nào phù hợp.
         </div>
 
         <div v-else class="overflow-x-auto">
@@ -41,7 +60,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
-              <tr v-for="promo in promotions" :key="promo._id" class="hover:bg-slate-50/50">
+              <tr v-for="promo in filteredPromotions" :key="promo._id" class="hover:bg-slate-50/50">
                 <td class="py-4 px-6 font-mono text-xs font-bold text-slate-900 bg-slate-50/20">{{ promo.code }}</td>
                 <td class="py-4 px-6">
                   <p class="font-bold text-slate-800">{{ promo.name }}</p>
@@ -191,7 +210,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import { promotionService } from '@/services/promotion.service'
 import { formatCurrency } from '@/utils/helpers'
@@ -203,6 +222,18 @@ const promotions = ref<Promotion[]>([])
 const loading = ref(true)
 const showForm = ref(false)
 const submitting = ref(false)
+const promoQuery = ref('')
+
+const filteredPromotions = computed(() => {
+  if (!promoQuery.value) return promotions.value
+  const q = promoQuery.value.toLowerCase().trim()
+  return promotions.value.filter(promo => {
+    const code = (promo.code || '').toLowerCase()
+    const name = (promo.name || '').toLowerCase()
+    const desc = (promo.description || '').toLowerCase()
+    return code.includes(q) || name.includes(q) || desc.includes(q)
+  })
+})
 
 const form = reactive({
   code: '',

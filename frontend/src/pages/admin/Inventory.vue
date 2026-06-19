@@ -48,12 +48,31 @@
       <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         <!-- Stock List Table -->
         <div class="xl:col-span-2 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+          <!-- Search box -->
+          <div class="p-4 border-b border-slate-100 flex gap-4 items-center">
+            <div class="relative flex-grow">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
+              </span>
+              <input
+                v-model="stockQuery"
+                type="text"
+                placeholder="Tìm kiếm theo tên sản phẩm hoặc SKU..."
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold transition-all placeholder:text-slate-400"
+              />
+            </div>
+          </div>
+
           <div v-if="loading" class="p-8 animate-pulse space-y-4">
             <div v-for="n in 5" :key="n" class="h-12 bg-slate-100 rounded-xl w-full"></div>
           </div>
 
           <div v-else-if="stocks.length === 0" class="p-16 text-center text-slate-400 font-bold text-xs uppercase tracking-wider">
             Chưa có thông tin kho cho sản phẩm nào.
+          </div>
+
+          <div v-else-if="filteredStocks.length === 0" class="p-16 text-center text-slate-400 font-bold text-xs uppercase tracking-wider">
+            Không tìm thấy sản phẩm phù hợp.
           </div>
 
           <div v-else class="overflow-x-auto">
@@ -69,7 +88,7 @@
               </thead>
               <tbody class="divide-y divide-slate-150 font-medium text-slate-800">
                 <tr
-                  v-for="stk in stocks"
+                  v-for="stk in filteredStocks"
                   :key="stk._id"
                   @click="selectStock(stk)"
                   class="hover:bg-slate-50/50 cursor-pointer transition-colors"
@@ -177,12 +196,31 @@
 
     <!-- Tab 2: Lịch sử giao dịch kho -->
     <div v-else-if="activeTab === 'history'" class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+      <!-- Search Box -->
+      <div class="p-4 border-b border-slate-100 flex gap-4 items-center">
+        <div class="relative flex-grow">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
+          </span>
+          <input
+            v-model="historyQuery"
+            type="text"
+            placeholder="Tìm kiếm lịch sử theo tên sản phẩm, SKU hoặc ghi chú..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold transition-all placeholder:text-slate-400"
+          />
+        </div>
+      </div>
+
       <div v-if="loadingTransactions" class="p-8 animate-pulse space-y-4">
         <div v-for="n in 5" :key="n" class="h-12 bg-slate-100 rounded-xl w-full"></div>
       </div>
 
       <div v-else-if="transactions.length === 0" class="p-16 text-center text-slate-400 font-bold text-xs uppercase tracking-wider">
         Chưa có lịch sử giao dịch kho nào được ghi nhận.
+      </div>
+
+      <div v-else-if="filteredTransactions.length === 0" class="p-16 text-center text-slate-400 font-bold text-xs uppercase tracking-wider">
+        Không tìm thấy lịch sử phù hợp.
       </div>
 
       <div v-else class="overflow-x-auto">
@@ -199,7 +237,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-150 font-medium text-slate-700">
-            <tr v-for="tx in transactions" :key="tx._id" class="hover:bg-slate-50/50">
+            <tr v-for="tx in filteredTransactions" :key="tx._id" class="hover:bg-slate-50/50">
               <td class="py-4 px-6 text-slate-500 font-semibold">{{ formatDateTime(tx.createdAt) }}</td>
               <td class="py-4 px-6 font-extrabold text-slate-800 truncate max-w-[220px]">{{ tx.product?.name || 'Sản phẩm đã bị xóa' }}</td>
               <td class="py-4 px-6 font-mono text-[10px] font-bold text-slate-500">{{ tx.product?.sku || '-' }}</td>
@@ -276,6 +314,32 @@ async function fetchTransactions() {
     loadingTransactions.value = false
   }
 }
+
+// Search states
+const stockQuery = ref('')
+const historyQuery = ref('')
+
+const filteredStocks = computed(() => {
+  if (!stockQuery.value) return stocks.value
+  const q = stockQuery.value.toLowerCase().trim()
+  return stocks.value.filter(stk => {
+    const name = getProductName(stk).toLowerCase()
+    const sku = getProductSku(stk).toLowerCase()
+    return name.includes(q) || sku.includes(q)
+  })
+})
+
+const filteredTransactions = computed(() => {
+  if (!historyQuery.value) return transactions.value
+  const q = historyQuery.value.toLowerCase().trim()
+  return transactions.value.filter(tx => {
+    const prodName = (tx.product?.name || '').toLowerCase()
+    const prodSku = (tx.product?.sku || '').toLowerCase()
+    const note = (tx.note || '').toLowerCase()
+    const creator = (tx.createdBy?.fullName || '').toLowerCase()
+    return prodName.includes(q) || prodSku.includes(q) || note.includes(q) || creator.includes(q)
+  })
+})
 
 // Low Stock warning computation matching screenshot
 const lowStockItems = computed(() => {
