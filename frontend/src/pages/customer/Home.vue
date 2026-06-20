@@ -138,60 +138,6 @@
       </div>
     </section>
 
-    <!-- Chapter 4: Best Sellers Section -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
-      <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
-        <div>
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Mọi người yêu thích</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">🔥 Sản phẩm bán chạy</h2>
-        </div>
-        <router-link to="/products" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
-          <span>Xem tất cả</span>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
-        </router-link>
-      </div>
-
-      <div v-if="loadingBest" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        <div v-for="n in 10" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse">
-          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-        </div>
-      </div>
-
-      <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        <ProductCard
-          v-for="(prod, index) in bestSelling"
-          :key="prod._id"
-          :product="prod"
-          :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
-          @add-to-cart="addToCart"
-        />
-      </div>
-    </section>
-
-    <!-- Chapter 5: Editorial Visual Break -->
-    <section class="relative min-h-[50vh] flex items-center justify-center bg-slate-900 text-white overflow-hidden py-16 px-4">
-      <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-25" style="background-image: url('https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80');"></div>
-      <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent"></div>
-      
-      <div class="relative max-w-3xl mx-auto text-center space-y-6 z-10 reveal">
-        <span class="text-xs font-bold text-amber-400 tracking-[0.3em] uppercase">Không Gian Cảm Hứng</span>
-        <h2 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
-          Nâng tầm góc làm việc & học tập của bạn
-        </h2>
-        <p class="text-slate-300 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
-          Góc làm việc gọn gàng, dụng cụ chất lượng là chiếc chìa khóa vạn năng khơi dậy động lực sáng tạo mỗi ngày. Hãy cùng Trường Thành trang trí không gian của bạn.
-        </p>
-        <div class="pt-2">
-          <router-link to="/products" class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs py-3 px-6 rounded-full transition-all cursor-pointer">
-            <span>Tìm cảm hứng</span>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3" /></svg>
-          </router-link>
-        </div>
-      </div>
-    </section>
-
     <!-- Chapter 6: Deal Zone (Urgency) -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
       <div class="reveal flex flex-col sm:flex-row sm:items-end justify-between border-b border-slate-100 pb-4 gap-4">
@@ -222,6 +168,60 @@
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 4) * 100}`]"
+          @add-to-cart="addToCart"
+        />
+      </div>
+    </section>
+
+    <!-- Chapter 5: Editorial Visual Break -->
+    <section class="relative min-h-[50vh] flex items-center justify-center bg-slate-900 text-white overflow-hidden py-16 px-4">
+      <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-25" style="background-image: url('https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80');"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent"></div>
+      
+      <div class="relative max-w-3xl mx-auto text-center space-y-6 z-10 reveal">
+        <span class="text-xs font-bold text-amber-400 tracking-[0.3em] uppercase">Không Gian Cảm Hứng</span>
+        <h2 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
+          Nâng tầm góc làm việc & học tập của bạn
+        </h2>
+        <p class="text-slate-300 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
+          Góc làm việc gọn gàng, dụng cụ chất lượng là chiếc chìa khóa vạn năng khơi dậy động lực sáng tạo mỗi ngày. Hãy cùng Trường Thành trang trí không gian của bạn.
+        </p>
+        <div class="pt-2">
+          <router-link to="/products" class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs py-3 px-6 rounded-full transition-all cursor-pointer">
+            <span>Tìm cảm hứng</span>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3" /></svg>
+          </router-link>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chapter 4: Best Sellers Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
+      <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
+        <div>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Mọi người yêu thích</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">🔥 Sản phẩm bán chạy</h2>
+        </div>
+        <router-link to="/products" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
+          <span>Xem tất cả</span>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+        </router-link>
+      </div>
+
+      <div v-if="loadingBest" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <div v-for="n in 10" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse">
+          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
+          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
+          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
+        </div>
+      </div>
+
+      <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <ProductCard
+          v-for="(prod, index) in bestSelling"
+          :key="prod._id"
+          :product="prod"
+          :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
           @add-to-cart="addToCart"
         />
       </div>
