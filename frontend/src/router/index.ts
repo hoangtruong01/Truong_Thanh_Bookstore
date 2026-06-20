@@ -13,6 +13,7 @@ import Cart from '@/pages/customer/Cart.vue'
 import Checkout from '@/pages/customer/Checkout.vue'
 import Login from '@/pages/customer/Login.vue'
 import Register from '@/pages/customer/Register.vue'
+import LandingPageDetail from '@/pages/customer/LandingPageDetail.vue'
 
 // Admin Pages
 import AdminDashboard from '@/pages/admin/Dashboard.vue'
@@ -24,6 +25,7 @@ import AdminCustomers from '@/pages/admin/Customers.vue'
 import AdminPromotions from '@/pages/admin/Promotions.vue'
 import AdminReports from '@/pages/admin/Reports.vue'
 import AdminCombos from '@/pages/admin/Combos.vue'
+import AdminLandingPages from '@/pages/admin/LandingPages.vue'
 
 const routes = [
   {
@@ -35,6 +37,7 @@ const routes = [
       { path: 'products/:id', name: 'ProductDetail', component: ProductDetail },
       { path: 'cart', name: 'Cart', component: Cart },
       { path: 'checkout', name: 'Checkout', component: Checkout, meta: { requiresAuth: true } },
+      { path: 't/:slug', name: 'LandingPageDetail', component: LandingPageDetail },
     ]
   },
   { path: '/login', name: 'Login', component: Login, meta: { guestOnly: true } },
@@ -55,6 +58,7 @@ const routes = [
       { path: 'customers', name: 'AdminCustomers', component: AdminCustomers },
       { path: 'promotions', name: 'AdminPromotions', component: AdminPromotions },
       { path: 'reports', name: 'AdminReports', component: AdminReports },
+      { path: 'landing-pages', name: 'AdminLandingPages', component: AdminLandingPages },
     ]
   },
   { path: '/:pathMatch(.*)*', redirect: '/' }

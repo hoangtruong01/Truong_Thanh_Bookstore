@@ -11,6 +11,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { PromotionsModule } from './modules/promotions/promotions.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { SeedModule } from './seeds/seed.module';
+import { LandingPagesModule } from './modules/landing-pages/landing-pages.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { SeedModule } from './seeds/seed.module';
     PromotionsModule,
     ReportsModule,
     SeedModule,
+    LandingPagesModule,
   ],
 })
 export class AppModule {}

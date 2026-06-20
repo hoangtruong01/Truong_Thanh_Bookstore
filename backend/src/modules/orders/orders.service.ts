@@ -6,12 +6,14 @@ import { CreateOrderDto, UpdateOrderStatusDto, OrderQueryDto } from './dto/order
 import { ProductsService } from '../products/products.service';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
 import { OrderStatus } from '../../common/enums';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     private productsService: ProductsService,
+    private configService: ConfigService,
   ) {}
 
   private generateOrderCode(): string {
@@ -21,6 +23,75 @@ export class OrdersService {
     const d = now.getDate().toString().padStart(2, '0');
     const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
     return `TT${y}${m}${d}${rand}`;
+  }
+
+  async syncToGoogleSheet(order: any) {
+    try {
+      const webappUrl = this.configService.get<string>('GOOGLE_SHEET_WEBAPP_URL');
+      if (!webappUrl) {
+        return;
+      }
+
+      // Format items to readable string
+      const itemsText = order.items
+        ? order.items.map((item: any) => `${item.name} (x${item.quantity})`).join(', ')
+        : '';
+
+      // Format Date in GMT+7
+      const dateText = order.createdAt
+        ? new Date(order.createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+        : new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+
+      // Translate Status
+      let statusLabel = order.orderStatus;
+      switch (order.orderStatus) {
+        case 'PENDING':
+          statusLabel = 'Chờ xử lý';
+          break;
+        case 'CONFIRMED':
+          statusLabel = 'Đã xác nhận';
+          break;
+        case 'SHIPPING':
+          statusLabel = 'Đang giao';
+          break;
+        case 'COMPLETED':
+          statusLabel = 'Hoàn thành';
+          break;
+        case 'CANCELLED':
+          statusLabel = 'Hủy đơn';
+          break;
+      }
+
+      const payload = {
+        orderCode: order.orderCode,
+        createdAt: dateText,
+        customerName: order.customerName || 'Khách vãng lai',
+        phone: order.phone || '',
+        shippingAddress: order.shippingAddress || '',
+        items: itemsText,
+        total: order.total || 0,
+        status: statusLabel,
+        note: order.note || '',
+      };
+
+      const response = await fetch(webappUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error(`Google Sheet Sync Error: Status ${response.status}, ${text}`);
+      } else {
+        const data = await response.json();
+        console.log('Google Sheet Sync success:', data);
+      }
+    } catch (error) {
+      console.error('Failed to sync order to Google Sheet:', error);
+    }
   }
 
   async create(dto: CreateOrderDto, userId?: string): Promise<OrderDocument> {
@@ -52,6 +123,9 @@ export class OrdersService {
       await this.productsService.updateStock(item.product, -item.quantity);
       await this.productsService.incrementSold(item.product, item.quantity);
     }
+
+    // Sync to Google Sheet (async)
+    this.syncToGoogleSheet(savedOrder).catch((err) => console.error(err));
 
     return savedOrder;
   }
@@ -116,7 +190,12 @@ export class OrdersService {
       order.paymentStatus = 'PAID' as any;
     }
 
-    return order.save();
+    const savedOrder = await order.save();
+    
+    // Sync to Google Sheet (async)
+    this.syncToGoogleSheet(savedOrder).catch((err) => console.error(err));
+
+    return savedOrder;
   }
 
   async cancel(id: string): Promise<OrderDocument> {
