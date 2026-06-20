@@ -174,24 +174,87 @@
                 </div>
               </div>
 
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Giá bán lẻ khuyến mãi (đ)</label>
-                  <input
-                    v-model="form.price"
-                    type="number"
-                    placeholder="VD: 179000"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all"
-                  />
+              <!-- 3-Column Quantity/Price Options Table -->
+              <div class="space-y-2 border border-slate-200 p-3.5 rounded-xl bg-slate-50/50">
+                <div class="flex items-center justify-between">
+                  <label class="block text-[11px] font-black text-slate-700 uppercase tracking-wider">Cấu hình Gói / Option Giá bán</label>
+                  <button type="button" @click="addPackage" class="text-[10px] font-black text-[#dc2626] hover:underline cursor-pointer flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3 h-3">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span>Thêm Gói / Option</span>
+                  </button>
                 </div>
-                <div>
-                  <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Giá gốc thị trường (đ)</label>
-                  <input
-                    v-model="form.originalPrice"
-                    type="number"
-                    placeholder="VD: 350000"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all"
-                  />
+                <div class="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-xs">
+                  <table class="w-full text-left border-collapse text-[11px]">
+                    <thead>
+                      <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold">
+                        <th class="p-2">Số lượng / Tên gói</th>
+                        <th class="p-2 w-1/4">Giá khuyến mãi (đ)</th>
+                        <th class="p-2 w-1/4">Giá thị trường (đ)</th>
+                        <th class="p-2 w-16 text-center">Nổi bật</th>
+                        <th class="p-2 w-10 text-center">Xóa</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(pkg, idx) in form.packages" :key="idx" class="border-b border-slate-100 last:border-0 hover:bg-slate-50/30">
+                        <td class="p-1.5 space-y-1">
+                          <input
+                            v-model="pkg.name"
+                            type="text"
+                            placeholder="VD: Mua 1 Quyển"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
+                          />
+                          <input
+                            v-model="pkg.badge"
+                            type="text"
+                            placeholder="Nhãn (VD: Tiết kiệm 49%)"
+                            class="w-full bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[9px] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
+                          />
+                        </td>
+                        <td class="p-1.5">
+                          <input
+                            v-model.number="pkg.price"
+                            type="number"
+                            placeholder="VD: 179000"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
+                          />
+                        </td>
+                        <td class="p-1.5">
+                          <input
+                            v-model.number="pkg.originalPrice"
+                            type="number"
+                            placeholder="VD: 350000"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
+                          />
+                        </td>
+                        <td class="p-1.5 text-center">
+                          <input
+                            type="checkbox"
+                            v-model="pkg.isBestSeller"
+                            @change="onBestSellerChange(idx)"
+                            class="rounded-sm cursor-pointer"
+                          />
+                        </td>
+                        <td class="p-1.5 text-center">
+                          <button
+                            type="button"
+                            @click="removePackage(idx)"
+                            class="text-slate-400 hover:text-red-600 transition-colors"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 mx-auto">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                      <tr v-if="!form.packages || form.packages.length === 0">
+                        <td colspan="5" class="p-4 text-center text-slate-400 italic">
+                          Chưa có gói bán nào. Click "+ Thêm Gói" để cấu hình.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -330,34 +393,7 @@
                 </div>
               </div>
 
-              <!-- Packages Config -->
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <label class="block text-[11px] font-bold text-slate-600">Danh sách các gói Combo bán hàng</label>
-                  <button type="button" @click="addPackage" class="text-xs font-bold text-[#dc2626] hover:underline cursor-pointer">+ Thêm gói</button>
-                </div>
-                <div class="space-y-2">
-                  <div v-for="(pkg, idx) in form.packages" :key="idx" class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 relative group">
-                    <button @click="removePackage(idx)" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                    <div class="grid grid-cols-2 gap-2">
-                      <input v-model="pkg.name" type="text" placeholder="Tên gói (Ví dụ: Mua 2 tặng 1)" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
-                      <input v-model="pkg.badge" type="text" placeholder="Nhãn (Ví dụ: Tiết kiệm 49%)" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
-                    </div>
-                    <div class="grid grid-cols-3 gap-2">
-                      <input v-model.number="pkg.price" type="number" placeholder="Giá bán" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
-                      <input v-model.number="pkg.originalPrice" type="number" placeholder="Giá gốc" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
-                      <label class="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 justify-center">
-                        <input type="checkbox" v-model="pkg.isBestSeller" class="rounded-sm" />
-                        <span>Khuyên dùng</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
+
 
               <!-- Benefits Config -->
               <div class="space-y-3">
@@ -374,6 +410,38 @@
                     </button>
                     <input v-model="bft.title" type="text" placeholder="Tiêu đề lợi ích (Ví dụ: Chính hãng 100%)" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
                     <textarea v-model="bft.description" rows="1" placeholder="Mô tả lợi ích..." class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626]"></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Testimonials / Feedbacks Config -->
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="block text-[11px] font-bold text-slate-600">Đánh giá / Phản hồi khách hàng (Feedback)</label>
+                  <button type="button" @click="addTestimonial" class="text-xs font-bold text-[#dc2626] hover:underline cursor-pointer">+ Thêm phản hồi</button>
+                </div>
+                <div class="space-y-2">
+                  <div v-for="(t, idx) in form.testimonials" :key="idx" class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 relative group font-sans">
+                    <button @click="removeTestimonial(idx)" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div class="grid grid-cols-2 gap-2">
+                      <input v-model="t.authorName" type="text" placeholder="Tên khách hàng" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
+                      <select v-model.number="t.rating" class="bg-white border border-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626]">
+                        <option :value="5">5 sao ★★★★★</option>
+                        <option :value="4">4 sao ★★★★</option>
+                        <option :value="3">3 sao ★★★</option>
+                        <option :value="2">2 sao ★★</option>
+                        <option :value="1">1 sao ★</option>
+                      </select>
+                    </div>
+                    <input v-model="t.avatar" type="text" placeholder="URL ảnh đại diện (Tùy chọn)" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
+                    <textarea v-model="t.content" rows="2" placeholder="Nội dung phản hồi từ khách hàng..." class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626]"></textarea>
+                  </div>
+                  <div v-if="!form.testimonials || form.testimonials.length === 0" class="text-[10px] text-slate-400 italic text-center py-2 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                    Chưa có đánh giá nào. Click "+ Thêm phản hồi" để cấu hình.
                   </div>
                 </div>
               </div>
@@ -482,6 +550,35 @@
                       <h4 class="text-xs font-black text-slate-800">{{ b.title }}</h4>
                       <p class="text-[10px] text-slate-500 mt-0.5 leading-relaxed">{{ b.description }}</p>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Product Images Display (below benefits) -->
+              <div v-if="form.images && form.images.length > 0" class="my-8 space-y-4">
+                <h3 class="text-xs font-black uppercase text-center tracking-wider opacity-85">Hình ảnh chi tiết</h3>
+                <div class="space-y-3">
+                  <div v-for="(img, idx) in form.images" :key="idx" class="rounded-xl overflow-hidden bg-white border border-slate-200/50 shadow-xs">
+                    <img :src="img" class="w-full h-auto object-cover" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Testimonials / Feedbacks Section (below product images) -->
+              <div v-if="form.testimonials && form.testimonials.length > 0" class="my-8 space-y-4">
+                <h3 class="text-xs font-black uppercase text-center tracking-wider opacity-85">Đánh giá từ khách hàng</h3>
+                <div class="grid grid-cols-1 gap-3">
+                  <div v-for="(t, idx) in form.testimonials" :key="idx" class="bg-white/40 p-4.5 rounded-xl border border-white/60 backdrop-blur-xs text-slate-800 space-y-2.5">
+                    <div class="flex items-center gap-3">
+                      <img :src="t.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'" class="w-8 h-8 rounded-full object-cover border border-slate-100" />
+                      <div>
+                        <h4 class="text-xs font-black text-slate-800 leading-none">{{ t.authorName }}</h4>
+                        <div class="flex items-center text-amber-400 text-[10px] mt-1">
+                          <span v-for="star in t.rating" :key="star">★</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p class="text-[10px] text-slate-500 leading-relaxed font-medium">"{{ t.content }}"</p>
                   </div>
                 </div>
               </div>
@@ -679,6 +776,14 @@ function removePackage(idx: number) {
   form.value.packages.splice(idx, 1);
 }
 
+function onBestSellerChange(idx: number) {
+  if (form.value.packages[idx].isBestSeller) {
+    form.value.packages.forEach((pkg: any, i: number) => {
+      if (i !== idx) pkg.isBestSeller = false;
+    });
+  }
+}
+
 function addBenefit() {
   form.value.benefits.push({
     title: 'Đặc điểm mới',
@@ -689,6 +794,22 @@ function addBenefit() {
 
 function removeBenefit(idx: number) {
   form.value.benefits.splice(idx, 1);
+}
+
+function addTestimonial() {
+  if (!form.value.testimonials) {
+    form.value.testimonials = [];
+  }
+  form.value.testimonials.push({
+    authorName: 'Khách hàng mới',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+    content: 'Đánh giá sản phẩm cực tốt!',
+    rating: 5,
+  });
+}
+
+function removeTestimonial(idx: number) {
+  form.value.testimonials.splice(idx, 1);
 }
 
 function removeImage(idx: number) {
@@ -719,12 +840,20 @@ async function generateLandingPageAI() {
     return;
   }
 
+  let currentPrice = form.value.price || 150000;
+  let currentOriginalPrice = form.value.originalPrice || 300000;
+  if (form.value.packages && form.value.packages.length > 0) {
+    const best = form.value.packages.find((p: any) => p.isBestSeller) || form.value.packages[0];
+    currentPrice = best.price || currentPrice;
+    currentOriginalPrice = best.originalPrice || currentOriginalPrice;
+  }
+
   loadingAI.value = true;
   try {
     const aiConfig = await landingPageService.generate({
       title: form.value.title || 'Bộ sản phẩm Trường Thành',
-      price: form.value.price || 150000,
-      originalPrice: form.value.originalPrice || 300000,
+      price: currentPrice,
+      originalPrice: currentOriginalPrice,
       images: form.value.images,
       prompt: aiPrompt.value,
     });
@@ -741,7 +870,7 @@ async function generateLandingPageAI() {
     form.value.customCss = aiConfig.customCss || form.value.customCss;
 
     if (aiConfig.isFallback) {
-      toast.warning('Đang dùng giao diện mẫu do API Key chưa được kích hoạt hoặc sai. Hãy bật "Generative Language API" trên Google Cloud!', { timeout: 10000 });
+      toast.warning('Đang dùng giao diện mẫu do chưa có API Key. Lấy miễn phí tại aistudio.google.com/apikey rồi thêm vào file .env!', { timeout: 10000 });
     } else {
       toast.success('Đã tạo layout bán hàng tối ưu bằng AI thành công!');
     }
@@ -760,6 +889,13 @@ async function saveLandingPage() {
 
   // Auto lowercase slug and remove spaces/special characters
   form.value.slug = form.value.slug.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+  // Synchronize form.price and form.originalPrice with the selected/first package
+  if (form.value.packages && form.value.packages.length > 0) {
+    const bestSeller = form.value.packages.find((p: any) => p.isBestSeller) || form.value.packages[0];
+    form.value.price = bestSeller.price || 0;
+    form.value.originalPrice = bestSeller.originalPrice || 0;
+  }
 
   saving.value = true;
   try {

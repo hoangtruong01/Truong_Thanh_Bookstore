@@ -145,6 +145,35 @@
         </div>
       </div>
 
+      <!-- Additional Product Images Display (below benefits) -->
+      <div v-if="page.images && page.images.length > 0" class="my-8 space-y-4">
+        <h2 class="text-sm font-black uppercase tracking-wider text-center select-none">Hình ảnh chi tiết sản phẩm</h2>
+        <div class="space-y-3">
+          <div v-for="(img, idx) in page.images" :key="idx" class="rounded-2xl overflow-hidden bg-white border border-slate-200/50 shadow-md">
+            <img :src="img" class="w-full h-auto object-cover" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Testimonials from Parents section (below product images) -->
+      <div v-if="page.testimonials && page.testimonials.length > 0" class="my-8 space-y-4">
+        <h2 class="text-sm font-black uppercase tracking-wider text-center select-none">Nhận xét từ khách hàng</h2>
+        <div class="grid grid-cols-1 gap-3.5">
+          <div v-for="(t, idx) in page.testimonials" :key="idx" class="bg-white border border-slate-200/50 p-4.5 rounded-2xl shadow-xs text-slate-800 space-y-2.5">
+            <div class="flex items-center gap-3">
+              <img :src="t.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'" class="w-9 h-9 rounded-full object-cover border border-slate-100" />
+              <div>
+                <h4 class="text-xs font-black text-slate-800 leading-none">{{ t.authorName }}</h4>
+                <div class="flex items-center text-amber-400 text-xs mt-1">
+                  <span v-for="star in t.rating" :key="star">★</span>
+                </div>
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-500 leading-relaxed font-medium">"{{ t.content }}"</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Combo Packages selection panel -->
       <div v-if="page.packages && page.packages.length > 0" class="my-8 space-y-4">
         <h2 class="text-sm font-black uppercase tracking-wider text-center select-none">Chọn Gói Ưu Đãi Khuyến Mãi</h2>
@@ -184,24 +213,7 @@
         </div>
       </div>
 
-      <!-- Testimonials from Parents section -->
-      <div v-if="page.testimonials && page.testimonials.length > 0" class="my-8 space-y-4">
-        <h2 class="text-sm font-black uppercase tracking-wider text-center select-none">Nhận xét từ khách hàng</h2>
-        <div class="grid grid-cols-1 gap-3.5">
-          <div v-for="(t, idx) in page.testimonials" :key="idx" class="bg-white border border-slate-200/50 p-4.5 rounded-2xl shadow-xs text-slate-800 space-y-2.5">
-            <div class="flex items-center gap-3">
-              <img :src="t.avatar" class="w-9 h-9 rounded-full object-cover border border-slate-100" />
-              <div>
-                <h4 class="text-xs font-black text-slate-800 leading-none">{{ t.authorName }}</h4>
-                <div class="flex items-center text-amber-400 text-xs mt-1">
-                  <span v-for="star in t.rating" :key="star">★</span>
-                </div>
-              </div>
-            </div>
-            <p class="text-[10px] text-slate-500 leading-relaxed font-medium">"{{ t.content }}"</p>
-          </div>
-        </div>
-      </div>
+
 
       <!-- Checkout Order Form -->
       <div ref="orderFormEl" class="my-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-md text-slate-800 space-y-5">
