@@ -151,20 +151,20 @@
         </router-link>
       </div>
 
-      <div v-if="loadingBest" class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-        <div v-for="n in 4" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse">
+      <div v-if="loadingBest" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <div v-for="n in 10" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse">
           <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
           <div class="h-4 bg-slate-200 rounded w-2/3"></div>
           <div class="h-6 bg-slate-200 rounded w-1/3"></div>
         </div>
       </div>
 
-      <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+      <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
           v-for="(prod, index) in bestSelling"
           :key="prod._id"
           :product="prod"
-          :class="['reveal-scale', `delay-${(index % 4) * 100}`]"
+          :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
           @add-to-cart="addToCart"
         />
       </div>
@@ -385,7 +385,7 @@ onMounted(async () => {
   }
 
   try {
-    const bestRes = await productService.getBestSelling(4)
+    const bestRes = await productService.getBestSelling(10)
     bestSelling.value = bestRes.data
   } finally {
     loadingBest.value = false
