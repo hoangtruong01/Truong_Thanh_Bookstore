@@ -39,7 +39,7 @@
           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-600 transition-all"
           @change="fetchProducts"
         >
-          <option value="">Tất cả danh mục</option>
+          <option value="">Tất cả combo</option>
           <option v-for="cat in categories" :key="cat._id" :value="cat._id">
             {{ cat.name }}
           </option>

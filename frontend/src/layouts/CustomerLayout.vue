@@ -91,7 +91,7 @@
         </div>
       </div>
 
-      <!-- Categories Navigation -->
+      <!-- Combos Navigation -->
       <nav class="bg-white border-t border-slate-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none h-14">
           <router-link
@@ -142,12 +142,12 @@
           </ul>
         </div>
         <div>
-          <h3 class="text-white text-sm font-semibold mb-4 uppercase tracking-wider">Danh mục phổ biến</h3>
+          <h3 class="text-white text-sm font-semibold mb-4 uppercase tracking-wider">Combo phổ biến</h3>
           <ul class="space-y-2 text-sm text-slate-400">
-            <li><router-link to="/products" class="hover:text-white transition-colors">Bút - Viết</router-link></li>
-            <li><router-link to="/products" class="hover:text-white transition-colors">Dụng Cụ Học Sinh</router-link></li>
-            <li><router-link to="/products" class="hover:text-white transition-colors">Dụng Cụ Văn Phòng</router-link></li>
-            <li><router-link to="/products" class="hover:text-white transition-colors">Sản Phẩm Về Giấy</router-link></li>
+            <li><router-link to="/products" class="hover:text-white transition-colors">Combo Bút - Viết</router-link></li>
+            <li><router-link to="/products" class="hover:text-white transition-colors">Combo Học Sinh</router-link></li>
+            <li><router-link to="/products" class="hover:text-white transition-colors">Combo Văn Phòng</router-link></li>
+            <li><router-link to="/products" class="hover:text-white transition-colors">Combo Sổ - Tập - Giấy</router-link></li>
           </ul>
         </div>
         <div>

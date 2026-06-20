@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsBoolean, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsBoolean, IsString, IsArray, IsNumber } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCategoryDto {
@@ -26,6 +26,17 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsString()
   parentId?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  products?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  comboPrice?: number;
 
   @ApiPropertyOptional({ default: true })
   @IsOptional()
@@ -58,6 +69,17 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsString()
   parentId?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  products?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  comboPrice?: number;
 
   @ApiPropertyOptional()
   @IsOptional()

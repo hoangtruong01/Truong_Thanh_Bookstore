@@ -20,6 +20,12 @@ export class Category {
   @Prop({ type: Types.ObjectId, ref: 'Category', default: null })
   parentId: Types.ObjectId | null;
 
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Product' }], default: [] })
+  products: Types.ObjectId[];
+
+  @Prop({ type: Number, default: 0 })
+  comboPrice: number;
+
   @Prop({ default: true })
   status: boolean;
 

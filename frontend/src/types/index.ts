@@ -43,6 +43,8 @@ export interface Category {
   description?: string
   image?: string
   parentId?: Category | string | null
+  products?: Product[]
+  comboPrice?: number
   status: boolean
   createdAt: string
   updatedAt: string

@@ -23,6 +23,7 @@ import AdminInventory from '@/pages/admin/Inventory.vue'
 import AdminCustomers from '@/pages/admin/Customers.vue'
 import AdminPromotions from '@/pages/admin/Promotions.vue'
 import AdminReports from '@/pages/admin/Reports.vue'
+import AdminCombos from '@/pages/admin/Combos.vue'
 
 const routes = [
   {
@@ -50,6 +51,7 @@ const routes = [
       { path: 'products/:id/edit', name: 'AdminProductEdit', component: AdminProductForm },
       { path: 'orders', name: 'AdminOrders', component: AdminOrders },
       { path: 'inventory', name: 'AdminInventory', component: AdminInventory },
+      { path: 'combos', name: 'AdminCombos', component: AdminCombos },
       { path: 'customers', name: 'AdminCustomers', component: AdminCustomers },
       { path: 'promotions', name: 'AdminPromotions', component: AdminPromotions },
       { path: 'reports', name: 'AdminReports', component: AdminReports },

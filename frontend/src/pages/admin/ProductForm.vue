@@ -46,13 +46,13 @@
         </div>
 
         <div>
-          <label class="text-xs font-bold text-slate-700">Danh mục sản phẩm *</label>
+          <label class="text-xs font-bold text-slate-700">Combo sản phẩm *</label>
           <select
             v-model="form.category"
             required
             class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
           >
-            <option value="">Chọn danh mục</option>
+            <option value="">Chọn combo</option>
             <option v-for="cat in categories" :key="cat._id" :value="cat._id">
               {{ cat.name }}
             </option>

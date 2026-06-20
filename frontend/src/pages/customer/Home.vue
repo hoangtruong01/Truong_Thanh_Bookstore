@@ -84,10 +84,10 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div class="reveal flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Khám phá danh mục</span>
+            <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Khám phá các Combo</span>
             <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">Sáng tạo không giới hạn</h2>
           </div>
-          <p class="text-xs text-slate-500 max-w-xs">Chọn danh mục văn phòng phẩm phù hợp với nhu cầu học tập và làm việc của bạn.</p>
+          <p class="text-xs text-slate-500 max-w-xs">Chọn các combo sản phẩm phù hợp với nhu cầu học tập và làm việc của bạn.</p>
         </div>
 
         <!-- Snap carousel scroll container -->

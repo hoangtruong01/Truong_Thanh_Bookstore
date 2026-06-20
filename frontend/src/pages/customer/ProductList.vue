@@ -5,7 +5,7 @@
       <aside class="w-full lg:w-64 flex-shrink-0 space-y-6">
         <!-- Categories -->
         <div class="bg-white border border-slate-200 rounded-2xl p-6">
-          <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider mb-4">Danh mục</h3>
+          <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider mb-4">Combo</h3>
           <div class="space-y-2">
             <button
               @click="selectCategory('')"

@@ -2,6 +2,7 @@ import api from '@/utils/api'
 
 export const categoryService = {
   getAll: () => api.get('/categories'),
+  getAllAdmin: () => api.get('/categories/admin'),
   getById: (id: string) => api.get(`/categories/${id}`),
   getParents: () => api.get('/categories/parents'),
   getSubCategories: (parentId: string) => api.get(`/categories/${parentId}/subcategories`),
