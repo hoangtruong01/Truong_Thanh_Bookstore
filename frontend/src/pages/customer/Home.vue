@@ -40,45 +40,6 @@
       </div>
     </div>
 
-    <!-- Chapter 2: Editorial Brand Story Section -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        <!-- Visual component -->
-        <div class="relative reveal-left">
-          <div class="aspect-video sm:aspect-square bg-gradient-to-tr from-rose-500 to-orange-400 rounded-3xl overflow-hidden shadow-2xl relative">
-            <div class="absolute inset-0 bg-black/20 mix-blend-multiply"></div>
-            <div class="absolute inset-4 border border-white/20 rounded-2xl"></div>
-            <div class="absolute bottom-8 left-8 right-8 text-white space-y-2">
-              <span class="text-xs font-black tracking-widest uppercase text-amber-300">Trường Thành Bookstore</span>
-              <h3 class="text-xl font-bold">"Nơi chắp cánh cho những ước mơ sáng tạo lớn"</h3>
-            </div>
-          </div>
-        </div>
-
-        <!-- Narrative content -->
-        <div class="space-y-6 lg:pl-6 reveal-right">
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Về chúng tôi</span>
-          <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
-            Chất lượng tuyệt đối, dịch vụ tận tâm từ năm 2016
-          </h2>
-          <p class="text-slate-600 text-sm leading-relaxed">
-            Chúng tôi hiểu rằng mỗi nét bút vẽ ra, mỗi trang sổ lật mở đều là khởi đầu của một ý tưởng tuyệt vời. Trường Thành Stationery luôn nỗ lực tuyển chọn và mang đến những dòng sản phẩm tốt nhất thế giới với mức giá dễ tiếp cận nhất.
-          </p>
-
-          <div class="grid grid-cols-2 gap-6 pt-4">
-            <div class="border-l-2 border-[#dc2626] pl-4 space-y-1">
-              <span class="text-2xl font-black text-slate-900">100%</span>
-              <p class="text-xs text-slate-500 font-medium">Hàng chính hãng</p>
-            </div>
-            <div class="border-l-2 border-[#dc2626] pl-4 space-y-1">
-              <span class="text-2xl font-black text-slate-900">24/7</span>
-              <p class="text-xs text-slate-500 font-medium">Hỗ trợ nhanh chóng</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- Chapter 3: Horizontal Carousel Categories -->
     <section class="bg-slate-100 py-24 overflow-hidden">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -87,47 +48,92 @@
             <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Khám phá các Combo</span>
             <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">Sáng tạo không giới hạn</h2>
           </div>
-          <p class="text-xs text-slate-500 max-w-xs">Chọn các combo sản phẩm phù hợp với nhu cầu học tập và làm việc của bạn.</p>
+          
         </div>
 
-        <!-- Snap carousel scroll container -->
-        <div class="category-scroll pb-6 scrollbar-none reveal delay-100">
-          <router-link
-            v-for="(cat, idx) in parentCategories"
-            :key="cat._id"
-            :to="`/products?category=${cat._id}`"
-            class="bg-white border border-slate-200/60 rounded-3xl p-6 text-center hover:shadow-xl hover:border-slate-300 transition-all flex flex-col items-center justify-between group cursor-pointer h-72 shadow-xs snap-align-start"
-          >
-            <div class="flex flex-col items-center space-y-4">
-              <!-- Animated Circle Card -->
-              <div :class="['w-16 h-16 rounded-full bg-gradient-to-br flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-md', getCategoryStyle(idx).gradient]">
-                <svg v-if="getCategoryStyle(idx).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                </svg>
-                <svg v-else-if="getCategoryStyle(idx).icon === 'academic'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M12 21v-4.5" />
-                </svg>
-                <svg v-else-if="getCategoryStyle(idx).icon === 'briefcase'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .994-.806 1.8-1.8 1.8H5.55c-.994 0-1.8-.806-1.8-1.8v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H5.184c-.267 0-.523-.093-.717-.258m16.5 0V8.706c0-1.08-.768-2.014-1.837-2.174a47.79 47.79 0 0 0-3.413-.387m-7.5 0V5.25A2.25 2.25 0 0 1 10.5 3h3a2.25 2.25 0 0 1 2.25 2.25v.819M6.75 7.5v.75m0-1.5h10.5M6.75 7.5H4.25m13 0h2.5M6.75 7.5v8.25M17.25 7.5v8.25M3 16.5h18" />
-                </svg>
-                <svg v-else-if="getCategoryStyle(idx).icon === 'document'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                </svg>
-                <svg v-else-if="getCategoryStyle(idx).icon === 'paint'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387m11.378-3.479a3 3 0 0 0-5.78-.87 2.25 2.25 0 0 1-2.4 1.992 4.5 4.5 0 0 0 8.4 1.122c0-.083-.008-.165-.02-.244Zm-10.87-4.135a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387M15.75 12c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Zm0-4.5c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Z" />
-                </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008ZM2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm11.379-3.379a.75.75 0 0 0-1.06 1.06l1.25 1.25a.75.75 0 0 0 1.06-1.06l-1.25-1.25Z" />
-                </svg>
+        <!-- Infinite Marquee categories container -->
+        <div class="relative w-full overflow-hidden py-4 reveal delay-100">
+          <!-- Glassmorphism side overlays for smooth fading -->
+          <div class="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-slate-100 via-slate-100/60 to-transparent z-10 pointer-events-none"></div>
+          <div class="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-slate-100 via-slate-100/60 to-transparent z-10 pointer-events-none"></div>
+
+          <div class="flex gap-6 w-max animate-marquee hover:[animation-play-state:paused] py-2">
+            <!-- First Set -->
+            <router-link
+              v-for="(cat, idx) in parentCategories"
+              :key="cat._id"
+              :to="`/products?category=${cat._id}`"
+              class="w-[220px] shrink-0 bg-white border border-slate-200/60 rounded-3xl p-6 text-center hover:shadow-xl hover:border-slate-300 transition-all flex flex-col items-center justify-between group cursor-pointer h-72 shadow-xs"
+            >
+              <div class="flex flex-col items-center space-y-4">
+                <!-- Animated Circle Card -->
+                <div :class="['w-16 h-16 rounded-full bg-gradient-to-br flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-md', getCategoryStyle(idx).gradient]">
+                  <svg v-if="getCategoryStyle(idx).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                  </svg>
+                  <svg v-else-if="getCategoryStyle(idx).icon === 'academic'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M12 21v-4.5" />
+                  </svg>
+                  <svg v-else-if="getCategoryStyle(idx).icon === 'briefcase'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .994-.806 1.8-1.8 1.8H5.55c-.994 0-1.8-.806-1.8-1.8v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H5.184c-.267 0-.523-.093-.717-.258m16.5 0V8.706c0-1.08-.768-2.014-1.837-2.174a47.79 47.79 0 0 0-3.413-.387m-7.5 0V5.25A2.25 2.25 0 0 1 10.5 3h3a2.25 2.25 0 0 1 2.25 2.25v.819M6.75 7.5v.75m0-1.5h10.5M6.75 7.5H4.25m13 0h2.5M6.75 7.5v8.25M17.25 7.5v8.25M3 16.5h18" />
+                  </svg>
+                  <svg v-else-if="getCategoryStyle(idx).icon === 'document'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                  <svg v-else-if="getCategoryStyle(idx).icon === 'paint'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387m11.378-3.479a3 3 0 0 0-5.78-.87 2.25 2.25 0 0 1-2.4 1.992 4.5 4.5 0 0 0 8.4 1.122c0-.083-.008-.165-.02-.244Zm-10.87-4.135a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387M15.75 12c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Zm0-4.5c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Z" />
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008ZM2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm11.379-3.379a.75.75 0 0 0-1.06 1.06l1.25 1.25a.75.75 0 0 0 1.06-1.06l-1.25-1.25Z" />
+                  </svg>
+                </div>
+                <h3 class="text-sm font-extrabold text-slate-800 group-hover:text-[#dc2626] transition-colors leading-tight">{{ cat.name }}</h3>
               </div>
-              <h3 class="text-sm font-extrabold text-slate-800 group-hover:text-[#dc2626] transition-colors leading-tight">{{ cat.name }}</h3>
-            </div>
-            
-            <span class="text-[11px] font-bold text-slate-400 group-hover:text-[#dc2626] transition-colors inline-flex items-center gap-1">
-              <span>Xem sản phẩm</span>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3 h-3"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
-            </span>
-          </router-link>
+              
+              <span class="text-[11px] font-bold text-slate-400 group-hover:text-[#dc2626] transition-colors inline-flex items-center gap-1">
+                <span>Xem sản phẩm</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3 h-3"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+              </span>
+            </router-link>
+
+            <!-- Second Set (Duplicate for smooth wrap) -->
+            <router-link
+              v-for="(cat, idx) in parentCategories"
+              :key="`dup-${cat._id}`"
+              :to="`/products?category=${cat._id}`"
+              class="w-[220px] shrink-0 bg-white border border-slate-200/60 rounded-3xl p-6 text-center hover:shadow-xl hover:border-slate-300 transition-all flex flex-col items-center justify-between group cursor-pointer h-72 shadow-xs"
+            >
+              <div class="flex flex-col items-center space-y-4">
+                <!-- Animated Circle Card -->
+                <div :class="['w-16 h-16 rounded-full bg-gradient-to-br flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-md', getCategoryStyle(idx).gradient]">
+                  <svg v-if="getCategoryStyle(idx).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                  </svg>
+                  <svg v-else-if="getCategoryStyle(idx).icon === 'academic'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M12 21v-4.5" />
+                  </svg>
+                  <svg v-else-if="getCategoryStyle(idx).icon === 'briefcase'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .994-.806 1.8-1.8 1.8H5.55c-.994 0-1.8-.806-1.8-1.8v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H5.184c-.267 0-.523-.093-.717-.258m16.5 0V8.706c0-1.08-.768-2.014-1.837-2.174a47.79 47.79 0 0 0-3.413-.387m-7.5 0V5.25A2.25 2.25 0 0 1 10.5 3h3a2.25 2.25 0 0 1 2.25 2.25v.819M6.75 7.5v.75m0-1.5h10.5M6.75 7.5H4.25m13 0h2.5M6.75 7.5v8.25M17.25 7.5v8.25M3 16.5h18" />
+                  </svg>
+                  <svg v-else-if="getCategoryStyle(idx).icon === 'document'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                  <svg v-else-if="getCategoryStyle(idx).icon === 'paint'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387m11.378-3.479a3 3 0 0 0-5.78-.87 2.25 2.25 0 0 1-2.4 1.992 4.5 4.5 0 0 0 8.4 1.122c0-.083-.008-.165-.02-.244Zm-10.87-4.135a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387M15.75 12c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Zm0-4.5c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Z" />
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008ZM2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm11.379-3.379a.75.75 0 0 0-1.06 1.06l1.25 1.25a.75.75 0 0 0 1.06-1.06l-1.25-1.25Z" />
+                  </svg>
+                </div>
+                <h3 class="text-sm font-extrabold text-slate-800 group-hover:text-[#dc2626] transition-colors leading-tight">{{ cat.name }}</h3>
+              </div>
+              
+              <span class="text-[11px] font-bold text-slate-400 group-hover:text-[#dc2626] transition-colors inline-flex items-center gap-1">
+                <span>Xem sản phẩm</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3 h-3"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+              </span>
+            </router-link>
+          </div>
         </div>
       </div>
     </section>
@@ -412,37 +418,21 @@ function addToCart(product: Product) {
 </script>
 
 <style scoped>
-.category-scroll {
-  display: flex;
-  gap: 1.25rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-padding: 1rem;
-  -webkit-overflow-scrolling: touch;
-}
-
-.category-scroll > * {
-  scroll-snap-align: start;
-  flex: 0 0 auto;
-  width: 180px;
-}
-
-@media (min-width: 640px) {
-  .category-scroll > * {
-    width: 220px;
-  }
-}
-
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
 .hero-text {
   animation: hero-reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-marquee {
+  animation: marquee-scroll 35s linear infinite;
+}
+
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 @keyframes hero-reveal {
