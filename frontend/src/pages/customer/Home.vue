@@ -139,37 +139,216 @@
     </section>
 
     <!-- Chapter 6: Deal Zone (Urgency) -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
-      <div class="reveal flex flex-col sm:flex-row sm:items-end justify-between border-b border-slate-100 pb-4 gap-4">
-        <div>
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Đừng bỏ lỡ</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">🏷️ Deal Sốc Giờ Vàng</h2>
-        </div>
-        <!-- countdown -->
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Kết thúc sau:</span>
-          <div class="flex items-center gap-1 text-xs font-mono font-bold text-white bg-slate-900 px-3 py-1.5 rounded-lg">
-            <span>02</span>:<span>45</span>:<span>18</span>
+    <section
+      :style="{ backgroundImage: `url(${flashSaleBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }"
+      class="w-full py-16 relative overflow-hidden"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 relative z-10">
+
+        <!-- Section Header -->
+        <div class="reveal flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div class="space-y-3">
+            <span class="inline-flex items-center gap-1 bg-red-50 border border-red-100 text-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+              🔥 ĐỪNG BỎ LỠ HÔM NAY!
+            </span>
+            <div class="flex items-center gap-3">
+              <!-- Discount tag icon -->
+              <div class="bg-gradient-to-br from-red-500 to-orange-600 text-white p-3 rounded-2xl shadow-lg rotate-12 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.753 2.481.162l5.586-5.586a1.725 1.725 0 0 0 .162-2.481l-9.58-9.581A2.25 2.25 0 0 0 9.568 3Z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
+                </svg>
+              </div>
+              <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                DEAL <span class="text-[#dc2626]">SỐC</span> GIỜ VÀNG
+              </h2>
+            </div>
+            <p class="text-slate-500 text-sm font-medium">
+              Giảm giá đến <span class="text-red-600 font-extrabold">30%</span> cho dụng cụ học tập & văn phòng phẩm
+            </p>
+            <!-- Badges -->
+            <div class="flex flex-wrap gap-4 text-xs font-bold text-slate-600 pt-1">
+              <span class="flex items-center gap-1 text-orange-600">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.753 2.481.162l5.586-5.586a1.725 1.725 0 0 0 .162-2.481l-9.58-9.581A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>
+                Giá tốt nhất
+              </span>
+              <span class="flex items-center gap-1 text-orange-600">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" /></svg>
+                Hàng chính hãng
+              </span>
+              <span class="flex items-center gap-1 text-orange-600">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125a1.125 1.125 0 0 0 1.125-1.125V9.75M3.75 14.25h13.5m0 0V6.375c0-.621-.504-1.125-1.125-1.125H9.75m4.875 0H16.5m-3.375 0H9.75m0 0v1.5A2.25 2.25 0 0 1 7.5 9h-3m3 5.25v-5.25m0 5.25H7.5" /></svg>
+                Giao nhanh 24h
+              </span>
+            </div>
+          </div>
+
+          <!-- Countdown timer -->
+          <div class="flex flex-col items-center md:items-end gap-2 shrink-0 bg-white/60 border border-orange-200/30 rounded-3xl p-4 backdrop-blur-xs">
+            <span class="text-xs text-slate-500 font-extrabold uppercase tracking-wider flex items-center gap-1">
+              ⏰ KẾT THÚC SAU:
+            </span>
+            <div class="flex items-center gap-2">
+              <!-- Hours -->
+              <div class="flex flex-col items-center">
+                <div class="bg-slate-900 text-white font-mono font-black text-xl px-3.5 py-2.5 rounded-xl shadow-md min-w-[46px] text-center tracking-wider">
+                  {{ hours }}
+                </div>
+                <span class="text-[10px] font-bold text-slate-400 mt-1 uppercase">Giờ</span>
+              </div>
+              <span class="font-black text-slate-900 text-xl -mt-5">:</span>
+              <!-- Minutes -->
+              <div class="flex flex-col items-center">
+                <div class="bg-slate-900 text-white font-mono font-black text-xl px-3.5 py-2.5 rounded-xl shadow-md min-w-[46px] text-center tracking-wider">
+                  {{ minutes }}
+                </div>
+                <span class="text-[10px] font-bold text-slate-400 mt-1 uppercase">Phút</span>
+              </div>
+              <span class="font-black text-slate-900 text-xl -mt-5">:</span>
+              <!-- Seconds -->
+              <div class="flex flex-col items-center">
+                <div class="bg-slate-900 text-white font-mono font-black text-xl px-3.5 py-2.5 rounded-xl shadow-md min-w-[46px] text-center tracking-wider">
+                  {{ seconds }}
+                </div>
+                <span class="text-[10px] font-bold text-slate-400 mt-1 uppercase">Giây</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div v-if="loadingDiscount" class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-        <div v-for="n in 4" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse">
-          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
+        <!-- Products Grid -->
+        <div v-if="loadingDiscount" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 relative z-10">
+          <div v-for="n in 5" :key="n" class="bg-white rounded-3xl border border-slate-100 p-5 space-y-4 animate-pulse">
+            <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
+            <div class="h-4 bg-slate-200 rounded w-2/3"></div>
+            <div class="h-6 bg-slate-200 rounded w-1/3"></div>
+          </div>
         </div>
-      </div>
 
-      <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-        <ProductCard
-          v-for="(prod, index) in discounted"
-          :key="prod._id"
-          :product="prod"
-          :class="['reveal-scale', `delay-${(index % 4) * 100}`]"
-          @add-to-cart="addToCart"
-        />
+        <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 relative z-10">
+          <div
+            v-for="(prod, index) in discounted"
+            :key="prod._id"
+            class="bg-white border border-slate-100/80 rounded-3xl p-5 space-y-4 shadow-sm hover:shadow-xl hover:border-orange-200 transition-all duration-300 relative group flex flex-col justify-between"
+          >
+            <!-- Badge container -->
+            <div class="absolute top-4 inset-x-4 flex items-center justify-between z-10 pointer-events-none">
+              <!-- Discount percent -->
+              <span class="bg-red-600 text-white text-[11px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider">
+                -{{ getDiscountPercent(prod.price, prod.discountPrice) }}%
+              </span>
+              <!-- Hot Deal Badge (first product only) -->
+              <span v-if="index === 0" class="bg-amber-100 text-amber-800 text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider flex items-center gap-0.5">
+                🔥 HOT DEAL
+              </span>
+            </div>
+
+            <!-- Product content -->
+            <router-link :to="`/product/${prod.slug || prod._id}`" class="block space-y-3 cursor-pointer">
+              <!-- Image -->
+              <div class="aspect-square bg-slate-50/50 rounded-2xl overflow-hidden flex items-center justify-center p-4">
+                <img
+                  :src="prod.images && prod.images[0] ? prod.images[0] : 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=300'"
+                  class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                  :alt="prod.name"
+                />
+              </div>
+
+              <!-- Name & Rating -->
+              <div class="space-y-1.5">
+                <h3 class="text-xs sm:text-sm font-extrabold text-slate-800 line-clamp-2 hover:text-[#dc2626] transition-colors leading-tight">
+                  {{ prod.name }}
+                </h3>
+                
+                <div class="flex items-center gap-1.5 text-[11px]">
+                  <div class="flex items-center text-amber-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5"><path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" /></svg>
+                  </div>
+                  <span class="font-bold text-slate-700">{{ prod.rating || 5.0 }}</span>
+                  <span class="text-slate-300">|</span>
+                  <span class="text-slate-500 font-medium">Đã bán {{ prod.sold || 0 }}</span>
+                </div>
+              </div>
+
+              <!-- Price -->
+              <div class="flex items-baseline gap-2 pt-1 border-t border-slate-100">
+                <span class="text-base sm:text-lg font-black text-[#dc2626]">
+                  {{ formatCurrency(prod.discountPrice || prod.price) }}
+                </span>
+                <span v-if="prod.discountPrice" class="text-xs text-slate-400 line-through">
+                  {{ formatCurrency(prod.price) }}
+                </span>
+              </div>
+
+              <!-- Sold Progress Bar -->
+              <div class="space-y-1.5 pt-1">
+                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    class="bg-gradient-to-r from-orange-500 to-[#dc2626] h-full rounded-full transition-all duration-500"
+                    :style="{ width: `${Math.min(Math.round((prod.sold / (prod.stock + prod.sold || 100)) * 100), 95) || 30}%` }"
+                  ></div>
+                </div>
+                <div class="flex justify-between items-center text-[10px] font-bold text-slate-500 leading-none">
+                  <span>Đã bán {{ prod.sold }}</span>
+                  <span>{{ Math.min(Math.round((prod.sold / (prod.stock + prod.sold || 100)) * 100), 95) || 30 }}%</span>
+                </div>
+              </div>
+            </router-link>
+
+            <!-- Buy Button -->
+            <button
+              @click.stop="addToCart(prod)"
+              class="w-full mt-3 bg-gradient-to-r from-orange-500 to-[#dc2626] hover:from-orange-600 hover:to-[#b91c1c] text-white font-extrabold py-3 px-4 rounded-2xl shadow-md shadow-red-500/10 hover:shadow-lg hover:shadow-red-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer text-[11px] uppercase tracking-wider"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+              </svg>
+              <span>MUA NGAY</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- See More Button -->
+        <div class="flex justify-center pt-2 relative z-10">
+          <router-link
+            to="/products"
+            class="bg-white border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
+          >
+            Xem Thêm
+          </router-link>
+        </div>
+
+        <!-- Section Footer -->
+        <div class="bg-white/95 backdrop-blur-xs border border-orange-100/80 rounded-3xl p-5 grid grid-cols-2 md:grid-cols-4 gap-6 text-xs text-slate-600 font-bold relative z-10 shadow-lg shadow-orange-600/5">
+          <div class="flex items-center gap-3">
+            <span class="text-orange-500 text-xl">🔥</span>
+            <div>
+              <p class="font-extrabold text-slate-800 leading-none">Deal sốc mỗi ngày</p>
+              <p class="text-[10px] text-slate-400 font-normal mt-1">Cập nhật liên tục 10:00 & 20:00</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-orange-500 text-xl">🏷️</span>
+            <div>
+              <p class="font-extrabold text-slate-800 leading-none">Tiết kiệm đến 30%</p>
+              <p class="text-[10px] text-slate-400 font-normal mt-1">Giá tốt nhất trong giờ vàng</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-orange-500 text-xl">👥</span>
+            <div>
+              <p class="font-extrabold text-slate-800 leading-none">Hơn 10.000+ khách hàng</p>
+              <p class="text-[10px] text-slate-400 font-normal mt-1">Đã mua và hài lòng</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-orange-500 text-xl">🛡️</span>
+            <div>
+              <p class="font-extrabold text-slate-800 leading-none">Mua sắm an tâm</p>
+              <p class="text-[10px] text-slate-400 font-normal mt-1">Đổi trả miễn phí 7 ngày</p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -222,8 +401,17 @@
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
-          @add-to-cart="addToCart"
         />
+      </div>
+
+      <!-- See More Button -->
+      <div class="flex justify-center pt-6">
+        <router-link
+          to="/products"
+          class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
+        >
+          Xem Thêm
+        </router-link>
       </div>
     </section>
 
@@ -233,7 +421,7 @@
         <div class="reveal flex items-end justify-between border-b border-slate-200 pb-4">
           <div>
             <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Tiết kiệm thông minh</span>
-            <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">📦 Combo văn phòng</h2>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">📦 Combo </h2>
           </div>
         </div>
 
@@ -275,22 +463,32 @@
         </router-link>
       </div>
 
-      <div v-if="loadingNew" class="grid grid-cols-2 sm:grid-cols-4 gap-6">
-        <div v-for="n in 4" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse">
+      <div v-if="loadingNew" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <div v-for="n in 10" :key="n" class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse">
           <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
           <div class="h-4 bg-slate-200 rounded w-2/3"></div>
           <div class="h-6 bg-slate-200 rounded w-1/3"></div>
         </div>
       </div>
 
-      <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-6">
+      <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
           v-for="(prod, index) in newProducts"
           :key="prod._id"
           :product="prod"
-          :class="['reveal-scale', `delay-${(index % 4) * 100}`]"
+          :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
           @add-to-cart="addToCart"
         />
+      </div>
+
+      <!-- See More Button -->
+      <div class="flex justify-center pt-6">
+        <router-link
+          to="/products?sort=newest"
+          class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
+        >
+          Xem Thêm
+        </router-link>
       </div>
     </section>
 
@@ -327,7 +525,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
 import { productService } from '@/services/product.service'
@@ -336,6 +534,7 @@ import { formatCurrency, getDiscountPercent } from '@/utils/helpers'
 import ProductCard from '@/components/ProductCard.vue'
 import { useScrollReveal } from '@/composables/useScrollReveal'
 import type { Product, Category } from '@/types'
+import flashSaleBg from '@/assets/flash-sale-bg.png'
 
 const cartStore = useCartStore()
 const toast = useToast()
@@ -349,6 +548,28 @@ const newProducts = ref<Product[]>([])
 const loadingBest = ref(true)
 const loadingDiscount = ref(true)
 const loadingNew = ref(true)
+
+// Countdown timer refs
+const hours = ref('02')
+const minutes = ref('45')
+const seconds = ref('18')
+let countdownTimer: any = null
+
+function startCountdown() {
+  let totalSeconds = 2 * 3600 + 45 * 60 + 18
+  countdownTimer = setInterval(() => {
+    if (totalSeconds <= 0) {
+      totalSeconds = 3 * 3600
+    }
+    totalSeconds--
+    const h = Math.floor(totalSeconds / 3600)
+    const m = Math.floor((totalSeconds % 3600) / 60)
+    const s = totalSeconds % 60
+    hours.value = h.toString().padStart(2, '0')
+    minutes.value = m.toString().padStart(2, '0')
+    seconds.value = s.toString().padStart(2, '0')
+  }, 1000)
+}
 
 // Mapped styling system for highlighting categories in home layout
 const categoryStyles = [
@@ -377,6 +598,7 @@ const combos = computed(() => {
 })
 
 onMounted(async () => {
+  startCountdown()
   try {
     const catRes = await categoryService.getParents()
     parentCategories.value = catRes.data
@@ -392,14 +614,14 @@ onMounted(async () => {
   }
 
   try {
-    const discRes = await productService.getDiscounted(4)
+    const discRes = await productService.getDiscounted(5)
     discounted.value = discRes.data
   } finally {
     loadingDiscount.value = false
   }
 
   try {
-    const newRes = await productService.getNew(4)
+    const newRes = await productService.getNew(10)
     newProducts.value = newRes.data
   } finally {
     loadingNew.value = false
