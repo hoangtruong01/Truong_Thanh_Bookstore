@@ -140,10 +140,21 @@
             <div>
               <label class="text-xs font-bold text-slate-700">Giá trị giảm giá *</label>
               <input
+                v-if="form.discountType === 'FIXED'"
+                :value="formatNumberWithDots(form.discountValue)"
+                @input="handleDiscountValueInput"
+                type="text"
+                required
+                placeholder="Nhập giá trị..."
+                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+              />
+              <input
+                v-else
                 v-model.number="form.discountValue"
                 type="number"
                 required
                 min="1"
+                max="100"
                 placeholder="Nhập giá trị..."
                 class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
               />
@@ -154,10 +165,10 @@
             <div>
               <label class="text-xs font-bold text-slate-700">Đơn tối thiểu *</label>
               <input
-                v-model.number="form.minOrderValue"
-                type="number"
+                :value="formatNumberWithDots(form.minOrderValue)"
+                @input="handleMinOrderValueInput"
+                type="text"
                 required
-                min="0"
                 placeholder="0đ"
                 class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
               />
@@ -215,6 +226,29 @@ import { useToast } from 'vue-toastification'
 import { promotionService } from '@/services/promotion.service'
 import { formatCurrency } from '@/utils/helpers'
 import type { Promotion } from '@/types'
+
+const formatNumberWithDots = (val: string | number | undefined | null): string => {
+  if (val === undefined || val === null || val === '') return '';
+  const clean = String(val).replace(/\D/g, '');
+  if (!clean) return '';
+  return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+const handleDiscountValueInput = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const rawValue = target.value;
+  const cleanValue = rawValue.replace(/\D/g, '');
+  form.discountValue = cleanValue ? parseInt(cleanValue, 10) : 0;
+  target.value = formatNumberWithDots(cleanValue);
+};
+
+const handleMinOrderValueInput = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const rawValue = target.value;
+  const cleanValue = rawValue.replace(/\D/g, '');
+  form.minOrderValue = cleanValue ? parseInt(cleanValue, 10) : 0;
+  target.value = formatNumberWithDots(cleanValue);
+};
 
 const toast = useToast()
 

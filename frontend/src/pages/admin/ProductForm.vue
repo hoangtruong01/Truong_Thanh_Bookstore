@@ -76,10 +76,10 @@
         <div>
           <label class="text-xs font-bold text-slate-700">Giá bán lẻ (VND) *</label>
           <input
-            v-model.number="form.price"
-            type="number"
+            :value="formatNumberWithDots(form.price)"
+            @input="handlePriceInput"
+            type="text"
             required
-            min="0"
             placeholder="0"
             class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
           />
@@ -88,9 +88,9 @@
         <div>
           <label class="text-xs font-bold text-slate-700">Giá đã giảm (Tùy chọn)</label>
           <input
-            v-model.number="form.discountPrice"
-            type="number"
-            min="0"
+            :value="formatNumberWithDots(form.discountPrice)"
+            @input="handleDiscountPriceInput"
+            type="text"
             placeholder="0"
             class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
           />
@@ -247,6 +247,29 @@ import { useToast } from 'vue-toastification'
 import { productService } from '@/services/product.service'
 import { categoryService } from '@/services/category.service'
 import type { Category } from '@/types'
+
+const formatNumberWithDots = (val: string | number | undefined | null): string => {
+  if (val === undefined || val === null || val === '') return '';
+  const clean = String(val).replace(/\D/g, '');
+  if (!clean) return '';
+  return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+const handlePriceInput = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const rawValue = target.value;
+  const cleanValue = rawValue.replace(/\D/g, '');
+  form.price = cleanValue ? parseInt(cleanValue, 10) : 0;
+  target.value = formatNumberWithDots(cleanValue);
+};
+
+const handleDiscountPriceInput = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const rawValue = target.value;
+  const cleanValue = rawValue.replace(/\D/g, '');
+  form.discountPrice = cleanValue ? parseInt(cleanValue, 10) : 0;
+  target.value = formatNumberWithDots(cleanValue);
+};
 
 const router = useRouter()
 const route = useRoute()

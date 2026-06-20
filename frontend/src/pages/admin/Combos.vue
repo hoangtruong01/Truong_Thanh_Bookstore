@@ -261,10 +261,10 @@
             <div>
               <label class="text-xs font-bold text-slate-700">Giá mua Combo ưu đãi *</label>
               <input
-                v-model.number="form.comboPrice"
-                type="number"
+                :value="formatNumberWithDots(form.comboPrice)"
+                @input="handleComboPriceInput"
+                type="text"
                 required
-                min="0"
                 placeholder="Nhập giá mua combo..."
                 class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-black"
               />
@@ -317,6 +317,21 @@ import { useToast } from 'vue-toastification'
 import { categoryService } from '@/services/category.service'
 import { productService } from '@/services/product.service'
 import type { Category, Product } from '@/types'
+
+const formatNumberWithDots = (val: string | number | undefined | null): string => {
+  if (val === undefined || val === null || val === '') return '';
+  const clean = String(val).replace(/\D/g, '');
+  if (!clean) return '';
+  return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+const handleComboPriceInput = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const rawValue = target.value;
+  const cleanValue = rawValue.replace(/\D/g, '');
+  form.value.comboPrice = cleanValue ? parseInt(cleanValue, 10) : 0;
+  target.value = formatNumberWithDots(cleanValue);
+};
 
 const toast = useToast()
 
