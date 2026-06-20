@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, SchemaTypes } from 'mongoose';
 
 export type CategoryDocument = Category & Document;
 
@@ -17,10 +17,10 @@ export class Category {
   @Prop()
   image: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Category', default: null })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Category', default: null })
   parentId: Types.ObjectId | null;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Product' }], default: [] })
+  @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: 'Product' }], default: [] })
   products: Types.ObjectId[];
 
   @Prop({ type: Number, default: 0 })

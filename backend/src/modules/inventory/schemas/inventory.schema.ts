@@ -1,12 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, SchemaTypes } from 'mongoose';
 import { InventoryStatus, InventoryTransactionType } from '../../../common/enums';
 
 export type InventoryDocument = Inventory & Document;
 
 @Schema({ timestamps: true })
 export class Inventory {
-  @Prop({ type: Types.ObjectId, ref: 'Product', required: true, unique: true })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: true, unique: true })
   product: Types.ObjectId;
 
   @Prop({ default: 0 })
@@ -31,7 +31,7 @@ export type InventoryTransactionDocument = InventoryTransaction & Document;
 
 @Schema({ timestamps: true })
 export class InventoryTransaction {
-  @Prop({ type: Types.ObjectId, ref: 'Product', required: true })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: true })
   product: Types.ObjectId;
 
   @Prop({ type: String, enum: InventoryTransactionType, required: true })
@@ -43,7 +43,7 @@ export class InventoryTransaction {
   @Prop()
   note: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   createdBy: Types.ObjectId;
 
   createdAt: Date;

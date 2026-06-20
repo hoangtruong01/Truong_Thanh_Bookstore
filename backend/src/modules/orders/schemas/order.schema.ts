@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, SchemaTypes } from 'mongoose';
 import { OrderStatus, PaymentMethod, PaymentStatus } from '../../../common/enums';
 
 @Schema()
 export class OrderItem {
-  @Prop({ type: Types.ObjectId, ref: 'Product', required: true })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: true })
   product: Types.ObjectId;
 
   @Prop({ required: true })
@@ -29,7 +29,7 @@ export class Order {
   @Prop({ required: true, unique: true })
   orderCode: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   customer: Types.ObjectId;
 
   @Prop({ type: [OrderItemSchema], required: true })

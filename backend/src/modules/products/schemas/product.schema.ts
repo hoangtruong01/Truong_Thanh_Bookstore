@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, SchemaTypes } from 'mongoose';
 import { ProductStatus } from '../../../common/enums';
 
 export type ProductDocument = Product & Document;
@@ -18,7 +18,7 @@ export class Product {
   @Prop()
   description: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Category' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Category' })
   category: Types.ObjectId;
 
   @Prop()
