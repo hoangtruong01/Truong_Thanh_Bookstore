@@ -54,8 +54,9 @@
           <div class="relative">
             <input
               type="text"
-              placeholder="Tìm kiếm..."
-              class="w-full bg-slate-100 border border-slate-200 rounded-lg py-2 pl-9 pr-4 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:border-transparent transition-all placeholder:text-slate-400"
+              placeholder="Tìm kiếm... (Đang phát triển)"
+              disabled
+              class="w-full bg-slate-100 border border-slate-200 rounded-lg py-2 pl-9 pr-4 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:border-transparent transition-all placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
             />
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2">
               <path stroke-linecap="round" stroke-linejoin="round" d="m21-21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
@@ -66,21 +67,20 @@
         <!-- Right User details -->
         <div class="flex items-center gap-5">
           <!-- Notification bell -->
-          <button class="relative text-slate-500 hover:text-slate-800 transition-colors cursor-pointer">
+          <button class="relative text-slate-500 hover:text-slate-800 transition-colors cursor-pointer" title="Thông báo (Đang phát triển)">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
             </svg>
-            <span class="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-[#dc2626] border-2 border-white"></span>
           </button>
 
           <!-- Profile -->
           <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-full bg-[#f97316] flex items-center justify-center text-white font-extrabold text-xs shadow-xs">
-              AD
+              {{ adminInitials }}
             </div>
             <div class="text-left leading-tight hidden sm:block">
-              <p class="text-xs font-extrabold text-slate-800">Admin Trường Thành</p>
-              <p class="text-[9px] text-slate-400 font-semibold uppercase">Super Admin</p>
+              <p class="text-xs font-extrabold text-slate-800">{{ adminName }}</p>
+              <p class="text-[9px] text-slate-400 font-semibold uppercase">{{ adminRole }}</p>
             </div>
           </div>
         </div>
@@ -101,6 +101,25 @@ import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+
+// BUG-07: Dynamic admin profile from authStore
+import { computed } from 'vue'
+
+const adminName = computed(() => authStore.user?.fullName || 'Admin')
+const adminInitials = computed(() => {
+  const name = authStore.user?.fullName || 'AD'
+  const parts = name.split(' ')
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }
+  return name.substring(0, 2).toUpperCase()
+})
+const adminRole = computed(() => {
+  const role = authStore.user?.role
+  if (role === 'admin') return 'Super Admin'
+  if (role === 'staff') return 'Nhân viên'
+  return 'Admin'
+})
 
 // Simple SVG Icons
 const DashboardIcon = {
@@ -144,7 +163,6 @@ const navItems = [
   { name: 'AdminPromotions', label: 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon },
   { name: 'AdminReports', label: 'Báo cáo', to: '/admin/reports', icon: ReportsIcon },
   { name: 'AdminLandingPages', label: 'Landing Page AI', to: '/admin/landing-pages', icon: SparklingIcon },
-  { name: 'AdminSettings', label: 'Cài đặt', to: '/admin/settings', icon: SettingsIcon },
 ]
 
 function handleLogout() {

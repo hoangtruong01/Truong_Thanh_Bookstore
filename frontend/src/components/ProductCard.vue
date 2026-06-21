@@ -75,7 +75,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { formatCurrency, getDiscountPercent } from '@/utils/helpers'
+import { formatCurrency, getDiscountPercent, formatNumber } from '@/utils/helpers'
 import type { Product } from '@/types'
 
 const props = defineProps<{
@@ -96,9 +96,6 @@ const discountPercent = computed(() => {
   return getDiscountPercent(props.product.price, props.product.discountPrice)
 })
 
-function formatNumber(num: number) {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-}
 
 const placeholder = computed(() => {
   const name = (props.product.name || '').toLowerCase()

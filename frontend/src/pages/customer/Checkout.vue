@@ -12,7 +12,7 @@
           Mã đơn hàng của bạn là <span class="font-mono font-bold text-slate-800">{{ orderCode }}</span>. Chúng tôi sẽ sớm liên hệ xác nhận đơn hàng của bạn.
         </p>
       </div>
-      <router-link to="/" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-xl transition-colors inline-block text-sm">
+      <router-link to="/" class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3 px-8 rounded-xl transition-colors inline-block text-sm">
         Trở về trang chủ
       </router-link>
     </div>
@@ -31,7 +31,7 @@
                 type="text"
                 required
                 placeholder="Nguyễn Văn A"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
               />
             </div>
             <div>
@@ -41,8 +41,14 @@
                 type="tel"
                 required
                 placeholder="09xx xxx xxx"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                maxlength="10"
+                @input="onPhoneInput"
+                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
+                :class="{ 'border-red-300 ring-1 ring-red-300': shippingInfo.phone && !isPhoneValid }"
               />
+              <p v-if="shippingInfo.phone && !isPhoneValid" class="text-[10px] text-red-500 mt-1 font-medium">
+                Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0
+              </p>
             </div>
             <div>
               <label class="text-xs font-bold text-slate-700">Địa chỉ Email</label>
@@ -51,7 +57,7 @@
                 type="email"
                 required
                 placeholder="customer@example.com"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
               />
             </div>
             <div class="sm:col-span-2">
@@ -61,7 +67,7 @@
                 type="text"
                 required
                 placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
               />
             </div>
             <div class="sm:col-span-2">
@@ -70,7 +76,7 @@
                 v-model="shippingInfo.note"
                 rows="3"
                 placeholder="Ví dụ: Giao giờ hành chính, gọi điện trước khi giao..."
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
               ></textarea>
             </div>
           </div>
@@ -84,14 +90,14 @@
               v-for="method in paymentMethods"
               :key="method.value"
               class="flex items-start gap-4 p-4 border rounded-2xl cursor-pointer transition-all hover:bg-slate-50"
-              :class="[paymentMethod === method.value ? 'border-blue-600 bg-blue-50/20' : 'border-slate-200']"
+              :class="[paymentMethod === method.value ? 'border-[#dc2626] bg-red-50/20' : 'border-slate-200']"
             >
               <input
                 type="radio"
                 v-model="paymentMethod"
                 :value="method.value"
                 name="payment_method"
-                class="mt-1 text-blue-600 focus:ring-blue-500"
+                class="mt-1 text-[#dc2626] focus:ring-[#dc2626] accent-[#dc2626]"
               />
               <div>
                 <p class="text-sm font-bold text-slate-800">{{ method.label }}</p>
@@ -138,14 +144,14 @@
             </div>
             <div class="border-t border-slate-100 pt-3 flex justify-between text-slate-800">
               <span class="text-base font-extrabold">Tổng thanh toán</span>
-              <span class="text-lg font-black text-blue-700">{{ formatCurrency(cartStore.total) }}</span>
+              <span class="text-lg font-black text-[#dc2626]">{{ formatCurrency(cartStore.total) }}</span>
             </div>
           </div>
 
           <button
             @click="placeOrder"
-            :disabled="submitting || checkoutItems.length === 0"
-            class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-lg shadow-blue-500/20 disabled:bg-slate-300 disabled:shadow-none"
+            :disabled="submitting || checkoutItems.length === 0 || (shippingInfo.phone && !isPhoneValid)"
+            class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none cursor-pointer"
           >
             {{ submitting ? 'Đang xử lý...' : 'Đặt hàng ngay' }}
           </button>
@@ -190,6 +196,18 @@ const paymentMethods = [
   { value: 'BANK_TRANSFER', label: 'Chuyển khoản ngân hàng', description: 'Chuyển khoản qua số tài khoản ngân hàng của cửa hàng.' },
   { value: 'EWALLET', label: 'Thanh toán qua ví điện tử', description: 'Momo, ZaloPay, ShopeePay...' },
 ]
+
+// UX-06: Phone validation
+const isPhoneValid = computed(() => {
+  if (!shippingInfo.phone) return true
+  return /^0\d{9}$/.test(shippingInfo.phone)
+})
+
+function onPhoneInput(e: Event) {
+  const input = e.target as HTMLInputElement
+  input.value = input.value.replace(/\D/g, '')
+  shippingInfo.phone = input.value
+}
 
 onMounted(() => {
   if (authStore.isAuthenticated && authStore.user) {

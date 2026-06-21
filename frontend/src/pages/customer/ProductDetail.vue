@@ -12,7 +12,7 @@
 
     <div v-else-if="!product" class="bg-white border border-slate-200 rounded-3xl p-16 text-center space-y-4">
       <h3 class="text-lg font-bold text-slate-800">Không tìm thấy sản phẩm</h3>
-      <router-link to="/products" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition-colors inline-block text-sm">
+      <router-link to="/products" class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-2.5 px-6 rounded-xl transition-colors inline-block text-sm">
         Trở về danh sách sản phẩm
       </router-link>
     </div>
@@ -54,7 +54,7 @@
               :key="idx"
               @click="selectedImage = img"
               class="w-20 h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0"
-              :class="[selectedImage === img ? 'border-blue-600' : 'border-transparent opacity-70 hover:opacity-100']"
+              :class="[selectedImage === img ? 'border-[#dc2626]' : 'border-transparent opacity-70 hover:opacity-100']"
             >
               <img :src="img" class="w-full h-full object-cover" />
             </button>
@@ -93,7 +93,7 @@
             <div class="space-y-1">
               <template v-if="product.discountPrice > 0">
                 <div class="flex items-baseline gap-3">
-                  <span class="text-3xl font-black text-blue-700">{{ formatCurrency(product.discountPrice) }}</span>
+                  <span class="text-3xl font-black text-[#dc2626]">{{ formatCurrency(product.discountPrice) }}</span>
                   <span class="text-slate-400 line-through text-sm font-medium">{{ formatCurrency(product.price) }}</span>
                 </div>
                 <p class="text-xs text-red-500 font-bold">
@@ -142,7 +142,7 @@
             <button
               @click="addToCart()"
               :disabled="product.stock === 0"
-              class="flex-1 bg-white hover:bg-slate-50 text-blue-700 border-2 border-blue-700 font-bold py-3.5 px-4 rounded-2xl transition-colors flex items-center justify-center gap-2 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-300 disabled:cursor-not-allowed text-sm uppercase tracking-wider cursor-pointer"
+              class="flex-1 bg-white hover:bg-slate-50 text-[#dc2626] border-2 border-[#dc2626] font-bold py-3.5 px-4 rounded-2xl transition-colors flex items-center justify-center gap-2 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-300 disabled:cursor-not-allowed text-sm uppercase tracking-wider cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" /></svg>
               Thêm vào giỏ hàng
@@ -753,9 +753,7 @@ function addToCart(prod?: Product) {
   }
 }
 
-function formatNumber(num: number) {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-}
+
 
 function getProductPlaceholder(prodName?: string) {
   const name = (prodName || '').toLowerCase()

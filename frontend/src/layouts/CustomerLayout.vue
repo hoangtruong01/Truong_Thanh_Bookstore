@@ -12,6 +12,13 @@
     >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-20 gap-4">
+          <!-- Mobile Menu Toggle (UX-05) -->
+          <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-slate-700 hover:text-[#dc2626] transition-colors cursor-pointer flex-shrink-0" aria-label="Menu">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+              <path v-if="!mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              <path v-else stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
           <!-- Logo -->
           <router-link to="/" class="flex items-center gap-2.5 flex-shrink-0">
             <!-- Icon TT -->
@@ -214,8 +221,8 @@
 
           <!-- Utility Icons -->
           <div class="flex items-center gap-6">
-            <!-- Notifications -->
-            <button class="relative text-slate-700 hover:text-[#dc2626] transition-colors cursor-pointer">
+            <!-- Notifications - BUG-08: add tooltip -->
+            <button class="relative text-slate-700 hover:text-[#dc2626] transition-colors cursor-pointer hidden md:block" title="Thông báo (Đang phát triển)">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
               </svg>
@@ -247,7 +254,10 @@
                       <router-link v-if="authStore.isStaff" to="/admin/dashboard" class="block px-4 py-2 hover:bg-slate-100">
                         Quản trị Admin
                       </router-link>
-                      <button @click="authStore.logout" class="w-full text-left block px-4 py-2 hover:bg-red-50 text-red-600">
+                      <router-link to="/my-orders" class="block px-4 py-2 hover:bg-slate-100">
+                        Đơn hàng của tôi
+                      </router-link>
+                      <button @click="authStore.logout" class="w-full text-left block px-4 py-2 hover:bg-red-50 text-red-600 cursor-pointer">
                         Đăng xuất
                       </button>
                     </div>
@@ -271,6 +281,65 @@
     </header>
     <div v-if="isSticky" class="h-20"></div>
 
+    <!-- Mobile Menu Drawer (UX-05) -->
+    <div v-if="mobileMenuOpen" class="md:hidden bg-white border-b border-slate-200 px-4 py-4 space-y-4 shadow-sm">
+      <!-- Search input for mobile -->
+      <form @submit.prevent="handleSearch">
+        <div class="relative w-full">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Tìm kiếm sản phẩm..."
+            class="w-full bg-slate-100 border border-slate-200 rounded-full py-2 px-4 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:border-transparent transition-all"
+          />
+          <button type="submit" class="absolute right-1 top-1/2 -translate-y-1/2 bg-[#dc2626] hover:bg-[#b91c1c] text-white p-1.5 px-3 rounded-full transition-colors cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m21-21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+            </svg>
+          </button>
+        </div>
+      </form>
+
+      <!-- Category List for mobile -->
+      <div class="space-y-2">
+        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Danh mục sản phẩm</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            v-for="cat in parentCategories"
+            :key="cat._id"
+            type="button"
+            @click="navigateToCategory(cat._id)"
+            class="text-left px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+          >
+            {{ cat.name }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick user links for mobile -->
+      <div class="border-t border-slate-100 pt-3 flex flex-col gap-2.5">
+        <router-link to="/cart" class="flex items-center gap-2 text-xs font-bold text-slate-700 px-1">
+          🛒 Giỏ hàng ({{ cartStore.itemsCount }})
+        </router-link>
+        <template v-if="authStore.isAuthenticated">
+          <router-link to="/my-orders" class="flex items-center gap-2 text-xs font-bold text-slate-700 px-1">
+            📦 Đơn hàng của tôi
+          </router-link>
+          <router-link v-if="authStore.isStaff" to="/admin/dashboard" class="flex items-center gap-2 text-xs font-bold text-[#dc2626] px-1">
+            ⚙️ Quản trị Admin
+          </router-link>
+          <button @click="authStore.logout" class="text-left flex items-center gap-2 text-xs font-bold text-red-600 px-1 cursor-pointer">
+            🚪 Đăng xuất
+          </button>
+        </template>
+        <template v-else>
+          <router-link to="/login" class="flex items-center gap-2 text-xs font-bold text-[#dc2626] px-1">
+            🔑 Đăng nhập
+          </router-link>
+        </template>
+      </div>
+    </div>
+
     <!-- Main Content Area -->
     <main class="flex-grow">
       <router-view />
@@ -288,19 +357,19 @@
         <div>
           <h3 class="text-white text-sm font-semibold mb-4 uppercase tracking-wider">Hỗ trợ khách hàng</h3>
           <ul class="space-y-2 text-sm text-slate-400">
-            <li><a href="#" class="hover:text-white transition-colors">Chính sách bảo mật</a></li>
-            <li><a href="#" class="hover:text-white transition-colors">Chính sách giao hàng</a></li>
-            <li><a href="#" class="hover:text-white transition-colors">Điều khoản dịch vụ</a></li>
-            <li><a href="#" class="hover:text-white transition-colors">Liên hệ - Góp ý</a></li>
+            <li><router-link to="/products" class="hover:text-white transition-colors">Chính sách bảo mật</router-link></li>
+            <li><router-link to="/products" class="hover:text-white transition-colors">Chính sách giao hàng</router-link></li>
+            <li><router-link to="/products" class="hover:text-white transition-colors">Điều khoản dịch vụ</router-link></li>
+            <li><router-link to="/products" class="hover:text-white transition-colors">Liên hệ - Góp ý</router-link></li>
           </ul>
         </div>
         <div>
           <h3 class="text-white text-sm font-semibold mb-4 uppercase tracking-wider">Combo phổ biến</h3>
           <ul class="space-y-2 text-sm text-slate-400">
-            <li><router-link to="/products" class="hover:text-white transition-colors">Combo Bút - Viết</router-link></li>
-            <li><router-link to="/products" class="hover:text-white transition-colors">Combo Học Sinh</router-link></li>
-            <li><router-link to="/products" class="hover:text-white transition-colors">Combo Văn Phòng</router-link></li>
-            <li><router-link to="/products" class="hover:text-white transition-colors">Combo Sổ - Tập - Giấy</router-link></li>
+            <li><router-link to="/products?q=combo+bút" class="hover:text-white transition-colors">Combo Bút - Viết</router-link></li>
+            <li><router-link to="/products?q=combo+học+sinh" class="hover:text-white transition-colors">Combo Học Sinh</router-link></li>
+            <li><router-link to="/products?q=combo+văn+phòng" class="hover:text-white transition-colors">Combo Văn Phòng</router-link></li>
+            <li><router-link to="/products?q=combo+sổ" class="hover:text-white transition-colors">Combo Sổ - Tập - Giấy</router-link></li>
           </ul>
         </div>
         <div>
@@ -321,7 +390,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
 import { productService } from '@/services/product.service'
@@ -332,7 +401,14 @@ import type { Category } from '@/types'
 const authStore = useAuthStore()
 const cartStore = useCartStore()
 const router = useRouter()
+const route = useRoute()
 
+const mobileMenuOpen = ref(false)
+
+// Close mobile menu on route changes
+watch(() => route.fullPath, () => {
+  mobileMenuOpen.value = false
+})
 
 const searchQuery = ref('')
 const allCategories = ref<Category[]>([])

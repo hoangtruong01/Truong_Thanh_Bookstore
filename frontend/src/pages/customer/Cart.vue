@@ -3,14 +3,14 @@
     <h1 class="text-2xl font-extrabold text-slate-900 mb-8">Giỏ hàng của bạn</h1>
 
     <div v-if="cartStore.items.length === 0" class="bg-white border border-slate-200 rounded-3xl p-16 text-center space-y-6">
-      <div class="w-20 h-20 bg-blue-50 text-blue-700 rounded-full flex items-center justify-center mx-auto">
+      <div class="w-20 h-20 bg-red-50 text-[#dc2626] rounded-full flex items-center justify-center mx-auto">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" /></svg>
       </div>
       <div class="space-y-2">
         <h3 class="text-lg font-bold text-slate-800">Giỏ hàng đang trống</h3>
         <p class="text-slate-400 text-sm max-w-xs mx-auto">Hãy lấp đầy giỏ hàng bằng những sản phẩm văn phòng phẩm chất lượng.</p>
       </div>
-      <router-link to="/products" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-xl transition-colors inline-block text-sm">
+      <router-link to="/products" class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3 px-8 rounded-xl transition-colors inline-block text-sm">
         Tiếp tục mua sắm
       </router-link>
     </div>
@@ -26,8 +26,8 @@
               class="w-6 h-6 border-2 rounded-lg flex items-center justify-center transition-all cursor-pointer"
               :class="[
                 isAllSelected
-                  ? 'bg-blue-700 border-blue-700 text-white'
-                  : 'bg-white border-slate-300 hover:border-blue-500'
+                  ? 'bg-[#dc2626] border-[#dc2626] text-white'
+                  : 'bg-white border-slate-300 hover:border-[#dc2626]'
               ]"
             >
               <svg
@@ -65,8 +65,8 @@
               class="w-6 h-6 border-2 rounded-lg flex items-center justify-center transition-all cursor-pointer"
               :class="[
                 item.selected !== false
-                  ? 'bg-blue-700 border-blue-700 text-white'
-                  : 'bg-white border-slate-300 hover:border-blue-500'
+                  ? 'bg-[#dc2626] border-[#dc2626] text-white'
+                  : 'bg-white border-slate-300 hover:border-[#dc2626]'
               ]"
             >
               <svg
@@ -88,7 +88,7 @@
           <div class="flex-grow flex flex-col justify-between">
             <div>
               <div class="flex justify-between gap-2">
-                <h3 class="text-sm font-bold text-slate-800 hover:text-blue-700 transition-colors line-clamp-2">
+                <h3 class="text-sm font-bold text-slate-800 hover:text-[#dc2626] transition-colors line-clamp-2">
                   <router-link :to="`/products/${item.product._id}`">{{ item.product.name }}</router-link>
                 </h3>
                 <button @click="cartStore.removeFromCart(item.product._id)" class="text-slate-400 hover:text-red-600 transition-colors">
@@ -101,7 +101,7 @@
             <div class="flex justify-between items-end mt-4">
               <!-- Price info -->
               <div class="flex items-baseline gap-2">
-                <span class="text-sm font-extrabold text-blue-700">
+                <span class="text-sm font-extrabold text-[#dc2626]">
                   {{ formatCurrency(item.product.discountPrice || item.product.price) }}
                 </span>
                 <span v-if="item.product.discountPrice > 0" class="text-xs text-slate-400 line-through">
@@ -148,9 +148,9 @@
               v-model="couponCode"
               type="text"
               placeholder="Nhập mã..."
-              class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white font-mono uppercase tracking-wider"
+              class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white font-mono uppercase tracking-wider"
             />
-            <button type="submit" class="bg-slate-950 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors">
+            <button type="submit" class="bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer">
               Áp dụng
             </button>
           </form>
@@ -177,7 +177,7 @@
             </div>
             <div class="border-t border-slate-100 pt-3 flex justify-between text-slate-800">
               <span class="text-base font-extrabold">Tổng tiền</span>
-              <span class="text-lg font-black text-blue-700">{{ formatCurrency(cartStore.total) }}</span>
+              <span class="text-lg font-black text-[#dc2626]">{{ formatCurrency(cartStore.total) }}</span>
             </div>
           </div>
 
@@ -185,7 +185,7 @@
             @click="proceedToCheckout"
             :class="[
               'w-full font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-md cursor-pointer',
-              isAnyItemSelected ? 'bg-blue-700 hover:bg-blue-800 text-white shadow-blue-500/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+              isAnyItemSelected ? 'bg-[#dc2626] hover:bg-[#b91c1c] text-white shadow-red-500/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
             ]"
             :disabled="!isAnyItemSelected"
           >

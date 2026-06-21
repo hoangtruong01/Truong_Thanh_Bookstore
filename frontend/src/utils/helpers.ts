@@ -5,6 +5,10 @@ export function formatCurrency(value: number): string {
   }).format(value)
 }
 
+export function formatNumber(value: number): string {
+  return new Intl.NumberFormat('vi-VN').format(value)
+}
+
 export function formatDate(date: string): string {
   return new Intl.DateTimeFormat('vi-VN', {
     year: 'numeric',

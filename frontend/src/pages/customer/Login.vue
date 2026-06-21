@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
     <div class="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-6">
       <div class="text-center space-y-2">
-        <router-link to="/" class="text-2xl font-black bg-gradient-to-r from-blue-700 to-indigo-800 bg-clip-text text-transparent uppercase tracking-tight">
+        <router-link to="/" class="text-2xl font-black text-[#dc2626] uppercase tracking-tight">
           TRƯỜNG THÀNH
         </router-link>
         <h2 class="text-lg font-bold text-slate-800">Đăng nhập tài khoản</h2>
@@ -17,7 +17,7 @@
             type="email"
             required
             placeholder="name@example.com"
-            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
           />
         </div>
         <div>
@@ -29,14 +29,14 @@
             type="password"
             required
             placeholder="••••••••"
-            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
           />
         </div>
 
         <button
           type="submit"
           :disabled="authStore.loading"
-          class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center text-sm uppercase tracking-wider shadow-lg shadow-blue-500/20 disabled:bg-slate-300 disabled:shadow-none"
+          class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center text-sm uppercase tracking-wider shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none cursor-pointer"
         >
           {{ authStore.loading ? 'Đang xử lý...' : 'Đăng nhập' }}
         </button>
@@ -44,7 +44,7 @@
 
       <div class="text-center text-xs text-slate-500">
         Chưa có tài khoản?
-        <router-link to="/register" class="text-blue-600 hover:underline font-bold">Đăng ký ngay</router-link>
+        <router-link to="/register" class="text-[#dc2626] hover:underline font-bold">Đăng ký ngay</router-link>
       </div>
     </div>
   </div>

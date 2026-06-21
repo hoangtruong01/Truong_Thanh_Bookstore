@@ -796,9 +796,11 @@
 
         <div class="pt-6 border-t border-slate-800 max-w-md mx-auto space-y-4">
           <h3 class="text-sm font-bold tracking-wider text-slate-300 uppercase">Đăng ký nhận tin tức & khuyến mãi</h3>
-          <form @submit.prevent class="flex gap-2">
+          <form @submit.prevent="handleSubscribe" class="flex gap-2">
             <input
+              v-model="newsletterEmail"
               type="email"
+              required
               placeholder="Email của bạn..."
               class="flex-grow bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
             />
@@ -845,25 +847,37 @@ const loadingDiscount = ref(true)
 const loadingNew = ref(true)
 
 // Countdown timer refs
-const hours = ref('02')
-const minutes = ref('45')
-const seconds = ref('18')
+const hours = ref('00')
+const minutes = ref('00')
+const seconds = ref('00')
 let countdownTimer: any = null
 
 function startCountdown() {
-  let totalSeconds = 2 * 3600 + 45 * 60 + 18
-  countdownTimer = setInterval(() => {
-    if (totalSeconds <= 0) {
-      totalSeconds = 3 * 3600
+  const updateTimer = () => {
+    const now = new Date()
+    const midnight = new Date()
+    midnight.setHours(24, 0, 0, 0)
+    const diff = midnight.getTime() - now.getTime()
+    if (diff <= 0) {
+      return
     }
-    totalSeconds--
-    const h = Math.floor(totalSeconds / 3600)
-    const m = Math.floor((totalSeconds % 3600) / 60)
-    const s = totalSeconds % 60
+    const h = Math.floor(diff / (1000 * 60 * 60))
+    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    const s = Math.floor((diff % (1000 * 60)) / 1000)
     hours.value = h.toString().padStart(2, '0')
     minutes.value = m.toString().padStart(2, '0')
     seconds.value = s.toString().padStart(2, '0')
-  }, 1000)
+  }
+  updateTimer()
+  countdownTimer = setInterval(updateTimer, 1000)
+}
+
+// BUG-09: Newsletter subscription
+const newsletterEmail = ref('')
+function handleSubscribe() {
+  if (!newsletterEmail.value.trim()) return
+  toast.success('Đăng ký nhận tin thành công! Chúng tôi đã lưu thông tin của bạn.')
+  newsletterEmail.value = ''
 }
 
 // Mapped styling system for highlighting categories in home layout

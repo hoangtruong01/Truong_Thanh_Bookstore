@@ -5,12 +5,12 @@
       <aside class="w-full lg:w-64 flex-shrink-0 space-y-6">
         <!-- Categories -->
         <div class="bg-white border border-slate-200 rounded-2xl p-6">
-          <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider mb-4">Combo</h3>
+          <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider mb-4">Danh mục</h3>
           <div class="space-y-2">
             <button
               @click="selectCategory('')"
               class="w-full text-left text-sm font-medium py-1 px-2 rounded-lg transition-colors"
-              :class="[!selectedCategory ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50']"
+              :class="[!selectedCategory ? 'bg-red-50 text-[#dc2626] font-bold' : 'text-slate-600 hover:bg-slate-50']"
             >
               Tất cả sản phẩm
             </button>
@@ -18,7 +18,7 @@
               <button
                 @click="selectCategory(cat._id)"
                 class="w-full text-left text-sm font-medium py-1 px-2 rounded-lg transition-colors flex justify-between items-center"
-                :class="[selectedCategory === cat._id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50']"
+                :class="[selectedCategory === cat._id ? 'bg-red-50 text-[#dc2626] font-bold' : 'text-slate-600 hover:bg-slate-50']"
               >
                 <span>{{ cat.name }}</span>
               </button>
@@ -50,7 +50,7 @@
             </div>
             <button
               @click="applyFilters"
-              class="w-full bg-slate-950 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors mt-2"
+              class="w-full bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors mt-2 cursor-pointer"
             >
               Áp dụng
             </button>
@@ -72,7 +72,7 @@
             <select
               v-model="sortBy"
               @change="fetchProducts"
-              class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+              class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
             >
               <option value="newest">Mới nhất</option>
               <option value="price_asc">Giá tăng dần</option>
@@ -232,9 +232,5 @@ function changePage(page: number) {
 function addToCart(product: Product) {
   cartStore.addToCart(product)
   toast.success(`Đã thêm "${product.name}" vào giỏ hàng`)
-}
-
-function formatNumber(num: number) {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 </script>

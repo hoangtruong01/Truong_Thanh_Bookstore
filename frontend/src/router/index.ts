@@ -1,31 +1,35 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-// Layouts
+// Layouts (keep eager since they wrap everything)
 import CustomerLayout from '@/layouts/CustomerLayout.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 
-// Customer Pages
-import Home from '@/pages/customer/Home.vue'
-import ProductList from '@/pages/customer/ProductList.vue'
-import ProductDetail from '@/pages/customer/ProductDetail.vue'
-import Cart from '@/pages/customer/Cart.vue'
-import Checkout from '@/pages/customer/Checkout.vue'
-import Login from '@/pages/customer/Login.vue'
-import Register from '@/pages/customer/Register.vue'
-import LandingPageDetail from '@/pages/customer/LandingPageDetail.vue'
+// Customer Pages - lazy loaded for better performance (PERF-01)
+const Home = () => import('@/pages/customer/Home.vue')
+const ProductList = () => import('@/pages/customer/ProductList.vue')
+const ProductDetail = () => import('@/pages/customer/ProductDetail.vue')
+const Cart = () => import('@/pages/customer/Cart.vue')
+const Checkout = () => import('@/pages/customer/Checkout.vue')
+const Login = () => import('@/pages/customer/Login.vue')
+const Register = () => import('@/pages/customer/Register.vue')
+const LandingPageDetail = () => import('@/pages/customer/LandingPageDetail.vue')
+const MyOrders = () => import('@/pages/customer/MyOrders.vue')
 
-// Admin Pages
-import AdminDashboard from '@/pages/admin/Dashboard.vue'
-import AdminProducts from '@/pages/admin/Products.vue'
-import AdminProductForm from '@/pages/admin/ProductForm.vue'
-import AdminOrders from '@/pages/admin/Orders.vue'
-import AdminInventory from '@/pages/admin/Inventory.vue'
-import AdminCustomers from '@/pages/admin/Customers.vue'
-import AdminPromotions from '@/pages/admin/Promotions.vue'
-import AdminReports from '@/pages/admin/Reports.vue'
-import AdminCombos from '@/pages/admin/Combos.vue'
-import AdminLandingPages from '@/pages/admin/LandingPages.vue'
+// Admin Pages - lazy loaded
+const AdminDashboard = () => import('@/pages/admin/Dashboard.vue')
+const AdminProducts = () => import('@/pages/admin/Products.vue')
+const AdminProductForm = () => import('@/pages/admin/ProductForm.vue')
+const AdminOrders = () => import('@/pages/admin/Orders.vue')
+const AdminInventory = () => import('@/pages/admin/Inventory.vue')
+const AdminCustomers = () => import('@/pages/admin/Customers.vue')
+const AdminPromotions = () => import('@/pages/admin/Promotions.vue')
+const AdminReports = () => import('@/pages/admin/Reports.vue')
+const AdminCombos = () => import('@/pages/admin/Combos.vue')
+const AdminLandingPages = () => import('@/pages/admin/LandingPages.vue')
+
+// 404 Page (UX-04)
+const NotFound = () => import('@/pages/NotFound.vue')
 
 const routes = [
   {
@@ -36,8 +40,10 @@ const routes = [
       { path: 'products', name: 'ProductList', component: ProductList },
       { path: 'products/:id', name: 'ProductDetail', component: ProductDetail },
       { path: 'cart', name: 'Cart', component: Cart },
-      { path: 'checkout', name: 'Checkout', component: Checkout, meta: { requiresAuth: true } },
+      // BUG-01: Removed requiresAuth - allow guest checkout
+      { path: 'checkout', name: 'Checkout', component: Checkout },
       { path: 't/:slug', name: 'LandingPageDetail', component: LandingPageDetail },
+      { path: 'my-orders', name: 'MyOrders', component: MyOrders, meta: { requiresAuth: true } },
     ]
   },
   { path: '/login', name: 'Login', component: Login, meta: { guestOnly: true } },
@@ -61,7 +67,8 @@ const routes = [
       { path: 'landing-pages', name: 'AdminLandingPages', component: AdminLandingPages },
     ]
   },
-  { path: '/:pathMatch(.*)*', redirect: '/' }
+  // UX-04: Proper 404 page instead of silent redirect
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound }
 ]
 
 const router = createRouter({
