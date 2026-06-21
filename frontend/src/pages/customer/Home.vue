@@ -229,7 +229,8 @@
           <div
             v-for="(prod, index) in discounted"
             :key="prod._id"
-            class="bg-white border border-slate-100/80 rounded-3xl p-5 space-y-4 shadow-sm hover:shadow-xl hover:border-orange-200 transition-all duration-300 relative group flex flex-col justify-between"
+            @click="goToDetail(prod._id)"
+            class="bg-white border border-slate-100/80 rounded-3xl p-5 space-y-4 shadow-sm hover:shadow-xl hover:border-orange-200 transition-all duration-300 relative group flex flex-col justify-between cursor-pointer"
           >
             <!-- Badge container -->
             <div class="absolute top-4 inset-x-4 flex items-center justify-between z-10 pointer-events-none">
@@ -244,7 +245,7 @@
             </div>
 
             <!-- Product content -->
-            <router-link :to="`/product/${prod.slug || prod._id}`" class="block space-y-3 cursor-pointer">
+            <div class="block space-y-3">
               <!-- Image -->
               <div class="aspect-square bg-slate-50/50 rounded-2xl overflow-hidden flex items-center justify-center p-4">
                 <img
@@ -293,7 +294,7 @@
                   <span>{{ Math.min(Math.round((prod.sold / (prod.stock + prod.sold || 100)) * 100), 95) || 30 }}%</span>
                 </div>
               </div>
-            </router-link>
+            </div>
 
             <!-- Buy Button -->
             <button
@@ -772,6 +773,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
 import { productService } from '@/services/product.service'
@@ -784,6 +786,11 @@ import flashSaleBg from '@/assets/flash-sale-bg.png'
 
 const cartStore = useCartStore()
 const toast = useToast()
+const router = useRouter()
+
+function goToDetail(id: string) {
+  router.push(`/products/${id}`)
+}
 const { observeNewElements } = useScrollReveal()
 
 const parentCategories = ref<Category[]>([])
