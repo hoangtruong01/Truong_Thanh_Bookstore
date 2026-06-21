@@ -202,31 +202,7 @@
         </div>
       </div>
 
-      <!-- Combos Navigation -->
-      <nav class="bg-white border-t border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none h-14">
-          <router-link
-            to="/"
-            :class="[
-              'text-sm font-semibold px-3.5 py-1.5 rounded-full transition-colors',
-              isRouteActive('/') ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            ]"
-          >
-            Tất cả sản phẩm
-          </router-link>
-          <template v-for="cat in parentCategories" :key="cat._id">
-            <router-link
-              :to="`/products?category=${cat._id}`"
-              :class="[
-                'text-sm font-semibold px-3.5 py-1.5 rounded-full transition-colors',
-                isCategoryActive(cat._id) ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              ]"
-            >
-              {{ cat.name }}
-            </router-link>
-          </template>
-        </div>
-      </nav>
+
     </header>
 
     <!-- Main Content Area -->
@@ -279,7 +255,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
 import { categoryService } from '@/services/category.service'
@@ -289,7 +265,7 @@ import type { Category } from '@/types'
 const authStore = useAuthStore()
 const cartStore = useCartStore()
 const router = useRouter()
-const route = useRoute()
+
 
 const searchQuery = ref('')
 const allCategories = ref<Category[]>([])
@@ -332,13 +308,7 @@ function handleSearch() {
   }
 }
 
-function isRouteActive(path: string) {
-  return route.path === path && !route.query.category
-}
 
-function isCategoryActive(categoryId: string) {
-  return route.path === '/products' && route.query.category === categoryId
-}
 </script>
 
 <style scoped>
