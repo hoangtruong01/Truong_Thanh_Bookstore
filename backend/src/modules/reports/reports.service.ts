@@ -14,14 +14,19 @@ export class ReportsService {
   ) {}
 
   async getDashboard() {
-    const [todayRevenue, totalOrders, totalProducts, lowStockCount, newCustomers] =
-      await Promise.all([
-        this.ordersService.getTodayRevenue(),
-        this.ordersService.count(),
-        this.productsService.count(),
-        this.inventoryService.getLowStockCount(),
-        this.customersService.getNewCustomersCount(30),
-      ]);
+    const [
+      todayRevenue,
+      totalOrders,
+      totalProducts,
+      lowStockCount,
+      newCustomers,
+    ] = await Promise.all([
+      this.ordersService.getTodayRevenue(),
+      this.ordersService.count(),
+      this.productsService.count(),
+      this.inventoryService.getLowStockCount(),
+      this.customersService.getNewCustomersCount(30),
+    ]);
 
     const recentOrders = await this.ordersService.getRecent(5);
     const bestSelling = await this.productsService.getBestSelling(5);

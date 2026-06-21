@@ -28,15 +28,27 @@ export class CategoriesService {
   }
 
   async findAll(): Promise<CategoryDocument[]> {
-    return this.categoryModel.find({ status: true }).populate('parentId').populate('products').exec();
+    return this.categoryModel
+      .find({ status: true })
+      .populate('parentId')
+      .populate('products')
+      .exec();
   }
 
   async findAllAdmin(): Promise<CategoryDocument[]> {
-    return this.categoryModel.find().populate('parentId').populate('products').exec();
+    return this.categoryModel
+      .find()
+      .populate('parentId')
+      .populate('products')
+      .exec();
   }
 
   async findById(id: string): Promise<CategoryDocument> {
-    const category = await this.categoryModel.findById(id).populate('parentId').populate('products').exec();
+    const category = await this.categoryModel
+      .findById(id)
+      .populate('parentId')
+      .populate('products')
+      .exec();
     if (!category) throw new NotFoundException('Category not found');
     return category;
   }

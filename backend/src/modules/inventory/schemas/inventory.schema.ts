@@ -1,12 +1,20 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types, SchemaTypes } from 'mongoose';
-import { InventoryStatus, InventoryTransactionType } from '../../../common/enums';
+import {
+  InventoryStatus,
+  InventoryTransactionType,
+} from '../../../common/enums';
 
 export type InventoryDocument = Inventory & Document;
 
 @Schema({ timestamps: true })
 export class Inventory {
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: true, unique: true })
+  @Prop({
+    type: SchemaTypes.ObjectId,
+    ref: 'Product',
+    required: true,
+    unique: true,
+  })
   product: Types.ObjectId;
 
   @Prop({ default: 0 })
@@ -18,7 +26,11 @@ export class Inventory {
   @Prop({ default: 1000 })
   maxStock: number;
 
-  @Prop({ type: String, enum: InventoryStatus, default: InventoryStatus.IN_STOCK })
+  @Prop({
+    type: String,
+    enum: InventoryStatus,
+    default: InventoryStatus.IN_STOCK,
+  })
   status: InventoryStatus;
 
   @Prop({ default: Date.now })
@@ -49,4 +61,5 @@ export class InventoryTransaction {
   createdAt: Date;
 }
 
-export const InventoryTransactionSchema = SchemaFactory.createForClass(InventoryTransaction);
+export const InventoryTransactionSchema =
+  SchemaFactory.createForClass(InventoryTransaction);

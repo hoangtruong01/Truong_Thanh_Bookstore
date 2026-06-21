@@ -20,6 +20,10 @@
   margin-right: auto !important;
 }
 
+* {
+  overflow-anchor: none !important;
+}
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 80px;
@@ -197,4 +201,8 @@ body {
 .slide-leave-to {
   transform: translateX(20px);
   opacity: 0;
+}
+
+header {
+  overflow-anchor: none !important;
 }

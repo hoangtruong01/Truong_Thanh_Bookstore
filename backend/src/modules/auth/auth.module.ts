@@ -16,7 +16,7 @@ import { UsersModule } from '../users/users.module';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') || 'fallback_secret',
         signOptions: {
-          expiresIn: (configService.get('JWT_EXPIRES_IN') || '7d') as any,
+          expiresIn: configService.get('JWT_EXPIRES_IN') || '7d',
         },
       }),
       inject: [ConfigService],

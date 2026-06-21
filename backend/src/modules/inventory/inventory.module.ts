@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
-  Inventory, InventorySchema,
-  InventoryTransaction, InventoryTransactionSchema,
+  Inventory,
+  InventorySchema,
+  InventoryTransaction,
+  InventoryTransactionSchema,
 } from './schemas/inventory.schema';
 import { InventoryService } from './inventory.service';
 import { InventoryController } from './inventory.controller';

@@ -1,6 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types, SchemaTypes } from 'mongoose';
-import { OrderStatus, PaymentMethod, PaymentStatus } from '../../../common/enums';
+import {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from '../../../common/enums';
 
 @Schema()
 export class OrderItem {

@@ -13,7 +13,11 @@ export class CustomersService {
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
   ) {}
 
-  async findAll(page = 1, limit = 10, search?: string): Promise<PaginatedResult<any>> {
+  async findAll(
+    page = 1,
+    limit = 10,
+    search?: string,
+  ): Promise<PaginatedResult<any>> {
     const filter: any = { role: UserRole.CUSTOMER };
     if (search) {
       filter.$or = [
@@ -25,7 +29,13 @@ export class CustomersService {
 
     const skip = (page - 1) * limit;
     const [users, total] = await Promise.all([
-      this.userModel.find(filter).select('-password').skip(skip).limit(limit).sort({ createdAt: -1 }).exec(),
+      this.userModel
+        .find(filter)
+        .select('-password')
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 })
+        .exec(),
       this.userModel.countDocuments(filter).exec(),
     ]);
 
@@ -34,7 +44,13 @@ export class CustomersService {
       users.map(async (user) => {
         const orderStats = await this.orderModel.aggregate([
           { $match: { customer: user._id } },
-          { $group: { _id: null, totalOrders: { $sum: 1 }, totalSpent: { $sum: '$total' } } },
+          {
+            $group: {
+              _id: null,
+              totalOrders: { $sum: 1 },
+              totalSpent: { $sum: '$total' },
+            },
+          },
         ]);
         return {
           ...user.toObject(),
@@ -59,7 +75,13 @@ export class CustomersService {
 
     const orderStats = await this.orderModel.aggregate([
       { $match: { customer: user._id } },
-      { $group: { _id: null, totalOrders: { $sum: 1 }, totalSpent: { $sum: '$total' } } },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalSpent: { $sum: '$total' },
+        },
+      },
     ]);
 
     return {
@@ -73,9 +95,11 @@ export class CustomersService {
   async getNewCustomersCount(days = 30): Promise<number> {
     const date = new Date();
     date.setDate(date.getDate() - days);
-    return this.userModel.countDocuments({
-      role: UserRole.CUSTOMER,
-      createdAt: { $gte: date },
-    }).exec();
+    return this.userModel
+      .countDocuments({
+        role: UserRole.CUSTOMER,
+        createdAt: { $gte: date },
+      })
+      .exec();
   }
 }

@@ -1,11 +1,19 @@
 import {
-  Controller, Get, Post,
-  Body, Query, UseGuards, Request,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
-import { InventoryTransactionDto, AdjustInventoryDto } from './dto/inventory.dto';
+import {
+  InventoryTransactionDto,
+  AdjustInventoryDto,
+} from './dto/inventory.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 

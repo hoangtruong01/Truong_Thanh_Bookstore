@@ -3,7 +3,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Order, OrderDocument } from './schemas/order.schema';
-import { CreateOrderDto, UpdateOrderStatusDto, OrderQueryDto } from './dto/order.dto';
+import {
+  CreateOrderDto,
+  UpdateOrderStatusDto,
+  OrderQueryDto,
+} from './dto/order.dto';
 import { ProductsService } from '../products/products.service';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
 import { OrderStatus } from '../../common/enums';
@@ -28,19 +32,25 @@ export class OrdersService {
 
   async syncToGoogleSheet(order: any) {
     try {
-      const webappUrl = this.configService.get<string>('GOOGLE_SHEET_WEBAPP_URL');
+      const webappUrl = this.configService.get<string>(
+        'GOOGLE_SHEET_WEBAPP_URL',
+      );
       if (!webappUrl) {
         return;
       }
 
       // Format items to readable string
       const itemsText = order.items
-        ? order.items.map((item: any) => `${item.name} (x${item.quantity})`).join(', ')
+        ? order.items
+            .map((item: any) => `${item.name} (x${item.quantity})`)
+            .join(', ')
         : '';
 
       // Format Date in GMT+7
       const dateText = order.createdAt
-        ? new Date(order.createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+        ? new Date(order.createdAt).toLocaleString('vi-VN', {
+            timeZone: 'Asia/Ho_Chi_Minh',
+          })
         : new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 
       // Translate Status
@@ -85,7 +95,9 @@ export class OrdersService {
 
       if (!response.ok) {
         const text = await response.text();
-        console.error(`Google Sheet Sync Error: Status ${response.status}, ${text}`);
+        console.error(
+          `Google Sheet Sync Error: Status ${response.status}, ${text}`,
+        );
       } else {
         const data = await response.json();
         console.log('Google Sheet Sync success:', data);
@@ -96,7 +108,10 @@ export class OrdersService {
   }
 
   async create(dto: CreateOrderDto, userId?: string): Promise<OrderDocument> {
-    const subtotal = dto.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = dto.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
     const shippingFee = dto.shippingFee || (subtotal >= 299000 ? 0 : 30000);
     const discount = dto.discount || 0;
     const total = subtotal + shippingFee - discount;
@@ -146,7 +161,13 @@ export class OrdersService {
 
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
-      this.orderModel.find(filter).populate('customer', 'fullName email').sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
+      this.orderModel
+        .find(filter)
+        .populate('customer', 'fullName email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
       this.orderModel.countDocuments(filter).exec(),
     ]);
 
@@ -154,36 +175,59 @@ export class OrdersService {
   }
 
   async findById(id: string): Promise<OrderDocument> {
-    const order = await this.orderModel.findById(id).populate('customer', 'fullName email phone').exec();
+    const order = await this.orderModel
+      .findById(id)
+      .populate('customer', 'fullName email phone')
+      .exec();
     if (!order) throw new NotFoundException('Order not found');
     return order;
   }
 
-  async findByUser(userId: string, query: OrderQueryDto): Promise<PaginatedResult<OrderDocument>> {
+  async findByUser(
+    userId: string,
+    query: OrderQueryDto,
+  ): Promise<PaginatedResult<OrderDocument>> {
     const { page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
     const filter = { customer: userId };
 
     const [data, total] = await Promise.all([
-      this.orderModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
+      this.orderModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
       this.orderModel.countDocuments(filter).exec(),
     ]);
 
     return paginate(data, total, page, limit);
   }
 
-  async updateStatus(id: string, dto: UpdateOrderStatusDto): Promise<OrderDocument> {
+  async updateStatus(
+    id: string,
+    dto: UpdateOrderStatusDto,
+  ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(id).exec();
     if (!order) throw new NotFoundException('Order not found');
 
     order.orderStatus = dto.orderStatus;
 
     // If cancelled, restore stock
-    if (dto.orderStatus === OrderStatus.CANCELLED && order.orderStatus !== OrderStatus.CANCELLED) {
+    if (
+      dto.orderStatus === OrderStatus.CANCELLED &&
+      order.orderStatus !== OrderStatus.CANCELLED
+    ) {
       for (const item of order.items) {
         if (item.product) {
-          await this.productsService.updateStock(item.product.toString(), item.quantity);
-          await this.productsService.incrementSold(item.product.toString(), -item.quantity);
+          await this.productsService.updateStock(
+            item.product.toString(),
+            item.quantity,
+          );
+          await this.productsService.incrementSold(
+            item.product.toString(),
+            -item.quantity,
+          );
         }
       }
     }
@@ -194,7 +238,7 @@ export class OrdersService {
     }
 
     const savedOrder = await order.save();
-    
+
     // Sync to Google Sheet (async)
     this.syncToGoogleSheet(savedOrder).catch((err) => console.error(err));
 
@@ -213,7 +257,12 @@ export class OrdersService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const result = await this.orderModel.aggregate([
-      { $match: { createdAt: { $gte: today }, orderStatus: { $ne: OrderStatus.CANCELLED } } },
+      {
+        $match: {
+          createdAt: { $gte: today },
+          orderStatus: { $ne: OrderStatus.CANCELLED },
+        },
+      },
       { $group: { _id: null, total: { $sum: '$total' } } },
     ]);
     return result[0]?.total || 0;

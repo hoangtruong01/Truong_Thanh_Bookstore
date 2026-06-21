@@ -1,8 +1,22 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { LandingPageService } from './landing-page.service';
-import { CreateLandingPageDto, GenerateLandingPageDto, SubmitOrderDto } from './dto/landing-page.dto';
+import {
+  CreateLandingPageDto,
+  GenerateLandingPageDto,
+  SubmitOrderDto,
+} from './dto/landing-page.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 

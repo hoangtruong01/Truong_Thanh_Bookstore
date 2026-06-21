@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Promotion, PromotionDocument } from './schemas/promotion.schema';
@@ -8,7 +12,8 @@ import { DiscountType } from '../../common/enums';
 @Injectable()
 export class PromotionsService {
   constructor(
-    @InjectModel(Promotion.name) private promotionModel: Model<PromotionDocument>,
+    @InjectModel(Promotion.name)
+    private promotionModel: Model<PromotionDocument>,
   ) {}
 
   async create(dto: CreatePromotionDto): Promise<PromotionDocument> {
@@ -26,8 +31,13 @@ export class PromotionsService {
     return promo;
   }
 
-  async update(id: string, dto: Partial<CreatePromotionDto>): Promise<PromotionDocument> {
-    const promo = await this.promotionModel.findByIdAndUpdate(id, dto, { new: true }).exec();
+  async update(
+    id: string,
+    dto: Partial<CreatePromotionDto>,
+  ): Promise<PromotionDocument> {
+    const promo = await this.promotionModel
+      .findByIdAndUpdate(id, dto, { new: true })
+      .exec();
     if (!promo) throw new NotFoundException('Promotion not found');
     return promo;
   }
@@ -37,11 +47,15 @@ export class PromotionsService {
     if (!result) throw new NotFoundException('Promotion not found');
   }
 
-  async apply(dto: ApplyPromotionDto): Promise<{ discount: number; code: string }> {
-    const promo = await this.promotionModel.findOne({
-      code: dto.code.toUpperCase(),
-      status: true,
-    }).exec();
+  async apply(
+    dto: ApplyPromotionDto,
+  ): Promise<{ discount: number; code: string }> {
+    const promo = await this.promotionModel
+      .findOne({
+        code: dto.code.toUpperCase(),
+        status: true,
+      })
+      .exec();
 
     if (!promo) throw new NotFoundException('Promotion code not found');
 
@@ -62,7 +76,7 @@ export class PromotionsService {
 
     let discount = 0;
     if (promo.discountType === DiscountType.PERCENT) {
-      discount = Math.floor(dto.orderTotal * promo.discountValue / 100);
+      discount = Math.floor((dto.orderTotal * promo.discountValue) / 100);
     } else {
       discount = promo.discountValue;
     }

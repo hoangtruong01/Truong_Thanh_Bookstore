@@ -2,18 +2,25 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
-  Inventory, InventoryDocument,
-  InventoryTransaction, InventoryTransactionDocument,
+  Inventory,
+  InventoryDocument,
+  InventoryTransaction,
+  InventoryTransactionDocument,
 } from './schemas/inventory.schema';
-import { InventoryTransactionDto, AdjustInventoryDto } from './dto/inventory.dto';
+import {
+  InventoryTransactionDto,
+  AdjustInventoryDto,
+} from './dto/inventory.dto';
 import { ProductsService } from '../products/products.service';
 import { InventoryStatus, InventoryTransactionType } from '../../common/enums';
 
 @Injectable()
 export class InventoryService {
   constructor(
-    @InjectModel(Inventory.name) private inventoryModel: Model<InventoryDocument>,
-    @InjectModel(InventoryTransaction.name) private transactionModel: Model<InventoryTransactionDocument>,
+    @InjectModel(Inventory.name)
+    private inventoryModel: Model<InventoryDocument>,
+    @InjectModel(InventoryTransaction.name)
+    private transactionModel: Model<InventoryTransactionDocument>,
     private productsService: ProductsService,
   ) {}
 
@@ -27,15 +34,19 @@ export class InventoryService {
     try {
       const productModel = this.inventoryModel.db.model('Product');
       const products = await productModel.find({ isDeleted: false }).exec();
-      
+
       const existingInventories = await this.inventoryModel.find().exec();
-      const existingProductIds = new Set(existingInventories.map(inv => inv.product.toString()));
-      
-      const missingProducts = products.filter(p => !existingProductIds.has(p._id.toString()));
-      
+      const existingProductIds = new Set(
+        existingInventories.map((inv) => inv.product.toString()),
+      );
+
+      const missingProducts = products.filter(
+        (p) => !existingProductIds.has(p._id.toString()),
+      );
+
       if (missingProducts.length > 0) {
-        const newInventories = missingProducts.map(p => {
-          const currentStock = (p as any).stock || 0;
+        const newInventories = missingProducts.map((p) => {
+          const currentStock = p.stock || 0;
           let status = InventoryStatus.IN_STOCK;
           if (currentStock <= 0) {
             status = InventoryStatus.OUT_OF_STOCK;
@@ -48,7 +59,7 @@ export class InventoryService {
             minStock: 10,
             maxStock: 1000,
             status,
-            lastUpdated: new Date()
+            lastUpdated: new Date(),
           };
         });
         await this.inventoryModel.insertMany(newInventories);
@@ -56,20 +67,33 @@ export class InventoryService {
     } catch (err) {
       console.error('Failed to sync missing product inventory records:', err);
     }
-    const items = await this.inventoryModel.find().populate('product', 'name sku images price').exec();
-    return items.filter(item => item.product !== null);
+    const items = await this.inventoryModel
+      .find()
+      .populate('product', 'name sku images price')
+      .exec();
+    return items.filter((item) => item.product !== null);
   }
 
   async getLowStock(): Promise<InventoryDocument[]> {
     return this.inventoryModel
-      .find({ $or: [{ status: InventoryStatus.LOW_STOCK }, { status: InventoryStatus.OUT_OF_STOCK }] })
+      .find({
+        $or: [
+          { status: InventoryStatus.LOW_STOCK },
+          { status: InventoryStatus.OUT_OF_STOCK },
+        ],
+      })
       .populate('product', 'name sku images price')
       .exec();
   }
 
-  async importStock(dto: InventoryTransactionDto, userId?: string): Promise<InventoryDocument> {
+  async importStock(
+    dto: InventoryTransactionDto,
+    userId?: string,
+  ): Promise<InventoryDocument> {
     const productObjectId = new Types.ObjectId(dto.product);
-    let inventory = await this.inventoryModel.findOne({ product: productObjectId }).exec();
+    let inventory = await this.inventoryModel
+      .findOne({ product: productObjectId })
+      .exec();
 
     if (!inventory) {
       inventory = new this.inventoryModel({
@@ -80,12 +104,18 @@ export class InventoryService {
       inventory.currentStock += dto.quantity;
     }
 
-    inventory.status = this.getStatus(inventory.currentStock, inventory.minStock);
+    inventory.status = this.getStatus(
+      inventory.currentStock,
+      inventory.minStock,
+    );
     inventory.lastUpdated = new Date();
     await inventory.save();
 
     // Set product stock to match inventory currentStock
-    await this.productsService.setStock(dto.product.toString(), inventory.currentStock);
+    await this.productsService.setStock(
+      dto.product.toString(),
+      inventory.currentStock,
+    );
 
     // Log transaction
     await this.transactionModel.create({
@@ -99,18 +129,29 @@ export class InventoryService {
     return inventory;
   }
 
-  async exportStock(dto: InventoryTransactionDto, userId?: string): Promise<InventoryDocument> {
+  async exportStock(
+    dto: InventoryTransactionDto,
+    userId?: string,
+  ): Promise<InventoryDocument> {
     const productObjectId = new Types.ObjectId(dto.product);
-    const inventory = await this.inventoryModel.findOne({ product: productObjectId }).exec();
+    const inventory = await this.inventoryModel
+      .findOne({ product: productObjectId })
+      .exec();
     if (!inventory) throw new NotFoundException('Inventory record not found');
 
     inventory.currentStock = Math.max(0, inventory.currentStock - dto.quantity);
-    inventory.status = this.getStatus(inventory.currentStock, inventory.minStock);
+    inventory.status = this.getStatus(
+      inventory.currentStock,
+      inventory.minStock,
+    );
     inventory.lastUpdated = new Date();
     await inventory.save();
 
     // Set product stock to match inventory currentStock
-    await this.productsService.setStock(dto.product.toString(), inventory.currentStock);
+    await this.productsService.setStock(
+      dto.product.toString(),
+      inventory.currentStock,
+    );
 
     await this.transactionModel.create({
       product: productObjectId,
@@ -123,9 +164,14 @@ export class InventoryService {
     return inventory;
   }
 
-  async adjustStock(dto: AdjustInventoryDto, userId?: string): Promise<InventoryDocument> {
+  async adjustStock(
+    dto: AdjustInventoryDto,
+    userId?: string,
+  ): Promise<InventoryDocument> {
     const productObjectId = new Types.ObjectId(dto.product);
-    let inventory = await this.inventoryModel.findOne({ product: productObjectId }).exec();
+    let inventory = await this.inventoryModel
+      .findOne({ product: productObjectId })
+      .exec();
 
     if (!inventory) {
       inventory = new this.inventoryModel({
@@ -136,12 +182,18 @@ export class InventoryService {
       inventory.currentStock = dto.quantity;
     }
 
-    inventory.status = this.getStatus(inventory.currentStock, inventory.minStock);
+    inventory.status = this.getStatus(
+      inventory.currentStock,
+      inventory.minStock,
+    );
     inventory.lastUpdated = new Date();
     await inventory.save();
 
     // Set product stock to match inventory currentStock
-    await this.productsService.setStock(dto.product.toString(), inventory.currentStock);
+    await this.productsService.setStock(
+      dto.product.toString(),
+      inventory.currentStock,
+    );
 
     await this.transactionModel.create({
       product: productObjectId,
@@ -154,7 +206,9 @@ export class InventoryService {
     return inventory;
   }
 
-  async getTransactions(productId?: string): Promise<InventoryTransactionDocument[]> {
+  async getTransactions(
+    productId?: string,
+  ): Promise<InventoryTransactionDocument[]> {
     const filter: any = {};
     if (productId) filter.product = productId;
     return this.transactionModel
@@ -167,8 +221,13 @@ export class InventoryService {
   }
 
   async getLowStockCount(): Promise<number> {
-    return this.inventoryModel.countDocuments({
-      $or: [{ status: InventoryStatus.LOW_STOCK }, { status: InventoryStatus.OUT_OF_STOCK }],
-    }).exec();
+    return this.inventoryModel
+      .countDocuments({
+        $or: [
+          { status: InventoryStatus.LOW_STOCK },
+          { status: InventoryStatus.OUT_OF_STOCK },
+        ],
+      })
+      .exec();
   }
 }

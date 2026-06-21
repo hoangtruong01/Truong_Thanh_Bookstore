@@ -6,7 +6,10 @@
     </div>
 
     <!-- Main Header -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-xs">
+    <header
+      class="bg-white border-b border-slate-200 z-50 transition-all duration-200"
+      :class="isSticky ? 'fixed top-0 left-0 right-0 shadow-md' : 'relative shadow-xs'"
+    >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-20 gap-4">
           <!-- Logo -->
@@ -132,19 +135,81 @@
             </div>
 
             <!-- Search Bar -->
-            <form @submit.prevent="handleSearch" class="flex-grow">
-              <div class="relative w-full">
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  placeholder="Tìm bút, sổ tay, giấy A4, kẹp giấy..."
-                  class="w-full bg-slate-100 border border-slate-200 rounded-full py-2.5 pl-5 pr-28 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:border-transparent transition-all placeholder:text-slate-400"
-                />
-                <button type="submit" class="absolute right-1 top-1/2 -translate-y-1/2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold px-4 py-2 rounded-full transition-colors cursor-pointer">
-                  Tìm kiếm
-                </button>
+            <div class="flex-grow relative">
+              <form @submit.prevent="handleSearch">
+                <div class="relative w-full">
+                  <input
+                    v-model="searchQuery"
+                    type="text"
+                    @focus="showDropdown = true"
+                    @blur="handleBlur"
+                    placeholder="Tìm bút, sổ tay, giấy A4, kẹp giấy..."
+                    class="w-full bg-slate-100 border border-slate-200 rounded-full py-2.5 pl-5 pr-20 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:border-transparent transition-all placeholder:text-slate-400"
+                  />
+                  <button type="submit" class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[#dc2626] hover:bg-[#b91c1c] text-white p-2.5 px-5 rounded-full transition-colors cursor-pointer flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m21-21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+                    </svg>
+                  </button>
+                </div>
+              </form>
+
+              <!-- Autocomplete Dropdown -->
+              <div
+                v-if="showDropdown && (suggestions.length > 0 || searchResults.length > 0)"
+                class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-3xl shadow-xl z-50 p-6"
+                style="contain: layout;"
+              >
+                <!-- Suggestions Section -->
+                <div v-if="suggestions.length > 0" class="mb-5">
+                  <div class="text-sm font-black text-slate-800 flex items-center gap-2 mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-slate-500">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    Gợi ý
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <div
+                      v-for="tag in suggestions"
+                      :key="tag"
+                      @mousedown="selectSuggestion(tag)"
+                      class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs px-3.5 py-2 rounded-xl transition-colors cursor-pointer select-none"
+                    >
+                      {{ tag }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Products Section -->
+                <div v-if="searchResults.length > 0" class="border-t border-slate-100 pt-4">
+                  <div class="text-sm font-black text-slate-800 flex items-center gap-2 mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-slate-500">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
+                    </svg>
+                    Sản phẩm
+                  </div>
+                  <div class="grid grid-cols-3 gap-4">
+                    <div
+                      v-for="prod in searchResults"
+                      :key="prod._id"
+                      @mousedown="selectProduct(prod._id)"
+                      class="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer group"
+                    >
+                      <img
+                        :src="prod.images && prod.images[0] ? prod.images[0] : 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=100'"
+                        class="w-12 h-12 object-cover rounded-xl bg-slate-50 border border-slate-100 flex-shrink-0"
+                        alt="Product image"
+                      />
+                      <div class="min-w-0 flex-1">
+                        <div class="text-xs font-semibold text-slate-700 group-hover:text-[#dc2626] line-clamp-2 leading-snug">
+                          {{ prod.name }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </form>
+            </div>
           </div>
 
           <!-- Utility Icons -->
@@ -204,6 +269,7 @@
 
 
     </header>
+    <div v-if="isSticky" class="h-20"></div>
 
     <!-- Main Content Area -->
     <main class="flex-grow">
@@ -254,10 +320,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
+import { productService } from '@/services/product.service'
 import { categoryService } from '@/services/category.service'
 import { formatCurrency } from '@/utils/helpers'
 import type { Category } from '@/types'
@@ -271,6 +338,101 @@ const searchQuery = ref('')
 const allCategories = ref<Category[]>([])
 const showMenu = ref(false)
 const activeParent = ref<Category | null>(null)
+
+// Sticky Scroll Toggle state
+const isSticky = ref(false)
+
+function handleScroll() {
+  isSticky.value = window.scrollY > 40
+}
+
+// Autocomplete State
+const showDropdown = ref(false)
+const searchResults = ref<any[]>([])
+const loadingSearch = ref(false)
+
+const commonKeywords = [
+  'bút bi', 'bút gel', 'bút ký', 'bút chì', 'bút dạ quang', 'bút lông', 'bút sáp màu', 'bút máy',
+  'sổ tay', 'sổ lò xo', 'sổ da', 'giấy A4', 'giấy note', 'giấy vẽ', 'kẹp bướm', 'bìa hồ sơ',
+  'thước kẻ', 'gôm tẩy', 'hộp bút', 'keo dán', 'kéo cắt giấy', 'máy tính casio'
+]
+
+function normalizeString(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd');
+}
+
+const suggestions = computed(() => {
+  const q = normalizeString(searchQuery.value.trim());
+  if (!q) {
+    return ['bút', 'sổ tay', 'giấy A4', 'kẹp giấy', 'bút bi', 'thước kẻ'];
+  }
+  const filtered = commonKeywords.filter(k => normalizeString(k).includes(q));
+  if (filtered.length === 0) {
+    return [
+      searchQuery.value.trim(),
+      `bút ${searchQuery.value.trim()}`,
+      `sổ ${searchQuery.value.trim()}`,
+      `giấy ${searchQuery.value.trim()}`
+    ].slice(0, 8);
+  }
+  return filtered.slice(0, 8);
+})
+
+function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
+  let timeout: any = null
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => {
+      fn(...args)
+    }, delay)
+  }
+}
+
+const performAutocomplete = debounce(async (query: string) => {
+  const trimmed = query.trim()
+  if (!trimmed) {
+    searchResults.value = []
+    return
+  }
+  loadingSearch.value = true
+  try {
+    const res = await productService.search(trimmed)
+    searchResults.value = res.data.slice(0, 6)
+  } catch (err) {
+    console.error('Autocomplete search failed:', err)
+  } finally {
+    loadingSearch.value = false
+  }
+}, 250)
+
+watch(searchQuery, (newVal) => {
+  if (!newVal.trim()) {
+    searchResults.value = []
+    return
+  }
+  performAutocomplete(newVal)
+})
+
+function handleBlur() {
+  setTimeout(() => {
+    showDropdown.value = false
+  }, 200)
+}
+
+function selectSuggestion(tag: string) {
+  searchQuery.value = tag
+  showDropdown.value = false
+  handleSearch()
+}
+
+function selectProduct(productId: string) {
+  showDropdown.value = false
+  router.push(`/products/${productId}`)
+}
 
 const parentCategories = computed(() => {
   return allCategories.value.filter(c => !c.parentId)
@@ -286,6 +448,7 @@ const getSubcategoriesForActiveParent = computed(() => {
 })
 
 onMounted(async () => {
+  window.addEventListener('scroll', handleScroll)
   try {
     const res = await categoryService.getAll()
     allCategories.value = res.data
@@ -295,6 +458,10 @@ onMounted(async () => {
   } catch (error) {
     console.error('Error fetching categories:', error)
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
 })
 
 function navigateToCategory(categoryId: string) {
