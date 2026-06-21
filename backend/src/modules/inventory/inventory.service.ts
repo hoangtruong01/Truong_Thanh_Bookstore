@@ -24,7 +24,40 @@ export class InventoryService {
   }
 
   async findAll(): Promise<InventoryDocument[]> {
-    return this.inventoryModel.find().populate('product', 'name sku images price').exec();
+    try {
+      const productModel = this.inventoryModel.db.model('Product');
+      const products = await productModel.find({ isDeleted: false }).exec();
+      
+      const existingInventories = await this.inventoryModel.find().exec();
+      const existingProductIds = new Set(existingInventories.map(inv => inv.product.toString()));
+      
+      const missingProducts = products.filter(p => !existingProductIds.has(p._id.toString()));
+      
+      if (missingProducts.length > 0) {
+        const newInventories = missingProducts.map(p => {
+          const currentStock = (p as any).stock || 0;
+          let status = InventoryStatus.IN_STOCK;
+          if (currentStock <= 0) {
+            status = InventoryStatus.OUT_OF_STOCK;
+          } else if (currentStock <= 10) {
+            status = InventoryStatus.LOW_STOCK;
+          }
+          return {
+            product: p._id,
+            currentStock,
+            minStock: 10,
+            maxStock: 1000,
+            status,
+            lastUpdated: new Date()
+          };
+        });
+        await this.inventoryModel.insertMany(newInventories);
+      }
+    } catch (err) {
+      console.error('Failed to sync missing product inventory records:', err);
+    }
+    const items = await this.inventoryModel.find().populate('product', 'name sku images price').exec();
+    return items.filter(item => item.product !== null);
   }
 
   async getLowStock(): Promise<InventoryDocument[]> {

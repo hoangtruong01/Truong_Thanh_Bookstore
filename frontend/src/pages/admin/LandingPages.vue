@@ -94,13 +94,15 @@
                 </span>
               </td>
               <td class="py-4 px-6">
-                <span
-                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
-                  :class="page.status ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'"
+                <button
+                  @click="togglePageStatus(page)"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer hover:scale-105"
+                  :class="page.status ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'"
+                  title="Click để chuyển trạng thái"
                 >
-                  <span class="w-1.5 h-1.5 rounded-full" :class="page.status ? 'bg-emerald-500' : 'bg-slate-400'"></span>
+                  <span class="w-1.5 h-1.5 rounded-full" :class="page.status ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"></span>
                   <span>{{ page.status ? 'Hoạt động' : 'Tắt' }}</span>
-                </span>
+                </button>
               </td>
               <td class="py-4 px-6 text-right">
                 <div class="flex items-center justify-end gap-2">
@@ -158,18 +160,20 @@
                   <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Tiêu đề Landing Page</label>
                   <input
                     v-model="form.title"
+                    :disabled="isEditing"
                     type="text"
                     placeholder="VD: 3 Cuốn Lịch Công Thức Tiểu Học"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
                   <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Đường dẫn Slug (Unique)</label>
                   <input
                     v-model="form.slug"
+                    :disabled="isEditing"
                     type="text"
                     placeholder="VD: lich-cong-thuc-tieu-hoc"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -178,7 +182,7 @@
               <div class="space-y-2 border border-slate-200 p-3.5 rounded-xl bg-slate-50/50">
                 <div class="flex items-center justify-between">
                   <label class="block text-[11px] font-black text-slate-700 uppercase tracking-wider">Cấu hình Gói / Option Giá bán</label>
-                  <button type="button" @click="addPackage" class="text-[10px] font-black text-[#dc2626] hover:underline cursor-pointer flex items-center gap-1">
+                  <button v-if="!isEditing" type="button" @click="addPackage" class="text-[10px] font-black text-[#dc2626] hover:underline cursor-pointer flex items-center gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3 h-3">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
@@ -193,7 +197,7 @@
                         <th class="p-2 w-1/4">Giá khuyến mãi (đ)</th>
                         <th class="p-2 w-1/4">Giá thị trường (đ)</th>
                         <th class="p-2 w-16 text-center">Nổi bật</th>
-                        <th class="p-2 w-10 text-center">Xóa</th>
+                        <th v-if="!isEditing" class="p-2 w-10 text-center">Xóa</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -201,42 +205,47 @@
                         <td class="p-1.5 space-y-1">
                           <input
                             v-model="pkg.name"
+                            :disabled="isEditing"
                             type="text"
                             placeholder="VD: Mua 1 Quyển"
-                            class="w-full bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] disabled:opacity-75 disabled:cursor-not-allowed"
                           />
                           <input
                             v-model="pkg.badge"
+                            :disabled="isEditing"
                             type="text"
                             placeholder="Nhãn (VD: Tiết kiệm 49%)"
-                            class="w-full bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[9px] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
+                            class="w-full bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[9px] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] disabled:opacity-75 disabled:cursor-not-allowed"
                           />
                         </td>
                         <td class="p-1.5">
                           <input
                             v-model.number="pkg.price"
+                            :disabled="isEditing"
                             type="number"
                             placeholder="VD: 179000"
-                            class="w-full bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] disabled:opacity-75 disabled:cursor-not-allowed"
                           />
                         </td>
                         <td class="p-1.5">
                           <input
                             v-model.number="pkg.originalPrice"
+                            :disabled="isEditing"
                             type="number"
                             placeholder="VD: 350000"
-                            class="w-full bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] disabled:opacity-75 disabled:cursor-not-allowed"
                           />
                         </td>
                         <td class="p-1.5 text-center">
                           <input
                             type="checkbox"
                             v-model="pkg.isBestSeller"
+                            :disabled="isEditing"
                             @change="onBestSellerChange(idx)"
-                            class="rounded-sm cursor-pointer"
+                            class="rounded-sm cursor-pointer disabled:cursor-not-allowed"
                           />
                         </td>
-                        <td class="p-1.5 text-center">
+                        <td v-if="!isEditing" class="p-1.5 text-center">
                           <button
                             type="button"
                             @click="removePackage(idx)"
@@ -249,7 +258,7 @@
                         </td>
                       </tr>
                       <tr v-if="!form.packages || form.packages.length === 0">
-                        <td colspan="5" class="p-4 text-center text-slate-400 italic">
+                        <td :colspan="isEditing ? 4 : 5" class="p-4 text-center text-slate-400 italic">
                           Chưa có gói bán nào. Click "+ Thêm Gói" để cấu hình.
                         </td>
                       </tr>
@@ -263,18 +272,20 @@
                   <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Thời gian đếm ngược (phút)</label>
                   <input
                     v-model="form.countdownMinutes"
+                    :disabled="isEditing"
                     type="number"
                     placeholder="VD: 30"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
                   <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Nhãn khuyến mãi</label>
                   <input
                     v-model="form.badgeText"
+                    :disabled="isEditing"
                     type="text"
                     placeholder="VD: GIẢM GIÁ DUY NHẤT HÔM NAY"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -283,9 +294,10 @@
                 <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Mô tả sản phẩm</label>
                 <textarea
                   v-model="form.description"
+                  :disabled="isEditing"
                   rows="2"
                   placeholder="Nhập mô tả sản phẩm..."
-                  class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                 ></textarea>
               </div>
             </div>
@@ -296,7 +308,7 @@
                 <span>Ảnh sản phẩm</span>
                 <span class="text-[10px] text-slate-400">{{ form.images.length }} ảnh</span>
               </h3>
-              <div class="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center bg-slate-50 hover:bg-slate-100/50 transition-colors">
+              <div v-if="!isEditing" class="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center bg-slate-50 hover:bg-slate-100/50 transition-colors">
                 <input
                   type="file"
                   multiple
@@ -323,6 +335,7 @@
                 <div v-for="(img, idx) in form.images" :key="idx" class="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
                   <img :src="img" class="w-full h-full object-cover" />
                   <button
+                    v-if="!isEditing"
                     @click="removeImage(idx)"
                     class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   >
@@ -335,7 +348,7 @@
             </div>
 
             <!-- AI Prompt & Generation Options -->
-            <div class="bg-red-50/50 border border-red-100 rounded-xl p-4.5 space-y-3">
+            <div v-if="!isEditing" class="bg-red-50/50 border border-red-100 rounded-xl p-4.5 space-y-3">
               <div class="flex items-center gap-2">
                 <span class="w-5 h-5 bg-[#dc2626] text-white text-[10px] font-extrabold rounded-full flex items-center justify-center">AI</span>
                 <h4 class="text-[11px] font-black text-[#dc2626] uppercase tracking-wider">Trợ lý AI thiết kế Landing Page</h4>
@@ -897,13 +910,33 @@ async function saveLandingPage() {
     form.value.originalPrice = bestSeller.originalPrice || 0;
   }
 
+  // Prepare a clean payload to prevent forbidNonWhitelisted pipe issues on backend
+  const payload = {
+    title: form.value.title,
+    slug: form.value.slug,
+    description: form.value.description,
+    images: form.value.images || [],
+    countdownMinutes: Number(form.value.countdownMinutes) || 30,
+    price: Number(form.value.price) || 0,
+    originalPrice: Number(form.value.originalPrice) || 0,
+    badgeText: form.value.badgeText,
+    benefits: form.value.benefits || [],
+    packages: form.value.packages || [],
+    testimonials: form.value.testimonials || [],
+    primaryColor: form.value.primaryColor,
+    backgroundColor: form.value.backgroundColor,
+    textColor: form.value.textColor,
+    customCss: form.value.customCss,
+    status: form.value.status !== undefined ? form.value.status : true,
+  };
+
   saving.value = true;
   try {
     if (isEditing.value && editingId.value) {
-      await landingPageService.update(editingId.value, form.value);
+      await landingPageService.update(editingId.value, payload);
       toast.success('Cập nhật Landing Page thành công!');
     } else {
-      await landingPageService.create(form.value);
+      await landingPageService.create(payload);
       toast.success('Tạo Landing Page mới thành công!');
     }
     showModal.value = false;
@@ -912,6 +945,35 @@ async function saveLandingPage() {
     toast.error('Lỗi khi lưu Landing Page: ' + (error.response?.data?.message || error.message));
   } finally {
     saving.value = false;
+  }
+}
+
+async function togglePageStatus(page: any) {
+  try {
+    const updatedStatus = !page.status;
+    const payload = {
+      title: page.title,
+      slug: page.slug,
+      description: page.description,
+      images: page.images || [],
+      countdownMinutes: Number(page.countdownMinutes) || 30,
+      price: Number(page.price) || 0,
+      originalPrice: Number(page.originalPrice) || 0,
+      badgeText: page.badgeText,
+      benefits: page.benefits || [],
+      packages: page.packages || [],
+      testimonials: page.testimonials || [],
+      primaryColor: page.primaryColor,
+      backgroundColor: page.backgroundColor,
+      textColor: page.textColor,
+      customCss: page.customCss,
+      status: updatedStatus,
+    };
+    await landingPageService.update(page._id, payload);
+    page.status = updatedStatus;
+    toast.success(`Đã chuyển trạng thái sang: ${updatedStatus ? 'Hoạt động' : 'Tắt'}`);
+  } catch (error: any) {
+    toast.error('Lỗi khi chuyển trạng thái: ' + (error.response?.data?.message || error.message));
   }
 }
 
