@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+// Trigger reload for Google Sheets URL configuration change
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Order, OrderDocument } from './schemas/order.schema';
@@ -180,8 +181,10 @@ export class OrdersService {
     // If cancelled, restore stock
     if (dto.orderStatus === OrderStatus.CANCELLED && order.orderStatus !== OrderStatus.CANCELLED) {
       for (const item of order.items) {
-        await this.productsService.updateStock(item.product.toString(), item.quantity);
-        await this.productsService.incrementSold(item.product.toString(), -item.quantity);
+        if (item.product) {
+          await this.productsService.updateStock(item.product.toString(), item.quantity);
+          await this.productsService.incrementSold(item.product.toString(), -item.quantity);
+        }
       }
     }
 

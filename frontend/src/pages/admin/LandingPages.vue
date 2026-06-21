@@ -241,14 +241,14 @@
                             type="checkbox"
                             v-model="pkg.isBestSeller"
                             :disabled="isEditing"
-                            @change="onBestSellerChange(idx)"
+                            @change="onBestSellerChange(Number(idx))"
                             class="rounded-sm cursor-pointer disabled:cursor-not-allowed"
                           />
                         </td>
                         <td v-if="!isEditing" class="p-1.5 text-center">
                           <button
                             type="button"
-                            @click="removePackage(idx)"
+                            @click="removePackage(Number(idx))"
                             class="text-slate-400 hover:text-red-600 transition-colors"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 mx-auto">
@@ -319,7 +319,7 @@
                 />
                 <button
                   type="button"
-                  @click="$refs.fileInput.click()"
+                  @click="fileInput?.click()"
                   class="mx-auto flex flex-col items-center justify-center cursor-pointer"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-slate-400 mb-1.5">
@@ -336,7 +336,7 @@
                   <img :src="img" class="w-full h-full object-cover" />
                   <button
                     v-if="!isEditing"
-                    @click="removeImage(idx)"
+                    @click="removeImage(Number(idx))"
                     class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-2.5 h-2.5">
@@ -416,7 +416,7 @@
                 </div>
                 <div class="space-y-2">
                   <div v-for="(bft, idx) in form.benefits" :key="idx" class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 relative group">
-                    <button @click="removeBenefit(idx)" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <button @click="removeBenefit(Number(idx))" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                       </svg>
@@ -435,7 +435,7 @@
                 </div>
                 <div class="space-y-2">
                   <div v-for="(t, idx) in form.testimonials" :key="idx" class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 relative group font-sans">
-                    <button @click="removeTestimonial(idx)" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <button @click="removeTestimonial(Number(idx))" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                       </svg>
@@ -541,7 +541,7 @@
                   <button
                     v-for="(img, idx) in form.images"
                     :key="idx"
-                    @click="currentPreviewImageIdx = idx"
+                    @click="currentPreviewImageIdx = Number(idx)"
                     class="w-10 h-10 rounded-md border overflow-hidden flex-shrink-0 cursor-pointer transition-all"
                     :class="currentPreviewImageIdx === idx ? 'border-2' : 'border-slate-200 opacity-60'"
                     :style="{ borderColor: currentPreviewImageIdx === idx ? form.primaryColor : '' }"
@@ -697,6 +697,7 @@ const saving = ref(false);
 const loadingAI = ref(false);
 const aiPrompt = ref('');
 const currentPreviewImageIdx = ref(0);
+const fileInput = ref<HTMLInputElement | null>(null);
 
 const form = ref<any>({
   title: '',

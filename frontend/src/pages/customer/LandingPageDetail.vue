@@ -92,7 +92,7 @@
           <button
             v-for="(img, idx) in page.images"
             :key="idx"
-            @click="currentImageIdx = idx"
+            @click="currentImageIdx = Number(idx)"
             class="w-11 h-11 rounded-lg border-2 overflow-hidden flex-shrink-0 cursor-pointer transition-all"
             :class="currentImageIdx === idx ? '' : 'border-slate-200 opacity-60'"
             :style="{ borderColor: currentImageIdx === idx ? page.primaryColor : '' }"
@@ -109,12 +109,12 @@
           <span class="text-[9px] font-black text-slate-800 uppercase mt-1 leading-none">Miễn phí ship</span>
         </div>
         <div class="bg-white/50 border border-white/60 p-3 rounded-xl flex flex-col items-center text-center shadow-xs">
-          <span class="text-lg">🛡️</span>
-          <span class="text-[9px] font-black text-slate-800 uppercase mt-1 leading-none">Chính hãng 100%</span>
+          <span class="text-lg">📦</span>
+          <span class="text-[9px] font-black text-slate-800 uppercase mt-1 leading-none">Được đồng kiểm</span>
         </div>
         <div class="bg-white/50 border border-white/60 p-3 rounded-xl flex flex-col items-center text-center shadow-xs">
-          <span class="text-lg">💵</span>
-          <span class="text-[9px] font-black text-slate-800 uppercase mt-1 leading-none">Nhận hàng thanh toán</span>
+          <span class="text-lg">💎</span>
+          <span class="text-[9px] font-black text-slate-800 uppercase mt-1 leading-none">Chất lượng cao</span>
         </div>
       </div>
 
@@ -184,7 +184,7 @@
             @click="selectPackage(pkg.name)"
             class="p-4.5 rounded-2xl border-2 bg-white relative flex items-center justify-between cursor-pointer transition-all hover:scale-101 shadow-xs text-slate-800"
             :class="selectedPackage === pkg.name ? 'ring-2' : ''"
-            :style="{ borderColor: selectedPackage === pkg.name || pkg.isBestSeller ? page.primaryColor : '#e2e8f0', ringColor: page.primaryColor }"
+            :style="{ borderColor: selectedPackage === pkg.name || pkg.isBestSeller ? page.primaryColor : '#e2e8f0', boxShadow: selectedPackage === pkg.name ? '0 0 0 2px ' + page.primaryColor : 'none' }"
           >
             <!-- Ribbon Badge -->
             <span v-if="pkg.badge" class="absolute -top-2.5 left-4 text-[9px] font-black px-2.5 py-0.5 rounded-full text-white uppercase tracking-wider" :style="{ backgroundColor: page.primaryColor }">

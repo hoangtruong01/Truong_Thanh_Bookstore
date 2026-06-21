@@ -4,7 +4,7 @@ import { OrderStatus, PaymentMethod, PaymentStatus } from '../../../common/enums
 
 @Schema()
 export class OrderItem {
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: true })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: false })
   product: Types.ObjectId;
 
   @Prop({ required: true })

@@ -493,13 +493,14 @@
       </div>
     </section>
 
+    <!-- 1. Sách Giáo Khoa 2026 -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
       <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Vừa Cập Bến</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">✨ Sách Tham Khảo</h2>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Chuẩn Bị Khai Giảng</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">📚 Sách Giáo Khoa 2026</h2>
         </div>
-        <router-link to="/products?sort=newest" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
+        <router-link to="/products?q=sách giáo khoa" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
           <span>Xem tất cả</span>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
         </router-link>
@@ -515,7 +516,7 @@
 
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
-          v-for="(prod, index) in newProducts"
+          v-for="(prod, index) in getCategoryProducts('Sách Giáo Khoa 2026')"
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
@@ -523,10 +524,9 @@
         />
       </div>
 
-      <!-- See More Button -->
       <div class="flex justify-center pt-6">
         <router-link
-          to="/products?sort=newest"
+          to="/products?q=sách giáo khoa"
           class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
         >
           Xem Thêm
@@ -534,13 +534,14 @@
       </div>
     </section>
 
+    <!-- 2. Dụng Cụ Học Tập -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
       <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Vừa Cập Bến</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">✨ ĐỒ CHƠI </h2>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Đầy Đủ Hành Trang</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">✏️ Dụng Cụ Học Tập</h2>
         </div>
-        <router-link to="/products?sort=newest" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
+        <router-link to="/products?q=dụng cụ" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
           <span>Xem tất cả</span>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
         </router-link>
@@ -556,7 +557,7 @@
 
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
-          v-for="(prod, index) in newProducts"
+          v-for="(prod, index) in getCategoryProducts('Dụng Cụ Học Tập')"
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
@@ -564,10 +565,9 @@
         />
       </div>
 
-      <!-- See More Button -->
       <div class="flex justify-center pt-6">
         <router-link
-          to="/products?sort=newest"
+          to="/products?q=dụng cụ"
           class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
         >
           Xem Thêm
@@ -575,13 +575,14 @@
       </div>
     </section>
 
+    <!-- 3. Truyện Tranh -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
       <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Vừa Cập Bến</span>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Thỏa Sức Giải Trí</span>
           <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">✨ Truyện Tranh</h2>
         </div>
-        <router-link to="/products?sort=newest" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
+        <router-link to="/products?q=truyện" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
           <span>Xem tất cả</span>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
         </router-link>
@@ -597,7 +598,7 @@
 
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
-          v-for="(prod, index) in newProducts"
+          v-for="(prod, index) in getCategoryProducts('Truyện Tranh')"
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
@@ -605,10 +606,9 @@
         />
       </div>
 
-      <!-- See More Button -->
       <div class="flex justify-center pt-6">
         <router-link
-          to="/products?sort=newest"
+          to="/products?q=truyện"
           class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
         >
           Xem Thêm
@@ -616,13 +616,55 @@
       </div>
     </section>
 
+    <!-- Beautiful Mid-Promo Banner with Section BG -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div 
+        class="reveal rounded-3xl overflow-hidden relative shadow-2xl border border-rose-100 flex flex-col md:flex-row items-center justify-between p-8 sm:p-12 md:p-16 min-h-[350px] bg-cover bg-center"
+        :style="{ backgroundImage: 'url(' + sectionBg + ')' }"
+      >
+        <!-- Overlay to ensure text readability -->
+        <div class="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-transparent md:to-white/10 pointer-events-none"></div>
+        
+        <!-- Text Content -->
+        <div class="relative z-10 max-w-xl space-y-4 text-left">
+          <span class="text-xs font-black text-rose-600 tracking-[0.25em] uppercase">Bộ Sưu Tập Đặc Biệt</span>
+          <h2 class="text-3xl sm:text-4xl font-black text-slate-900 leading-tight tracking-tight">
+            Nét Bút Tri Thức <br />
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-rose-600 to-orange-500">Khởi Đầu Tương Lai</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
+            Trang bị đầy đủ những dụng cụ học tập, vở viết cao cấp, bút mực chính hãng và truyện tranh hấp dẫn nhất tại Trường Thành Bookstore. Đồng hành cùng bạn trên mọi nẻo đường tri thức.
+          </p>
+          <div class="pt-2">
+            <router-link 
+              to="/products" 
+              class="inline-flex items-center gap-2 bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-700 hover:to-orange-600 text-white font-extrabold text-xs px-8 py-3.5 rounded-xl shadow-lg shadow-rose-600/20 transition-all hover:-translate-y-0.5 cursor-pointer"
+            >
+              <span>Khám Phá Ngay</span>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+            </router-link>
+          </div>
+        </div>
+
+        <!-- Decorative Right Badge (optional glassmorphism badge) -->
+        <div class="relative z-10 mt-8 md:mt-0 bg-white/20 backdrop-blur-md border border-white/40 p-6 rounded-2xl shadow-xl max-w-xs text-center space-y-2 hidden sm:block">
+          <span class="text-2xl">✨</span>
+          <h3 class="text-xs font-black text-rose-700 uppercase tracking-wider">Ưu Đãi Đặc Biệt</h3>
+          <p class="text-[10px] text-slate-700 font-bold leading-normal">
+            Giảm giá lên đến 40% cho tất cả các gói combo học tập chuẩn bị cho năm học mới 2026.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Sách Tham Khảo -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
       <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Vừa Cập Bến</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">✨ Dụng Cụ Học Tập</h2>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Nâng Cao Kiến Thức</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">📖 Sách Tham Khảo</h2>
         </div>
-        <router-link to="/products?sort=newest" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
+        <router-link to="/products?q=tham khảo" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
           <span>Xem tất cả</span>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
         </router-link>
@@ -638,7 +680,7 @@
 
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
-          v-for="(prod, index) in newProducts"
+          v-for="(prod, index) in getCategoryProducts('Sách Tham Khảo')"
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
@@ -646,10 +688,9 @@
         />
       </div>
 
-      <!-- See More Button -->
       <div class="flex justify-center pt-6">
         <router-link
-          to="/products?sort=newest"
+          to="/products?q=tham khảo"
           class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
         >
           Xem Thêm
@@ -657,13 +698,14 @@
       </div>
     </section>
 
+    <!-- 5. ĐỒ CHƠI -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
       <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Vừa Cập Bến</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">✨ Đồ Lưu Niệm</h2>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Phát Triển Tư Duy</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">🧩 Đồ Chơi</h2>
         </div>
-        <router-link to="/products?sort=newest" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
+        <router-link to="/products?q=chơi" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
           <span>Xem tất cả</span>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
         </router-link>
@@ -679,7 +721,7 @@
 
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
-          v-for="(prod, index) in newProducts"
+          v-for="(prod, index) in getCategoryProducts('ĐỒ CHƠI')"
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
@@ -687,10 +729,9 @@
         />
       </div>
 
-      <!-- See More Button -->
       <div class="flex justify-center pt-6">
         <router-link
-          to="/products?sort=newest"
+          to="/products?q=chơi"
           class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
         >
           Xem Thêm
@@ -698,13 +739,14 @@
       </div>
     </section>
 
+    <!-- 6. Đồ Lưu Niệm -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
       <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Vừa Cập Bến</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">✨ Sách Giáo Khoa 2026</h2>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Quà Tặng Ý Nghĩa</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">🎁 Đồ Lưu Niệm</h2>
         </div>
-        <router-link to="/products?sort=newest" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
+        <router-link to="/products?q=lưu niệm" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
           <span>Xem tất cả</span>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
         </router-link>
@@ -720,7 +762,7 @@
 
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
-          v-for="(prod, index) in newProducts"
+          v-for="(prod, index) in getCategoryProducts('Đồ Lưu Niệm')"
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
@@ -728,10 +770,9 @@
         />
       </div>
 
-      <!-- See More Button -->
       <div class="flex justify-center pt-6">
         <router-link
-          to="/products?sort=newest"
+          to="/products?q=lưu niệm"
           class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
         >
           Xem Thêm
@@ -783,6 +824,7 @@ import ProductCard from '@/components/ProductCard.vue'
 import { useScrollReveal } from '@/composables/useScrollReveal'
 import type { Product, Category } from '@/types'
 import flashSaleBg from '@/assets/flash-sale-bg.png'
+import sectionBg from '@/assets/section-bg.png'
 
 const cartStore = useCartStore()
 const toast = useToast()
@@ -836,6 +878,57 @@ const categoryStyles = [
 
 function getCategoryStyle(index: number) {
   return categoryStyles[index % categoryStyles.length]
+}
+
+const filterCategoryProducts = (categoryName: string) => {
+  const allProds = [...newProducts.value, ...bestSelling.value]
+  const uniqueProds = Array.from(new Map(allProds.map(p => [p._id, p])).values())
+  
+  const nameMatches = (p: Product, keywords: string[]) => {
+    const nameLower = p.name.toLowerCase()
+    const catLower = p.category && typeof p.category === 'object' && (p.category as any).name
+      ? (p.category as any).name.toLowerCase()
+      : ''
+    return keywords.some(k => nameLower.includes(k) || catLower.includes(k))
+  }
+
+  if (categoryName === 'Sách Giáo Khoa 2026') {
+    return uniqueProds.filter(p => nameMatches(p, ['giáo khoa', 'sgk', 'bài tập']))
+  }
+  if (categoryName === 'Dụng Cụ Học Tập') {
+    return uniqueProds.filter(p => nameMatches(p, ['bút', 'thước', 'tẩy', 'gôm', 'vở', 'hộp bút', 'máy tính', 'dụng cụ', 'kéo', 'keo']))
+  }
+  if (categoryName === 'Truyện Tranh') {
+    return uniqueProds.filter(p => nameMatches(p, ['truyện', 'manga', 'comic']))
+  }
+  if (categoryName === 'Sách Tham Khảo') {
+    return uniqueProds.filter(p => nameMatches(p, ['tham khảo', 'luyện đề', 'ôn thi']))
+  }
+  if (categoryName === 'ĐỒ CHƠI') {
+    return uniqueProds.filter(p => nameMatches(p, ['chơi', 'lego', 'rubik', 'thủ công']))
+  }
+  if (categoryName === 'Đồ Lưu Niệm') {
+    return uniqueProds.filter(p => nameMatches(p, ['lưu niệm', 'quà', 'móc khóa', 'sổ tay']))
+  }
+  return []
+}
+
+const getCategoryProducts = (categoryName: string) => {
+  const filtered = filterCategoryProducts(categoryName)
+  if (filtered.length > 0) {
+    if (filtered.length < 10) {
+      const allProds = [...newProducts.value, ...bestSelling.value]
+      const uniqueProds = Array.from(new Map(allProds.map(p => [p._id, p])).values())
+      const remaining = uniqueProds.filter(p => !filtered.some(f => f._id === p._id))
+      return [...filtered, ...remaining].slice(0, 10)
+    }
+    return filtered.slice(0, 10)
+  }
+  const allProds = [...newProducts.value, ...bestSelling.value]
+  const uniqueProds = Array.from(new Map(allProds.map(p => [p._id, p])).values())
+  const hash = categoryName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  const startIdx = hash % Math.max(1, uniqueProds.length - 9)
+  return uniqueProds.slice(startIdx, startIdx + 10)
 }
 
 // Combos section computed logic
