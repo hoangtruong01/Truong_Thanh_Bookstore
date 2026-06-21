@@ -4,13 +4,19 @@ import type { CartItem, Product, Promotion } from '@/types'
 import { promotionService } from '@/services/promotion.service'
 
 export const useCartStore = defineStore('cart', () => {
-  const items = ref<CartItem[]>(JSON.parse(localStorage.getItem('cart') || '[]'))
+  const items = ref<CartItem[]>(
+    (JSON.parse(localStorage.getItem('cart') || '[]') as any[]).map(item => ({
+      ...item,
+      selected: item.selected !== false
+    }))
+  )
   const appliedPromotion = ref<Promotion | null>(null)
   const discountAmount = ref(0)
   const promoError = ref('')
 
   const subtotal = computed(() => {
     return items.value.reduce((sum: number, item: CartItem) => {
+      if (item.selected === false) return sum
       const price = item.product.discountPrice || item.product.price
       return sum + price * item.quantity
     }, 0)
@@ -34,8 +40,9 @@ export const useCartStore = defineStore('cart', () => {
     const existing = items.value.find((item: CartItem) => item.product._id === product._id)
     if (existing) {
       existing.quantity += quantity
+      existing.selected = true
     } else {
-      items.value.push({ product, quantity })
+      items.value.push({ product, quantity, selected: true })
     }
     saveCart()
     recalculateDiscount()
@@ -55,6 +62,23 @@ export const useCartStore = defineStore('cart', () => {
 
   function removeFromCart(productId: string) {
     items.value = items.value.filter((item: CartItem) => item.product._id !== productId)
+    saveCart()
+    recalculateDiscount()
+  }
+
+  function toggleItemSelection(productId: string) {
+    const item = items.value.find((item: CartItem) => item.product._id === productId)
+    if (item) {
+      item.selected = item.selected !== false ? false : true
+      saveCart()
+      recalculateDiscount()
+    }
+  }
+
+  function toggleAllSelection(selected: boolean) {
+    items.value.forEach((item: CartItem) => {
+      item.selected = selected
+    })
     saveCart()
     recalculateDiscount()
   }
@@ -86,6 +110,12 @@ export const useCartStore = defineStore('cart', () => {
     discountAmount.value = 0
     promoError.value = ''
     localStorage.removeItem('cart')
+  }
+
+  function clearCheckedOutItems() {
+    items.value = items.value.filter((item: CartItem) => item.selected === false)
+    saveCart()
+    recalculateDiscount()
   }
 
   function saveCart() {
@@ -120,8 +150,11 @@ export const useCartStore = defineStore('cart', () => {
     addToCart,
     updateQuantity,
     removeFromCart,
+    toggleItemSelection,
+    toggleAllSelection,
     applyCoupon,
     removeCoupon,
-    clearCart
+    clearCart,
+    clearCheckedOutItems
   }
 })

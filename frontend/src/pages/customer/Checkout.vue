@@ -107,7 +107,7 @@
         <div class="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-xs">
           <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3">Chi tiết đơn hàng</h3>
           <div class="max-h-60 overflow-y-auto space-y-3 divide-y divide-slate-100">
-            <div v-for="item in cartStore.items" :key="item.product._id" class="flex gap-3 pt-3 first:pt-0">
+            <div v-for="item in checkoutItems" :key="item.product._id" class="flex gap-3 pt-3 first:pt-0">
               <div class="w-12 h-12 rounded-lg bg-slate-50 overflow-hidden border border-slate-100 flex-shrink-0">
                 <img :src="item.product.images[0] || 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400'" class="w-full h-full object-cover" />
               </div>
@@ -144,7 +144,7 @@
 
           <button
             @click="placeOrder"
-            :disabled="submitting || cartStore.items.length === 0"
+            :disabled="submitting || checkoutItems.length === 0"
             class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-lg shadow-blue-500/20 disabled:bg-slate-300 disabled:shadow-none"
           >
             {{ submitting ? 'Đang xử lý...' : 'Đặt hàng ngay' }}
@@ -156,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
@@ -168,6 +168,8 @@ const cartStore = useCartStore()
 const authStore = useAuthStore()
 const toast = useToast()
 const router = useRouter()
+
+const checkoutItems = computed(() => cartStore.items.filter(item => item.selected !== false))
 
 const submitting = ref(false)
 const orderSuccess = ref(false)
@@ -205,7 +207,7 @@ async function placeOrder() {
 
   submitting.value = true
   try {
-    const items = cartStore.items.map(item => ({
+    const items = checkoutItems.value.map(item => ({
       product: item.product._id,
       name: item.product.name,
       price: item.product.discountPrice || item.product.price,
@@ -233,7 +235,7 @@ async function placeOrder() {
 
     orderCode.value = response.data.orderCode
     orderSuccess.value = true
-    cartStore.clearCart()
+    cartStore.clearCheckedOutItems()
   } catch (err: any) {
     toast.error(err.message || 'Đặt hàng thất bại. Vui lòng kiểm tra lại tồn kho sản phẩm.')
   } finally {

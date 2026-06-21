@@ -53,6 +53,7 @@ export interface Category {
 export interface CartItem {
   product: Product
   quantity: number
+  selected?: boolean
 }
 
 export interface OrderItem {
