@@ -31,7 +31,6 @@ export class CategoriesService {
     return this.categoryModel
       .find({ status: true })
       .populate('parentId')
-      .populate('products')
       .exec();
   }
 
@@ -39,7 +38,6 @@ export class CategoriesService {
     return this.categoryModel
       .find()
       .populate('parentId')
-      .populate('products')
       .exec();
   }
 
@@ -47,7 +45,6 @@ export class CategoriesService {
     const category = await this.categoryModel
       .findById(id)
       .populate('parentId')
-      .populate('products')
       .exec();
     if (!category) throw new NotFoundException('Category not found');
     return category;

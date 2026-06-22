@@ -49,6 +49,7 @@ export class PromotionsService {
 
   async apply(
     dto: ApplyPromotionDto,
+    incrementUsage = false,
   ): Promise<{ discount: number; code: string }> {
     const promo = await this.promotionModel
       .findOne({
@@ -81,9 +82,11 @@ export class PromotionsService {
       discount = promo.discountValue;
     }
 
-    // Increment usage
-    promo.usedCount += 1;
-    await promo.save();
+    if (incrementUsage) {
+      // Increment usage
+      promo.usedCount += 1;
+      await promo.save();
+    }
 
     return { discount, code: promo.code };
   }

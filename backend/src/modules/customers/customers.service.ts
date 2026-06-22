@@ -39,26 +39,34 @@ export class CustomersService {
       this.userModel.countDocuments(filter).exec(),
     ]);
 
-    // Enrich with order stats
-    const enriched = await Promise.all(
-      users.map(async (user) => {
-        const orderStats = await this.orderModel.aggregate([
-          { $match: { customer: user._id } },
-          {
-            $group: {
-              _id: null,
-              totalOrders: { $sum: 1 },
-              totalSpent: { $sum: '$total' },
-            },
-          },
-        ]);
-        return {
-          ...user.toObject(),
-          totalOrders: orderStats[0]?.totalOrders || 0,
-          totalSpent: orderStats[0]?.totalSpent || 0,
-        };
-      }),
+    // Enrich with order stats (Bulk Aggregate to avoid N+1 queries)
+    const userIds = users.map((user) => user._id);
+    const orderStats = await this.orderModel.aggregate([
+      { $match: { customer: { $in: userIds } } },
+      {
+        $group: {
+          _id: '$customer',
+          totalOrders: { $sum: 1 },
+          totalSpent: { $sum: '$total' },
+        },
+      },
+    ]);
+
+    const statsMap = new Map<string, { totalOrders: number; totalSpent: number }>(
+      orderStats.map((stat) => [
+        stat._id ? stat._id.toString() : '',
+        { totalOrders: stat.totalOrders, totalSpent: stat.totalSpent },
+      ]),
     );
+
+    const enriched = users.map((user) => {
+      const stats = statsMap.get(user._id.toString());
+      return {
+        ...user.toObject(),
+        totalOrders: stats ? stats.totalOrders : 0,
+        totalSpent: stats ? stats.totalSpent : 0,
+      };
+    });
 
     return paginate(enriched, total, page, limit);
   }

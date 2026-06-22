@@ -12,6 +12,7 @@ import { ProductsService } from '../products/products.service';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
 import { OrderStatus } from '../../common/enums';
 import { ConfigService } from '@nestjs/config';
+import { PromotionsService } from '../promotions/promotions.service';
 
 @Injectable()
 export class OrdersService {
@@ -19,6 +20,7 @@ export class OrdersService {
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     private productsService: ProductsService,
     private configService: ConfigService,
+    private promotionsService: PromotionsService,
   ) {}
 
   private generateOrderCode(): string {
@@ -113,8 +115,20 @@ export class OrdersService {
       0,
     );
     const shippingFee = dto.shippingFee || (subtotal >= 299000 ? 0 : 30000);
-    const discount = dto.discount || 0;
-    const total = subtotal + shippingFee - discount;
+    
+    let discount = dto.discount || 0;
+    if (dto.promotionCode) {
+      const promoResult = await this.promotionsService.apply(
+        {
+          code: dto.promotionCode,
+          orderTotal: subtotal,
+        },
+        true, // Increment usage count
+      );
+      discount = promoResult.discount;
+    }
+
+    const total = Math.max(0, subtotal + shippingFee - discount);
 
     const order = new this.orderModel({
       orderCode: this.generateOrderCode(),
@@ -211,12 +225,13 @@ export class OrdersService {
     const order = await this.orderModel.findById(id).exec();
     if (!order) throw new NotFoundException('Order not found');
 
+    const oldStatus = order.orderStatus;
     order.orderStatus = dto.orderStatus;
 
     // If cancelled, restore stock
     if (
       dto.orderStatus === OrderStatus.CANCELLED &&
-      order.orderStatus !== OrderStatus.CANCELLED
+      oldStatus !== OrderStatus.CANCELLED
     ) {
       for (const item of order.items) {
         if (item.product) {

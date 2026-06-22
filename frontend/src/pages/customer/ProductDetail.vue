@@ -286,6 +286,7 @@
         <div class="flex items-center justify-between border-b border-slate-100 pb-4">
           <h2 class="text-lg font-extrabold text-slate-900">Đánh giá sản phẩm</h2>
           <button 
+            v-if="authStore.isAuthenticated"
             @click="showReviewForm = !showReviewForm" 
             class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-sm transition-colors cursor-pointer focus:outline-none"
           >
@@ -332,7 +333,7 @@
         </div>
 
         <!-- Write Review Form -->
-        <div v-if="showReviewForm" class="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-4 animate-in fade-in slide-in-from-top-4 duration-200">
+        <div v-if="showReviewForm && authStore.isAuthenticated" class="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-4 animate-in fade-in slide-in-from-top-4 duration-200">
           <h3 class="text-sm font-extrabold text-slate-800">Đánh giá của bạn</h3>
           
           <!-- Rating Star Selector -->
@@ -399,40 +400,133 @@
           </div>
         </div>
 
+        <!-- Prompt to Login -->
+        <div v-if="!authStore.isAuthenticated" class="bg-slate-50 border border-slate-100/60 rounded-2xl p-6 text-center space-y-3">
+          <p class="text-sm font-medium text-slate-500">Quý khách vui lòng đăng nhập tài khoản để gửi đánh giá và nhận xét sản phẩm.</p>
+          <router-link to="/login" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors cursor-pointer">
+            Đăng nhập ngay
+          </router-link>
+        </div>
+
         <!-- Reviews List -->
         <div class="space-y-6 divide-y divide-slate-100">
           <div 
             v-for="(rev, idx) in reviews" 
-            :key="idx"
-            class="pt-6 first:pt-0 space-y-2"
+            :key="rev.id || idx"
+            class="pt-6 first:pt-0 space-y-3"
           >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-sm">
-                  {{ rev.name.charAt(0).toUpperCase() }}
+            <!-- Regular Mode -->
+            <div v-if="editingReviewId !== rev.id" class="space-y-2">
+              <div class="flex items-start justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-sm">
+                    {{ rev.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <div>
+                    <h4 class="text-sm font-extrabold text-slate-800">{{ rev.name }}</h4>
+                    <div class="flex gap-0.5 mt-0.5">
+                      <svg 
+                        v-for="star in 5" 
+                        :key="star"
+                        xmlns="http://www.w3.org/2000/svg" 
+                        viewBox="0 0 24 24" 
+                        fill="currentColor" 
+                        class="w-3.5 h-3.5"
+                        :class="star <= rev.rating ? 'text-yellow-500' : 'text-slate-200'"
+                      >
+                        <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h4 class="text-sm font-extrabold text-slate-800">{{ rev.name }}</h4>
-                  <div class="flex gap-0.5 mt-0.5">
-                    <svg 
-                      v-for="star in 5" 
-                      :key="star"
-                      xmlns="http://www.w3.org/2000/svg" 
-                      viewBox="0 0 24 24" 
-                      fill="currentColor" 
-                      class="w-3.5 h-3.5"
-                      :class="star <= rev.rating ? 'text-yellow-500' : 'text-slate-200'"
+                <div class="flex items-center gap-3">
+                  <span class="text-xs text-slate-400">{{ rev.createdAt }}</span>
+                  <div v-if="canModifyReview(rev)" class="flex items-center gap-1.5">
+                    <button 
+                      @click="startEditReview(rev)"
+                      class="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100/80 px-2 py-1 rounded-md cursor-pointer focus:outline-none"
                     >
-                      <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
-                    </svg>
+                      Sửa
+                    </button>
+                    <button 
+                      @click="deleteReview(rev.id)"
+                      class="text-xs font-bold text-red-600 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100/80 px-2 py-1 rounded-md cursor-pointer focus:outline-none"
+                    >
+                      Xóa
+                    </button>
                   </div>
                 </div>
               </div>
-              <span class="text-xs text-slate-400">{{ rev.createdAt }}</span>
+              <p class="text-sm text-slate-600 leading-relaxed pl-11">
+                {{ rev.content }}
+              </p>
             </div>
-            <p class="text-sm text-slate-600 leading-relaxed pl-11">
-              {{ rev.content }}
-            </p>
+
+            <!-- Edit Mode Inline -->
+            <div v-else class="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 space-y-4 pl-11">
+              <div class="flex items-center justify-between">
+                <h4 class="text-sm font-extrabold text-slate-800">Chỉnh sửa đánh giá</h4>
+                <!-- Star Rating Selector -->
+                <div class="flex items-center gap-1.5">
+                  <button 
+                    v-for="star in 5" 
+                    :key="star"
+                    type="button"
+                    @click="editReviewRating = star"
+                    class="hover:scale-110 transition-transform focus:outline-none cursor-pointer"
+                  >
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 24 24" 
+                      fill="currentColor" 
+                      class="w-5 h-5"
+                      :class="star <= editReviewRating ? 'text-yellow-500' : 'text-slate-300'"
+                    >
+                      <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1">
+                  <label class="text-xs font-bold text-slate-700">Tên của bạn</label>
+                  <input 
+                    v-model="editReviewName" 
+                    type="text" 
+                    placeholder="Nhập tên của bạn"
+                    class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 bg-white text-sm"
+                  />
+                </div>
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-slate-700">Nội dung đánh giá</label>
+                <textarea 
+                  v-model="editReviewContent" 
+                  rows="2"
+                  placeholder="Nhập nội dung đánh giá..."
+                  class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 bg-white text-sm"
+                ></textarea>
+              </div>
+
+              <div class="flex justify-end gap-3 pt-1">
+                <button 
+                  type="button"
+                  @click="cancelEditReview"
+                  class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button 
+                  type="button"
+                  @click="saveEditReview"
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  Lưu thay đổi
+                </button>
+              </div>
+            </div>
           </div>
           <div v-if="reviews.length === 0" class="text-center py-6 text-slate-400 text-sm">
             Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên đánh giá!
@@ -533,6 +627,7 @@ import { ref, onMounted, watch, computed, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
 import { productService } from '@/services/product.service'
 import ProductCard from '@/components/ProductCard.vue'
 import { formatCurrency, getDiscountPercent } from '@/utils/helpers'
@@ -541,6 +636,7 @@ import type { Product } from '@/types'
 const route = useRoute()
 const router = useRouter()
 const cartStore = useCartStore()
+const authStore = useAuthStore()
 const toast = useToast()
 
 function buyNow() {
@@ -652,6 +748,8 @@ const policyDetails = {
 }
 
 interface Review {
+  id: string
+  userId?: string
   name: string
   rating: number
   content: string
@@ -664,23 +762,91 @@ const newReviewRating = ref(5)
 const newReviewContent = ref('')
 const showReviewForm = ref(false)
 
+watch(showReviewForm, (newVal) => {
+  if (newVal && authStore.isAuthenticated && authStore.user) {
+    newReviewName.value = authStore.user.fullName || ''
+  }
+})
+
+// Edit comment states
+const editingReviewId = ref<string | null>(null)
+const editReviewName = ref('')
+const editReviewRating = ref(5)
+const editReviewContent = ref('')
+
+function canModifyReview(review: Review): boolean {
+  if (authStore.isAdmin) return true
+  
+  const currentUserId = authStore.user?._id
+  return !!currentUserId && review.userId === currentUserId
+}
+
+function startEditReview(review: Review) {
+  editingReviewId.value = review.id
+  editReviewName.value = review.name
+  editReviewRating.value = review.rating
+  editReviewContent.value = review.content
+}
+
+function cancelEditReview() {
+  editingReviewId.value = null
+  editReviewName.value = ''
+  editReviewRating.value = 5
+  editReviewContent.value = ''
+}
+
+function saveEditReview() {
+  if (!editReviewName.value.trim()) {
+    toast.warning('Vui lòng nhập tên của bạn')
+    return
+  }
+  if (!editReviewContent.value.trim()) {
+    toast.warning('Vui lòng nhập nội dung đánh giá')
+    return
+  }
+
+  const prodId = route.params.id as string
+  const review = reviews.value.find(r => r.id === editingReviewId.value)
+  if (review) {
+    review.name = editReviewName.value
+    review.rating = editReviewRating.value
+    review.content = editReviewContent.value
+    review.createdAt = new Date().toLocaleDateString('vi-VN')
+    localStorage.setItem(`reviews_${prodId}`, JSON.stringify(reviews.value))
+    toast.success('Đã cập nhật đánh giá!')
+  }
+  cancelEditReview()
+}
+
+function deleteReview(reviewId: string) {
+  const prodId = route.params.id as string
+  reviews.value = reviews.value.filter(r => r.id !== reviewId)
+  localStorage.setItem(`reviews_${prodId}`, JSON.stringify(reviews.value))
+  toast.success('Đã xóa đánh giá!')
+}
+
 function loadReviews() {
   const prodId = route.params.id as string
   const storedReviews = localStorage.getItem(`reviews_${prodId}`)
   if (storedReviews) {
     reviews.value = JSON.parse(storedReviews)
   } else {
+    const productName = product.value ? product.value.name : 'sản phẩm'
     reviews.value = [
       {
+        id: 'mock_1',
+        userId: 'mock_system',
         name: 'Nguyễn Văn A',
         rating: 5,
-        content: 'Sản phẩm chất lượng cực kỳ tốt, đóng gói cẩn thận và giao hàng siêu nhanh. Sẽ tiếp tục ủng hộ Trường Thanh Bookstore!',
+        content: `Tôi đã mua sản phẩm "${productName}" này ở Trường Thanh Bookstore, chất lượng hoàn thiện cực kỳ tốt, đóng gói cẩn thận và giao hàng siêu nhanh. Sẽ tiếp tục ủng hộ shop!`,
         createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN')
       },
       {
+        id: 'mock_2',
+        userId: 'mock_system',
         name: 'Trần Thị B',
         rating: 4,
-        content: 'Sách đẹp, đóng gói kỹ. Giao hàng hơi chậm một chút do thời tiết nhưng nhân viên hỗ trợ rất nhiệt tình.',
+        content: `Sản phẩm "${productName}" nhận được đúng như mô tả của cửa hàng, đóng gói kỹ lượng và có tem nhãn chính hãng đầy đủ. Sử dụng rất ưng ý.`,
         createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN')
       }
     ]
@@ -714,6 +880,10 @@ const ratingStats = computed(() => {
 })
 
 function submitReview() {
+  if (!authStore.isAuthenticated) {
+    toast.error('Vui lòng đăng nhập để đánh giá sản phẩm')
+    return
+  }
   if (!newReviewName.value.trim()) {
     toast.warning('Vui lòng nhập tên của bạn')
     return
@@ -724,7 +894,11 @@ function submitReview() {
   }
 
   const prodId = route.params.id as string
+  const currentUserId = authStore.user?._id
+
   const review: Review = {
+    id: 'rev_' + Date.now(),
+    userId: currentUserId,
     name: newReviewName.value,
     rating: newReviewRating.value,
     content: newReviewContent.value,
