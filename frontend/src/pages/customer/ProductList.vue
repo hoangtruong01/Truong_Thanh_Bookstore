@@ -93,7 +93,7 @@
 
         <div v-else-if="products.length === 0" class="bg-white border border-slate-200 rounded-3xl p-16 text-center space-y-4">
           <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m21-21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
           </div>
           <h3 class="text-lg font-bold text-slate-800">Không tìm thấy sản phẩm nào</h3>
           <p class="text-slate-400 text-sm max-w-xs mx-auto">Vui lòng điều chỉnh bộ lọc hoặc từ khóa tìm kiếm của bạn.</p>
