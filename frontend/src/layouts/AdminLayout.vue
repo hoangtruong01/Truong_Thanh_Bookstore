@@ -116,8 +116,8 @@ const adminInitials = computed(() => {
 })
 const adminRole = computed(() => {
   const role = authStore.user?.role
-  if (role === 'admin') return 'Super Admin'
-  if (role === 'staff') return 'Nhân viên'
+  if (role === 'ADMIN') return 'Super Admin'
+  if (role === 'STAFF') return 'Nhân viên'
   return 'Admin'
 })
 

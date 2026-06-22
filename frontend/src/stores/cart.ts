@@ -39,10 +39,11 @@ export const useCartStore = defineStore('cart', () => {
   function addToCart(product: Product, quantity = 1) {
     const existing = items.value.find((item: CartItem) => item.product._id === product._id)
     if (existing) {
-      existing.quantity += quantity
+      const newQty = existing.quantity + quantity
+      existing.quantity = Math.min(newQty, product.stock)
       existing.selected = true
     } else {
-      items.value.push({ product, quantity, selected: true })
+      items.value.push({ product, quantity: Math.min(quantity, product.stock), selected: true })
     }
     saveCart()
     recalculateDiscount()

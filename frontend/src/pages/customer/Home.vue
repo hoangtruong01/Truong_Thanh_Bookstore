@@ -957,40 +957,55 @@ const combos = computed(() => {
   return matched.length > 0 ? matched.slice(0, 2) : bestSelling.value.slice(0, 2)
 })
 
-onMounted(async () => {
+onMounted(() => {
   startCountdown()
-  try {
-    const catRes = await categoryService.getParents()
-    parentCategories.value = catRes.data
-  } catch (err) {
-    console.error('Error loading parent categories', err)
-  }
 
-  try {
-    const bestRes = await productService.getBestSelling(10)
-    bestSelling.value = bestRes.data
-  } finally {
-    loadingBest.value = false
-  }
+  // Concurrently load all homepage content in parallel to prevent waterfall blocking (UX Optimization)
+  categoryService.getParents()
+    .then(catRes => {
+      parentCategories.value = catRes.data
+    })
+    .catch(err => {
+      console.error('Error loading parent categories', err)
+    })
 
-  try {
-    const discRes = await productService.getDiscounted(5)
-    discounted.value = discRes.data
-  } finally {
-    loadingDiscount.value = false
-  }
+  productService.getBestSelling(10)
+    .then(bestRes => {
+      bestSelling.value = bestRes.data
+    })
+    .catch(err => {
+      console.error('Error loading best sellers', err)
+    })
+    .finally(() => {
+      loadingBest.value = false
+    })
 
-  try {
-    const newRes = await productService.getNew(10)
-    newProducts.value = newRes.data
-  } finally {
-    loadingNew.value = false
-  }
+  productService.getDiscounted(5)
+    .then(discRes => {
+      discounted.value = discRes.data
+    })
+    .catch(err => {
+      console.error('Error loading discounted products', err)
+    })
+    .finally(() => {
+      loadingDiscount.value = false
+    })
+
+  productService.getNew(10)
+    .then(newRes => {
+      newProducts.value = newRes.data
+    })
+    .catch(err => {
+      console.error('Error loading new products', err)
+    })
+    .finally(() => {
+      loadingNew.value = false
+    })
 
   // Trigger observer scroll reveal setup once the items are in the DOM
   setTimeout(() => {
     observeNewElements()
-  }, 150)
+  }, 350)
 })
 
 function addToCart(product: Product) {

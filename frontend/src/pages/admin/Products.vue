@@ -183,13 +183,14 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 const limit = 10
 
-onMounted(async () => {
-  try {
-    const catRes = await categoryService.getAll()
-    categories.value = catRes.data
-  } catch (err) {
-    console.error('Error fetching categories', err)
-  }
+onMounted(() => {
+  categoryService.getAll()
+    .then(catRes => {
+      categories.value = catRes.data
+    })
+    .catch(err => {
+      console.error('Error fetching categories', err)
+    })
   fetchProducts()
 })
 

@@ -725,7 +725,8 @@ onMounted(() => {
 async function fetchLandingPages() {
   loadingList.value = true;
   try {
-    landingPages.value = await landingPageService.getAll();
+    const res = (await landingPageService.getAll()) as any;
+    landingPages.value = res.data;
   } catch (error: any) {
     toast.error('Lỗi khi tải danh sách landing page: ' + (error.response?.data?.message || error.message));
   } finally {
@@ -864,13 +865,13 @@ async function generateLandingPageAI() {
 
   loadingAI.value = true;
   try {
-    const aiConfig = await landingPageService.generate({
+    const aiConfig = (await landingPageService.generate({
       title: form.value.title || 'Bộ sản phẩm Trường Thành',
       price: currentPrice,
       originalPrice: currentOriginalPrice,
       images: form.value.images,
       prompt: aiPrompt.value,
-    });
+    })) as any;
 
     // Update form content dynamically with generated layout guidelines from AI
     form.value.description = aiConfig.description || form.value.description;

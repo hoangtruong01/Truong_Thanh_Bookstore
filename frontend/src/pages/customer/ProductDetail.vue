@@ -710,18 +710,23 @@ async function loadProduct() {
     selectedImage.value = res.data.images[0] || ''
     quantity.value = 1
     
-    // Load related products
-    const relatedRes = await productService.getAll({
-      category: typeof res.data.category === 'object' ? res.data.category._id : res.data.category,
-      limit: 9
-    })
-    relatedProducts.value = relatedRes.data.data.filter((p: Product) => p._id !== id)
-    
     // Load reviews
     loadReviews()
+    
+    // De-couple main page loader so users can view & purchase the product immediately (UX Optimization)
+    loading.value = false
+    
+    // Fetch related products asynchronously in the background
+    productService.getAll({
+      category: typeof res.data.category === 'object' ? res.data.category._id : res.data.category,
+      limit: 9
+    }).then(relatedRes => {
+      relatedProducts.value = relatedRes.data.data.filter((p: Product) => p._id !== id)
+    }).catch(err => {
+      console.error('Error fetching related products:', err)
+    })
   } catch (err) {
     toast.error('Lỗi khi tải chi tiết sản phẩm')
-  } finally {
     loading.value = false
   }
 }

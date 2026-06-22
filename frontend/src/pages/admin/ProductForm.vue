@@ -298,35 +298,37 @@ const form = reactive({
   isFeatured: false,
 })
 
-onMounted(async () => {
-  try {
-    const catRes = await categoryService.getAll()
-    categories.value = catRes.data
-  } catch (err) {
-    console.error('Error fetching categories', err)
-  }
+onMounted(() => {
+  categoryService.getAll()
+    .then(catRes => {
+      categories.value = catRes.data
+    })
+    .catch(err => {
+      console.error('Error fetching categories', err)
+    })
 
   const id = route.params.id as string
   if (id) {
     isEdit.value = true
-    try {
-      const prodRes = await productService.getById(id)
-      const data = prodRes.data
-      form.name = data.name
-      form.sku = data.sku
-      form.brand = data.brand || ''
-      form.category = typeof data.category === 'object' ? data.category._id : data.category
-      form.price = data.price
-      form.discountPrice = data.discountPrice || 0
-      form.stock = data.stock
-      form.description = data.description || ''
-      form.status = data.status
-      form.isFeatured = data.isFeatured || false
-      imagesList.value = data.images || []
-    } catch (err) {
-      toast.error('Lỗi khi tải thông tin sản phẩm')
-      router.push('/admin/products')
-    }
+    productService.getById(id)
+      .then(prodRes => {
+        const data = prodRes.data
+        form.name = data.name
+        form.sku = data.sku
+        form.brand = data.brand || ''
+        form.category = typeof data.category === 'object' ? data.category._id : data.category
+        form.price = data.price
+        form.discountPrice = data.discountPrice || 0
+        form.stock = data.stock
+        form.description = data.description || ''
+        form.status = data.status
+        form.isFeatured = data.isFeatured || false
+        imagesList.value = data.images || []
+      })
+      .catch(err => {
+        toast.error('Lỗi khi tải thông tin sản phẩm')
+        router.push('/admin/products')
+      })
   }
 })
 

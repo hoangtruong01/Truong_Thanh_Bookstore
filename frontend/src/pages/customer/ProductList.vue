@@ -166,13 +166,14 @@ const minPrice = ref<number | null>(null)
 const maxPrice = ref<number | null>(null)
 const sortBy = ref('newest')
 
-onMounted(async () => {
-  try {
-    const catRes = await categoryService.getAll()
-    categories.value = catRes.data
-  } catch (err) {
-    console.error('Error fetching categories', err)
-  }
+onMounted(() => {
+  categoryService.getAll()
+    .then(catRes => {
+      categories.value = catRes.data
+    })
+    .catch(err => {
+      console.error('Error fetching categories', err)
+    })
   fetchProducts()
 })
 

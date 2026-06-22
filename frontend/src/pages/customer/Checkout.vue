@@ -150,7 +150,7 @@
 
           <button
             @click="placeOrder"
-            :disabled="submitting || checkoutItems.length === 0 || (shippingInfo.phone && !isPhoneValid)"
+            :disabled="submitting || checkoutItems.length === 0 || (!!shippingInfo.phone && !isPhoneValid)"
             class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none cursor-pointer"
           >
             {{ submitting ? 'Đang xử lý...' : 'Đặt hàng ngay' }}

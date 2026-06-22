@@ -385,7 +385,7 @@ async function loadLandingPage() {
   error.value = false;
   try {
     const slug = route.params.slug as string;
-    const pageData = await landingPageService.getBySlug(slug);
+    const pageData = (await landingPageService.getBySlug(slug)) as any;
     page.value = pageData;
     currentImageIdx.value = 0;
 
@@ -456,14 +456,14 @@ async function handleSubmitOrder() {
 
   submittingOrder.value = true;
   try {
-    const response = await landingPageService.submitOrder({
+    const response = (await landingPageService.submitOrder({
       landingPageId: page.value._id,
       fullName: orderForm.value.fullName,
       phone: orderForm.value.phone,
       address: orderForm.value.address,
       packageName: selectedPackage.value,
       note: orderForm.value.note,
-    });
+    })) as any;
 
     createdOrderCode.value = response.orderCode;
     showSuccessModal.value = true;
