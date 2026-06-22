@@ -10,7 +10,7 @@
 
     <!-- Image/Placeholder Container -->
     <div class="aspect-square bg-slate-50/70 rounded-xl overflow-hidden mb-4 relative flex items-center justify-center">
-      <img v-if="product.images && product.images.length > 0" :src="product.images[0]" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+      <img v-if="product.images && product.images.length > 0" :src="product.images[0]" class="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500" />
       <div v-else :class="`w-full h-full ${placeholder.gradient} flex items-center justify-center group-hover:scale-105 transition-transform duration-500`">
         <!-- SVG Icon fallbacks -->
         <svg v-if="placeholder.icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">

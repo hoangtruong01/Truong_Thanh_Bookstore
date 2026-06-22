@@ -105,11 +105,11 @@
             v-for="(img, idx) in page.images"
             :key="idx"
             @click="selectImageIdx(Number(idx))"
-            class="w-11 h-11 rounded-lg border-2 overflow-hidden flex-shrink-0 cursor-pointer transition-all"
+            class="w-11 h-11 rounded-lg border-2 overflow-hidden flex-shrink-0 cursor-pointer transition-all bg-slate-50"
             :class="currentImageIdx === idx ? '' : 'border-slate-200 opacity-60'"
             :style="{ borderColor: currentImageIdx === idx ? page.primaryColor : '' }"
           >
-            <img :src="img" class="w-full h-full object-cover" />
+            <img :src="img" class="w-full h-full object-contain" />
           </button>
         </div>
       </div>
@@ -162,7 +162,7 @@
         <h2 class="text-sm font-black uppercase tracking-wider text-center select-none">Hình ảnh chi tiết sản phẩm</h2>
         <div class="space-y-3">
           <div v-for="(img, idx) in page.images" :key="idx" class="rounded-2xl overflow-hidden bg-white border border-slate-200/50 shadow-md">
-            <img :src="img" class="w-full h-auto object-cover" />
+            <img :src="img" class="w-full h-auto object-contain" />
           </div>
         </div>
       </div>

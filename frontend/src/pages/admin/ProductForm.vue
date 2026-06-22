@@ -184,9 +184,9 @@
               <div
                 v-for="(img, idx) in imagesList"
                 :key="idx"
-                class="relative aspect-square rounded-2xl overflow-hidden group border border-slate-200 bg-slate-50 shadow-xs"
+                class="relative aspect-square rounded-2xl overflow-hidden group border border-slate-200 bg-slate-50 shadow-xs flex items-center justify-center"
               >
-                <img :src="img" class="w-full h-full object-cover" />
+                <img :src="img" class="w-full h-full object-contain" />
                 <div class="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <button
                     type="button"

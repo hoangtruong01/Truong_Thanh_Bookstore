@@ -34,7 +34,7 @@
                 :key="idx" 
                 class="w-full h-full flex-shrink-0 flex items-center justify-center bg-slate-50/70"
               >
-                <img :src="img" class="w-full h-full object-cover" />
+                <img :src="img" class="w-full h-full object-contain" />
               </div>
             </div>
             <div v-else :class="`w-full h-full ${getProductPlaceholder(product ? product.name : '').gradient} flex items-center justify-center`">
@@ -66,10 +66,10 @@
               v-for="(img, idx) in product.images"
               :key="idx"
               @click="selectProductImage(img)"
-              class="w-20 h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0"
+              class="w-20 h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-slate-50"
               :class="[selectedImage === img ? 'border-[#dc2626]' : 'border-transparent opacity-70 hover:opacity-100']"
             >
-              <img :src="img" class="w-full h-full object-cover" />
+              <img :src="img" class="w-full h-full object-contain" />
             </button>
           </div>
         </div>

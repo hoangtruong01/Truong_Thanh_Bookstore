@@ -60,7 +60,7 @@
                 <img
                   v-if="page.images && page.images.length > 0"
                   :src="page.images[0]"
-                  class="w-11 h-11 rounded-lg object-cover border border-slate-200 bg-slate-50"
+                  class="w-11 h-11 rounded-lg object-contain border border-slate-200 bg-slate-50"
                 />
                 <div v-else class="w-11 h-11 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200">
                   <span class="text-[9px] text-slate-400 uppercase font-bold">N/A</span>
@@ -332,8 +332,8 @@
 
               <!-- Images Preview Gallery -->
               <div v-if="form.images.length > 0" class="grid grid-cols-5 gap-2 mt-2">
-                <div v-for="(img, idx) in form.images" :key="idx" class="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
-                  <img :src="img" class="w-full h-full object-cover" />
+                <div v-for="(img, idx) in form.images" :key="idx" class="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center">
+                  <img :src="img" class="w-full h-full object-contain" />
                   <button
                     v-if="!isEditing"
                     @click="removeImage(Number(idx))"
@@ -542,11 +542,11 @@
                     v-for="(img, idx) in form.images"
                     :key="idx"
                     @click="selectPreviewImageIdx(Number(idx))"
-                    class="w-10 h-10 rounded-md border overflow-hidden flex-shrink-0 cursor-pointer transition-all"
+                    class="w-10 h-10 rounded-md border overflow-hidden flex-shrink-0 cursor-pointer transition-all bg-slate-50"
                     :class="currentPreviewImageIdx === idx ? 'border-2' : 'border-slate-200 opacity-60'"
                     :style="{ borderColor: currentPreviewImageIdx === idx ? form.primaryColor : '' }"
                   >
-                    <img :src="img" class="w-full h-full object-cover" />
+                    <img :src="img" class="w-full h-full object-contain" />
                   </button>
                 </div>
               </div>
@@ -572,7 +572,7 @@
                 <h3 class="text-xs font-black uppercase text-center tracking-wider opacity-85">Hình ảnh chi tiết</h3>
                 <div class="space-y-3">
                   <div v-for="(img, idx) in form.images" :key="idx" class="rounded-xl overflow-hidden bg-white border border-slate-200/50 shadow-xs">
-                    <img :src="img" class="w-full h-auto object-cover" />
+                    <img :src="img" class="w-full h-auto object-contain" />
                   </div>
                 </div>
               </div>
