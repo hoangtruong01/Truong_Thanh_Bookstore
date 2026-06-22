@@ -67,21 +67,33 @@
 
       <!-- Main Slider Image Gallery -->
       <div v-if="page.images && page.images.length > 0" class="my-4 space-y-3">
-        <div class="aspect-video w-full rounded-2xl overflow-hidden bg-white border border-slate-200/80 shadow-md flex items-center justify-center relative group">
-          <img :src="page.images[currentImageIdx]" class="w-full h-full object-contain" />
+        <div class="aspect-video w-full rounded-2xl overflow-hidden bg-white border border-slate-200/80 shadow-md relative group">
+          <!-- Sliding Track -->
+          <div 
+            class="flex w-full h-full transition-transform duration-500 ease-in-out"
+            :style="{ transform: `translateX(-${currentImageIdx * 100}%)` }"
+          >
+            <div 
+              v-for="(img, idx) in page.images" 
+              :key="idx" 
+              class="w-full h-full flex-shrink-0 flex items-center justify-center bg-white"
+            >
+              <img :src="img" class="w-full h-full object-contain" />
+            </div>
+          </div>
           
           <!-- Prev/Next navigation overlay -->
           <button
             v-if="page.images.length > 1"
             @click="prevImage"
-            class="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/40 hover:bg-slate-900/60 text-white flex items-center justify-center transition-all cursor-pointer"
+            class="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/40 hover:bg-slate-900/60 text-white flex items-center justify-center transition-all cursor-pointer z-10"
           >
             ❮
           </button>
           <button
             v-if="page.images.length > 1"
             @click="nextImage"
-            class="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/40 hover:bg-slate-900/60 text-white flex items-center justify-center transition-all cursor-pointer"
+            class="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/40 hover:bg-slate-900/60 text-white flex items-center justify-center transition-all cursor-pointer z-10"
           >
             ❯
           </button>
@@ -92,7 +104,7 @@
           <button
             v-for="(img, idx) in page.images"
             :key="idx"
-            @click="currentImageIdx = Number(idx)"
+            @click="selectImageIdx(Number(idx))"
             class="w-11 h-11 rounded-lg border-2 overflow-hidden flex-shrink-0 cursor-pointer transition-all"
             :class="currentImageIdx === idx ? '' : 'border-slate-200 opacity-60'"
             :style="{ borderColor: currentImageIdx === idx ? page.primaryColor : '' }"
@@ -354,6 +366,30 @@ const submittingOrder = ref(false);
 const showSuccessModal = ref(false);
 const createdOrderCode = ref('');
 
+// Autoplay Slideshow for Landing Page images
+let autoplayInterval: any = null;
+
+function startAutoplay() {
+  stopAutoplay();
+  if (page.value?.images && page.value.images.length > 1) {
+    autoplayInterval = setInterval(() => {
+      nextImage();
+    }, 3500); // transition to next image every 3.5 seconds
+  }
+}
+
+function stopAutoplay() {
+  if (autoplayInterval) {
+    clearInterval(autoplayInterval);
+    autoplayInterval = null;
+  }
+}
+
+function selectImageIdx(idx: number) {
+  currentImageIdx.value = idx;
+  startAutoplay();
+}
+
 // Fake Scarcity Timer
 const timerMinutes = ref(30);
 const timerSeconds = ref(0);
@@ -378,6 +414,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval);
+  stopAutoplay();
 });
 
 async function loadLandingPage() {
@@ -386,19 +423,21 @@ async function loadLandingPage() {
   try {
     const slug = route.params.slug as string;
     const pageData = (await landingPageService.getBySlug(slug)) as any;
-    page.value = pageData;
+    const pageObj = pageData.data || pageData;
+    page.value = pageObj;
     currentImageIdx.value = 0;
 
     // Set default package selection
-    if (pageData.packages && pageData.packages.length > 0) {
-      const best = pageData.packages.find((p: any) => p.isBestSeller);
-      selectedPackage.value = best ? best.name : pageData.packages[0].name;
+    if (pageObj.packages && pageObj.packages.length > 0) {
+      const best = pageObj.packages.find((p: any) => p.isBestSeller);
+      selectedPackage.value = best ? best.name : pageObj.packages[0].name;
     }
 
     // Initialize Timer
-    timerMinutes.value = pageData.countdownMinutes || 30;
+    timerMinutes.value = pageObj.countdownMinutes || 30;
     timerSeconds.value = 0;
     startTimer();
+    startAutoplay();
   } catch (err: any) {
     error.value = true;
     console.error('Error loading landing page:', err);
@@ -430,11 +469,13 @@ function formatTimerUnit(val: number): string {
 function prevImage() {
   if (!page.value.images || page.value.images.length === 0) return;
   currentImageIdx.value = (currentImageIdx.value - 1 + page.value.images.length) % page.value.images.length;
+  startAutoplay();
 }
 
 function nextImage() {
   if (!page.value.images || page.value.images.length === 0) return;
   currentImageIdx.value = (currentImageIdx.value + 1) % page.value.images.length;
+  startAutoplay();
 }
 
 function selectPackage(name: string) {
@@ -486,3 +527,18 @@ function formatMoney(value: number | string): string {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 </script>
+
+<style scoped>
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slide-right-enter-from {
+  transform: translateX(-30px);
+  opacity: 0;
+}
+.slide-right-leave-to {
+  transform: translateX(30px);
+  opacity: 0;
+}
+</style>

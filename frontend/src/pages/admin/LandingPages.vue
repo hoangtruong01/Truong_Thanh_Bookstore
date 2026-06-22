@@ -459,16 +459,7 @@
                 </div>
               </div>
 
-              <!-- Custom CSS Code -->
-              <div>
-                <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Custom CSS</label>
-                <textarea
-                  v-model="form.customCss"
-                  rows="3"
-                  placeholder=".my-class { border-radius: 99px; }"
-                  class="w-full font-mono bg-slate-900 text-slate-100 border border-slate-800 rounded-lg p-2 text-[10px] focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
-                ></textarea>
-              </div>
+
 
               <!-- Active Status -->
               <div class="flex items-center gap-2">
@@ -522,12 +513,21 @@
 
               <!-- Mock Slider / Image Gallery -->
               <div class="my-6 space-y-2">
-                <div class="aspect-video w-full rounded-xl overflow-hidden bg-slate-50 border border-slate-200 shadow-xs flex items-center justify-center">
-                  <img
+                <div class="aspect-video w-full rounded-xl overflow-hidden bg-slate-50 border border-slate-200 shadow-xs relative flex items-center justify-center">
+                  <!-- Sliding Track -->
+                  <div 
                     v-if="form.images.length > 0"
-                    :src="form.images[currentPreviewImageIdx]"
-                    class="w-full h-full object-contain"
-                  />
+                    class="flex w-full h-full transition-transform duration-500 ease-in-out"
+                    :style="{ transform: `translateX(-${currentPreviewImageIdx * 100}%)` }"
+                  >
+                    <div 
+                      v-for="(img, idx) in form.images" 
+                      :key="idx" 
+                      class="w-full h-full flex-shrink-0 flex items-center justify-center bg-slate-50"
+                    >
+                      <img :src="img" class="w-full h-full object-contain" />
+                    </div>
+                  </div>
                   <div v-else class="text-slate-400 text-xs font-bold text-center p-6">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="w-12 h-12 mx-auto text-slate-300 mb-2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -541,7 +541,7 @@
                   <button
                     v-for="(img, idx) in form.images"
                     :key="idx"
-                    @click="currentPreviewImageIdx = Number(idx)"
+                    @click="selectPreviewImageIdx(Number(idx))"
                     class="w-10 h-10 rounded-md border overflow-hidden flex-shrink-0 cursor-pointer transition-all"
                     :class="currentPreviewImageIdx === idx ? 'border-2' : 'border-slate-200 opacity-60'"
                     :style="{ borderColor: currentPreviewImageIdx === idx ? form.primaryColor : '' }"
@@ -683,7 +683,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { landingPageService } from '@/services/landingPage';
 import { useToast } from 'vue-toastification';
 
@@ -716,6 +716,50 @@ const form = ref<any>({
   testimonials: [],
   customCss: '',
   status: true,
+});
+
+// Autoplay slideshow for preview images
+let previewAutoplayInterval: any = null;
+
+function startPreviewAutoplay() {
+  stopPreviewAutoplay();
+  if (form.value.images && form.value.images.length > 1) {
+    previewAutoplayInterval = setInterval(() => {
+      currentPreviewImageIdx.value = (currentPreviewImageIdx.value + 1) % form.value.images.length;
+    }, 3500);
+  }
+}
+
+function stopPreviewAutoplay() {
+  if (previewAutoplayInterval) {
+    clearInterval(previewAutoplayInterval);
+    previewAutoplayInterval = null;
+  }
+}
+
+function selectPreviewImageIdx(idx: number) {
+  currentPreviewImageIdx.value = idx;
+  startPreviewAutoplay();
+}
+
+watch(() => form.value.images, (newImages) => {
+  if (newImages && newImages.length > 1) {
+    startPreviewAutoplay();
+  } else {
+    stopPreviewAutoplay();
+  }
+}, { deep: true });
+
+watch(showModal, (val) => {
+  if (val) {
+    startPreviewAutoplay();
+  } else {
+    stopPreviewAutoplay();
+  }
+});
+
+onUnmounted(() => {
+  stopPreviewAutoplay();
 });
 
 onMounted(() => {
@@ -996,3 +1040,18 @@ function formatMoney(value: number | string): string {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 </script>
+
+<style scoped>
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slide-right-enter-from {
+  transform: translateX(-30px);
+  opacity: 0;
+}
+.slide-right-leave-to {
+  transform: translateX(30px);
+  opacity: 0;
+}
+</style>
