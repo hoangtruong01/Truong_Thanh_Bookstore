@@ -47,16 +47,122 @@
 
         <div>
           <label class="text-xs font-bold text-slate-700">Combo sản phẩm *</label>
-          <select
-            v-model="form.category"
-            required
-            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-          >
-            <option value="">Chọn combo</option>
-            <option v-for="cat in categories" :key="cat._id" :value="cat._id">
-              {{ cat.name }}
-            </option>
-          </select>
+          <div class="flex items-center gap-2 mt-1">
+            <select
+              v-model="form.category"
+              required
+              class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+            >
+              <option value="">Chọn combo</option>
+              <option v-for="cat in categories" :key="cat._id" :value="cat._id">
+                {{ cat.name }}
+              </option>
+            </select>
+            <button
+              type="button"
+              @click="toggleAddComboForm"
+              class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center flex-shrink-0 shadow-xs hover:shadow-md"
+              title="Thêm combo mới"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            </button>
+            <button
+              v-if="form.category"
+              type="button"
+              @click="deleteSelectedCombo"
+              class="bg-rose-600 hover:bg-rose-700 text-white font-bold p-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center flex-shrink-0 shadow-xs hover:shadow-md"
+              title="Xóa combo đang chọn"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+            </button>
+          </div>
+
+          <!-- Quick Add Combo Form -->
+          <div v-if="showAddComboForm" class="mt-3 p-4 bg-slate-55 border border-slate-200 rounded-2xl space-y-3.5 shadow-xs transition-all duration-300">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+              <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Tạo nhanh Combo mới</span>
+              <button type="button" @click="showAddComboForm = false" class="text-slate-400 hover:text-slate-650 text-sm font-bold">&times;</button>
+            </div>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="text-[10px] font-bold text-slate-600 block">Tên Combo *</label>
+                <input
+                  v-model="quickCombo.name"
+                  type="text"
+                  placeholder="Ví dụ: Combo Học Tập Tiết Kiệm"
+                  class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-600 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold text-slate-600 block">Tên nhãn bộ lọc (VD: Chọn Lớp)</label>
+                <input
+                  v-model="quickCombo.optionsLabel"
+                  type="text"
+                  placeholder="Ví dụ: Chọn Lớp"
+                  class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-600 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold text-slate-600 block">Giá trị bộ lọc bổ sung</label>
+                <div class="flex gap-2 mt-1">
+                  <input
+                    v-model="quickComboOptionInput"
+                    type="text"
+                    placeholder="Điền tên rồi nhấn +..."
+                    @keyup.enter.prevent="addQuickComboOption"
+                    class="flex-grow bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-600 font-semibold"
+                  />
+                  <button
+                    type="button"
+                    @click="addQuickComboOption"
+                    class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center flex-shrink-0"
+                    title="Thêm giá trị bộ lọc"
+                  >
+                    +
+                  </button>
+                </div>
+
+                <!-- Display tags/chips of quick combo options -->
+                <div v-if="quickCombo.options && quickCombo.options.length > 0" class="flex flex-wrap gap-1.5 p-2 mt-2 bg-white border border-slate-150 rounded-xl max-h-32 overflow-y-auto">
+                  <span
+                    v-for="(opt, idx) in quickCombo.options"
+                    :key="idx"
+                    class="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-bold pl-2 pr-1 py-0.5 rounded-full shadow-2xs"
+                  >
+                    <span>{{ opt }}</span>
+                    <button
+                      type="button"
+                      @click="removeQuickComboOption(idx)"
+                      class="w-3.5 h-3.5 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 font-extrabold text-[9px] cursor-pointer"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex gap-2 pt-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  @click="submitQuickCombo"
+                  :disabled="quickComboSubmitting"
+                  class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs transition-colors cursor-pointer disabled:bg-slate-300"
+                >
+                  {{ quickComboSubmitting ? 'Đang tạo...' : 'Xác nhận tạo' }}
+                </button>
+                <button
+                  type="button"
+                  @click="showAddComboForm = false"
+                  class="bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  Hủy
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -361,8 +467,103 @@ const activeCategoryOptions = computed(() => {
   if (!form.category) return null
   return categories.value.find(c => c._id === form.category) || null
 })
-
 const newQuickOptionVal = ref('')
+
+// Quick Combo addition & deletion handling
+const showAddComboForm = ref(false)
+const quickComboSubmitting = ref(false)
+const quickComboOptionInput = ref('')
+const quickCombo = reactive({
+  name: '',
+  optionsLabel: '',
+  options: [] as string[],
+})
+
+function toggleAddComboForm() {
+  showAddComboForm.value = !showAddComboForm.value
+  if (showAddComboForm.value) {
+    quickCombo.name = ''
+    quickCombo.optionsLabel = ''
+    quickCombo.options = []
+    quickComboOptionInput.value = ''
+  }
+}
+
+function addQuickComboOption() {
+  const val = quickComboOptionInput.value.trim()
+  if (!val) return
+  if (!quickCombo.options.includes(val)) {
+    quickCombo.options.push(val)
+  }
+  quickComboOptionInput.value = ''
+}
+
+function removeQuickComboOption(idx: number) {
+  quickCombo.options.splice(idx, 1)
+}
+
+async function submitQuickCombo() {
+  const name = quickCombo.name.trim()
+  if (!name) {
+    toast.error('Vui lòng nhập tên combo')
+    return
+  }
+  quickComboSubmitting.value = true
+  try {
+    const payload = {
+      name,
+      description: '',
+      comboPrice: 0,
+      optionsLabel: quickCombo.optionsLabel.trim() || 'Tùy Chọn',
+      optionsType: quickCombo.options.length > 0 ? ('pills' as const) : ('' as const),
+      options: quickCombo.options,
+      status: true,
+      products: [],
+      parentId: null
+    }
+
+    const res = await categoryService.create(payload)
+    toast.success('Tạo combo mới thành công!')
+    
+    // Refresh categories dropdown
+    const catRes = await categoryService.getAll()
+    categories.value = catRes.data
+    
+    // Select the newly created combo automatically
+    form.category = res.data._id
+    
+    // Hide form
+    showAddComboForm.value = false
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Có lỗi xảy ra khi tạo combo')
+  } finally {
+    quickComboSubmitting.value = false
+  }
+}
+
+async function deleteSelectedCombo() {
+  if (!form.category) return
+  const selectedCombo = categories.value.find(c => c._id === form.category)
+  if (!selectedCombo) return
+
+  if (!confirm(`Bạn có chắc chắn muốn xóa combo "${selectedCombo.name}"? Các sản phẩm thuộc combo này sẽ bị mất phân nhóm.`)) {
+    return
+  }
+
+  try {
+    await categoryService.delete(form.category)
+    toast.success('Xóa combo thành công!')
+    
+    // Reset selected option
+    form.category = ''
+    
+    // Refresh list
+    const catRes = await categoryService.getAll()
+    categories.value = catRes.data
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Có lỗi xảy ra khi xóa combo')
+  }
+}
 
 async function addQuickOption() {
   const val = newQuickOptionVal.value.trim()
