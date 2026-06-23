@@ -45,8 +45,8 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div class="reveal flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Khám phá các Combo</span>
-            <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">Sáng tạo không giới hạn</h2>
+            <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Danh Mục Sản Phẩm</span>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">Đa dạng & chất lượng</h2>
           </div>
           
         </div>
@@ -493,12 +493,12 @@
       </div>
     </section>
 
-    <!-- 1. Sách Giáo Khoa 2026 -->
+    <!-- 1. Sách Giáo Khoa -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
       <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Chuẩn Bị Khai Giảng</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">📚 Sách Giáo Khoa 2026</h2>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Hành Trang Đến Trường</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">📚 Sách Giáo Khoa</h2>
         </div>
         <router-link to="/products?q=sách giáo khoa" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
           <span>Xem tất cả</span>
@@ -516,7 +516,7 @@
 
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
-          v-for="(prod, index) in getCategoryProducts('Sách Giáo Khoa 2026')"
+          v-for="(prod, index) in getCategoryProducts('Sách Giáo Khoa')"
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
@@ -534,14 +534,14 @@
       </div>
     </section>
 
-    <!-- 2. Dụng Cụ Học Tập -->
+    <!-- 2. Sách Tham Khảo -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
       <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Đầy Đủ Hành Trang</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">✏️ Dụng Cụ Học Tập</h2>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Nâng Cao Kiến Thức</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">📖 Sách Tham Khảo</h2>
         </div>
-        <router-link to="/products?q=dụng cụ" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
+        <router-link to="/products?q=tham khảo" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
           <span>Xem tất cả</span>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
         </router-link>
@@ -557,7 +557,7 @@
 
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
-          v-for="(prod, index) in getCategoryProducts('Dụng Cụ Học Tập')"
+          v-for="(prod, index) in getCategoryProducts('Sách Tham Khảo')"
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
@@ -567,7 +567,7 @@
 
       <div class="flex justify-center pt-6">
         <router-link
-          to="/products?q=dụng cụ"
+          to="/products?q=tham khảo"
           class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
         >
           Xem Thêm
@@ -633,7 +633,7 @@
             <span class="text-transparent bg-clip-text bg-gradient-to-r from-rose-600 to-orange-500">Khởi Đầu Tương Lai</span>
           </h2>
           <p class="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
-            Trang bị đầy đủ những dụng cụ học tập, vở viết cao cấp, bút mực chính hãng và truyện tranh hấp dẫn nhất tại Trường Thành Bookstore. Đồng hành cùng bạn trên mọi nẻo đường tri thức.
+            Trang bị đầy đủ các sản phẩm sách giáo khoa chính hãng, sách tham khảo đa dạng môn học và truyện tranh hấp dẫn nhất tại Trường Thành Bookstore. Đồng hành cùng bạn trên mọi nẻo đường tri thức.
           </p>
           <div class="pt-2">
             <router-link 
@@ -651,20 +651,20 @@
           <span class="text-2xl">✨</span>
           <h3 class="text-xs font-black text-rose-700 uppercase tracking-wider">Ưu Đãi Đặc Biệt</h3>
           <p class="text-[10px] text-slate-700 font-bold leading-normal">
-            Giảm giá lên đến 40% cho tất cả các gói combo học tập chuẩn bị cho năm học mới 2026.
+            Giảm giá lên đến 40% cho tất cả các combo và đồ lưu niệm xinh xắn chuẩn bị cho năm học mới 2026.
           </p>
         </div>
       </div>
     </section>
 
-    <!-- 4. Sách Tham Khảo -->
+    <!-- 4. Combo -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
       <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Nâng Cao Kiến Thức</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">📖 Sách Tham Khảo</h2>
+          <span class="text-xs font-bold text-[#dc2626] tracking-[0.2em] uppercase">Tiết Kiệm Hơn</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">🎁 Combo Ưu Đãi</h2>
         </div>
-        <router-link to="/products?q=tham khảo" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
+        <router-link to="/products?q=combo" class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group">
           <span>Xem tất cả</span>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
         </router-link>
@@ -680,7 +680,7 @@
 
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
-          v-for="(prod, index) in getCategoryProducts('Sách Tham Khảo')"
+          v-for="(prod, index) in getCategoryProducts('Combo')"
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
@@ -690,7 +690,7 @@
 
       <div class="flex justify-center pt-6">
         <router-link
-          to="/products?q=tham khảo"
+          to="/products?q=combo"
           class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
         >
           Xem Thêm
@@ -698,7 +698,7 @@
       </div>
     </section>
 
-    <!-- 5. ĐỒ CHƠI -->
+    <!-- 5. Đồ Chơi -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 space-y-8">
       <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
         <div>
@@ -721,7 +721,7 @@
 
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         <ProductCard
-          v-for="(prod, index) in getCategoryProducts('ĐỒ CHƠI')"
+          v-for="(prod, index) in getCategoryProducts('Đồ Chơi')"
           :key="prod._id"
           :product="prod"
           :class="['reveal-scale', `delay-${(index % 5) * 100}`]"
@@ -882,11 +882,11 @@ function handleSubscribe() {
 
 // Mapped styling system for highlighting categories in home layout
 const categoryStyles = [
-  { gradient: 'from-rose-400 to-pink-500', icon: 'pencil' },
-  { gradient: 'from-amber-400 to-orange-500', icon: 'academic' },
-  { gradient: 'from-blue-400 to-sky-500', icon: 'briefcase' },
+  { gradient: 'from-blue-400 to-sky-500', icon: 'academic' },
   { gradient: 'from-emerald-400 to-teal-500', icon: 'document' },
-  { gradient: 'from-fuchsia-400 to-purple-500', icon: 'paint' },
+  { gradient: 'from-rose-400 to-pink-500', icon: 'pencil' },
+  { gradient: 'from-fuchsia-400 to-purple-500', icon: 'briefcase' },
+  { gradient: 'from-amber-400 to-orange-500', icon: 'paint' },
   { gradient: 'from-indigo-400 to-purple-500', icon: 'calculator' }
 ]
 
@@ -906,20 +906,20 @@ const filterCategoryProducts = (categoryName: string) => {
     return keywords.some(k => nameLower.includes(k) || catLower.includes(k))
   }
 
-  if (categoryName === 'Sách Giáo Khoa 2026') {
+  if (categoryName === 'Sách Giáo Khoa') {
     return uniqueProds.filter(p => nameMatches(p, ['giáo khoa', 'sgk', 'bài tập']))
-  }
-  if (categoryName === 'Dụng Cụ Học Tập') {
-    return uniqueProds.filter(p => nameMatches(p, ['bút', 'thước', 'tẩy', 'gôm', 'vở', 'hộp bút', 'máy tính', 'dụng cụ', 'kéo', 'keo']))
-  }
-  if (categoryName === 'Truyện Tranh') {
-    return uniqueProds.filter(p => nameMatches(p, ['truyện', 'manga', 'comic']))
   }
   if (categoryName === 'Sách Tham Khảo') {
     return uniqueProds.filter(p => nameMatches(p, ['tham khảo', 'luyện đề', 'ôn thi']))
   }
-  if (categoryName === 'ĐỒ CHƠI') {
-    return uniqueProds.filter(p => nameMatches(p, ['chơi', 'lego', 'rubik', 'thủ công']))
+  if (categoryName === 'Truyện Tranh') {
+    return uniqueProds.filter(p => nameMatches(p, ['truyện', 'manga', 'comic']))
+  }
+  if (categoryName === 'Combo') {
+    return uniqueProds.filter(p => nameMatches(p, ['combo']))
+  }
+  if (categoryName === 'Đồ Chơi') {
+    return uniqueProds.filter(p => nameMatches(p, ['chơi', 'lego', 'rubik', 'thủ công', 'đồ chơi']))
   }
   if (categoryName === 'Đồ Lưu Niệm') {
     return uniqueProds.filter(p => nameMatches(p, ['lưu niệm', 'quà', 'móc khóa', 'sổ tay']))

@@ -129,6 +129,7 @@ export class ProductsService {
         { description: { $regex: regexPattern, $options: 'i' } },
         { sku: { $regex: regexPattern, $options: 'i' } },
         { brand: { $regex: regexPattern, $options: 'i' } },
+        { subOptions: { $regex: regexPattern, $options: 'i' } },
       ];
     }
 

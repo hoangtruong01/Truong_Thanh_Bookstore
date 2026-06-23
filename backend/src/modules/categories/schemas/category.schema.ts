@@ -29,6 +29,15 @@ export class Category {
   @Prop({ default: true })
   status: boolean;
 
+  @Prop({ default: '' })
+  optionsLabel: string;
+
+  @Prop({ type: String, enum: ['grid', 'pills', ''], default: '' })
+  optionsType: 'grid' | 'pills' | '';
+
+  @Prop({ type: [String], default: [] })
+  options: string[];
+
   createdAt: Date;
   updatedAt: Date;
 }

@@ -165,6 +165,77 @@
             </select>
           </div>
 
+          <!-- Category Options Management -->
+          <div class="border-t border-slate-100 pt-4 space-y-3">
+            <h4 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Cấu hình bộ lọc tùy chọn</h4>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs font-bold text-slate-700">Tên nhãn bộ lọc (VD: Chọn Lớp)</label>
+                <input
+                  v-model="form.optionsLabel"
+                  type="text"
+                  placeholder="Nhập nhãn bộ lọc..."
+                  class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold"
+                />
+              </div>
+              
+              <div>
+                <label class="text-xs font-bold text-slate-700">Dạng hiển thị bộ lọc</label>
+                <select
+                  v-model="form.optionsType"
+                  class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-600 font-semibold"
+                >
+                  <option value="">Không sử dụng</option>
+                  <option value="grid">Ô vuông (Grid)</option>
+                  <option value="pills">Nút tròn (Pills)</option>
+                </select>
+              </div>
+            </div>
+
+            <div v-if="form.optionsType" class="space-y-2">
+              <label class="text-xs font-bold text-slate-700">Danh sách các giá trị bộ lọc</label>
+              
+              <div class="flex gap-2">
+                <input
+                  v-model="newOptionInput"
+                  type="text"
+                  placeholder="Nhập giá trị (VD: Lớp 6, Toán...)"
+                  class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold"
+                  @keyup.enter.prevent="addOptionItem"
+                />
+                <button
+                  type="button"
+                  @click="addOptionItem"
+                  class="bg-slate-900 hover:bg-[#dc2626] text-white text-xs font-bold px-4 py-2 rounded-xl cursor-pointer transition-colors"
+                >
+                  Thêm
+                </button>
+              </div>
+
+              <!-- List of current options -->
+              <div v-if="form.options && form.options.length > 0" class="flex flex-wrap gap-2 p-3 bg-slate-50 border border-slate-150 rounded-xl max-h-40 overflow-y-auto">
+                <span
+                  v-for="(opt, idx) in form.options"
+                  :key="idx"
+                  class="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-700 text-xs font-bold pl-2.5 pr-1.5 py-1 rounded-full shadow-xs"
+                >
+                  <span>{{ opt }}</span>
+                  <button
+                    type="button"
+                    @click="removeOptionItem(idx)"
+                    class="w-4 h-4 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 font-extrabold text-[10px] cursor-pointer"
+                  >
+                    &times;
+                  </button>
+                </span>
+              </div>
+              <div v-else class="text-center py-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-slate-400 text-[11px] font-semibold">
+                Chưa có giá trị bộ lọc nào. Hãy thêm giá trị ở trên.
+              </div>
+            </div>
+          </div>
+
           <!-- Product Picker inside Combo -->
           <div class="border-t border-slate-100 pt-4 space-y-3">
             <h4 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Danh sách sản phẩm trong Combo</h4>
@@ -355,7 +426,30 @@ const form = ref({
   products: [] as string[],
   comboPrice: 0,
   status: true,
+  optionsLabel: '',
+  optionsType: '' as 'grid' | 'pills' | '',
+  options: [] as string[],
 })
+
+const newOptionInput = ref('')
+
+function addOptionItem() {
+  const val = newOptionInput.value.trim()
+  if (!val) return
+  if (!form.value.options) {
+    form.value.options = []
+  }
+  if (!form.value.options.includes(val)) {
+    form.value.options.push(val)
+  }
+  newOptionInput.value = ''
+}
+
+function removeOptionItem(idx: number) {
+  if (form.value.options) {
+    form.value.options.splice(idx, 1)
+  }
+}
 
 // Filter parent combos to populate the dropdown
 const parentCombos = computed(() => {
@@ -481,6 +575,7 @@ function openCreateForm() {
   currentComboId.value = null
   selectedProductIdToAdd.value = ''
   productSearchText.value = ''
+  newOptionInput.value = ''
   form.value = {
     name: '',
     slug: '',
@@ -489,6 +584,9 @@ function openCreateForm() {
     products: [],
     comboPrice: 0,
     status: true,
+    optionsLabel: '',
+    optionsType: '',
+    options: [],
   }
   showForm.value = true
 }
@@ -498,6 +596,7 @@ function openEditForm(combo: Category) {
   currentComboId.value = combo._id
   selectedProductIdToAdd.value = ''
   productSearchText.value = ''
+  newOptionInput.value = ''
   
   // Extract product IDs
   const prodIds = combo.products
@@ -516,6 +615,9 @@ function openEditForm(combo: Category) {
     products: prodIds,
     comboPrice: combo.comboPrice || 0,
     status: combo.status,
+    optionsLabel: combo.optionsLabel || '',
+    optionsType: combo.optionsType || '',
+    options: combo.options ? [...combo.options] : [],
   }
   showForm.value = true
 }

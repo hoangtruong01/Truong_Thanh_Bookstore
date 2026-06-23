@@ -69,6 +69,64 @@
             <option value="INACTIVE">Ngừng hoạt động (Inactive)</option>
           </select>
         </div>
+
+        <!-- Dynamic Category Sub-options Selector -->
+        <div v-if="activeCategoryOptions" class="sm:col-span-2 bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4">
+          <div class="flex justify-between items-center border-b border-slate-150 pb-2">
+            <label class="text-xs font-bold text-slate-700 block">
+              Phân loại bổ sung cho sản phẩm (Theo {{ activeCategoryOptions.optionsLabel || 'Tùy Chọn' }}):
+            </label>
+            
+            <!-- Quick Add Option value -->
+            <div class="flex items-center gap-1">
+              <input
+                v-model="newQuickOptionVal"
+                type="text"
+                placeholder="Thêm phân loại..."
+                class="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-blue-600 text-slate-700 font-semibold w-36"
+                @keyup.enter.prevent="addQuickOption"
+              />
+              <button
+                type="button"
+                @click="addQuickOption"
+                class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-2 py-1 text-xs font-black cursor-pointer transition-colors flex items-center justify-center"
+                title="Thêm phân loại mới"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div v-if="activeCategoryOptions.options && activeCategoryOptions.options.length" class="flex flex-wrap gap-2.5">
+            <div
+              v-for="(opt, idx) in activeCategoryOptions.options"
+              :key="idx"
+              class="inline-flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl pl-3 pr-1 py-1.5 shadow-2xs hover:border-blue-300 transition-all"
+            >
+              <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  :value="opt"
+                  v-model="form.subOptions"
+                  class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 rounded cursor-pointer"
+                />
+                <span>{{ opt }}</span>
+              </label>
+              <!-- Delete Option from Category -->
+              <button
+                type="button"
+                @click="removeQuickOption(opt)"
+                class="w-4 h-4 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 font-extrabold text-[10px] cursor-pointer ml-1"
+                title="Xóa khỏi danh mục"
+              >
+                &times;
+              </button>
+            </div>
+          </div>
+          <div v-else class="text-center py-4 bg-slate-50/50 text-slate-400 text-xs font-medium rounded-xl">
+            Chưa có phân loại nào. Hãy nhập ở góc trên để thêm phân loại mới.
+          </div>
+        </div>
       </div>
 
       <!-- Pricing & Stock -->
@@ -241,7 +299,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { productService } from '@/services/product.service'
@@ -296,7 +354,67 @@ const form = reactive({
   description: '',
   status: 'ACTIVE',
   isFeatured: false,
+  subOptions: [] as string[],
 })
+
+const activeCategoryOptions = computed(() => {
+  if (!form.category) return null
+  return categories.value.find(c => c._id === form.category) || null
+})
+
+const newQuickOptionVal = ref('')
+
+async function addQuickOption() {
+  const val = newQuickOptionVal.value.trim()
+  if (!val) return
+  if (!activeCategoryOptions.value) return
+
+  const cat = activeCategoryOptions.value
+  const currentOptions = cat.options ? [...cat.options] : []
+  
+  if (currentOptions.includes(val)) {
+    toast.warning('Phân loại này đã tồn tại!')
+    return
+  }
+
+  currentOptions.push(val)
+  
+  try {
+    const res = await categoryService.update(cat._id, {
+      options: currentOptions
+    })
+    const catIdx = categories.value.findIndex(c => c._id === cat._id)
+    if (catIdx !== -1) {
+      categories.value[catIdx] = res.data
+    }
+    toast.success(`Đã thêm phân loại "${val}" thành công!`)
+    newQuickOptionVal.value = ''
+  } catch (err: any) {
+    toast.error('Không thể thêm phân loại mới')
+  }
+}
+
+async function removeQuickOption(optName: string) {
+  if (!activeCategoryOptions.value) return
+  if (!confirm(`Bạn có chắc chắn muốn xóa phân loại "${optName}" khỏi danh mục này?`)) return
+
+  const cat = activeCategoryOptions.value
+  const currentOptions = cat.options ? cat.options.filter(o => o !== optName) : []
+
+  try {
+    const res = await categoryService.update(cat._id, {
+      options: currentOptions
+    })
+    const catIdx = categories.value.findIndex(c => c._id === cat._id)
+    if (catIdx !== -1) {
+      categories.value[catIdx] = res.data
+    }
+    form.subOptions = form.subOptions.filter(o => o !== optName)
+    toast.success(`Đã xóa phân loại "${optName}"!`)
+  } catch (err: any) {
+    toast.error('Không thể xóa phân loại')
+  }
+}
 
 onMounted(() => {
   categoryService.getAll()
@@ -323,6 +441,7 @@ onMounted(() => {
         form.description = data.description || ''
         form.status = data.status
         form.isFeatured = data.isFeatured || false
+        form.subOptions = data.subOptions || []
         imagesList.value = data.images || []
       })
       .catch(err => {

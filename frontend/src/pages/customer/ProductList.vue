@@ -26,6 +26,57 @@
           </div>
         </div>
 
+        <!-- Dynamic Sub-Options Filter -->
+        <div v-if="activeSubOptions" class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs transition-all duration-300">
+          <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <span class="w-1.5 h-3 bg-[#dc2626] rounded-full"></span>
+            {{ activeSubOptions.label }}
+          </h3>
+          
+          <!-- Grid Layout (e.g. for Grades 1-12) -->
+          <div v-if="activeSubOptions.type === 'grid'" class="grid grid-cols-4 gap-2">
+            <button
+              v-for="opt in activeSubOptions.options"
+              :key="opt"
+              @click="toggleSubOption(opt)"
+              class="h-9 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center justify-center"
+              :class="[
+                selectedSubOption === opt
+                  ? 'bg-[#dc2626] border-[#dc2626] text-white shadow-xs font-extrabold transform scale-[1.02]'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-100'
+              ]"
+            >
+              {{ opt.replace('Lớp ', '') }}
+            </button>
+          </div>
+
+          <!-- Pills Layout (e.g. for subjects, genres) -->
+          <div v-else class="flex flex-wrap gap-2">
+            <button
+              v-for="opt in activeSubOptions.options"
+              :key="opt"
+              @click="toggleSubOption(opt)"
+              class="px-3 py-1.5 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center justify-center"
+              :class="[
+                selectedSubOption === opt
+                  ? 'bg-[#dc2626] border-[#dc2626] text-white shadow-xs transform scale-[1.02]'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-100'
+              ]"
+            >
+              {{ opt }}
+            </button>
+          </div>
+
+          <!-- Clear sub-option filter if selected -->
+          <button
+            v-if="selectedSubOption"
+            @click="toggleSubOption('')"
+            class="w-full text-center text-[11px] font-bold text-slate-400 hover:text-[#dc2626] transition-colors mt-4 block cursor-pointer"
+          >
+            Xóa bộ lọc
+          </button>
+        </div>
+
         <!-- Price Filter -->
         <div class="bg-white border border-slate-200 rounded-2xl p-6">
           <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider mb-4">Khoảng giá</h3>
@@ -136,7 +187,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
@@ -162,9 +213,22 @@ const limit = 9
 // Filter values
 const selectedCategory = ref(route.query.category as string || '')
 const searchQuery = ref(route.query.q as string || '')
+const selectedSubOption = ref('')
 const minPrice = ref<number | null>(null)
 const maxPrice = ref<number | null>(null)
 const sortBy = ref('newest')
+
+const activeSubOptions = computed(() => {
+  const cat = categories.value.find(c => c._id === selectedCategory.value)
+  if (cat && cat.optionsLabel && cat.optionsType && cat.options && cat.options.length > 0) {
+    return {
+      label: cat.optionsLabel,
+      type: cat.optionsType as 'grid' | 'pills',
+      options: cat.options
+    }
+  }
+  return null
+})
 
 onMounted(() => {
   categoryService.getAll()
@@ -180,17 +244,23 @@ onMounted(() => {
 watch(() => route.query, (newQuery) => {
   selectedCategory.value = newQuery.category as string || ''
   searchQuery.value = newQuery.q as string || ''
+  selectedSubOption.value = ''
   fetchProducts()
 })
 
 async function fetchProducts() {
   loading.value = true
   try {
+    const combinedQ = [
+      searchQuery.value,
+      selectedSubOption.value
+    ].filter(Boolean).join(' ')
+
     const params: any = {
       page: currentPage.value,
       limit,
       category: selectedCategory.value || undefined,
-      q: searchQuery.value || undefined,
+      q: combinedQ || undefined,
       minPrice: minPrice.value || undefined,
       maxPrice: maxPrice.value || undefined,
       sort: sortBy.value,
@@ -208,6 +278,7 @@ async function fetchProducts() {
 
 function selectCategory(catId: string) {
   selectedCategory.value = catId
+  selectedSubOption.value = ''
   currentPage.value = 1
   router.push({
     path: '/products',
@@ -216,6 +287,16 @@ function selectCategory(catId: string) {
       category: catId || undefined,
     }
   })
+}
+
+function toggleSubOption(opt: string) {
+  if (selectedSubOption.value === opt) {
+    selectedSubOption.value = ''
+  } else {
+    selectedSubOption.value = opt
+  }
+  currentPage.value = 1
+  fetchProducts()
 }
 
 function applyFilters() {

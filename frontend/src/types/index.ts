@@ -32,6 +32,7 @@ export interface Product {
   status: string
   isFeatured: boolean
   isDeleted: boolean
+  subOptions?: string[]
   createdAt: string
   updatedAt: string
 }
@@ -46,6 +47,9 @@ export interface Category {
   products?: Product[]
   comboPrice?: number
   status: boolean
+  optionsLabel?: string
+  optionsType?: 'grid' | 'pills' | ''
+  options?: string[]
   createdAt: string
   updatedAt: string
 }

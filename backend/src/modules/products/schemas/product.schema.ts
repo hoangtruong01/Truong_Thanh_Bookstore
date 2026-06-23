@@ -24,6 +24,9 @@ export class Product {
   @Prop()
   brand: string;
 
+  @Prop({ type: [String], default: [] })
+  subOptions: string[];
+
   @Prop({ required: true })
   price: number;
 
