@@ -549,7 +549,7 @@
 
         <!-- Content Grid -->
         <div class="bg-emerald-50/5 p-6 md:p-8">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             <ProductCard
               v-for="related in relatedProducts"
               :key="related._id"
@@ -936,7 +936,7 @@ async function loadProduct() {
     // Fetch related products asynchronously in the background
     productService.getAll({
       category: typeof res.data.category === 'object' ? res.data.category._id : res.data.category,
-      limit: 9
+      limit: 11
     }).then(relatedRes => {
       relatedProducts.value = relatedRes.data.data.filter((p: Product) => p._id !== id)
     }).catch(err => {
