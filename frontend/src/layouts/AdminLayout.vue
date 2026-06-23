@@ -148,7 +148,7 @@ const navItems = [
   { name: 'AdminCustomers', label: 'Khách hàng', to: '/admin/customers', icon: CustomersIcon },
   { name: 'AdminPromotions', label: 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon },
   { name: 'AdminReports', label: 'Báo cáo', to: '/admin/reports', icon: ReportsIcon },
-  { name: 'AdminLandingPages', label: 'Landing Page AI', to: '/admin/landing-pages', icon: SparklingIcon },
+  { name: 'AdminLandingPages', label: 'Tạo Page Nhanh', to: '/admin/landing-pages', icon: SparklingIcon },
 ]
 
 function handleLogout() {

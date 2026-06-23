@@ -134,8 +134,8 @@
         </div>
 
         <!-- Products Grid -->
-        <div v-if="loading" class="grid grid-cols-2 md:grid-cols-3 gap-6">
-          <div v-for="n in 6" :key="n" class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 animate-pulse">
+        <div v-if="loading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div v-for="n in 10" :key="n" class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 animate-pulse">
             <div class="bg-slate-200 rounded-xl aspect-square w-full"></div>
             <div class="h-4 bg-slate-200 rounded w-2/3"></div>
             <div class="h-6 bg-slate-200 rounded w-1/3"></div>
@@ -151,7 +151,7 @@
         </div>
 
         <div v-else class="space-y-8">
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             <ProductCard
               v-for="prod in products"
               :key="prod._id"
@@ -208,7 +208,7 @@ const loading = ref(true)
 const totalProducts = ref(0)
 const totalPages = ref(1)
 const currentPage = ref(1)
-const limit = 9
+const limit = 15
 
 // Filter values
 const selectedCategory = ref(route.query.category as string || '')
