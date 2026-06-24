@@ -786,38 +786,6 @@
         </router-link>
       </div>
     </section>
-
-    <!-- Chapter 7: Testimonials & Closing Newsletter -->
-    <section class="bg-gradient-to-b from-slate-950 to-slate-900 text-white py-24 overflow-hidden border-b border-slate-800">
-      <div class="max-w-4xl mx-auto px-4 text-center space-y-8 reveal">
-        <span class="text-xs font-bold text-[#dc2626] tracking-[0.3em] uppercase">Khách Hàng Nói Gì</span>
-        
-        <blockquote class="text-lg sm:text-2xl font-medium italic text-slate-100 leading-relaxed">
-          "Trường Thành Stationery có bộ dịch vụ khách hàng cực tốt. Tôi đặt mua combo văn phòng cho doanh nghiệp và được hỗ trợ in khắc logo, chất lượng bút và sổ tay thì cực kỳ đẳng cấp."
-        </blockquote>
-        
-        <div class="space-y-1">
-          <p class="font-extrabold text-sm text-white">Anh Hoàng Long</p>
-          <p class="text-xs text-slate-400">CEO & Founder, Long Tech Media</p>
-        </div>
-
-        <div class="pt-6 border-t border-slate-800 max-w-md mx-auto space-y-4">
-          <h3 class="text-sm font-bold tracking-wider text-slate-300 uppercase">Đăng ký nhận tin tức & khuyến mãi</h3>
-          <form @submit.prevent="handleSubscribe" class="flex gap-2">
-            <input
-              v-model="newsletterEmail"
-              type="email"
-              required
-              placeholder="Email của bạn..."
-              class="flex-grow bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
-            />
-            <button type="submit" class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-colors cursor-pointer">
-              Đăng ký
-            </button>
-          </form>
-        </div>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -879,13 +847,6 @@ function startCountdown() {
   countdownTimer = setInterval(updateTimer, 1000)
 }
 
-// BUG-09: Newsletter subscription
-const newsletterEmail = ref('')
-function handleSubscribe() {
-  if (!newsletterEmail.value.trim()) return
-  toast.success('Đăng ký nhận tin thành công! Chúng tôi đã lưu thông tin của bạn.')
-  newsletterEmail.value = ''
-}
 
 // Mapped styling system for highlighting categories in home layout
 const categoryStyles = [
