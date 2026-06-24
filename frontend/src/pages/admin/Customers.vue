@@ -86,7 +86,7 @@ async function fetchCustomers() {
   loading.value = true
   try {
     const res = await customerService.getAll()
-    customers.value = res.data
+    customers.value = res.data.data || []
   } catch (err) {
     toast.error('Lỗi khi tải thông tin khách hàng')
   } finally {

@@ -38,6 +38,7 @@ export class CategoriesService {
     return this.categoryModel
       .find()
       .populate('parentId')
+      .populate('products')
       .exec();
   }
 

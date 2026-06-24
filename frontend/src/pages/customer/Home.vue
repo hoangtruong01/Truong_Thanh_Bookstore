@@ -1,7 +1,14 @@
 <template>
-  <div class="space-y-0 pb-0 bg-[#fcfcfc] overflow-hidden">
+  <div class="space-y-0 pb-0 bg-slate-50/30 overflow-hidden">
     <!-- Chapter 1: Immersive Hero Section (Matches visual excellence request) -->
     <div class="relative min-h-[85vh] flex items-center justify-center bg-gradient-to-br from-[#1e1b4b] via-[#311042] to-[#450a0a] text-white overflow-hidden py-20 px-4">
+      <!-- Premium Glowing particles / Fuzzy gradient dust (Visual Excellence) -->
+      <div class="absolute top-1/4 left-1/4 w-3 h-3 bg-white/40 rounded-full blur-xs animate-float-dust"></div>
+      <div class="absolute top-1/3 right-1/3 w-2 h-2 bg-rose-400/50 rounded-full blur-2xs animate-float-dust-delayed"></div>
+      <div class="absolute bottom-1/3 left-1/3 w-2.5 h-2.5 bg-orange-400/40 rounded-full blur-xs animate-float-dust"></div>
+      <div class="absolute top-2/3 right-1/4 w-3 h-3 bg-amber-400/40 rounded-full blur-xs animate-float-dust-delayed"></div>
+      <div class="absolute -right-10 top-10 w-96 h-96 bg-[#dc2626]/10 rounded-full blur-3xl"></div>
+      
       <!-- Floating decorative shapes -->
       <div class="absolute -right-20 -bottom-20 w-120 h-120 bg-rose-600/20 rounded-full blur-3xl animate-pulse-soft"></div>
       <div class="absolute -left-20 -top-20 w-100 h-100 bg-orange-600/20 rounded-full blur-3xl animate-pulse-soft delay-1000"></div>
@@ -265,7 +272,7 @@
                   <div class="flex items-center text-amber-400">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5"><path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" /></svg>
                   </div>
-                  <span class="font-bold text-slate-700">{{ prod.rating || 5.0 }}</span>
+                  <span class="font-bold text-slate-700">{{ Number(prod.rating || 5.0).toFixed(1) }}</span>
                   <span class="text-slate-300">|</span>
                   <span class="text-slate-500 font-medium">Đã bán {{ prod.sold || 0 }}</span>
                 </div>
@@ -1043,5 +1050,25 @@ function addToCart(product: Product) {
     transform: translateY(0);
     filter: blur(0);
   }
+}
+
+@keyframes float-dust {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-20px) scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+.animate-float-dust {
+  animation: float-dust 6s ease-in-out infinite;
+}
+
+.animate-float-dust-delayed {
+  animation: float-dust 8s ease-in-out infinite;
+  animation-delay: 2s;
 }
 </style>

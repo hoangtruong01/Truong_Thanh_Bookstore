@@ -7,8 +7,8 @@
 
     <!-- Main Header -->
     <header
-      class="bg-white border-b border-slate-200 z-50 transition-all duration-200"
-      :class="isSticky ? 'fixed top-0 left-0 right-0 shadow-md' : 'relative shadow-xs'"
+      class="z-50 transition-all duration-300 border-b border-slate-200/80"
+      :class="isSticky ? 'fixed top-0 left-0 right-0 bg-white/85 backdrop-blur-md shadow-lg shadow-slate-100/50 border-b border-slate-100' : 'relative bg-white shadow-xs'"
     >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-20 gap-4">

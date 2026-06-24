@@ -56,7 +56,7 @@
       
       <div class="flex items-center justify-between text-[10px] text-slate-400">
         <div class="flex items-center gap-0.5 text-yellow-600 font-bold">
-          ★ {{ product.rating || '4.8' }}
+          ★ {{ Number(product.rating || 4.8).toFixed(1) }}
         </div>
         <div>
           Đã bán {{ formatNumber(product.sold || 0) }}

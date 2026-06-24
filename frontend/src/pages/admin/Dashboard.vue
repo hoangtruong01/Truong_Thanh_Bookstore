@@ -8,6 +8,48 @@
     </div>
 
     <div v-else-if="stats" class="space-y-6">
+      <!-- Low Stock Warnings / Push Notifications (Low Stock Alert) -->
+      <div v-if="lowStockItems.length > 0" class="bg-red-50 border border-red-200/80 rounded-2xl p-6 space-y-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl animate-bounce">⚠️</span>
+            <div>
+              <h3 class="text-xs font-black text-red-800 uppercase tracking-wider">Cảnh báo tồn kho dưới mức tối thiểu</h3>
+              <p class="text-[10px] text-red-500 font-medium">Các sản phẩm dưới đây có số lượng tồn kho thực tế thấp hơn mức tối thiểu (minStock).</p>
+            </div>
+          </div>
+          <span class="text-[10px] bg-red-100 text-red-700 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+            {{ lowStockItems.length }} sản phẩm
+          </span>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div v-for="item in lowStockItems" :key="item._id" class="bg-white border border-red-100 rounded-xl p-3 flex items-center justify-between shadow-xs hover:border-red-300 transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
+              <img 
+                :src="item.product?.images && item.product.images[0] ? item.product.images[0] : 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=100'" 
+                class="w-10 h-10 object-cover rounded-lg bg-slate-50 border border-slate-100 flex-shrink-0"
+                alt="Low stock product thumbnail"
+              />
+              <div class="min-w-0">
+                <p class="text-xs font-bold text-slate-800 truncate leading-snug">{{ item.product?.name || 'Sản phẩm không rõ' }}</p>
+                <p class="text-[9px] text-slate-400 font-semibold">SKU: {{ item.product?.sku }}</p>
+              </div>
+            </div>
+            <div class="text-right flex-shrink-0 ml-2">
+              <div class="text-xs font-black text-red-600">{{ item.currentStock }} / {{ item.minStock }}</div>
+              <p class="text-[8px] text-slate-400 uppercase font-bold">Hiện tại / Min</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="text-right pt-1">
+          <router-link to="/admin/inventory" class="text-xs font-extrabold text-red-600 hover:text-red-700 inline-flex items-center gap-1">
+            <span>Quản lý kho hàng &gt;</span>
+          </router-link>
+        </div>
+      </div>
+
       <!-- Stats grid (Matches Screenshot) -->
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
         <!-- Revenue Card -->
@@ -219,13 +261,17 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { reportService } from '@/services/report.service'
+import { inventoryService } from '@/services/inventory.service'
+import { useToast } from 'vue-toastification'
 import { formatCurrency, getStatusLabel } from '@/utils/helpers'
 import type { DashboardStats, Order, Product } from '@/types'
 
 const stats = ref<DashboardStats | null>(null)
 const recentOrders = ref<Order[]>([])
 const bestSelling = ref<Product[]>([])
+const lowStockItems = ref<any[]>([])
 const loading = ref(true)
+const toast = useToast()
 
 onMounted(async () => {
   try {
@@ -233,8 +279,17 @@ onMounted(async () => {
     stats.value = res.data.stats
     recentOrders.value = res.data.recentOrders
     bestSelling.value = res.data.bestSellingProducts
+    
+    // Load low stock items for dashboard notifications (Low Stock Alert)
+    const lowStockRes = await inventoryService.getLowStock()
+    lowStockItems.value = lowStockRes.data
+    if (lowStockItems.value.length > 0) {
+      toast.warning(`Cảnh báo: Có ${lowStockItems.value.length} sản phẩm sắp hết hàng (tồn kho < minStock)!`, {
+        timeout: 6000
+      })
+    }
   } catch (err) {
-    console.error('Error fetching dashboard stats', err)
+    console.error('Error fetching dashboard stats or low stock items', err)
   } finally {
     loading.value = false
   }
