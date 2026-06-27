@@ -26,6 +26,12 @@ export class PromotionsController {
     return this.promotionsService.apply(dto);
   }
 
+  @Get('active')
+  @ApiOperation({ summary: 'Get all active promotions' })
+  findActive() {
+    return this.promotionsService.findActive();
+  }
+
   @Get()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')

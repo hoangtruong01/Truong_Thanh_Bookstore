@@ -7,4 +7,5 @@ export const promotionService = {
   update: (id: string, data: any) => api.patch(`/promotions/${id}`, data),
   delete: (id: string) => api.delete(`/promotions/${id}`),
   apply: (code: string, orderTotal: number) => api.post('/promotions/apply', { code, orderTotal }),
+  getActive: () => api.get('/promotions/active'),
 }

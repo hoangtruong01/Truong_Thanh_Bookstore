@@ -54,6 +54,7 @@ export class SeedService implements OnModuleInit {
     const hasCategories = await this.categoryModel.countDocuments({}).exec();
     const firstCategory = await this.categoryModel.findOne({ name: 'Sách giáo khoa' }).exec() as any;
     const productCount = await this.productModel.countDocuments({}).exec();
+    const promotionCount = await this.promotionModel.countDocuments({}).exec();
 
     if (hasUsers === 0 || hasCategories === 0 || !firstCategory || !firstCategory.optionsLabel || productCount !== 120) {
       this.logger.log(`Triggering seed: users=${hasUsers}, categories=${hasCategories}, products=${productCount}`);
@@ -61,6 +62,52 @@ export class SeedService implements OnModuleInit {
       await this.seed();
     } else {
       this.logger.log('Database already populated with 120 products. Skipping seed.');
+      if (promotionCount === 0) {
+        this.logger.log('No promotions found, seeding default promotions...');
+        const promotions = [
+          {
+            code: 'GIAM10K',
+            name: 'Voucher giảm 10K',
+            description: 'Giảm 10.000đ cho đơn hàng từ 50.000đ trở lên',
+            discountType: DiscountType.FIXED,
+            discountValue: 10000,
+            minOrderValue: 50000,
+            startDate: new Date(),
+            endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+            usageLimit: 1000,
+            usedCount: 0,
+            status: true,
+          },
+          {
+            code: 'HE2026',
+            name: 'Chào Hè Rực Rỡ',
+            description: 'Giảm 10% cho đơn hàng từ 100.000đ trở lên',
+            discountType: DiscountType.PERCENT,
+            discountValue: 10,
+            minOrderValue: 100000,
+            startDate: new Date(),
+            endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+            usageLimit: 500,
+            usedCount: 0,
+            status: true,
+          },
+          {
+            code: 'TRUONGTHANH50',
+            name: 'Tri ân khách hàng',
+            description: 'Giảm 50.000đ cho đơn hàng từ 300.000đ trở lên',
+            discountType: DiscountType.FIXED,
+            discountValue: 50000,
+            minOrderValue: 300000,
+            startDate: new Date(),
+            endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+            usageLimit: 100,
+            usedCount: 0,
+            status: true,
+          },
+        ];
+        await this.promotionModel.insertMany(promotions);
+        this.logger.log('Promotions seeded successfully');
+      }
     }
   }
 
@@ -383,5 +430,50 @@ export class SeedService implements OnModuleInit {
 
     await this.inventoryModel.insertMany(inventoryRecords);
     this.logger.log('Inventory records generated');
+
+    // Create promotions
+    const promotions = [
+      {
+        code: 'GIAM10K',
+        name: 'Voucher giảm 10K',
+        description: 'Giảm 10.000đ cho đơn hàng từ 50.000đ trở lên',
+        discountType: DiscountType.FIXED,
+        discountValue: 10000,
+        minOrderValue: 50000,
+        startDate: new Date(),
+        endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        usageLimit: 1000,
+        usedCount: 0,
+        status: true,
+      },
+      {
+        code: 'HE2026',
+        name: 'Chào Hè Rực Rỡ',
+        description: 'Giảm 10% cho đơn hàng từ 100.000đ trở lên',
+        discountType: DiscountType.PERCENT,
+        discountValue: 10,
+        minOrderValue: 100000,
+        startDate: new Date(),
+        endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        usageLimit: 500,
+        usedCount: 0,
+        status: true,
+      },
+      {
+        code: 'TRUONGTHANH50',
+        name: 'Tri ân khách hàng',
+        description: 'Giảm 50.000đ cho đơn hàng từ 300.000đ trở lên',
+        discountType: DiscountType.FIXED,
+        discountValue: 50000,
+        minOrderValue: 300000,
+        startDate: new Date(),
+        endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        usageLimit: 100,
+        usedCount: 0,
+        status: true,
+      },
+    ];
+    await this.promotionModel.insertMany(promotions);
+    this.logger.log('Promotions seeded');
   }
 }

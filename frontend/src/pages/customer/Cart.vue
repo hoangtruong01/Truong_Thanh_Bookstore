@@ -133,6 +133,36 @@
 
       <!-- Pricing Summary -->
       <div class="space-y-6">
+        <!-- Freeship Progress Block -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">🚚</span>
+              <span class="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Miễn phí vận chuyển</span>
+            </div>
+            <span class="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Đơn từ 50K</span>
+          </div>
+          <div class="space-y-2">
+            <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+              <div 
+                class="h-full bg-red-600 rounded-full transition-all duration-500" 
+                :style="{ width: `${Math.min(100, (cartStore.subtotal / 50000) * 100)}%` }"
+              ></div>
+            </div>
+            <p class="text-xs font-bold text-slate-500">
+              <template v-if="cartStore.subtotal >= 50000">
+                🎉 Đơn hàng của bạn đã được <span class="text-green-600 font-extrabold">Miễn phí vận chuyển</span>!
+              </template>
+              <template v-else-if="cartStore.subtotal > 0">
+                Mua thêm <span class="text-red-600 font-extrabold">{{ formatCurrency(50000 - cartStore.subtotal) }}</span> để freeship.
+              </template>
+              <template v-else>
+                Đơn hàng từ 50.000đ sẽ được miễn phí vận chuyển.
+              </template>
+            </p>
+          </div>
+        </div>
+
         <!-- Coupon Form -->
         <div class="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
           <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Mã giảm giá</h3>
@@ -155,6 +185,36 @@
             </button>
           </form>
           <p v-if="cartStore.promoError" class="text-xs text-red-500 font-medium mt-1">{{ cartStore.promoError }}</p>
+
+          <!-- Active Coupons List -->
+          <div v-if="activePromotions.length > 0" class="pt-3 border-t border-slate-100">
+            <p class="text-xs font-bold text-slate-500 mb-2">Voucher đề xuất:</p>
+            <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
+              <div 
+                v-for="promo in activePromotions" 
+                :key="promo._id" 
+                class="border border-dashed border-red-200 rounded-xl p-2.5 bg-red-50/10 flex justify-between items-center gap-2 hover:bg-red-50/20 transition-colors"
+              >
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="bg-red-100 text-red-700 text-[10px] font-black px-1.5 py-0.5 rounded font-mono uppercase tracking-wider">{{ promo.code }}</span>
+                    <span class="text-xs font-extrabold text-slate-800">
+                      {{ promo.discountType === 'PERCENT' ? `Giảm ${promo.discountValue}%` : `Giảm ${formatCurrency(promo.discountValue)}` }}
+                    </span>
+                  </div>
+                  <p class="text-[10px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{{ promo.description }}</p>
+                  <p class="text-[9px] text-slate-400 mt-0.5 font-medium">Đơn tối thiểu: {{ formatCurrency(promo.minOrderValue) }}</p>
+                </div>
+                <button 
+                  @click="applySuggestedCoupon(promo.code)"
+                  :disabled="cartStore.subtotal < promo.minOrderValue"
+                  class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2.5 rounded-lg text-[10px] transition-colors disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Dùng
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Summary Info -->
@@ -198,16 +258,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
 import { formatCurrency } from '@/utils/helpers'
+import { promotionService } from '@/services/promotion.service'
+import type { Promotion } from '@/types'
 
 const cartStore = useCartStore()
 const toast = useToast()
 const router = useRouter()
 const couponCode = ref('')
+const activePromotions = ref<Promotion[]>([])
 
 const isAnyItemSelected = computed(() => cartStore.items.some(item => item.selected !== false))
 const isAllSelected = computed(() => cartStore.items.every(item => item.selected !== false))
@@ -245,4 +308,22 @@ async function handleApplyCoupon() {
     toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
   }
 }
+
+async function applySuggestedCoupon(code: string) {
+  const success = await cartStore.applyCoupon(code)
+  if (success) {
+    toast.success('Áp dụng mã giảm giá thành công!')
+  } else {
+    toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+  }
+}
+
+onMounted(async () => {
+  try {
+    const res = await promotionService.getActive()
+    activePromotions.value = res.data || []
+  } catch (err) {
+    console.error('Failed to load active promotions:', err)
+  }
+})
 </script>

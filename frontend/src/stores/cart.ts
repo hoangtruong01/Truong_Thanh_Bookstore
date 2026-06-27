@@ -24,7 +24,7 @@ export const useCartStore = defineStore('cart', () => {
 
   const shippingFee = computed(() => {
     if (subtotal.value === 0) return 0
-    return subtotal.value >= 299000 ? 0 : 30000
+    return subtotal.value >= 50000 ? 0 : 30000
   })
 
   const total = computed(() => {
@@ -88,8 +88,9 @@ export const useCartStore = defineStore('cart', () => {
     promoError.value = ''
     try {
       const res = await promotionService.apply(code, subtotal.value)
-      appliedPromotion.value = res as any
-      discountAmount.value = (res as any).discount
+      const payload = res.data
+      appliedPromotion.value = payload.promotion
+      discountAmount.value = payload.discount
       return true
     } catch (err: any) {
       promoError.value = err.message || 'Mã giảm giá không hợp lệ'

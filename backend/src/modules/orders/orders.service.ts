@@ -114,7 +114,7 @@ export class OrdersService {
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
-    const shippingFee = dto.shippingFee || (subtotal >= 299000 ? 0 : 30000);
+    const shippingFee = dto.shippingFee !== undefined ? dto.shippingFee : (subtotal >= 50000 ? 0 : 30000);
     
     let discount = dto.discount || 0;
     if (dto.promotionCode) {

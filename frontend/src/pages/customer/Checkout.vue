@@ -127,6 +127,82 @@
             </div>
           </div>
 
+          <!-- Coupon Block on Checkout -->
+          <div class="border-t border-slate-100 pt-4 space-y-3">
+            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Mã giảm giá (Voucher)</h4>
+            
+            <div v-if="cartStore.appliedPromotion" class="bg-green-50 border border-green-200 rounded-xl p-3 flex justify-between items-center">
+              <div class="text-xs text-green-800 font-medium">
+                <p class="font-bold">Đã áp dụng: {{ cartStore.appliedPromotion.code }}</p>
+                <p>Giảm {{ formatCurrency(cartStore.discountAmount) }}</p>
+              </div>
+              <button @click="cartStore.removeCoupon" class="text-xs font-bold text-red-600 hover:underline">Gỡ</button>
+            </div>
+            
+            <div v-else class="flex gap-2">
+              <input
+                v-model="couponCode"
+                type="text"
+                placeholder="Nhập mã giảm giá..."
+                class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white font-mono uppercase tracking-wider"
+              />
+              <button 
+                @click="handleApplyCoupon" 
+                class="bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Áp dụng
+              </button>
+            </div>
+            <p v-if="cartStore.promoError" class="text-[10px] text-red-500 font-medium mt-1">{{ cartStore.promoError }}</p>
+
+            <!-- Collapsible Suggestive Vouchers list -->
+            <div v-if="activePromotions.length > 0" class="mt-2">
+              <button 
+                @click="showVoucherList = !showVoucherList" 
+                class="text-xs font-bold text-[#dc2626] hover:text-[#b91c1c] flex items-center gap-1.5 focus:outline-none cursor-pointer"
+              >
+                <span>{{ showVoucherList ? 'Ẩn danh sách Voucher' : 'Xem Voucher khả dụng' }}</span>
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke-width="2.5" 
+                  stroke="currentColor" 
+                  class="w-3.5 h-3.5 transition-transform duration-200"
+                  :class="{'rotate-180': showVoucherList}"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
+
+              <div v-if="showVoucherList" class="mt-2 space-y-2 max-h-40 overflow-y-auto pr-1">
+                <div 
+                  v-for="promo in activePromotions" 
+                  :key="promo._id" 
+                  class="border border-dashed border-red-200 rounded-xl p-2.5 bg-red-50/10 flex justify-between items-center gap-2 hover:bg-red-50/20 transition-colors"
+                >
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="bg-red-100 text-red-700 text-[10px] font-black px-1.5 py-0.5 rounded font-mono uppercase tracking-wider">{{ promo.code }}</span>
+                      <span class="text-xs font-extrabold text-slate-800">
+                        {{ promo.discountType === 'PERCENT' ? `Giảm ${promo.discountValue}%` : `Giảm ${formatCurrency(promo.discountValue)}` }}
+                      </span>
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{{ promo.description }}</p>
+                    <p class="text-[9px] text-slate-400 mt-0.5 font-medium">Đơn tối thiểu: {{ formatCurrency(promo.minOrderValue) }}</p>
+                  </div>
+                  <button 
+                    @click="applySuggestedCoupon(promo.code)"
+                    :disabled="cartStore.subtotal < promo.minOrderValue"
+                    class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2.5 rounded-lg text-[10px] transition-colors disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Dùng
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="border-t border-slate-100 pt-4 space-y-3 text-sm font-medium">
             <div class="flex justify-between text-slate-500">
               <span>Tạm tính</span>
@@ -134,9 +210,14 @@
             </div>
             <div class="flex justify-between text-slate-500">
               <span>Phí vận chuyển</span>
-              <span class="text-slate-800 font-bold">
-                {{ cartStore.shippingFee === 0 ? 'Miễn phí' : formatCurrency(cartStore.shippingFee) }}
-              </span>
+              <div class="text-right">
+                <span class="text-slate-800 font-bold block">
+                  {{ cartStore.shippingFee === 0 ? 'Miễn phí' : formatCurrency(cartStore.shippingFee) }}
+                </span>
+                <span v-if="cartStore.shippingFee === 0" class="text-[9px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded-md mt-0.5 inline-block">
+                  Đơn hàng trên 50K
+                </span>
+              </div>
             </div>
             <div v-if="cartStore.discountAmount > 0" class="flex justify-between text-red-500">
               <span>Giảm giá</span>
@@ -169,6 +250,8 @@ import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { orderService } from '@/services/order.service'
 import { formatCurrency } from '@/utils/helpers'
+import { promotionService } from '@/services/promotion.service'
+import type { Promotion } from '@/types'
 
 const cartStore = useCartStore()
 const authStore = useAuthStore()
@@ -180,6 +263,9 @@ const checkoutItems = computed(() => cartStore.items.filter(item => item.selecte
 const submitting = ref(false)
 const orderSuccess = ref(false)
 const orderCode = ref('')
+const couponCode = ref('')
+const activePromotions = ref<Promotion[]>([])
+const showVoucherList = ref(false)
 
 const shippingInfo = reactive({
   fullName: '',
@@ -209,11 +295,38 @@ function onPhoneInput(e: Event) {
   shippingInfo.phone = input.value
 }
 
-onMounted(() => {
+async function handleApplyCoupon() {
+  if (!couponCode.value.trim()) return
+  const success = await cartStore.applyCoupon(couponCode.value.trim().toUpperCase())
+  if (success) {
+    toast.success('Áp dụng mã giảm giá thành công!')
+    couponCode.value = ''
+  } else {
+    toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+  }
+}
+
+async function applySuggestedCoupon(code: string) {
+  const success = await cartStore.applyCoupon(code)
+  if (success) {
+    toast.success('Áp dụng mã giảm giá thành công!')
+  } else {
+    toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+  }
+}
+
+onMounted(async () => {
   if (authStore.isAuthenticated && authStore.user) {
     shippingInfo.fullName = authStore.user.fullName || ''
     shippingInfo.phone = authStore.user.phone || ''
     shippingInfo.email = authStore.user.email || ''
+  }
+
+  try {
+    const res = await promotionService.getActive()
+    activePromotions.value = res.data || []
+  } catch (err) {
+    console.error('Failed to load active promotions:', err)
   }
 })
 

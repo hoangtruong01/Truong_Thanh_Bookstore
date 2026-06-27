@@ -25,6 +25,19 @@ export class PromotionsService {
     return this.promotionModel.find().sort({ createdAt: -1 }).exec();
   }
 
+  async findActive(): Promise<PromotionDocument[]> {
+    const now = new Date();
+    return this.promotionModel
+      .find({
+        status: true,
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+        $expr: { $lt: ['$usedCount', '$usageLimit'] },
+      })
+      .sort({ minOrderValue: 1 })
+      .exec();
+  }
+
   async findById(id: string): Promise<PromotionDocument> {
     const promo = await this.promotionModel.findById(id).exec();
     if (!promo) throw new NotFoundException('Promotion not found');
@@ -50,7 +63,7 @@ export class PromotionsService {
   async apply(
     dto: ApplyPromotionDto,
     incrementUsage = false,
-  ): Promise<{ discount: number; code: string }> {
+  ): Promise<{ discount: number; code: string; promotion: PromotionDocument }> {
     const promo = await this.promotionModel
       .findOne({
         code: dto.code.toUpperCase(),
@@ -88,6 +101,6 @@ export class PromotionsService {
       await promo.save();
     }
 
-    return { discount, code: promo.code };
+    return { discount, code: promo.code, promotion: promo };
   }
 }
