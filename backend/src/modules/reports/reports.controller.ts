@@ -47,4 +47,10 @@ export class ReportsController {
   getLowStockProducts() {
     return this.reportsService.getLowStockProducts();
   }
+
+  @Get('notifications')
+  @ApiOperation({ summary: 'Get admin system notifications' })
+  getNotifications() {
+    return this.reportsService.getNotifications();
+  }
 }

@@ -110,4 +110,13 @@ export class CustomersService {
       })
       .exec();
   }
+
+  async getRecent(limit = 5): Promise<UserDocument[]> {
+    return this.userModel
+      .find({ role: UserRole.CUSTOMER })
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .exec();
+  }
 }

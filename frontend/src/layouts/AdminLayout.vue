@@ -53,11 +53,83 @@
         <!-- Right User details -->
         <div class="flex items-center gap-5">
           <!-- Notification bell -->
-          <button class="relative text-slate-500 hover:text-slate-800 transition-colors cursor-pointer" title="Thông báo (Đang phát triển)">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-            </svg>
-          </button>
+          <div id="notification-dropdown-container" class="relative">
+            <button 
+              @click="toggleNotifications"
+              class="relative text-slate-500 hover:text-slate-800 transition-colors cursor-pointer p-1.5 rounded-full hover:bg-slate-100" 
+              title="Thông báo hệ thống"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+              </svg>
+              <!-- Unread badge -->
+              <span 
+                v-if="unreadCount > 0" 
+                class="absolute top-0.5 right-0.5 w-4 h-4 bg-red-600 text-[9px] font-black text-white rounded-full flex items-center justify-center border border-white"
+              >
+                {{ unreadCount }}
+              </span>
+            </button>
+
+            <!-- Dropdown menu -->
+            <div 
+              v-if="showNotifications" 
+              class="absolute right-0 mt-2.5 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden"
+            >
+              <!-- Header -->
+              <div class="px-4 py-3 bg-slate-50 border-b border-slate-150 flex items-center justify-between">
+                <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Thông báo hệ thống</span>
+                <button 
+                  v-if="unreadCount > 0" 
+                  @click="markAllAsRead" 
+                  class="text-[10px] font-extrabold text-[#dc2626] hover:underline cursor-pointer"
+                >
+                  Đọc tất cả
+                </button>
+              </div>
+
+              <!-- List -->
+              <div class="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                <div v-if="notifications.length === 0" class="p-6 text-center text-xs text-slate-400 font-medium">
+                  Không có thông báo nào.
+                </div>
+                <div 
+                  v-for="item in notifications" 
+                  :key="item.id" 
+                  @click="handleNotificationClick(item)"
+                  class="p-3.5 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                  :class="{'bg-red-50/5 font-semibold': !readIds.includes(item.id)}"
+                >
+                  <!-- Icon indicator -->
+                  <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm" :class="{
+                    'bg-red-50 text-red-600': item.type === 'stock',
+                    'bg-green-50 text-green-600': item.type === 'order',
+                    'bg-blue-50 text-blue-600': item.type === 'customer'
+                  }">
+                    <span v-if="item.type === 'stock'">⚠️</span>
+                    <span v-else-if="item.type === 'order'">📦</span>
+                    <span v-else-if="item.type === 'customer'">👤</span>
+                  </div>
+
+                  <!-- Text -->
+                  <div class="flex-grow min-w-0 text-left">
+                    <div class="flex justify-between items-baseline gap-1">
+                      <span class="text-xs font-bold text-slate-800 truncate">{{ item.title }}</span>
+                      <span class="text-[9px] text-slate-400 font-medium whitespace-nowrap">{{ formatTimeAgo(item.createdAt) }}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-600 leading-relaxed mt-0.5 line-clamp-2 font-medium">
+                      {{ item.message }}
+                    </p>
+                  </div>
+                  
+                  <!-- Read indicator dot -->
+                  <div v-if="!readIds.includes(item.id)" class="flex-shrink-0 self-center">
+                    <div class="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Profile -->
           <div class="flex items-center gap-3">
@@ -83,13 +155,12 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { reportService } from '@/services/report.service'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
-
-// BUG-07: Dynamic admin profile from authStore
-import { computed } from 'vue'
 
 const adminName = computed(() => authStore.user?.fullName || 'Admin')
 const adminInitials = computed(() => {
@@ -105,6 +176,114 @@ const adminRole = computed(() => {
   if (role === 'ADMIN') return 'Super Admin'
   if (role === 'STAFF') return 'Nhân viên'
   return 'Admin'
+})
+
+// Notifications State & Logic
+const showNotifications = ref(false)
+const notifications = ref<any[]>([])
+const readIds = ref<string[]>([])
+
+function loadReadIds() {
+  const stored = localStorage.getItem('admin_read_notification_ids')
+  if (stored) {
+    try {
+      readIds.value = JSON.parse(stored)
+    } catch (e) {
+      readIds.value = []
+    }
+  }
+}
+
+function saveReadIds() {
+  localStorage.setItem('admin_read_notification_ids', JSON.stringify(readIds.value))
+}
+
+const unreadCount = computed(() => {
+  return notifications.value.filter(n => !readIds.value.includes(n.id)).length
+})
+
+async function fetchNotifications() {
+  try {
+    const res = await reportService.getNotifications()
+    notifications.value = res.data || []
+  } catch (err) {
+    console.error('Failed to fetch notifications:', err)
+  }
+}
+
+function toggleNotifications(event: Event) {
+  event.stopPropagation()
+  showNotifications.value = !showNotifications.value
+  if (showNotifications.value) {
+    fetchNotifications()
+  }
+}
+
+function markAllAsRead() {
+  notifications.value.forEach(n => {
+    if (!readIds.value.includes(n.id)) {
+      readIds.value.push(n.id)
+    }
+  })
+  saveReadIds()
+}
+
+function handleNotificationClick(item: any) {
+  if (!readIds.value.includes(item.id)) {
+    readIds.value.push(item.id)
+    saveReadIds()
+  }
+  showNotifications.value = false
+  
+  if (item.type === 'order') {
+    router.push('/admin/orders')
+  } else if (item.type === 'stock') {
+    router.push('/admin/inventory')
+  } else if (item.type === 'customer') {
+    router.push('/admin/customers')
+  }
+}
+
+function closeDropdown() {
+  showNotifications.value = false
+}
+
+function handleClickOutside(event: MouseEvent) {
+  const dropdown = document.getElementById('notification-dropdown-container')
+  if (dropdown && !dropdown.contains(event.target as Node)) {
+    closeDropdown()
+  }
+}
+
+function formatTimeAgo(dateStr: string) {
+  const now = new Date()
+  const date = new Date(dateStr)
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  
+  if (seconds < 60) return 'Vừa xong'
+  
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} phút trước`
+  
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} giờ trước`
+  
+  const days = Math.floor(hours / 24)
+  if (days === 1) return 'Hôm qua'
+  return `${days} ngày trước`
+}
+
+onMounted(() => {
+  loadReadIds()
+  fetchNotifications()
+  
+  const interval = setInterval(fetchNotifications, 30000)
+  window.addEventListener('click', handleClickOutside)
+  
+  onUnmounted(() => {
+    clearInterval(interval)
+    window.removeEventListener('click', handleClickOutside)
+  })
 })
 
 // Simple SVG Icons
