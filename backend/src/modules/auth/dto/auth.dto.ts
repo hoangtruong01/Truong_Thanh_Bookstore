@@ -36,3 +36,18 @@ export class LoginDto {
   @IsNotEmpty()
   password: string;
 }
+
+export class UpdateProfileDto {
+  @ApiPropertyOptional({ example: 'Nguyễn Văn A' })
+  @IsOptional()
+  fullName?: string;
+
+  @ApiPropertyOptional({ example: '0901234567' })
+  @IsOptional()
+  phone?: string;
+
+  @ApiPropertyOptional({ example: 'data:image/png;base64,...' })
+  @IsOptional()
+  avatar?: string;
+}
+

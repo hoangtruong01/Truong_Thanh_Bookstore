@@ -6,14 +6,16 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
-import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto } from './dto/auth.dto';
 import { UserRole } from '../../common/enums';
+import { CloudinaryService } from '../users/cloudinary.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -76,4 +78,26 @@ export class AuthService {
     }
     return user;
   }
+
+  async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
+    const updateData: any = {};
+    if (updateProfileDto.fullName !== undefined) updateData.fullName = updateProfileDto.fullName;
+    if (updateProfileDto.phone !== undefined) updateData.phone = updateProfileDto.phone;
+
+    if (updateProfileDto.avatar) {
+      if (updateProfileDto.avatar.startsWith('data:image')) {
+        const imageUrl = await this.cloudinaryService.uploadImage(updateProfileDto.avatar);
+        updateData.avatar = imageUrl;
+      } else {
+        updateData.avatar = updateProfileDto.avatar;
+      }
+    }
+
+    const updatedUser = await this.usersService.update(userId, updateData);
+    if (!updatedUser) {
+      throw new UnauthorizedException('User not found');
+    }
+    return updatedUser;
+  }
 }
+

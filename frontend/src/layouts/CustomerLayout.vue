@@ -477,9 +477,10 @@
               <template v-if="authStore.isAuthenticated">
                 <div class="flex items-center gap-2 cursor-pointer group">
                   <div
-                    class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-[#dc2626] font-bold border border-red-100"
+                    class="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center border border-red-100 bg-red-50 flex-shrink-0"
                   >
-                    {{ authStore.user?.fullName.charAt(0).toUpperCase() }}
+                    <img v-if="authStore.user?.avatar" :src="authStore.user.avatar" class="w-full h-full object-cover" />
+                    <span v-else class="text-[#dc2626] font-bold">{{ authStore.user?.fullName.charAt(0).toUpperCase() }}</span>
                   </div>
                   <span
                     class="text-sm font-medium text-slate-700 group-hover:text-[#dc2626] max-w-[120px] truncate hidden lg:block transition-colors"
@@ -500,6 +501,12 @@
                       >
                         Quản trị Admin
                       </router-link>
+                      <button
+                        @click="showProfile = true"
+                        class="w-full text-left block px-4 py-2 hover:bg-slate-100 cursor-pointer"
+                      >
+                        Thông tin tài khoản
+                      </button>
                       <router-link
                         to="/my-orders"
                         class="block px-4 py-2 hover:bg-slate-100"
@@ -610,6 +617,12 @@
           🛒 Giỏ hàng ({{ cartStore.itemsCount }})
         </router-link>
         <template v-if="authStore.isAuthenticated">
+          <button
+            @click="showProfile = true"
+            class="w-full text-left flex items-center gap-2 text-xs font-bold text-slate-700 px-1 cursor-pointer"
+          >
+            👤 Thông tin tài khoản
+          </button>
           <router-link
             to="/my-orders"
             class="flex items-center gap-2 text-xs font-bold text-slate-700 px-1"
@@ -1144,6 +1157,9 @@
         </div>
       </div>
     </footer>
+
+    <!-- Profile Modal -->
+    <ProfileModal :isOpen="showProfile" @close="showProfile = false" />
   </div>
 </template>
 
@@ -1157,12 +1173,15 @@ import { categoryService } from "@/services/category.service";
 import { formatCurrency } from "@/utils/helpers";
 import type { Category } from "@/types";
 import { useToast } from "vue-toastification";
+import ProfileModal from "@/components/ProfileModal.vue";
 
 const authStore = useAuthStore();
 const cartStore = useCartStore();
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
+
+const showProfile = ref(false);
 
 const newsletterEmail = ref("");
 function handleNewsletter() {

@@ -132,9 +132,10 @@
           </div>
 
           <!-- Profile -->
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-[#f97316] flex items-center justify-center text-white font-extrabold text-xs shadow-xs">
-              {{ adminInitials }}
+          <div @click="showProfile = true" class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-all select-none" title="Thông tin tài khoản">
+            <div class="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white font-extrabold text-xs shadow-xs border border-slate-200 bg-[#f97316]">
+              <img v-if="authStore.user?.avatar" :src="authStore.user.avatar" class="w-full h-full object-cover" />
+              <span v-else>{{ adminInitials }}</span>
             </div>
             <div class="text-left leading-tight hidden sm:block">
               <p class="text-xs font-extrabold text-slate-800">{{ adminName }}</p>
@@ -149,6 +150,9 @@
         <router-view />
       </main>
     </div>
+
+    <!-- Profile Modal -->
+    <ProfileModal :isOpen="showProfile" @close="showProfile = false" />
   </div>
 </template>
 
@@ -157,10 +161,13 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { reportService } from '@/services/report.service'
+import ProfileModal from '@/components/ProfileModal.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+
+const showProfile = ref(false)
 
 const adminName = computed(() => authStore.user?.fullName || 'Admin')
 const adminInitials = computed(() => {
