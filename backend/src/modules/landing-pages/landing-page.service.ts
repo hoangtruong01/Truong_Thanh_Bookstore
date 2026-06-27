@@ -157,7 +157,7 @@ export class LandingPageService {
     );
 
     // Gemini API via Google AI Studio (không cần Google Cloud Console)
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
 
     const promptText = `
 Bạn là chuyên gia thiết kế và lập trình viên landing page bán hàng chuyên nghiệp, có tỷ lệ chuyển đổi (CR) cực kỳ cao.
@@ -208,6 +208,10 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
     parts.push({ text: promptText });
 
     try {
+      // Add timeout for Gemini API call (90 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000);
+
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -215,7 +219,10 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
           contents: [{ parts }],
           generationConfig: { responseMimeType: 'application/json' },
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();

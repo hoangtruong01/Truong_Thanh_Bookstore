@@ -52,7 +52,10 @@ export const landingPageService = {
     images: string[];
     prompt?: string;
   }) {
-    const response = await api.post('/landing-pages/generate', data);
+    // AI generation with images can take 30-90s, so we need a much longer timeout
+    const response = await api.post('/landing-pages/generate', data, {
+      timeout: 120000, // 120 seconds for AI processing
+    });
     return response;
   },
 };

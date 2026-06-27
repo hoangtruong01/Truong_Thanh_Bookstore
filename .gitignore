@@ -66,3 +66,7 @@ out/
 **/.env
 **/.env.local
 **/.env.*.local
+
+# Scratch/test files
+scratch_*
+**/scratch_*
