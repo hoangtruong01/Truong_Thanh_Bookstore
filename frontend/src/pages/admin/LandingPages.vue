@@ -718,6 +718,29 @@ const form = ref<any>({
   status: true,
 });
 
+// Auto-generate slug from title
+function generateSlug(text: string): string {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove Vietnamese tones
+    .replace(/[đĐ]/g, 'd')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+}
+
+watch(() => form.value.title, (newTitle) => {
+  if (!isEditing.value) {
+    form.value.slug = generateSlug(newTitle);
+  }
+});
+
 // Autoplay slideshow for preview images
 let previewAutoplayInterval: any = null;
 
