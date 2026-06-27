@@ -315,28 +315,7 @@
               <div class="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-transparent"></div>
             </div>
 
-            <!-- Large Floating Background Icon -->
-            <div class="absolute -right-8 -bottom-8 opacity-10 group-hover:opacity-20 group-hover:scale-110 group-hover:-rotate-12 transition-all duration-500 pointer-events-none z-10">
-              <svg v-if="getCategoryStyle(cat, idx).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-48 h-48">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-              </svg>
-              <svg v-else-if="getCategoryStyle(cat, idx).icon === 'academic'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-48 h-48">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M12 21v-4.5" />
-              </svg>
-              <svg v-else-if="getCategoryStyle(cat, idx).icon === 'briefcase'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-48 h-48">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .994-.806 1.8-1.8 1.8H5.55c-.994 0-1.8-.806-1.8-1.8v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H5.184c-.267 0-.523-.093-.717-.258m16.5 0V8.706c0-1.08-.768-2.014-1.837-2.174a47.79 47.79 0 0 0-3.413-.387m-7.5 0V5.25A2.25 2.25 0 0 1 10.5 3h3a2.25 2.25 0 0 1 2.25 2.25v.819M6.75 7.5v.75m0-1.5h10.5M6.75 7.5H4.25m13 0h2.5M6.75 7.5v8.25M17.25 7.5v8.25M3 16.5h18" />
-              </svg>
-              <svg v-else-if="getCategoryStyle(cat, idx).icon === 'document'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-48 h-48">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-              </svg>
-              <svg v-else-if="getCategoryStyle(cat, idx).icon === 'paint'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-48 h-48">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387m11.378-3.479a3 3 0 0 0-5.78-.87 2.25 2.25 0 0 1-2.4 1.992 4.5 4.5 0 0 0 8.4 1.122c0-.083-.008-.165-.02-.244Zm-10.87-4.135a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387M15.75 12c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Zm0-4.5c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Z" />
-              </svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-48 h-48">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.753 2.481.162l5.586-5.586a1.725 1.725 0 0 0 .162-2.481l-9.58-9.581A2.25 2.25 0 0 0 9.568 3Z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
-              </svg>
-            </div>
+
 
             <!-- Content -->
             <div class="space-y-4 relative z-10">
@@ -757,6 +736,9 @@ import heroStationery from '@/assets/hero_stationery.png'
 import sgkBg from '@/assets/sgk-bg.jpg'
 import doChoiBg from '@/assets/do-choi-bg.png'
 import comboBg from '@/assets/combo-bg.png'
+import truyenTranhBg from '@/assets/truyen-tranh-bg.png'
+import sachThamKhaoBg from '@/assets/sach-tham-khao-bg.png'
+import doLuuNiemBg from '@/assets/do-luu-niem-bg.jpg'
 
 const cartStore = useCartStore()
 const toast = useToast()
@@ -886,19 +868,21 @@ function getCategoryStyle(cat: any, index: number) {
       }
     case 'sach-tham-khao':
       return {
-        gradient: 'bg-gradient-to-br from-sky-50 to-blue-100/70 text-blue-950 border-blue-200/40 hover:border-blue-300',
+        gradient: 'bg-sky-50/10 text-blue-950 border-blue-200/40 hover:border-blue-300',
         iconColor: 'text-blue-600',
         icon: 'document',
         label: 'Ôn thi & Luyện đề',
-        desc: 'Sách tham khảo bồi dưỡng học sinh giỏi & ôn tập nâng cao'
+        desc: 'Sách tham khảo bồi dưỡng học sinh giỏi & ôn tập nâng cao',
+        bgImage: sachThamKhaoBg
       }
     case 'truyen-tranh':
       return {
-        gradient: 'bg-gradient-to-br from-rose-50 to-pink-100/70 text-pink-950 border-pink-200/40 hover:border-pink-300',
+        gradient: 'bg-rose-50/10 text-pink-950 border-pink-200/40 hover:border-pink-300',
         iconColor: 'text-pink-600',
         icon: 'paint',
         label: 'Giải trí & Manga',
-        desc: 'Thế giới truyện tranh, manga & nhân vật siêu anh hùng'
+        desc: 'Thế giới truyện tranh, manga & nhân vật siêu anh hùng',
+        bgImage: truyenTranhBg
       }
     case 'combo':
       return {
@@ -920,11 +904,12 @@ function getCategoryStyle(cat: any, index: number) {
       }
     case 'do-luu-niem':
       return {
-        gradient: 'bg-gradient-to-br from-indigo-50 to-purple-100/70 text-indigo-950 border-indigo-200/40 hover:border-indigo-300',
+        gradient: 'bg-indigo-50/10 text-indigo-950 border-indigo-200/40 hover:border-indigo-300',
         iconColor: 'text-indigo-600',
         icon: 'tag',
         label: 'Quà tặng xinh xắn',
-        desc: 'Móc khóa Capybara, sổ tay khắc tên & đồ lưu niệm xinh xắn'
+        desc: 'Móc khóa Capybara, sổ tay khắc tên & đồ lưu niệm xinh xắn',
+        bgImage: doLuuNiemBg
       }
     default:
       return categoryStyles[index % categoryStyles.length]
