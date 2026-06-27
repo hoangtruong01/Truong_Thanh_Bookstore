@@ -29,6 +29,9 @@ export class PackageItem {
   @Prop()
   badge: string;
 
+  @Prop()
+  image: string; // Base64 or image url
+
   @Prop({ default: false })
   isBestSeller: boolean;
 }

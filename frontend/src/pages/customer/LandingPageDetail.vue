@@ -208,7 +208,21 @@
               <span class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center flex-shrink-0">
                 <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: selectedPackage === pkg.name ? page.primaryColor : 'transparent' }"></span>
               </span>
-              <div class="space-y-0.5">
+
+              <!-- Package specific image -->
+              <img 
+                v-if="pkg.image" 
+                :src="pkg.image" 
+                class="w-12 h-12 object-contain rounded-lg border border-slate-100 flex-shrink-0 bg-slate-50" 
+              />
+              <!-- Fallback to first product image if package image is missing -->
+              <img 
+                v-else-if="page.images && page.images.length > 0" 
+                :src="page.images[0]" 
+                class="w-12 h-12 object-contain rounded-lg border border-slate-100 flex-shrink-0 bg-slate-50" 
+              />
+
+              <div class="space-y-0.5 text-left">
                 <span class="text-xs font-black text-slate-800 leading-none">{{ pkg.name }}</span>
                 <div class="flex items-center gap-2 text-[10px] font-bold">
                   <span class="text-slate-400 line-through">{{ formatMoney(pkg.originalPrice) }}đ</span>

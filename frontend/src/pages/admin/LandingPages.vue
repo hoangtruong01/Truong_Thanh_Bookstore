@@ -193,6 +193,7 @@
                   <table class="w-full text-left border-collapse text-[11px]">
                     <thead>
                       <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold">
+                        <th class="p-2 w-16 text-center">Ảnh</th>
                         <th class="p-2">Số lượng / Tên gói</th>
                         <th class="p-2 w-1/4">Giá khuyến mãi (đ)</th>
                         <th class="p-2 w-1/4">Giá thị trường (đ)</th>
@@ -202,6 +203,25 @@
                     </thead>
                     <tbody>
                       <tr v-for="(pkg, idx) in form.packages" :key="idx" class="border-b border-slate-100 last:border-0 hover:bg-slate-50/30">
+                        <td class="p-1.5 text-center">
+                          <label :for="'pkg-file-' + idx" class="cursor-pointer block">
+                            <img v-if="pkg.image" :src="pkg.image" class="w-12 h-12 rounded object-contain border border-slate-200 bg-slate-50 mx-auto" />
+                            <div v-else class="w-12 h-12 rounded border border-slate-200 border-dashed hover:bg-slate-50 flex flex-col items-center justify-center text-slate-400 hover:text-slate-600 transition-colors mx-auto bg-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                              </svg>
+                              <span class="text-[8px] mt-0.5">Tải ảnh</span>
+                            </div>
+                          </label>
+                          <input
+                            :disabled="isEditing"
+                            type="file"
+                            accept="image/*"
+                            class="hidden"
+                            :id="'pkg-file-' + idx"
+                            @change="handlePackageImageUpload($event, Number(idx))"
+                          />
+                        </td>
                         <td class="p-1.5 space-y-1">
                           <input
                             v-model="pkg.name"
@@ -258,7 +278,7 @@
                         </td>
                       </tr>
                       <tr v-if="!form.packages || form.packages.length === 0">
-                        <td :colspan="isEditing ? 4 : 5" class="p-4 text-center text-slate-400 italic">
+                        <td :colspan="isEditing ? 5 : 6" class="p-4 text-center text-slate-400 italic">
                           Chưa có gói bán nào. Click "+ Thêm Gói" để cấu hình.
                         </td>
                       </tr>
@@ -611,11 +631,26 @@
                       {{ p.badge }}
                     </span>
 
-                    <div class="space-y-1">
-                      <span class="text-xs font-black text-slate-800">{{ p.name }}</span>
-                      <div class="flex items-center gap-2 text-[10px]">
-                        <span class="text-slate-400 line-through">{{ formatMoney(p.originalPrice) }}đ</span>
-                        <span class="font-bold text-emerald-600">Tiết kiệm {{ Math.round((1 - p.price / p.originalPrice) * 100) }}%</span>
+                    <div class="flex items-center gap-3">
+                      <!-- Package specific image -->
+                      <img 
+                        v-if="p.image" 
+                        :src="p.image" 
+                        class="w-12 h-12 object-contain rounded-lg border border-slate-100 flex-shrink-0 bg-slate-50" 
+                      />
+                      <!-- Fallback to first product image if package image is missing -->
+                      <img 
+                        v-else-if="form.images && form.images.length > 0" 
+                        :src="form.images[0]" 
+                        class="w-12 h-12 object-contain rounded-lg border border-slate-100 flex-shrink-0 bg-slate-50" 
+                      />
+
+                      <div class="space-y-1 text-left">
+                        <span class="text-xs font-black text-slate-800">{{ p.name }}</span>
+                        <div class="flex items-center gap-2 text-[10px]">
+                          <span class="text-slate-400 line-through">{{ formatMoney(p.originalPrice) }}đ</span>
+                          <span class="font-bold text-emerald-600">Tiết kiệm {{ Math.round((1 - p.price / p.originalPrice) * 100) }}%</span>
+                        </div>
                       </div>
                     </div>
 
@@ -819,9 +854,9 @@ function openCreateModal() {
     textColor: '#1e293b',
     images: [],
     packages: [
-      { name: 'Mua 1 Quyển Sách', price: 99000, originalPrice: 150000, badge: 'Ưu đãi', isBestSeller: false },
-      { name: 'Combo 2 Quyển Sách', price: 149000, originalPrice: 300000, badge: 'Tiết kiệm', isBestSeller: false },
-      { name: 'Bộ 3 Cuốn Học Tập', price: 179000, originalPrice: 350000, badge: 'Bán chạy nhất', isBestSeller: true }
+      { name: 'Mua 1 Quyển Sách', price: 99000, originalPrice: 150000, badge: 'Ưu đãi', image: '', isBestSeller: false },
+      { name: 'Combo 2 Quyển Sách', price: 149000, originalPrice: 300000, badge: 'Tiết kiệm', image: '', isBestSeller: false },
+      { name: 'Bộ 3 Cuốn Học Tập', price: 179000, originalPrice: 350000, badge: 'Bán chạy nhất', image: '', isBestSeller: true }
     ],
     benefits: [
       { title: 'Chính Hãng 100%', description: 'Sản phẩm từ thương hiệu sách hàng đầu Trường Thành.', icon: 'ShieldCheckIcon' },
@@ -850,6 +885,7 @@ function addPackage() {
     price: 0,
     originalPrice: 0,
     badge: '',
+    image: '',
     isBestSeller: false,
   });
 }
@@ -892,6 +928,18 @@ function addTestimonial() {
 
 function removeTestimonial(idx: number) {
   form.value.testimonials.splice(idx, 1);
+}
+
+// Convert uploaded package image file to base64
+function handlePackageImageUpload(event: any, idx: number) {
+  const files: FileList = event.target.files;
+  if (!files || files.length === 0) return;
+  const file = files[0];
+  const reader = new FileReader();
+  reader.onload = (e: any) => {
+    form.value.packages[idx].image = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function removeImage(idx: number) {
