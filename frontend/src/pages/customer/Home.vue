@@ -304,8 +304,19 @@
             :to="`/products?category=${cat._id}`"
             :class="['relative overflow-hidden rounded-[2rem] p-8 flex flex-col justify-between group transition-all duration-500 hover:shadow-2xl border cursor-pointer min-h-[220px]', getCategoryStyle(cat, idx).gradient, getBentoSpanClass(idx)]"
           >
+            <!-- Background Image with Zoom effect -->
+            <div v-if="getCategoryStyle(cat, idx).bgImage" class="absolute inset-0 z-0 overflow-hidden">
+              <img
+                :src="getCategoryStyle(cat, idx).bgImage"
+                class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                alt=""
+              />
+              <!-- Soft gradient overlay to ensure text stands out beautifully -->
+              <div class="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-transparent"></div>
+            </div>
+
             <!-- Large Floating Background Icon -->
-            <div class="absolute -right-8 -bottom-8 opacity-10 group-hover:opacity-20 group-hover:scale-110 group-hover:-rotate-12 transition-all duration-500 pointer-events-none">
+            <div class="absolute -right-8 -bottom-8 opacity-10 group-hover:opacity-20 group-hover:scale-110 group-hover:-rotate-12 transition-all duration-500 pointer-events-none z-10">
               <svg v-if="getCategoryStyle(cat, idx).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-48 h-48">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
               </svg>
@@ -743,6 +754,9 @@ import { useScrollReveal } from '@/composables/useScrollReveal'
 import type { Product, Category } from '@/types'
 import flashSaleBg from '@/assets/flash-sale-bg.png'
 import heroStationery from '@/assets/hero_stationery.png'
+import sgkBg from '@/assets/sgk-bg.jpg'
+import doChoiBg from '@/assets/do-choi-bg.png'
+import comboBg from '@/assets/combo-bg.png'
 
 const cartStore = useCartStore()
 const toast = useToast()
@@ -863,11 +877,12 @@ function getCategoryStyle(cat: any, index: number) {
   switch (slug) {
     case 'sach-giao-khoa':
       return {
-        gradient: 'bg-gradient-to-br from-amber-50 to-orange-100/70 text-orange-950 border-orange-200/40 hover:border-orange-300',
+        gradient: 'bg-amber-50/10 text-orange-950 border-orange-200/40 hover:border-orange-300',
         iconColor: 'text-orange-600',
         icon: 'academic',
         label: 'Học tập chính hãng',
-        desc: 'Sách giáo khoa đầy đủ môn học cho học sinh cấp 1, 2, 3'
+        desc: 'Sách giáo khoa đầy đủ môn học cho học sinh cấp 1, 2, 3',
+        bgImage: sgkBg
       }
     case 'sach-tham-khao':
       return {
@@ -887,19 +902,21 @@ function getCategoryStyle(cat: any, index: number) {
       }
     case 'combo':
       return {
-        gradient: 'bg-gradient-to-br from-fuchsia-50 to-purple-100/70 text-purple-950 border-purple-200/40 hover:border-purple-300',
+        gradient: 'bg-fuchsia-50/10 text-purple-950 border-purple-200/40 hover:border-purple-300',
         iconColor: 'text-purple-600',
         icon: 'briefcase',
         label: 'Combo siêu tiết kiệm',
-        desc: 'Set dụng cụ học tập & văn phòng phẩm trọn bộ giá sốc'
+        desc: 'Set dụng cụ học tập & văn phòng phẩm trọn bộ giá sốc',
+        bgImage: comboBg
       }
     case 'do-choi':
       return {
-        gradient: 'bg-gradient-to-br from-emerald-50 to-teal-100/70 text-teal-950 border-teal-200/40 hover:border-teal-300',
+        gradient: 'bg-emerald-50/10 text-teal-950 border-teal-200/40 hover:border-teal-300',
         iconColor: 'text-teal-600',
         icon: 'pencil',
         label: 'Phát triển tư duy',
-        desc: 'Lego lắp ráp, Rubik thi đấu & bộ boardgame rèn luyện tư duy'
+        desc: 'Lego lắp ráp, Rubik thi đấu & bộ boardgame rèn luyện tư duy',
+        bgImage: doChoiBg
       }
     case 'do-luu-niem':
       return {
