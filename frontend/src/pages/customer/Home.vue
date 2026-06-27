@@ -1,69 +1,108 @@
 <template>
   <div class="space-y-0 pb-0 bg-slate-50/50 overflow-hidden">
-    <!-- Section 1: Immersive Hero Section (Warm & Inviting, Web 2026 Trend) -->
-    <div class="relative min-h-[85vh] flex items-center bg-gradient-to-br from-[#faf8f5] via-[#fffbf7] to-[#ffffff] text-slate-800 overflow-hidden py-16 px-4 md:px-8 border-b border-slate-100">
-      <div class="absolute -right-20 -top-20 w-96 h-96 bg-orange-200/30 rounded-full blur-3xl animate-pulse-soft"></div>
-      <div class="absolute left-10 bottom-10 w-80 h-80 bg-rose-200/20 rounded-full blur-3xl animate-pulse-soft delay-1000"></div>
-      
-      <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
-        <!-- Left Column -->
-        <div class="lg:col-span-7 space-y-6 text-left">
-          <div class="inline-flex items-center gap-1.5 bg-orange-100/70 border border-orange-200 text-orange-800 text-[11px] font-black px-4 py-1.5 rounded-full w-fit animate-float">
-            <span>✨ Siêu Ưu Đãi Mùa Tựu Trường</span>
-          </div>
-          <h1 class="text-4xl sm:text-6xl font-black tracking-tight leading-none uppercase hero-text text-slate-900">
-            Khởi nguồn <br />
-            <span class="bg-gradient-to-r from-red-600 via-rose-500 to-orange-500 bg-clip-text text-transparent">Sự Sáng Tạo</span>
-          </h1>
-          <p class="text-slate-600 text-sm sm:text-base max-w-xl leading-relaxed reveal">
-            Khám phá bộ sưu tập dụng cụ học tập & văn phòng phẩm Trường Thành chất lượng vượt trội, đồng hành trên con đường chinh phục đỉnh cao tri thức của bạn.
-          </p>
-          
-          <div class="pt-2 flex flex-wrap gap-4 reveal delay-100">
-            <router-link to="/products" class="bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white font-extrabold py-4 px-8 rounded-2xl shadow-lg shadow-red-500/20 transition-all text-sm flex items-center gap-2 group cursor-pointer">
-              <span>Mua sắm ngay</span>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 group-hover:translate-x-1 transition-transform">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-              </svg>
-            </router-link>
-            <router-link to="/products?discounted=true" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-extrabold py-4 px-8 rounded-2xl transition-all text-sm flex items-center gap-2 cursor-pointer shadow-xs">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.753 2.481.162l5.586-5.586a1.725 1.725 0 0 0 .162-2.481l-9.58-9.581A2.25 2.25 0 0 0 9.568 3Z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
-              </svg>
-              <span>Bộ Sưu Tập Giảm Giá</span>
-            </router-link>
-          </div>
-          
-          <div class="pt-6 grid grid-cols-3 gap-4 border-t border-slate-100 max-w-lg text-[11px] text-slate-500 font-bold">
-            <div class="flex items-center gap-1.5">
-              <span class="text-orange-500 text-sm">✓</span><span>100% Chính Hãng</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="text-orange-500 text-sm">✓</span><span>Giao Nhanh Toàn Quốc</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="text-orange-500 text-sm">✓</span><span>Đổi Trả Dễ Dàng</span>
-            </div>
-          </div>
+    <!-- Category Navigation Bar -->
+    <div class="bg-white border-b border-slate-100 hidden md:block">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center gap-1 py-2.5 overflow-x-auto scrollbar-none">
+          <router-link
+            v-for="item in navItems"
+            :key="item.name"
+            :to="item.to"
+            class="flex items-center gap-1.5 text-xs font-extrabold text-[#0f172a] hover:text-[#dc2626] px-4 py-2 rounded-full hover:bg-red-50 transition-all whitespace-nowrap flex-shrink-0"
+          >
+            <span>{{ item.icon }}</span>
+            {{ item.name }}
+          </router-link>
+          <router-link
+            to="/products?discounted=true"
+            class="flex items-center gap-1.5 text-xs font-extrabold text-white bg-[#dc2626] hover:bg-[#b91c1c] px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0 ml-auto"
+          >
+            % Ưu đãi hot
+          </router-link>
         </div>
+      </div>
+    </div>
+
+    <!-- Section 1: Hero Section (Card layout) -->
+    <div class="max-w-[1440px] mx-auto px-4 md:px-8 pt-4 pb-14">
+      <div class="relative rounded-[32px] overflow-hidden bg-gradient-to-br from-[#fff7ed] to-[#ffffff] border border-orange-100/50 py-10 md:py-14 px-6 md:px-12 min-h-[500px] md:min-h-[540px] flex items-center shadow-xs">
+        <!-- Subtle dot grid & decorations pattern -->
+        <div class="absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(#000 1px, transparent 1px); background-size: 20px 20px;"></div>
+        <!-- Absolute decorative icons -->
+        <div class="absolute top-10 left-10 text-slate-300 text-xl font-bold select-none opacity-20 pointer-events-none">✏️</div>
+        <div class="absolute bottom-10 left-[40%] text-slate-300 text-2xl font-bold select-none opacity-20 pointer-events-none">📎</div>
+        <div class="absolute top-20 right-[45%] text-slate-300 text-lg font-bold select-none opacity-20 pointer-events-none">📐</div>
+        <div class="absolute bottom-20 right-[35%] text-slate-300 text-xl font-bold select-none opacity-20 pointer-events-none">📓</div>
+
+        <div class="absolute -right-20 -top-20 w-96 h-96 bg-orange-200/30 rounded-full blur-3xl animate-pulse-soft"></div>
+        <div class="absolute left-10 bottom-10 w-80 h-80 bg-rose-200/20 rounded-full blur-3xl animate-pulse-soft delay-1000"></div>
         
-        <!-- Right Column -->
-        <div class="lg:col-span-5 relative flex justify-center lg:justify-end reveal delay-200">
-          <div class="relative w-full max-w-[420px] aspect-square rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white bg-white/50 backdrop-blur-md">
-            <img :src="heroStationery" alt="Truong Thanh Stationery" class="w-full h-full object-cover" />
-            <div class="absolute -left-6 bottom-12 bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl p-3.5 shadow-lg flex items-center gap-3 animate-float max-w-[180px]">
-              <div class="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-sm">30%</div>
-              <div class="leading-tight">
-                <p class="text-[10px] text-slate-400 font-bold uppercase">Ưu đãi mùa hè</p>
-                <p class="text-xs font-black text-slate-800">Giảm giá cực sốc</p>
+        <!-- Decorative stars -->
+        <div class="absolute top-16 left-[45%] text-orange-300/60 text-xs animate-float pointer-events-none select-none">✦</div>
+        <div class="absolute top-32 left-[52%] text-rose-300/50 text-[10px] animate-float-reverse pointer-events-none select-none">✦</div>
+        <div class="absolute bottom-20 left-[48%] text-amber-300/40 text-sm animate-float pointer-events-none select-none">+</div>
+        <div class="absolute top-24 right-[15%] text-orange-200/50 text-lg animate-float-reverse pointer-events-none select-none">✦</div>
+
+        <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10">
+          <!-- Left Column -->
+          <div class="lg:col-span-7 space-y-5 text-left">
+            <div class="inline-flex items-center gap-1.5 bg-orange-100/70 border border-orange-200 text-orange-800 text-[11px] font-black px-4 py-1.5 rounded-full w-fit animate-float">
+              <span>✨ Siêu Ưu Đãi Mùa Tựu Trường</span>
+            </div>
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.05] uppercase hero-text text-[#0f172a]">
+              Khởi nguồn <br />
+              <span class="bg-gradient-to-r from-[#e11d24] via-rose-500 to-[#fb5607] bg-clip-text text-transparent italic">Sự Sáng Tạo</span>
+            </h1>
+            <p class="text-slate-600 text-sm sm:text-base max-w-xl leading-relaxed reveal">
+              Khám phá bộ sưu tập dụng cụ học tập & văn phòng phẩm Trường Thành chất lượng vượt trội, đồng hành trên con đường chinh phục đỉnh cao tri thức của bạn.
+            </p>
+            
+            <div class="pt-1 flex flex-wrap gap-3 reveal delay-100">
+              <router-link to="/products" class="bg-gradient-to-r from-[#e11d24] to-[#fb5607] hover:opacity-95 text-white font-extrabold py-3.5 px-7 rounded-full shadow-lg shadow-red-500/20 transition-all text-sm flex items-center gap-2 group cursor-pointer">
+                <span>Mua sắm ngay</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 group-hover:translate-x-1 transition-transform">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+              </router-link>
+              <router-link to="/products?discounted=true" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-extrabold py-3.5 px-7 rounded-full transition-all text-sm flex items-center gap-2 cursor-pointer shadow-xs">
+                <span>🏷️ Xem ưu đãi</span>
+              </router-link>
+            </div>
+            
+            <div class="pt-4 flex flex-wrap gap-6 text-[11px] text-slate-500 font-bold">
+              <div class="flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-emerald-500"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" /></svg>
+                <span>100% Chính Hãng</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-emerald-500"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" /></svg>
+                <span>Giao Nhanh Toàn Quốc</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-emerald-500"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" /></svg>
+                <span>Đổi Trả 7 Ngày</span>
               </div>
             </div>
-            <div class="absolute -right-4 top-12 bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl p-3.5 shadow-lg flex items-center gap-3 animate-float-reverse max-w-[190px]">
-              <div class="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center text-lg">✨</div>
-              <div class="leading-tight">
-                <p class="text-[10px] text-slate-400 font-bold uppercase">Độc quyền</p>
-                <p class="text-xs font-black text-slate-800">10k+ Khách Hàng</p>
+          </div>
+          
+          <!-- Right Column -->
+          <div class="lg:col-span-5 relative flex justify-center lg:justify-end reveal delay-200">
+            <!-- Orange blob in the background -->
+            <div class="absolute -inset-4 bg-orange-300/20 rounded-full blur-2xl pointer-events-none z-0"></div>
+            
+            <div class="relative w-full max-w-[420px] aspect-square rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white bg-white/50 backdrop-blur-md z-10 animate-float">
+              <img :src="heroStationery" alt="Truong Thanh Stationery" class="w-full h-full object-cover" />
+              <!-- Upper-right badge -->
+              <div class="absolute right-4 top-4 bg-emerald-500/90 backdrop-blur-md text-white rounded-full px-3 py-1 text-[10px] font-black tracking-wide shadow-md flex items-center gap-1">
+                <span>✨</span> ĐỘC QUYỀN - 10k+ Khách Hàng
+              </div>
+              <!-- Lower-left badge -->
+              <div class="absolute left-4 bottom-4 bg-[#e11d24]/90 backdrop-blur-md text-white rounded-2xl p-2.5 shadow-md flex items-center gap-2 max-w-[200px]">
+                <div class="w-8 h-8 rounded-full bg-white text-[#e11d24] flex items-center justify-center font-black text-xs flex-shrink-0 shadow-sm">-30%</div>
+                <div class="leading-none text-left">
+                  <p class="text-[8px] text-white/80 font-bold uppercase tracking-wider">Ưu đãi mùa hè</p>
+                  <p class="text-[10px] font-black mt-0.5">Giảm giá cực sốc</p>
+                </div>
               </div>
             </div>
           </div>
@@ -71,35 +110,37 @@
       </div>
     </div>
 
-    <!-- Section 2: Trust Bar -->
-    <div class="bg-white border-b border-slate-100 py-6 px-4">
-      <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-xs text-slate-600 font-bold">
-        <div class="flex items-center gap-3 justify-center border-r border-slate-100 last:border-0">
-          <span class="text-orange-500 text-xl">🔥</span>
-          <div>
-            <p class="font-extrabold text-slate-800 leading-none">Deal sốc mỗi ngày</p>
-            <p class="text-[10px] text-slate-400 font-normal mt-1">Cập nhật liên tục hàng giờ</p>
+    <!-- Section 2: Trust Bar (Overlaid on bottom of Hero Card) -->
+    <div class="max-w-7xl mx-auto px-4 md:px-8 -mt-16 mb-10 relative z-20">
+      <div class="bg-white border border-slate-100 rounded-[20px] shadow-lg py-5 px-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-xs text-slate-600 font-bold">
+          <div class="flex items-center gap-3 justify-center border-r border-slate-100 last:border-0">
+            <span class="text-orange-500 text-xl">🔥</span>
+            <div class="text-left">
+              <p class="font-extrabold text-slate-800 leading-none">Deal sốc mỗi ngày</p>
+              <p class="text-[10px] text-slate-400 font-normal mt-1">Cập nhật liên tục hàng giờ</p>
+            </div>
           </div>
-        </div>
-        <div class="flex items-center gap-3 justify-center md:border-r border-slate-100 last:border-0">
-          <span class="text-orange-500 text-xl">🏷️</span>
-          <div>
-            <p class="font-extrabold text-slate-800 leading-none">Tiết kiệm đến 30%</p>
-            <p class="text-[10px] text-slate-400 font-normal mt-1">Giá tốt nhất thị trường</p>
+          <div class="flex items-center gap-3 justify-center md:border-r border-slate-100 last:border-0">
+            <span class="text-orange-500 text-xl">🏷️</span>
+            <div class="text-left">
+              <p class="font-extrabold text-slate-800 leading-none">Tiết kiệm đến 30%</p>
+              <p class="text-[10px] text-slate-400 font-normal mt-1">Với hàng ngàn ưu đãi</p>
+            </div>
           </div>
-        </div>
-        <div class="flex items-center gap-3 justify-center border-r border-slate-100 last:border-0">
-          <span class="text-orange-500 text-xl">👥</span>
-          <div>
-            <p class="font-extrabold text-slate-800 leading-none">10.000+ Khách hàng</p>
-            <p class="text-[10px] text-slate-400 font-normal mt-1">Đã tin dùng và hài lòng</p>
+          <div class="flex items-center gap-3 justify-center border-r border-slate-100 last:border-0">
+            <span class="text-orange-500 text-xl">👥</span>
+            <div class="text-left">
+              <p class="font-extrabold text-slate-800 leading-none">10.000+ Khách hàng</p>
+              <p class="text-[10px] text-slate-400 font-normal mt-1">Đã tin tưởng và ủng hộ</p>
+            </div>
           </div>
-        </div>
-        <div class="flex items-center gap-3 justify-center last:border-0">
-          <span class="text-orange-500 text-xl">🛡️</span>
-          <div>
-            <p class="font-extrabold text-slate-800 leading-none">Mua sắm an tâm</p>
-            <p class="text-[10px] text-slate-400 font-normal mt-1">Đổi trả dễ dàng trong 7 ngày</p>
+          <div class="flex items-center gap-3 justify-center last:border-0">
+            <span class="text-orange-500 text-xl">🛡️</span>
+            <div class="text-left">
+              <p class="font-extrabold text-slate-800 leading-none">Mua sắm an tâm</p>
+              <p class="text-[10px] text-slate-400 font-normal mt-1">Đổi trả dễ dàng trong 7 ngày</p>
+            </div>
           </div>
         </div>
       </div>
@@ -284,97 +325,48 @@
       </div>
     </section>
 
-    <!-- Section 4: Bento Grid Categories -->
-    <section class="py-20 px-4 md:px-8">
-      <div class="max-w-7xl mx-auto space-y-10">
+    <!-- Section 4: Horizontal Featured Categories -->
+    <section class="py-10 px-4 md:px-8 bg-white border-y border-slate-100/80">
+      <div class="max-w-7xl mx-auto space-y-6">
         <!-- Section Header -->
-        <div class="reveal text-center max-w-2xl mx-auto space-y-2">
-          <span class="text-xs font-black text-rose-600 tracking-[0.2em] uppercase">Khám Phá Danh Mục</span>
-          <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Đa dạng & Chất lượng vượt trội</h2>
-          <p class="text-slate-500 text-xs sm:text-sm font-medium">
-            Lựa chọn các sản phẩm văn phòng phẩm, sách giáo khoa & quà lưu niệm chính hãng phù hợp với mọi nhu cầu sáng tạo.
-          </p>
-        </div>
-
-        <!-- Bento Grid Container -->
-        <div v-if="parentCategories.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-fr">
-          <router-link
-            v-for="(cat, idx) in parentCategories.slice(0, 6)"
-            :key="cat._id"
-            :to="`/products?category=${cat._id}`"
-            :class="['relative overflow-hidden rounded-[2rem] p-8 flex flex-col justify-between group transition-all duration-500 hover:shadow-2xl border cursor-pointer min-h-[220px]', getCategoryStyle(cat, idx).gradient, getBentoSpanClass(idx)]"
-          >
-            <!-- Background Image with Zoom effect -->
-            <div v-if="getCategoryStyle(cat, idx).bgImage" class="absolute inset-0 z-0 overflow-hidden">
-              <img
-                :src="getCategoryStyle(cat, idx).bgImage"
-                class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                alt=""
-              />
-              <!-- Soft gradient overlay to ensure text stands out beautifully -->
-              <div class="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-transparent"></div>
-            </div>
-
-
-
-            <!-- Content -->
-            <div class="space-y-4 relative z-10">
-              <!-- Small Badge Icon -->
-              <div :class="['w-14 h-14 rounded-2xl bg-white shadow-md flex items-center justify-center group-hover:scale-110 transition-transform duration-300', getCategoryStyle(cat, idx).iconColor]">
-                <svg v-if="getCategoryStyle(cat, idx).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                </svg>
-                <svg v-else-if="getCategoryStyle(cat, idx).icon === 'academic'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M12 21v-4.5" />
-                </svg>
-                <svg v-else-if="getCategoryStyle(cat, idx).icon === 'briefcase'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 .994-.806 1.8-1.8 1.8H5.55c-.994 0-1.8-.806-1.8-1.8v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.45.258-.717.258H5.184c-.267 0-.523-.093-.717-.258m16.5 0V8.706c0-1.08-.768-2.014-1.837-2.174a47.79 47.79 0 0 0-3.413-.387m-7.5 0V5.25A2.25 2.25 0 0 1 10.5 3h3a2.25 2.25 0 0 1 2.25 2.25v.819M6.75 7.5v.75m0-1.5h10.5M6.75 7.5H4.25m13 0h2.5M6.75 7.5v8.25M17.25 7.5v8.25M3 16.5h18" />
-                </svg>
-                <svg v-else-if="getCategoryStyle(cat, idx).icon === 'document'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                </svg>
-                <svg v-else-if="getCategoryStyle(cat, idx).icon === 'paint'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387m11.378-3.479a3 3 0 0 0-5.78-.87 2.25 2.25 0 0 1-2.4 1.992 4.5 4.5 0 0 0 8.4 1.122c0-.083-.008-.165-.02-.244Zm-10.87-4.135a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.242c0-.399-.078-.78-.22-1.131Zm0 0a15.998 15.998 0 0 1 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 3.395-1.622m-3.42 1.622a15.999 15.999 0 0 1-1.62-3.387M15.75 12c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Zm0-4.5c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5.672-1.5 1.5-1.5 1.5.672 1.5 1.5Z" />
-                </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008ZM2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm11.379-3.379a.75.75 0 0 0-1.06 1.06l1.25 1.25a.75.75 0 0 0 1.06-1.06l-1.25-1.25Z" />
-                </svg>
-              </div>
-              <div class="space-y-1">
-                <span class="text-[10px] font-black uppercase tracking-wider opacity-60">{{ getCategoryStyle(cat, idx).label }}</span>
-                <h3 class="text-xl font-black tracking-tight text-slate-800 leading-tight group-hover:text-red-600 transition-colors">{{ cat.name }}</h3>
-                <p class="text-xs text-slate-500 font-medium leading-relaxed max-w-sm hidden sm:block">{{ getCategoryStyle(cat, idx).desc }}</p>
-              </div>
-            </div>
-
-            <div class="mt-6 flex items-center gap-1.5 text-xs font-black text-slate-600 group-hover:text-red-600 transition-colors relative z-10">
-              <span>Khám phá ngay</span>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-              </svg>
-            </div>
+        <div class="reveal flex items-end justify-between">
+          <div class="text-left">
+            <h2 class="text-xl sm:text-2xl font-black text-[#0f172a] tracking-tight flex items-center gap-2">✨ Danh mục nổi bật</h2>
+          </div>
+          <router-link to="/products" class="text-xs font-bold text-slate-500 hover:text-red-600 flex items-center gap-1 group">
+            <span>Xem tất cả</span>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
           </router-link>
         </div>
-      </div>
-    </section>
 
-    <!-- Section 5: Editorial Banner -->
-    <section class="relative min-h-[45vh] flex items-center justify-center bg-slate-900 text-white overflow-hidden py-16 px-4">
-      <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20" style="background-image: url('https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80')"></div>
-      <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent"></div>
-      
-      <div class="relative max-w-3xl mx-auto text-center space-y-6 z-10 reveal">
-        <span class="text-xs font-bold text-amber-400 tracking-[0.3em] uppercase">Không Gian Cảm Hứng</span>
-        <h2 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight">Nâng tầm góc làm việc & học tập của bạn</h2>
-        <p class="text-slate-300 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
-          Góc làm việc gọn gàng, dụng cụ chất lượng là chiếc chìa khóa vạn năng khơi dậy động lực sáng tạo mỗi ngày. Hãy cùng Trường Thành trang trí không gian học tập và sáng tạo của bạn.
-        </p>
-        <div class="pt-2">
-          <router-link to="/products" class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs py-3.5 px-7 rounded-xl transition-all cursor-pointer">
-            <span>Tìm cảm hứng sáng tạo</span>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3" />
-            </svg>
+        <!-- Cards Container -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+          <router-link
+            v-for="cat in featuredCategoriesList"
+            :key="cat.name"
+            :to="cat.to"
+            :class="['relative overflow-hidden rounded-[18px] p-5 border flex items-center justify-between group transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer min-h-[100px]', cat.gradient]"
+          >
+            <!-- Text on the left -->
+            <div class="space-y-1 text-left relative z-10 max-w-[60%]">
+              <h3 class="text-sm font-black tracking-tight leading-tight text-[#0f172a] group-hover:text-red-600 transition-colors">
+                {{ cat.name }}
+              </h3>
+              <p class="text-[10px] text-slate-400 font-medium leading-none mt-1">
+                {{ cat.desc }}
+              </p>
+            </div>
+
+            <!-- Illustration on the right -->
+            <div class="w-16 h-16 rounded-xl overflow-hidden shadow-xs border border-white/50 relative shrink-0">
+              <img
+                :src="cat.bgImage"
+                class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                alt=""
+              />
+            </div>
           </router-link>
         </div>
       </div>
@@ -547,6 +539,48 @@
         >
           Khám Phá Sách Tham Khảo
         </router-link>
+      </div>
+    </section>
+
+    <!-- Section 5: Editorial Banner -->
+    <section 
+      :style="{ backgroundImage: `url(${inspirationBg})`, backgroundSize: 'cover', backgroundPosition: 'right center' }"
+      class="relative min-h-[50vh] flex items-center bg-no-repeat py-20 px-4 md:px-8 overflow-hidden border-t border-b border-orange-100/50"
+    >
+      <!-- Soft warm glow overlays for premium feel -->
+      <div class="absolute inset-0 bg-gradient-to-r from-amber-50/90 via-amber-50/70 to-transparent pointer-events-none"></div>
+      
+      <div class="max-w-7xl mx-auto w-full relative z-10">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <!-- Text content aligned to the left, taking up 8 columns on large screens to prevent awkward line breaks -->
+          <div class="lg:col-span-8 xl:col-span-7 space-y-4 sm:space-y-6 text-left bg-white/70 lg:bg-transparent backdrop-blur-md lg:backdrop-blur-none p-6 sm:p-8 lg:p-0 rounded-[2rem] border border-orange-200/20 lg:border-none shadow-lg lg:shadow-none reveal">
+            <div>
+              <span class="inline-flex items-center gap-1.5 bg-orange-100/60 border border-orange-200/50 text-[#b25e1d] text-[11px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider">
+                ✨ Không Gian Cảm Hứng
+              </span>
+            </div>
+            
+            <h2 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-[1.15] text-slate-900 uppercase">
+              Nâng tầm <span class="bg-gradient-to-r from-[#b25e1d] to-[#d97706] bg-clip-text text-transparent">góc làm việc & học tập</span> của bạn
+            </h2>
+            
+            <p class="text-slate-600 text-xs sm:text-sm leading-relaxed font-medium max-w-2xl">
+              Góc làm việc gọn gàng, dụng cụ chất lượng là chiếc chìa khóa vạn năng khơi dậy động lực sáng tạo mỗi ngày. Hãy cùng Trường Thành trang trí không gian học tập và sáng tạo của bạn.
+            </p>
+            
+            <div class="pt-2">
+              <router-link 
+                to="/products" 
+                class="inline-flex items-center gap-2 bg-gradient-to-r from-[#b25e1d] to-[#d97706] hover:from-[#964c14] hover:to-[#b45309] text-white font-extrabold text-xs py-3.5 px-7 sm:py-4 sm:px-8 rounded-xl shadow-lg shadow-orange-700/20 hover:shadow-xl transition-all cursor-pointer group"
+              >
+                <span>Tìm cảm hứng sáng tạo</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3" />
+                </svg>
+              </router-link>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -739,6 +773,7 @@ import comboBg from '@/assets/combo-bg.png'
 import truyenTranhBg from '@/assets/truyen-tranh-bg.png'
 import sachThamKhaoBg from '@/assets/sach-tham-khao-bg.png'
 import doLuuNiemBg from '@/assets/do-luu-niem-bg.jpg'
+import inspirationBg from '@/assets/inspiration-bg.png'
 
 const cartStore = useCartStore()
 const toast = useToast()
@@ -747,9 +782,92 @@ const router = useRouter()
 function goToDetail(id: string) {
   router.push(`/products/${id}`)
 }
+
+function getCatNavIcon(slug: string): string {
+  const iconMap: Record<string, string> = {
+    'sach-giao-khoa': '📚',
+    'sach-tham-khao': '📖',
+    'van-phong-pham': '✏️',
+    'do-choi': '🧸',
+    'truyen-tranh': '📕',
+    'do-luu-niem': '🎁',
+    'combo': '🔥',
+  }
+  return iconMap[slug] || '📦'
+}
 const { observeNewElements } = useScrollReveal()
 
 const parentCategories = ref<Category[]>([])
+
+const navItems = computed(() => {
+  if (!parentCategories.value.length) return [];
+  
+  const sgk = parentCategories.value.find(c => c.slug === 'sach-giao-khoa');
+  const stk = parentCategories.value.find(c => c.slug === 'sach-tham-khao');
+  const doChoi = parentCategories.value.find(c => c.slug === 'do-choi');
+  const truyenTranh = parentCategories.value.find(c => c.slug === 'truyen-tranh');
+  const combo = parentCategories.value.find(c => c.slug === 'combo');
+  const luuNiem = parentCategories.value.find(c => c.slug === 'do-luu-niem');
+
+  return [
+    { name: 'Sách giáo khoa', to: sgk ? `/products?category=${sgk._id}` : '/products', icon: '📚' },
+    { name: 'Sách tham khảo', to: stk ? `/products?category=${stk._id}` : '/products', icon: '📖' },
+    { name: 'Văn phòng phẩm', to: luuNiem ? `/products?category=${luuNiem._id}&search=bút` : '/products', icon: '✏️' },
+    { name: 'Đồ chơi', to: doChoi ? `/products?category=${doChoi._id}` : '/products', icon: '🧸' },
+    { name: 'Truyện tranh', to: truyenTranh ? `/products?category=${truyenTranh._id}` : '/products', icon: '📕' },
+    { name: 'Lưu niệm', to: luuNiem ? `/products?category=${luuNiem._id}` : '/products', icon: '🎁' },
+    { name: 'Combo ưu đãi', to: combo ? `/products?category=${combo._id}` : '/products', icon: '🔥' }
+  ];
+});
+
+const featuredCategoriesList = computed(() => {
+  if (!parentCategories.value.length) return [];
+
+  const sgk = parentCategories.value.find(c => c.slug === 'sach-giao-khoa');
+  const stk = parentCategories.value.find(c => c.slug === 'sach-tham-khao');
+  const doChoi = parentCategories.value.find(c => c.slug === 'do-choi');
+  const combo = parentCategories.value.find(c => c.slug === 'combo');
+  const luuNiem = parentCategories.value.find(c => c.slug === 'do-luu-niem');
+
+  return [
+    {
+      name: 'Sách giáo khoa',
+      desc: 'Đầy đủ cấp 1, 2, 3',
+      bgImage: sgkBg,
+      gradient: 'bg-amber-50/80 border-orange-100 hover:border-orange-300 text-orange-950',
+      to: sgk ? `/products?category=${sgk._id}` : '/products'
+    },
+    {
+      name: 'Văn phòng phẩm',
+      desc: 'Bút, sổ tay, file hồ sơ',
+      bgImage: doLuuNiemBg,
+      gradient: 'bg-sky-50/80 border-blue-100 hover:border-blue-300 text-blue-950',
+      to: luuNiem ? `/products?category=${luuNiem._id}&search=bút` : '/products'
+    },
+    {
+      name: 'Sách tham khảo',
+      desc: 'Ôn luyện thi nâng cao',
+      bgImage: sachThamKhaoBg,
+      gradient: 'bg-rose-50/80 border-pink-100 hover:border-pink-300 text-pink-950',
+      to: stk ? `/products?category=${stk._id}` : '/products'
+    },
+    {
+      name: 'Đồ chơi',
+      desc: 'Lego, Rubik trí tuệ',
+      bgImage: doChoiBg,
+      gradient: 'bg-indigo-50/80 border-indigo-100 hover:border-indigo-300 text-indigo-950',
+      to: doChoi ? `/products?category=${doChoi._id}` : '/products'
+    },
+    {
+      name: 'Combo ưu đãi',
+      desc: 'Trọn bộ học tập giá sốc',
+      bgImage: comboBg,
+      gradient: 'bg-emerald-50/80 border-teal-100 hover:border-teal-300 text-emerald-950',
+      to: combo ? `/products?category=${combo._id}` : '/products'
+    }
+  ];
+});
+
 const bestSelling = ref<Product[]>([])
 const discounted = ref<Product[]>([])
 const newProducts = ref<Product[]>([])
@@ -1089,5 +1207,13 @@ function addToCart(product: Product) {
 
 .animate-pulse-soft {
   animation: pulse-soft 3s ease-in-out infinite;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 </style>

@@ -77,30 +77,27 @@
             >
               <button
                 type="button"
-                class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-full px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors cursor-pointer"
+                class="flex items-center gap-1.5 bg-[#dc2626] hover:bg-[#b91c1c] rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors cursor-pointer"
               >
-                <!-- Grid icon -->
+                <!-- Menu icon -->
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke-width="2"
                   stroke="currentColor"
-                  class="w-5 h-5 text-slate-600"
+                  class="w-5 h-5 text-white"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"
-                  />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                 </svg>
+                <span>Danh mục</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke-width="2.5"
                   stroke="currentColor"
-                  class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
+                  class="w-3.5 h-3.5 text-white/90 transition-transform duration-200"
                   :class="{ 'rotate-180': showMenu }"
                 >
                   <path
@@ -750,7 +747,7 @@
               />
             </svg>
             <span class="text-xs font-black uppercase tracking-wider"
-              >Bản đồ cửa hàng</span
+              >555555555``</span
             >
           </div>
 
@@ -759,7 +756,7 @@
             class="relative w-full h-40 rounded-2xl overflow-hidden border border-slate-800 shadow-inner bg-slate-950 group-hover:border-[#dc2626]/30 transition-colors duration-300"
           >
             <iframe
-              src="https://maps.google.com/maps?q=20.538095,106.1298353&t=&z=18&ie=UTF8&iwloc=&output=embed"
+              src="https://maps.google.com/maps?q=20.5381011,106.1298122&t=&z=18&ie=UTF8&iwloc=&output=embed"
               class="w-full h-full border-0 filter invert-[90%] hue-rotate-[180deg] brightness-[95%] contrast-[90%]"
               allowfullscreen
               loading="lazy"
@@ -814,7 +811,7 @@
             </div>
 
             <a
-              href="https://maps.app.goo.gl/ZdGH8DkJoUhHbAudA"
+              href="https://maps.app.goo.gl/WimhqeY99KTQwWD2A"
               target="_blank"
               class="bg-[#dc2626]/10 border border-[#dc2626]/30 text-red-500 hover:bg-[#dc2626] hover:text-white font-extrabold text-[11px] px-4 py-2 rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0 w-full sm:w-auto hover:shadow-lg hover:shadow-red-600/20 hover:-translate-y-0.5 active:translate-y-0"
             >
