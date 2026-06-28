@@ -140,24 +140,24 @@
               <span class="text-xl">🚚</span>
               <span class="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Miễn phí vận chuyển</span>
             </div>
-            <span class="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Đơn từ 50K</span>
+            <span class="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Đơn từ 299K</span>
           </div>
           <div class="space-y-2">
             <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
               <div 
                 class="h-full bg-red-600 rounded-full transition-all duration-500" 
-                :style="{ width: `${Math.min(100, (cartStore.subtotal / 50000) * 100)}%` }"
+                :style="{ width: `${Math.min(100, (cartStore.subtotal / 299000) * 100)}%` }"
               ></div>
             </div>
             <p class="text-xs font-bold text-slate-500">
-              <template v-if="cartStore.subtotal >= 50000">
+              <template v-if="cartStore.subtotal >= 299000">
                 🎉 Đơn hàng của bạn đã được <span class="text-green-600 font-extrabold">Miễn phí vận chuyển</span>!
               </template>
               <template v-else-if="cartStore.subtotal > 0">
-                Mua thêm <span class="text-red-600 font-extrabold">{{ formatCurrency(50000 - cartStore.subtotal) }}</span> để freeship.
+                Mua thêm <span class="text-red-600 font-extrabold">{{ formatCurrency(299000 - cartStore.subtotal) }}</span> để freeship.
               </template>
               <template v-else>
-                Đơn hàng từ 50.000đ sẽ được miễn phí vận chuyển.
+                Đơn hàng từ 299.000đ sẽ được miễn phí vận chuyển.
               </template>
             </p>
           </div>

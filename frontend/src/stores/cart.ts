@@ -24,7 +24,7 @@ export const useCartStore = defineStore('cart', () => {
 
   const shippingFee = computed(() => {
     if (subtotal.value === 0) return 0
-    return subtotal.value >= 50000 ? 0 : 30000
+    return subtotal.value >= 299000 ? 0 : 30000
   })
 
   const total = computed(() => {
