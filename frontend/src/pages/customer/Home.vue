@@ -3,7 +3,7 @@
     <!-- Category Navigation Bar -->
     <div class="bg-white border-b border-slate-100 hidden md:block">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center gap-1 py-2.5 overflow-x-auto scrollbar-none">
+        <div class="flex items-center justify-center gap-2 lg:gap-6 py-2.5 overflow-x-auto scrollbar-none">
           <router-link
             v-for="item in navItems"
             :key="item.name"
@@ -15,7 +15,7 @@
           </router-link>
           <router-link
             to="/products?discounted=true"
-            class="flex items-center gap-1.5 text-xs font-extrabold text-white bg-[#dc2626] hover:bg-[#b91c1c] px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0 ml-auto"
+            class="flex items-center gap-1.5 text-xs font-extrabold text-white bg-[#dc2626] hover:bg-[#b91c1c] px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0"
           >
             % Ưu đãi hot
           </router-link>
@@ -342,30 +342,30 @@
         </div>
 
         <!-- Cards Container -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-6">
           <router-link
             v-for="cat in featuredCategoriesList"
             :key="cat.name"
             :to="cat.to"
             :class="['relative overflow-hidden rounded-[18px] p-5 border flex items-center justify-between group transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer min-h-[100px]', cat.gradient]"
           >
+            <!-- Card Background Image with hover zoom effect -->
+            <div 
+              class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+              :style="{ backgroundImage: `url(${cat.bgImage})` }"
+            ></div>
+            
+            <!-- Soft gradient overlay to ensure text contrast/readability on the left -->
+            <div class="absolute inset-0 bg-gradient-to-r from-white/60 via-white/30 to-transparent pointer-events-none"></div>
+
             <!-- Text on the left -->
-            <div class="space-y-1 text-left relative z-10 max-w-[60%]">
-              <h3 class="text-sm font-black tracking-tight leading-tight text-[#0f172a] group-hover:text-red-600 transition-colors">
+            <div class="space-y-1 text-left relative z-10 max-w-[65%]">
+              <h3 class="text-sm font-black tracking-tight leading-tight text-[#0f172a] group-hover:text-[#dc2626] transition-colors">
                 {{ cat.name }}
               </h3>
-              <p class="text-[10px] text-slate-400 font-medium leading-none mt-1">
+              <p class="text-[10px] text-slate-600 font-extrabold leading-none mt-1">
                 {{ cat.desc }}
               </p>
-            </div>
-
-            <!-- Illustration on the right -->
-            <div class="w-16 h-16 rounded-xl overflow-hidden shadow-xs border border-white/50 relative shrink-0">
-              <img
-                :src="cat.bgImage"
-                class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                alt=""
-              />
             </div>
           </router-link>
         </div>
@@ -828,41 +828,56 @@ const featuredCategoriesList = computed(() => {
   const doChoi = parentCategories.value.find(c => c.slug === 'do-choi');
   const combo = parentCategories.value.find(c => c.slug === 'combo');
   const luuNiem = parentCategories.value.find(c => c.slug === 'do-luu-niem');
+  const truyenTranh = parentCategories.value.find(c => c.slug === 'truyen-tranh');
 
   return [
     {
       name: 'Sách giáo khoa',
       desc: 'Đầy đủ cấp 1, 2, 3',
       bgImage: sgkBg,
-      gradient: 'bg-amber-50/80 border-orange-100 hover:border-orange-300 text-orange-950',
+      gradient: 'bg-white border-orange-100 hover:border-orange-300 text-orange-950',
       to: sgk ? `/products?category=${sgk._id}` : '/products'
-    },
-    {
-      name: 'Văn phòng phẩm',
-      desc: 'Bút, sổ tay, file hồ sơ',
-      bgImage: doLuuNiemBg,
-      gradient: 'bg-sky-50/80 border-blue-100 hover:border-blue-300 text-blue-950',
-      to: luuNiem ? `/products?category=${luuNiem._id}&search=bút` : '/products'
     },
     {
       name: 'Sách tham khảo',
       desc: 'Ôn luyện thi nâng cao',
       bgImage: sachThamKhaoBg,
-      gradient: 'bg-rose-50/80 border-pink-100 hover:border-pink-300 text-pink-950',
+      gradient: 'bg-white border-pink-100 hover:border-pink-300 text-pink-950',
       to: stk ? `/products?category=${stk._id}` : '/products'
+    },
+    {
+      name: 'Truyện tranh',
+      desc: 'Manga, anime nổi bật',
+      bgImage: truyenTranhBg,
+      gradient: 'bg-white border-rose-100 hover:border-rose-300 text-rose-950',
+      to: truyenTranh ? `/products?category=${truyenTranh._id}` : '/products'
+    },
+    {
+      name: 'Văn phòng phẩm',
+      desc: 'Bút, sổ tay, file hồ sơ',
+      bgImage: doLuuNiemBg,
+      gradient: 'bg-white border-blue-100 hover:border-blue-300 text-blue-950',
+      to: luuNiem ? `/products?category=${luuNiem._id}&search=bút` : '/products'
     },
     {
       name: 'Đồ chơi',
       desc: 'Lego, Rubik trí tuệ',
       bgImage: doChoiBg,
-      gradient: 'bg-indigo-50/80 border-indigo-100 hover:border-indigo-300 text-indigo-950',
+      gradient: 'bg-white border-indigo-100 hover:border-indigo-300 text-indigo-950',
       to: doChoi ? `/products?category=${doChoi._id}` : '/products'
+    },
+    {
+      name: 'Đồ lưu niệm',
+      desc: 'Quà tặng, phụ kiện xinh xắn',
+      bgImage: doLuuNiemBg,
+      gradient: 'bg-white border-purple-100 hover:border-purple-300 text-purple-950',
+      to: luuNiem ? `/products?category=${luuNiem._id}` : '/products'
     },
     {
       name: 'Combo ưu đãi',
       desc: 'Trọn bộ học tập giá sốc',
       bgImage: comboBg,
-      gradient: 'bg-emerald-50/80 border-teal-100 hover:border-teal-300 text-emerald-950',
+      gradient: 'bg-white border-teal-100 hover:border-teal-300 text-emerald-950',
       to: combo ? `/products?category=${combo._id}` : '/products'
     }
   ];

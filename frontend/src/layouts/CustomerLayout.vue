@@ -747,7 +747,7 @@
               />
             </svg>
             <span class="text-xs font-black uppercase tracking-wider"
-              >555555555``</span
+              >Liên hệ với chúng tôi</span
             >
           </div>
 
