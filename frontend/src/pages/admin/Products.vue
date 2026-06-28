@@ -45,6 +45,16 @@
           </option>
         </select>
       </div>
+      <div class="w-full md:w-48">
+        <select
+          v-model="dealFilter"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-600 transition-all"
+          @change="fetchProducts"
+        >
+          <option value="">Tất cả sản phẩm</option>
+          <option value="discounted">Chỉ Deal Sốc Giờ Vàng</option>
+        </select>
+      </div>
     </div>
 
     <!-- Products Table -->
@@ -92,7 +102,12 @@
                   <span v-else>{{ prod.name.charAt(0).toUpperCase() }}</span>
                 </div>
                 <div class="min-w-0">
-                  <p class="font-extrabold truncate max-w-[200px] text-slate-800 leading-tight">{{ prod.name }}</p>
+                  <div class="flex items-center gap-1.5">
+                    <p class="font-extrabold truncate max-w-[200px] text-slate-800 leading-tight">{{ prod.name }}</p>
+                    <span v-if="prod.discountPrice > 0" class="bg-red-50 text-red-600 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0" title="Sản phẩm đang chạy Deal Sốc Giờ Vàng">
+                      🔥 DEAL SỐC
+                    </span>
+                  </div>
                   <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
                     {{ (prod.category && typeof prod.category === 'object') ? prod.category.name : 'Khác' }}
                   </p>
@@ -179,6 +194,7 @@ const loading = ref(true)
 
 const searchQuery = ref('')
 const selectedCategory = ref('')
+const dealFilter = ref('')
 const currentPage = ref(1)
 const totalPages = ref(1)
 const limit = 10
@@ -202,6 +218,7 @@ async function fetchProducts() {
       limit,
       q: searchQuery.value || undefined,
       category: selectedCategory.value || undefined,
+      discounted: dealFilter.value === 'discounted' ? true : undefined,
     })
     products.value = res.data.data
     totalPages.value = res.data.totalPages || 1

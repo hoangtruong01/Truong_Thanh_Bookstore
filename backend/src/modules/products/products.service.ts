@@ -93,8 +93,13 @@ export class ProductsService {
       status,
       sort,
       q,
+      discounted,
     } = query;
     const filter: any = { isDeleted: false };
+
+    if (discounted === true || discounted === 'true') {
+      filter.discountPrice = { $gt: 0 };
+    }
 
     if (category) {
       try {

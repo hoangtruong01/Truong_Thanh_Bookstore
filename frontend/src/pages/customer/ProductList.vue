@@ -111,6 +111,24 @@
 
       <!-- Products Area -->
       <div class="flex-grow space-y-6">
+        <!-- Discounted Banner -->
+        <div v-if="isDiscounted" class="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl p-5 text-white shadow-xs relative overflow-hidden flex items-center justify-between">
+          <div class="space-y-1 z-10">
+            <h2 class="text-lg font-black uppercase tracking-wide flex items-center gap-2">
+              🔥 Deal Sốc Giờ Vàng
+            </h2>
+            <p class="text-xs text-red-50/95 font-bold">Danh sách các sản phẩm đang được giảm giá cực ưu đãi!</p>
+          </div>
+          <button 
+            @click="clearDiscountFilter" 
+            class="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer z-10 uppercase tracking-wider"
+          >
+            Xem tất cả
+          </button>
+          <!-- background blob decoration -->
+          <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
+        </div>
+
         <!-- Sort and Stats -->
         <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div class="text-sm text-slate-500 font-medium">
@@ -217,6 +235,7 @@ const selectedSubOption = ref('')
 const minPrice = ref<number | null>(null)
 const maxPrice = ref<number | null>(null)
 const sortBy = ref('newest')
+const isDiscounted = ref(route.query.discounted === 'true')
 
 const activeSubOptions = computed(() => {
   const cat = categories.value.find(c => c._id === selectedCategory.value)
@@ -244,6 +263,7 @@ onMounted(() => {
 watch(() => route.query, (newQuery) => {
   selectedCategory.value = newQuery.category as string || ''
   searchQuery.value = newQuery.q as string || ''
+  isDiscounted.value = newQuery.discounted === 'true'
   selectedSubOption.value = ''
   fetchProducts()
 })
@@ -264,6 +284,7 @@ async function fetchProducts() {
       minPrice: minPrice.value || undefined,
       maxPrice: maxPrice.value || undefined,
       sort: sortBy.value,
+      discounted: isDiscounted.value ? true : undefined,
     }
     const res: any = await productService.getAll(params)
     products.value = res.data.data
@@ -274,6 +295,17 @@ async function fetchProducts() {
   } finally {
     loading.value = false
   }
+}
+
+function clearDiscountFilter() {
+  isDiscounted.value = false
+  router.push({
+    path: '/products',
+    query: {
+      ...route.query,
+      discounted: undefined
+    }
+  })
 }
 
 function selectCategory(catId: string) {

@@ -236,7 +236,7 @@
       </div>
 
       <!-- Pricing & Stock -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 border-t border-slate-100 pt-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
         <div>
           <label class="text-xs font-bold text-slate-700">Giá bán lẻ (VND) *</label>
           <input
@@ -244,17 +244,6 @@
             @input="handlePriceInput"
             type="text"
             required
-            placeholder="0"
-            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
-          />
-        </div>
-
-        <div>
-          <label class="text-xs font-bold text-slate-700">Giá đã giảm (Tùy chọn)</label>
-          <input
-            :value="formatNumberWithDots(form.discountPrice)"
-            @input="handleDiscountPriceInput"
-            type="text"
             placeholder="0"
             class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
           />
@@ -270,6 +259,56 @@
             placeholder="0"
             class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
           />
+        </div>
+      </div>
+
+      <!-- Deal Sốc Giờ Vàng Settings -->
+      <div class="border-t border-slate-100 pt-6 space-y-4">
+        <div class="flex items-center justify-between bg-orange-50/50 border border-orange-100 rounded-2xl p-4">
+          <div class="space-y-0.5 text-left">
+            <span class="inline-flex items-center gap-1 bg-red-100 text-red-650 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+              🔥 HOT DEAL
+            </span>
+            <h4 class="text-xs font-extrabold text-slate-800">Cấu hình Deal Sốc Giờ Vàng</h4>
+            <p class="text-[10px] text-slate-400 font-medium">Đưa sản phẩm này vào danh mục khuyến mãi đặc biệt trên trang chủ.</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer select-none">
+            <input 
+              type="checkbox" 
+              v-model="isHotDeal" 
+              @change="handleHotDealToggle"
+              class="sr-only peer"
+            />
+            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+          </label>
+        </div>
+
+        <div v-if="isHotDeal" class="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 border border-slate-200 rounded-2xl p-5 animate-fadeIn">
+          <div>
+            <label class="text-xs font-bold text-slate-700">Giá đã giảm (VND) *</label>
+            <input
+              :value="formatNumberWithDots(form.discountPrice)"
+              @input="handleDiscountPriceInput"
+              type="text"
+              required
+              placeholder="Nhập giá khuyến mãi..."
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 font-semibold text-red-650"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700 block">Tính nhanh giá giảm theo %</label>
+            <div class="flex gap-2 mt-1">
+              <button 
+                v-for="percent in [10, 15, 20, 30, 50]" 
+                :key="percent"
+                type="button"
+                @click="applyPercentageDiscount(percent)"
+                class="flex-1 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-300 text-slate-750 hover:text-red-600 font-extrabold py-2 rounded-xl text-xs transition-all cursor-pointer shadow-2xs"
+              >
+                -{{ percent }}%
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -440,8 +479,23 @@ const route = useRoute()
 const toast = useToast()
 
 const isEdit = ref(false)
+const isHotDeal = ref(false)
 const submitting = ref(false)
 const categories = ref<Category[]>([])
+
+function handleHotDealToggle() {
+  if (!isHotDeal.value) {
+    form.discountPrice = 0
+  } else if (form.price > 0 && form.discountPrice === 0) {
+    applyPercentageDiscount(10)
+  }
+}
+
+function applyPercentageDiscount(percent: number) {
+  if (form.price > 0) {
+    form.discountPrice = Math.round(form.price * (1 - percent / 100))
+  }
+}
 
 // Image upload/URL states
 const imageTab = ref<'url' | 'upload'>('url')
@@ -638,6 +692,7 @@ onMounted(() => {
         form.category = typeof data.category === 'object' ? data.category._id : data.category
         form.price = data.price
         form.discountPrice = data.discountPrice || 0
+        isHotDeal.value = (data.discountPrice || 0) > 0
         form.stock = data.stock
         form.description = data.description || ''
         form.status = data.status
@@ -658,6 +713,7 @@ async function handleSubmit() {
     const finalImages = imagesList.value.filter(url => url.trim() !== '')
     const payload = {
       ...form,
+      discountPrice: isHotDeal.value ? form.discountPrice : 0,
       images: finalImages.length > 0 ? finalImages : ['https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400'],
     }
 
