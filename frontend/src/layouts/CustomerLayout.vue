@@ -421,26 +421,46 @@
 
           <!-- Utility Icons -->
           <div class="flex items-center gap-3 sm:gap-6">
-            <!-- Notifications - BUG-08: add tooltip -->
-            <button
-              class="relative text-slate-700 hover:text-[#dc2626] transition-colors cursor-pointer hidden md:block"
-              title="Thông báo (Đang phát triển)"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="2"
-                stroke="currentColor"
-                class="w-6 h-6"
+            <!-- Notifications -->
+            <div class="relative hidden md:block">
+              <button
+                @click="showCustNotif = !showCustNotif"
+                class="relative text-slate-700 hover:text-[#dc2626] transition-colors cursor-pointer"
+                title="Thông báo"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
-                />
-              </svg>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="2"
+                  stroke="currentColor"
+                  class="w-6 h-6"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
+                  />
+                </svg>
+                <span class="absolute top-0 right-0 w-2 h-2 bg-red-600 rounded-full border border-white"></span>
+              </button>
+
+              <div 
+                v-if="showCustNotif" 
+                class="absolute right-0 mt-3 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4"
+              >
+                <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2 mb-2">Thông báo của bạn</h4>
+                <div class="space-y-3">
+                  <div class="flex gap-2.5 p-2 rounded-xl bg-red-50/30 border border-red-100/50">
+                    <span class="text-sm mt-0.5">🎉</span>
+                    <div>
+                      <p class="text-xs font-bold text-slate-800">Chào mừng bạn!</p>
+                      <p class="text-[10px] text-slate-500 mt-0.5 leading-relaxed">Chào mừng bạn đến với Trường Thành Bookstore. Chúc bạn mua sắm vui vẻ!</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <!-- Cart -->
             <router-link
@@ -1246,12 +1266,14 @@ function handleNewsletter() {
 }
 
 const mobileMenuOpen = ref(false);
+const showCustNotif = ref(false);
 
-// Close mobile menu on route changes
+// Close menu and notifications on route changes
 watch(
   () => route.fullPath,
   () => {
     mobileMenuOpen.value = false;
+    showCustNotif.value = false;
   },
 );
 

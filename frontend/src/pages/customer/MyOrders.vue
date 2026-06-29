@@ -97,7 +97,7 @@
             <p>
               <strong>Thanh toán:</strong>
               <span class="font-bold text-slate-700 ml-1">
-                {{ order.paymentMethod === 'COD' ? 'COD' : 'Chuyển khoản' }}
+                {{ order.paymentMethod === 'COD' ? 'COD' : (order.paymentMethod === 'EWALLET' ? 'Ví điện tử' : 'Chuyển khoản') }}
               </span>
               <span :class="['ml-2 text-[10px] font-black', order.paymentStatus === 'PAID' ? 'text-green-600' : 'text-amber-600']">
                 ({{ order.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán' }})

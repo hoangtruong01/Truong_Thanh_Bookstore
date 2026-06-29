@@ -97,6 +97,7 @@ export interface Promotion {
   discountType: 'PERCENT' | 'FIXED'
   discountValue: number
   minOrderValue: number
+  maxDiscount?: number
   startDate: string
   endDate: string
   usageLimit: number

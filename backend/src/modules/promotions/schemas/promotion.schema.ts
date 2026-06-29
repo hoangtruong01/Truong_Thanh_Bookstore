@@ -24,6 +24,9 @@ export class Promotion {
   @Prop({ default: 0 })
   minOrderValue: number;
 
+  @Prop()
+  maxDiscount: number;
+
   @Prop({ required: true })
   startDate: Date;
 

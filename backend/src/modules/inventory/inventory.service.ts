@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -16,6 +16,8 @@ import { InventoryStatus, InventoryTransactionType } from '../../common/enums';
 
 @Injectable()
 export class InventoryService {
+  private readonly logger = new Logger(InventoryService.name);
+
   constructor(
     @InjectModel(Inventory.name)
     private inventoryModel: Model<InventoryDocument>,
@@ -65,7 +67,7 @@ export class InventoryService {
         await this.inventoryModel.insertMany(newInventories);
       }
     } catch (err) {
-      console.error('Failed to sync missing product inventory records:', err);
+      this.logger.error('Failed to sync missing product inventory records:', err);
     }
     const items = await this.inventoryModel
       .find()

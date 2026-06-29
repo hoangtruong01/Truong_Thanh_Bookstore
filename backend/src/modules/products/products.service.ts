@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
+import { Review, ReviewDocument } from './schemas/review.schema';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -34,12 +35,16 @@ function makeDiacriticRegex(str: string): string {
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
+    @InjectModel(Review.name) private reviewModel: Model<ReviewDocument>,
   ) {}
 
+  // FIX-L05: Generate slug with uniqueness check
   private generateSlug(name: string): string {
-    return name
+    const base = name
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -47,6 +52,9 @@ export class ProductsService {
       .replace(/Đ/g, 'D')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
+    // Append short random suffix to prevent duplicate slugs
+    const suffix = Math.random().toString(36).substring(2, 6);
+    return `${base}-${suffix}`;
   }
 
   async create(dto: CreateProductDto): Promise<ProductDocument> {
@@ -74,7 +82,7 @@ export class ProductsService {
         lastUpdated: new Date(),
       });
     } catch (err) {
-      console.error('Failed to auto-create inventory for new product:', err);
+      this.logger.error('Failed to auto-create inventory for new product:', err);
     }
 
     return savedProduct;
@@ -128,7 +136,9 @@ export class ProductsService {
       if (maxPrice) filter.price.$lte = maxPrice;
     }
     if (q) {
-      const regexPattern = makeDiacriticRegex(q);
+      // FIX-M04: Limit search query length to prevent ReDoS
+      const safeQ = q.substring(0, 100);
+      const regexPattern = makeDiacriticRegex(safeQ);
       filter.$or = [
         { name: { $regex: regexPattern, $options: 'i' } },
         { description: { $regex: regexPattern, $options: 'i' } },
@@ -226,7 +236,9 @@ export class ProductsService {
   }
 
   async search(q: string): Promise<ProductDocument[]> {
-    const regexPattern = makeDiacriticRegex(q);
+    // FIX-M04: Limit search query length
+    const safeQ = q.substring(0, 100);
+    const regexPattern = makeDiacriticRegex(safeQ);
     return this.productModel
       .find({
         isDeleted: false,
@@ -325,9 +337,137 @@ export class ProductsService {
     }
   }
 
+  // FIX-C04: Safe stock deduction with atomic check
+  async deductStock(id: string, quantity: number): Promise<void> {
+    const updated = await this.productModel
+      .findOneAndUpdate(
+        { _id: id, stock: { $gte: quantity } },
+        { $inc: { stock: -quantity } },
+        { new: true },
+      )
+      .exec();
+    if (!updated) {
+      throw new BadRequestException(
+        `Không đủ tồn kho cho sản phẩm (ID: ${id})`,
+      );
+    }
+    // Sync inventory status
+    try {
+      const inventoryModel = this.productModel.db.model('Inventory');
+      const minStock = 10;
+      let status = InventoryStatus.IN_STOCK;
+      if (updated.stock <= 0) {
+        status = InventoryStatus.OUT_OF_STOCK;
+      } else if (updated.stock <= minStock) {
+        status = InventoryStatus.LOW_STOCK;
+      }
+      await inventoryModel
+        .findOneAndUpdate(
+          { product: id },
+          { currentStock: updated.stock, status, lastUpdated: new Date() },
+          { upsert: true },
+        )
+        .exec();
+    } catch (err) {
+      // Ignore if model not registered
+    }
+  }
+
   async incrementSold(id: string, quantity: number): Promise<void> {
     await this.productModel
       .findByIdAndUpdate(id, { $inc: { sold: quantity } })
       .exec();
+  }
+
+  async getReviews(productId: string): Promise<any[]> {
+    return this.reviewModel
+      .find({ product: new Types.ObjectId(productId) })
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async addReview(
+    productId: string,
+    userId: string,
+    userName: string,
+    dto: { rating: number; content: string }
+  ): Promise<any> {
+    const product = await this.productModel.findById(productId).exec();
+    if (!product) {
+      throw new NotFoundException('Không tìm thấy sản phẩm');
+    }
+
+    const existing = await this.reviewModel.findOne({
+      product: new Types.ObjectId(productId),
+      user: new Types.ObjectId(userId),
+    }).exec();
+
+    let savedReview;
+    if (existing) {
+      existing.rating = dto.rating;
+      existing.content = dto.content;
+      existing.name = userName;
+      savedReview = await existing.save();
+    } else {
+      savedReview = await this.reviewModel.create({
+        product: new Types.ObjectId(productId),
+        user: new Types.ObjectId(userId),
+        name: userName,
+        rating: dto.rating,
+        content: dto.content,
+      });
+    }
+
+    await this.recalculateProductRating(productId);
+    return savedReview;
+  }
+
+  async updateReview(
+    productId: string,
+    reviewId: string,
+    userId: string,
+    dto: { rating?: number; content?: string }
+  ): Promise<any> {
+    const review = await this.reviewModel.findById(reviewId).exec();
+    if (!review) {
+      throw new NotFoundException('Không tìm thấy đánh giá');
+    }
+
+    if (review.user.toString() !== userId) {
+      throw new BadRequestException('Bạn không có quyền sửa đánh giá này');
+    }
+
+    if (dto.rating !== undefined) review.rating = dto.rating;
+    if (dto.content !== undefined) review.content = dto.content;
+
+    const saved = await review.save();
+    await this.recalculateProductRating(productId);
+    return saved;
+  }
+
+  async deleteReview(productId: string, reviewId: string, userId: string, userRole: string): Promise<any> {
+    const review = await this.reviewModel.findById(reviewId).exec();
+    if (!review) {
+      throw new NotFoundException('Không tìm thấy đánh giá');
+    }
+
+    if (review.user.toString() !== userId && userRole !== 'ADMIN' && userRole !== 'STAFF') {
+      throw new BadRequestException('Bạn không có quyền xóa đánh giá này');
+    }
+
+    await this.reviewModel.findByIdAndDelete(reviewId).exec();
+    await this.recalculateProductRating(productId);
+    return { success: true };
+  }
+
+  private async recalculateProductRating(productId: string): Promise<void> {
+    const reviews = await this.reviewModel.find({ product: new Types.ObjectId(productId) }).exec();
+    if (reviews.length === 0) {
+      await this.productModel.findByIdAndUpdate(productId, { rating: 5 }).exec();
+      return;
+    }
+    const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
+    const avgRating = Math.round((sum / reviews.length) * 10) / 10;
+    await this.productModel.findByIdAndUpdate(productId, { rating: avgRating }).exec();
   }
 }

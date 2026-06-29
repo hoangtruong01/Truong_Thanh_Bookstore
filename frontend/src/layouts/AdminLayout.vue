@@ -1,7 +1,13 @@
 <template>
-  <div class="min-h-screen flex bg-slate-50 font-sans">
+  <div class="min-h-screen flex bg-slate-50 font-sans relative">
+    <!-- Backdrop for mobile -->
+    <div v-if="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 md:hidden"></div>
+
     <!-- Sidebar (Matches Screenshot: light background) -->
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col shadow-xs flex-shrink-0">
+    <aside 
+      class="fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex flex-col shadow-xs flex-shrink-0 z-40 transition-transform duration-300 md:translate-x-0 md:relative"
+      :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full']"
+    >
       <!-- Sidebar Header / Logo -->
       <div class="h-20 flex items-center px-6 border-b border-slate-200 gap-2.5 bg-white">
         <!-- Emblem -->
@@ -48,7 +54,16 @@
     <!-- Main Workspace -->
     <div class="flex-1 flex flex-col overflow-hidden">
       <!-- Top Bar (Matches Screenshot) -->
-      <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-end px-8 flex-shrink-0">
+      <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between md:justify-end px-8 flex-shrink-0">
+        <!-- Mobile hamburger menu button -->
+        <button 
+          @click="sidebarOpen = !sidebarOpen" 
+          class="md:hidden text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg hover:bg-slate-100 cursor-pointer"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
 
         <!-- Right User details -->
         <div class="flex items-center gap-5">
@@ -159,7 +174,7 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { reportService } from '@/services/report.service'
 import ProfileModal from '@/components/ProfileModal.vue'
 
@@ -168,6 +183,11 @@ const router = useRouter()
 const route = useRoute()
 
 const showProfile = ref(false)
+const sidebarOpen = ref(false)
+
+watch(() => route.path, () => {
+  sidebarOpen.value = false
+})
 
 const adminName = computed(() => authStore.user?.fullName || 'Admin')
 const adminInitials = computed(() => {

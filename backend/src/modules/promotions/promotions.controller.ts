@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -14,6 +15,7 @@ import { PromotionsService } from './promotions.service';
 import { CreatePromotionDto, ApplyPromotionDto } from './dto/promotion.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt.guard';
 
 @ApiTags('promotions')
 @Controller('promotions')
@@ -21,9 +23,11 @@ export class PromotionsController {
   constructor(private promotionsService: PromotionsService) {}
 
   @Post('apply')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Apply a promotion code' })
-  apply(@Body() dto: ApplyPromotionDto) {
-    return this.promotionsService.apply(dto);
+  apply(@Body() dto: ApplyPromotionDto, @Request() req: any) {
+    const userId = req.user ? req.user._id : undefined;
+    return this.promotionsService.apply(dto, userId);
   }
 
   @Get('active')

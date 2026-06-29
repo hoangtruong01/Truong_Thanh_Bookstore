@@ -108,12 +108,19 @@ const loading = ref(true)
 const startDate = ref('')
 const endDate = ref('')
 
+function getLocalDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 onMounted(() => {
   // Set default to last 30 days
   const end = new Date()
   const start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-  startDate.value = start.toISOString().substring(0, 10)
-  endDate.value = end.toISOString().substring(0, 10)
+  startDate.value = getLocalDateString(start)
+  endDate.value = getLocalDateString(end)
   
   fetchRevenueReport()
 })

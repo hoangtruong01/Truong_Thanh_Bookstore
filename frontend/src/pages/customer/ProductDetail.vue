@@ -485,18 +485,18 @@
         <div class="space-y-6 divide-y divide-slate-100">
           <div 
             v-for="(rev, idx) in reviews" 
-            :key="rev.id || idx"
+            :key="rev._id || rev.id || idx"
             class="pt-6 first:pt-0 space-y-3"
           >
             <!-- Regular Mode -->
-            <div v-if="editingReviewId !== rev.id" class="space-y-2">
+            <div v-if="editingReviewId !== (rev._id || rev.id)" class="space-y-2">
               <div class="flex items-start justify-between">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-sm">
-                    {{ rev.name.charAt(0).toUpperCase() }}
+                    {{ rev.name ? rev.name.charAt(0).toUpperCase() : 'U' }}
                   </div>
                   <div>
-                    <h4 class="text-sm font-extrabold text-slate-800">{{ rev.name }}</h4>
+                    <h4 class="text-sm font-extrabold text-slate-800">{{ rev.name || 'Người dùng' }}</h4>
                     <div class="flex gap-0.5 mt-0.5">
                       <svg 
                         v-for="star in 5" 
@@ -513,7 +513,7 @@
                   </div>
                 </div>
                 <div class="flex items-center gap-3">
-                  <span class="text-xs text-slate-400">{{ rev.createdAt }}</span>
+                  <span class="text-xs text-slate-400">{{ formatDate(rev.createdAt) }}</span>
                   <div v-if="canModifyReview(rev)" class="flex items-center gap-1.5">
                     <button 
                       @click="startEditReview(rev)"
@@ -522,7 +522,7 @@
                       Sửa
                     </button>
                     <button 
-                      @click="deleteReview(rev.id)"
+                      @click="deleteReview(rev._id || rev.id)"
                       class="text-xs font-bold text-red-600 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100/80 px-2 py-1 rounded-md cursor-pointer focus:outline-none"
                     >
                       Xóa
@@ -847,7 +847,9 @@ function handleImageError(imgUrl: string) {
 }
 
 interface Review {
-  id: string
+  _id?: string
+  id?: string
+  user?: string
   userId?: string
   name: string
   rating: number
@@ -873,15 +875,23 @@ const editReviewName = ref('')
 const editReviewRating = ref(5)
 const editReviewContent = ref('')
 
+function formatDate(dateStr: any): string {
+  if (!dateStr) return ''
+  // Support both local format and ISO string
+  if (typeof dateStr === 'string' && dateStr.includes('/')) return dateStr
+  return new Date(dateStr).toLocaleDateString('vi-VN')
+}
+
 function canModifyReview(review: Review): boolean {
   if (authStore.isAdmin) return true
   
   const currentUserId = authStore.user?._id
-  return !!currentUserId && review.userId === currentUserId
+  const reviewUserId = review.user || review.userId
+  return !!currentUserId && reviewUserId === currentUserId
 }
 
 function startEditReview(review: Review) {
-  editingReviewId.value = review.id
+  editingReviewId.value = review._id || review.id || null
   editReviewName.value = review.name
   editReviewRating.value = review.rating
   editReviewContent.value = review.content
@@ -894,62 +904,47 @@ function cancelEditReview() {
   editReviewContent.value = ''
 }
 
-function saveEditReview() {
-  if (!editReviewName.value.trim()) {
-    toast.warning('Vui lòng nhập tên của bạn')
-    return
-  }
+async function saveEditReview() {
   if (!editReviewContent.value.trim()) {
     toast.warning('Vui lòng nhập nội dung đánh giá')
     return
   }
 
   const prodId = route.params.id as string
-  const review = reviews.value.find(r => r.id === editingReviewId.value)
-  if (review) {
-    review.name = editReviewName.value
-    review.rating = editReviewRating.value
-    review.content = editReviewContent.value
-    review.createdAt = new Date().toLocaleDateString('vi-VN')
-    localStorage.setItem(`reviews_${prodId}`, JSON.stringify(reviews.value))
+  try {
+    const res = await productService.updateReview(prodId, editingReviewId.value!, {
+      rating: editReviewRating.value,
+      content: editReviewContent.value
+    })
+    const index = reviews.value.findIndex(r => (r._id || r.id) === editingReviewId.value)
+    if (index !== -1) {
+      reviews.value[index] = res.data
+    }
     toast.success('Đã cập nhật đánh giá!')
+    cancelEditReview()
+  } catch (err) {
+    toast.error('Có lỗi xảy ra khi cập nhật đánh giá')
   }
-  cancelEditReview()
 }
 
-function deleteReview(reviewId: string) {
+async function deleteReview(reviewId: string) {
   const prodId = route.params.id as string
-  reviews.value = reviews.value.filter(r => r.id !== reviewId)
-  localStorage.setItem(`reviews_${prodId}`, JSON.stringify(reviews.value))
-  toast.success('Đã xóa đánh giá!')
+  try {
+    await productService.deleteReview(prodId, reviewId)
+    reviews.value = reviews.value.filter(r => (r._id || r.id) !== reviewId)
+    toast.success('Đã xóa đánh giá!')
+  } catch (err) {
+    toast.error('Có lỗi xảy ra khi xóa đánh giá')
+  }
 }
 
-function loadReviews() {
+async function loadReviews() {
   const prodId = route.params.id as string
-  const storedReviews = localStorage.getItem(`reviews_${prodId}`)
-  if (storedReviews) {
-    reviews.value = JSON.parse(storedReviews)
-  } else {
-    const productName = product.value ? product.value.name : 'sản phẩm'
-    reviews.value = [
-      {
-        id: 'mock_1',
-        userId: 'mock_system',
-        name: 'Nguyễn Văn A',
-        rating: 5,
-        content: `Tôi đã mua sản phẩm "${productName}" này ở Trường Thanh Bookstore, chất lượng hoàn thiện cực kỳ tốt, đóng gói cẩn thận và giao hàng siêu nhanh. Sẽ tiếp tục ủng hộ shop!`,
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN')
-      },
-      {
-        id: 'mock_2',
-        userId: 'mock_system',
-        name: 'Trần Thị B',
-        rating: 4,
-        content: `Sản phẩm "${productName}" nhận được đúng như mô tả của cửa hàng, đóng gói kỹ lượng và có tem nhãn chính hãng đầy đủ. Sử dụng rất ưng ý.`,
-        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN')
-      }
-    ]
-    localStorage.setItem(`reviews_${prodId}`, JSON.stringify(reviews.value))
+  try {
+    const res = await productService.getReviews(prodId)
+    reviews.value = res.data
+  } catch (err) {
+    console.error('Error loading reviews:', err)
   }
 }
 
@@ -978,13 +973,9 @@ const ratingStats = computed(() => {
   }
 })
 
-function submitReview() {
+async function submitReview() {
   if (!authStore.isAuthenticated) {
     toast.error('Vui lòng đăng nhập để đánh giá sản phẩm')
-    return
-  }
-  if (!newReviewName.value.trim()) {
-    toast.warning('Vui lòng nhập tên của bạn')
     return
   }
   if (!newReviewContent.value.trim()) {
@@ -993,26 +984,22 @@ function submitReview() {
   }
 
   const prodId = route.params.id as string
-  const currentUserId = authStore.user?._id
-
-  const review: Review = {
-    id: 'rev_' + Date.now(),
-    userId: currentUserId,
-    name: newReviewName.value,
-    rating: newReviewRating.value,
-    content: newReviewContent.value,
-    createdAt: new Date().toLocaleDateString('vi-VN')
+  try {
+    const res = await productService.addReview(prodId, {
+      rating: newReviewRating.value,
+      content: newReviewContent.value
+    })
+    reviews.value.unshift(res.data)
+    
+    newReviewName.value = ''
+    newReviewRating.value = 5
+    newReviewContent.value = ''
+    showReviewForm.value = false
+    
+    toast.success('Cảm ơn bạn đã đánh giá sản phẩm!')
+  } catch (err) {
+    toast.error('Có lỗi xảy ra khi gửi đánh giá')
   }
-
-  reviews.value.unshift(review)
-  localStorage.setItem(`reviews_${prodId}`, JSON.stringify(reviews.value))
-
-  newReviewName.value = ''
-  newReviewRating.value = 5
-  newReviewContent.value = ''
-  showReviewForm.value = false
-  
-  toast.success('Cảm ơn bạn đã đánh giá sản phẩm!')
 }
 
 async function loadProduct() {

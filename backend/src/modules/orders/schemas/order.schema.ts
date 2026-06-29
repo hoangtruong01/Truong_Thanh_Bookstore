@@ -75,6 +75,9 @@ export class Order {
   @Prop()
   customerEmail: string;
 
+  @Prop()
+  promotionCode: string;
+
   createdAt: Date;
   updatedAt: Date;
 }

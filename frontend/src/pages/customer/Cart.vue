@@ -102,9 +102,9 @@
               <!-- Price info -->
               <div class="flex items-baseline gap-2">
                 <span class="text-sm font-extrabold text-[#dc2626]">
-                  {{ formatCurrency(item.product.discountPrice || item.product.price) }}
+                  {{ formatCurrency(getEffectivePrice(item.product.price, item.product.discountPrice)) }}
                 </span>
-                <span v-if="item.product.discountPrice > 0" class="text-xs text-slate-400 line-through">
+                <span v-if="item.product.discountPrice != null && item.product.discountPrice > 0 && item.product.discountPrice < item.product.price" class="text-xs text-slate-400 line-through">
                   {{ formatCurrency(item.product.price) }}
                 </span>
               </div>
@@ -178,6 +178,7 @@
               v-model="couponCode"
               type="text"
               placeholder="Nhập mã..."
+              maxlength="30"
               class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white font-mono uppercase tracking-wider"
             />
             <button type="submit" class="bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer">
@@ -262,7 +263,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
-import { formatCurrency } from '@/utils/helpers'
+import { formatCurrency, getEffectivePrice } from '@/utils/helpers'
 import { promotionService } from '@/services/promotion.service'
 import type { Promotion } from '@/types'
 

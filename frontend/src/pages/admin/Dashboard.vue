@@ -236,7 +236,7 @@
                 <td class="py-3.5 text-slate-500">{{ new Date(order.createdAt).toLocaleDateString('vi-VN') }}</td>
                 <td class="py-3.5">
                   <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded">
-                    {{ order.paymentMethod === 'COD' ? 'COD' : 'Chuyển khoản' }}
+                    {{ order.paymentMethod === 'COD' ? 'COD' : (order.paymentMethod === 'EWALLET' ? 'Ví điện tử' : 'Chuyển khoản') }}
                   </span>
                   <span :class="['ml-1.5 text-[9px] font-bold', order.paymentStatus === 'PAID' ? 'text-green-600' : 'text-amber-600']">
                     {{ order.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán' }}

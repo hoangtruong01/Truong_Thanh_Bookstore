@@ -44,6 +44,12 @@ export class CreatePromotionDto {
   @Min(0)
   minOrderValue?: number;
 
+  @ApiPropertyOptional({ example: 50000 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  maxDiscount?: number;
+
   @ApiProperty()
   @IsNotEmpty()
   @IsDateString()

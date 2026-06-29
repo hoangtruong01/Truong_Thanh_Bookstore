@@ -27,7 +27,7 @@ export class OrdersController {
   constructor(private ordersService: OrdersService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create an order' })
+  @ApiOperation({ summary: 'Create an order (guest)' })
   create(@Body() dto: CreateOrderDto) {
     return this.ordersService.create(dto);
   }
@@ -57,8 +57,11 @@ export class OrdersController {
     return this.ordersService.findByUser(req.user._id, query);
   }
 
+  // FIX-C02: Require authentication to view order details
   @Get(':id')
-  @ApiOperation({ summary: 'Get order by ID' })
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get order by ID (authenticated)' })
   findById(@Param('id') id: string) {
     return this.ordersService.findById(id);
   }
@@ -72,11 +75,12 @@ export class OrdersController {
     return this.ordersService.updateStatus(id, dto);
   }
 
+  // FIX-C01: Cancel with ownership check — pass userId so service can verify
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Cancel an order' })
-  cancel(@Param('id') id: string) {
-    return this.ordersService.cancel(id);
+  @ApiOperation({ summary: 'Cancel an order (owner or admin only)' })
+  cancel(@Param('id') id: string, @Request() req: any) {
+    return this.ordersService.cancel(id, req.user._id);
   }
 }

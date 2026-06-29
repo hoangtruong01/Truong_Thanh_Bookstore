@@ -17,7 +17,10 @@ export const useCartStore = defineStore('cart', () => {
   const subtotal = computed(() => {
     return items.value.reduce((sum: number, item: CartItem) => {
       if (item.selected === false) return sum
-      const price = item.product.discountPrice || item.product.price
+      // FIX-M03: Use explicit check — discountPrice=0 means no discount
+      const price = (item.product.discountPrice != null && item.product.discountPrice > 0)
+        ? item.product.discountPrice
+        : item.product.price
       return sum + price * item.quantity
     }, 0)
   })
@@ -121,7 +124,34 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   function saveCart() {
-    localStorage.setItem('cart', JSON.stringify(items.value))
+    // FIX-M06: Save only minimal fields to prevent localStorage quota issues
+    const minimal = items.value.map((item: CartItem) => ({
+      product: {
+        _id: item.product._id,
+        name: item.product.name,
+        slug: item.product.slug,
+        price: item.product.price,
+        discountPrice: item.product.discountPrice,
+        stock: item.product.stock,
+        images: item.product.images?.slice(0, 1) || [],
+        rating: item.product.rating,
+        sold: item.product.sold,
+        sku: item.product.sku || '',
+        status: item.product.status,
+        isFeatured: item.product.isFeatured,
+        isDeleted: item.product.isDeleted,
+        category: typeof item.product.category === 'string' ? item.product.category : (item.product.category as any)?._id || '',
+        createdAt: item.product.createdAt,
+        updatedAt: item.product.updatedAt,
+      },
+      quantity: item.quantity,
+      selected: item.selected,
+    }))
+    try {
+      localStorage.setItem('cart', JSON.stringify(minimal))
+    } catch (e) {
+      console.warn('Failed to save cart to localStorage:', e)
+    }
   }
 
   function recalculateDiscount() {
@@ -132,7 +162,11 @@ export const useCartStore = defineStore('cart', () => {
         promoError.value = `Đơn hàng tối thiểu ${promo.minOrderValue.toLocaleString('vi-VN')}đ để sử dụng mã này`
       } else {
         if (promo.discountType === 'PERCENT') {
-          discountAmount.value = Math.floor(subtotal.value * promo.discountValue / 100)
+          let calculated = Math.floor(subtotal.value * promo.discountValue / 100)
+          if (promo.maxDiscount && promo.maxDiscount > 0) {
+            calculated = Math.min(calculated, promo.maxDiscount)
+          }
+          discountAmount.value = calculated
         } else {
           discountAmount.value = promo.discountValue
         }

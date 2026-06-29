@@ -31,6 +31,7 @@
                 type="text"
                 required
                 placeholder="Nguyễn Văn A"
+                maxlength="100"
                 class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
               />
             </div>
@@ -57,6 +58,7 @@
                 type="email"
                 required
                 placeholder="customer@example.com"
+                maxlength="100"
                 class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
               />
             </div>
@@ -67,6 +69,7 @@
                 type="text"
                 required
                 placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
+                maxlength="200"
                 class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
               />
             </div>
@@ -76,6 +79,7 @@
                 v-model="shippingInfo.note"
                 rows="3"
                 placeholder="Ví dụ: Giao giờ hành chính, gọi điện trước khi giao..."
+                maxlength="500"
                 class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
               ></textarea>
             </div>
@@ -122,7 +126,7 @@
                 <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Số lượng: {{ item.quantity }}</p>
               </div>
               <span class="text-xs font-bold text-slate-800 whitespace-nowrap">
-                {{ formatCurrency((item.product.discountPrice || item.product.price) * item.quantity) }}
+                {{ formatCurrency(((item.product.discountPrice != null && item.product.discountPrice > 0) ? item.product.discountPrice : item.product.price) * item.quantity) }}
               </span>
             </div>
           </div>
@@ -144,6 +148,7 @@
                 v-model="couponCode"
                 type="text"
                 placeholder="Nhập mã giảm giá..."
+                maxlength="30"
                 class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white font-mono uppercase tracking-wider"
               />
               <button 
@@ -249,7 +254,8 @@ import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { orderService } from '@/services/order.service'
-import { formatCurrency } from '@/utils/helpers'
+import { productService } from '@/services/product.service'
+import { formatCurrency, getEffectivePrice } from '@/utils/helpers'
 import { promotionService } from '@/services/promotion.service'
 import type { Promotion } from '@/types'
 
@@ -336,12 +342,34 @@ async function placeOrder() {
     return
   }
 
+  if (!isPhoneValid.value) {
+    toast.warning('Số điện thoại không hợp lệ. Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0.')
+    return
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(shippingInfo.email)) {
+    toast.warning('Địa chỉ email không đúng định dạng.')
+    return
+  }
+
   submitting.value = true
   try {
+    // Validate stock with backend before placing order
+    for (const item of checkoutItems.value) {
+      const prodRes = await productService.getById(item.product._id)
+      const latestProd = prodRes.data
+      if (latestProd.stock < item.quantity) {
+        toast.error(`Sản phẩm "${item.product.name}" hiện chỉ còn ${latestProd.stock} sản phẩm trong kho.`)
+        submitting.value = false
+        return
+      }
+    }
+
     const items = checkoutItems.value.map(item => ({
       product: item.product._id,
       name: item.product.name,
-      price: item.product.discountPrice || item.product.price,
+      price: getEffectivePrice(item.product.price, item.product.discountPrice),
       quantity: item.quantity,
       image: item.product.images[0] || '',
     }))
@@ -368,7 +396,8 @@ async function placeOrder() {
     orderSuccess.value = true
     cartStore.clearCheckedOutItems()
   } catch (err: any) {
-    toast.error(err.message || 'Đặt hàng thất bại. Vui lòng kiểm tra lại tồn kho sản phẩm.')
+    const errorMsg = err.response?.data?.message || err.message || 'Đặt hàng thất bại. Vui lòng kiểm tra lại tồn kho sản phẩm.'
+    toast.error(errorMsg)
   } finally {
     submitting.value = false
   }

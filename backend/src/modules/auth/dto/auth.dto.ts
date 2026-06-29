@@ -4,6 +4,7 @@ import {
   MinLength,
   IsOptional,
   IsEnum,
+  Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '../../../common/enums';
@@ -14,7 +15,7 @@ export class RegisterDto {
   fullName: string;
 
   @ApiProperty({ example: 'user@example.com' })
-  @IsEmail()
+  @IsEmail({}, { message: 'Email không đúng định dạng' })
   email: string;
 
   @ApiProperty({ example: 'Password@123' })
@@ -24,6 +25,7 @@ export class RegisterDto {
 
   @ApiPropertyOptional({ example: '0901234567' })
   @IsOptional()
+  @Matches(/^0\d{9}$/, { message: 'Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0' })
   phone?: string;
 }
 
@@ -44,6 +46,7 @@ export class UpdateProfileDto {
 
   @ApiPropertyOptional({ example: '0901234567' })
   @IsOptional()
+  @Matches(/^0\d{9}$/, { message: 'Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0' })
   phone?: string;
 
   @ApiPropertyOptional({ example: 'data:image/png;base64,...' })

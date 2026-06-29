@@ -20,8 +20,16 @@ export function formatDate(date: string): string {
 }
 
 export function getDiscountPercent(price: number, discountPrice: number): number {
-  if (!discountPrice || discountPrice >= price) return 0
+  if (discountPrice == null || discountPrice <= 0 || discountPrice >= price) return 0
   return Math.round(((price - discountPrice) / price) * 100)
+}
+
+/**
+ * FIX-M03: Returns the effective price for a product.
+ * If discountPrice is a positive number, use it; otherwise fall back to price.
+ */
+export function getEffectivePrice(price: number, discountPrice?: number | null): number {
+  return (discountPrice != null && discountPrice > 0) ? discountPrice : price
 }
 
 export function getStatusColor(status: string): string {
@@ -64,3 +72,21 @@ export function getStatusLabel(status: string): string {
   }
   return labels[status] || status
 }
+
+export function encryptToken(value: string): string {
+  if (!value) return ''
+  return btoa(value.split('').reverse().join(''))
+}
+
+export function decryptToken(value: string | null): string | null {
+  if (!value) return null
+  try {
+    if (value.startsWith('{') || value.startsWith('[') || value.includes('"') || !/^[A-Za-z0-9+/=]+$/.test(value)) {
+      return value
+    }
+    return atob(value).split('').reverse().join('')
+  } catch (e) {
+    return value
+  }
+}
+

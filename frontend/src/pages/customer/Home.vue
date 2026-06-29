@@ -6,15 +6,20 @@
         <div
           class="flex items-center justify-start lg:justify-center gap-2 lg:gap-6 py-2.5 overflow-x-auto scrollbar-none"
         >
-          <router-link
-            v-for="item in navItems"
-            :key="item.name"
-            :to="item.to"
-            class="flex items-center gap-1.5 text-xs font-extrabold text-[#0f172a] hover:text-[#dc2626] px-4 py-2 rounded-full hover:bg-red-50 transition-all whitespace-nowrap flex-shrink-0"
-          >
-            <span>{{ item.icon }}</span>
-            {{ item.name }}
-          </router-link>
+          <template v-if="loadingCategories">
+            <div v-for="n in 6" :key="n" class="h-8 bg-slate-100 rounded-full w-24 animate-pulse"></div>
+          </template>
+          <template v-else>
+            <router-link
+              v-for="item in navItems"
+              :key="item.name"
+              :to="item.to"
+              class="flex items-center gap-1.5 text-xs font-extrabold text-[#0f172a] hover:text-[#dc2626] px-4 py-2 rounded-full hover:bg-red-50 transition-all whitespace-nowrap flex-shrink-0"
+            >
+              <span>{{ item.icon }}</span>
+              {{ item.name }}
+            </router-link>
+          </template>
           <router-link
             to="/products?discounted=true"
             class="flex items-center gap-1.5 text-xs font-extrabold text-white bg-[#dc2626] hover:bg-[#b91c1c] px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0"
@@ -775,8 +780,16 @@
           </router-link>
         </div>
 
+        <!-- Skeleton loader -->
+        <div v-if="loadingCategories" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-6">
+          <div v-for="n in 7" :key="n" class="relative overflow-hidden rounded-[18px] p-5 border border-slate-100 bg-slate-50 min-h-[100px] animate-pulse">
+            <div class="h-4 bg-slate-200 rounded w-2/3 mt-2"></div>
+            <div class="h-3 bg-slate-200 rounded w-1/2 mt-2"></div>
+          </div>
+        </div>
         <!-- Cards Container -->
         <div
+          v-else
           class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-6"
         >
           <router-link
@@ -1539,6 +1552,7 @@ function getCatNavIcon(slug: string): string {
 const { observeNewElements } = useScrollReveal();
 
 const parentCategories = ref<Category[]>([]);
+const loadingCategories = ref(true);
 
 const navItems = computed(() => {
   if (!parentCategories.value.length) return [];
@@ -2023,6 +2037,9 @@ onMounted(() => {
     })
     .catch((err) => {
       console.error("Error loading parent categories", err);
+    })
+    .finally(() => {
+      loadingCategories.value = false;
     });
 
   productService

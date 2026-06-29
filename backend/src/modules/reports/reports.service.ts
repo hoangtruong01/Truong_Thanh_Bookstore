@@ -45,10 +45,25 @@ export class ReportsService {
   }
 
   async getRevenue(startDate?: string, endDate?: string) {
-    const end = endDate ? new Date(endDate) : new Date();
-    const start = startDate
-      ? new Date(startDate)
-      : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+    let start: Date;
+    let end: Date;
+
+    if (startDate) {
+      const [y, m, d] = startDate.split('-').map(Number);
+      start = new Date(y, m - 1, d, 0, 0, 0, 0);
+    } else {
+      start = new Date();
+      start.setDate(start.getDate() - 30);
+      start.setHours(0, 0, 0, 0);
+    }
+
+    if (endDate) {
+      const [y, m, d] = endDate.split('-').map(Number);
+      end = new Date(y, m - 1, d, 23, 59, 59, 999);
+    } else {
+      end = new Date();
+      end.setHours(23, 59, 59, 999);
+    }
 
     return this.ordersService.getRevenueByDateRange(start, end);
   }

@@ -71,12 +71,15 @@ export class AuthService {
     };
   }
 
+  // FIX-H07: Exclude password hash from profile response
   async getProfile(userId: string) {
     const user = await this.usersService.findById(userId);
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
-    return user;
+    const userObj = user.toObject ? user.toObject() : user;
+    const { password, ...safeUser } = userObj;
+    return safeUser;
   }
 
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {

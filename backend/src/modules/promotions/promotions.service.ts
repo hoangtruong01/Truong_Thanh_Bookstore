@@ -7,13 +7,16 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Promotion, PromotionDocument } from './schemas/promotion.schema';
 import { CreatePromotionDto, ApplyPromotionDto } from './dto/promotion.dto';
-import { DiscountType } from '../../common/enums';
+import { DiscountType, OrderStatus } from '../../common/enums';
+import { Order, OrderDocument } from '../orders/schemas/order.schema';
 
 @Injectable()
 export class PromotionsService {
   constructor(
     @InjectModel(Promotion.name)
     private promotionModel: Model<PromotionDocument>,
+    @InjectModel(Order.name)
+    private orderModel: Model<OrderDocument>,
   ) {}
 
   async create(dto: CreatePromotionDto): Promise<PromotionDocument> {
@@ -62,6 +65,7 @@ export class PromotionsService {
 
   async apply(
     dto: ApplyPromotionDto,
+    userId?: string,
     incrementUsage = false,
   ): Promise<{ discount: number; code: string; promotion: PromotionDocument }> {
     const promo = await this.promotionModel
@@ -88,9 +92,27 @@ export class PromotionsService {
       );
     }
 
+    // FIX-M02: Prevent duplicate promotion usage per user
+    if (userId) {
+      const alreadyUsed = await this.orderModel
+        .findOne({
+          customer: userId as any,
+          promotionCode: promo.code,
+          orderStatus: { $ne: OrderStatus.CANCELLED as any },
+        } as any)
+        .exec();
+      if (alreadyUsed) {
+        throw new BadRequestException('Bạn đã sử dụng mã giảm giá này cho một đơn hàng trước đó.');
+      }
+    }
+
     let discount = 0;
     if (promo.discountType === DiscountType.PERCENT) {
       discount = Math.floor((dto.orderTotal * promo.discountValue) / 100);
+      // FIX-H02: Limit percentage discount based on maxDiscount
+      if (promo.maxDiscount && promo.maxDiscount > 0) {
+        discount = Math.min(discount, promo.maxDiscount);
+      }
     } else {
       discount = promo.discountValue;
     }

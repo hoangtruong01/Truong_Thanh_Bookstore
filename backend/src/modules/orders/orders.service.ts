@@ -1,5 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-// Trigger reload for Google Sheets URL configuration change
+import { Injectable, NotFoundException, BadRequestException, Logger, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Order, OrderDocument } from './schemas/order.schema';
@@ -14,8 +13,14 @@ import { OrderStatus } from '../../common/enums';
 import { ConfigService } from '@nestjs/config';
 import { PromotionsService } from '../promotions/promotions.service';
 
+// FIX-C03: Shipping fee threshold (must match frontend)
+const FREE_SHIPPING_THRESHOLD = 299000;
+const SHIPPING_FEE = 30000;
+
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     private productsService: ProductsService,
@@ -97,32 +102,59 @@ export class OrdersService {
 
       if (!response.ok) {
         const text = await response.text();
-        console.error(
+        this.logger.error(
           `Google Sheet Sync Error: Status ${response.status}, ${text}`,
         );
       } else {
         const data = await response.json();
-        console.log('Google Sheet Sync success:', data);
+        this.logger.log('Google Sheet Sync success');
       }
     } catch (error) {
-      console.error('Failed to sync order to Google Sheet:', error);
+      this.logger.error('Failed to sync order to Google Sheet:', error);
     }
   }
 
   async create(dto: CreateOrderDto, userId?: string): Promise<OrderDocument> {
-    const subtotal = dto.items.reduce(
+    // FIX-C03: Fetch real prices from DB instead of trusting frontend
+    const verifiedItems = [];
+    for (const item of dto.items) {
+      const product = await this.productsService.findById(item.product);
+      if (!product) {
+        throw new BadRequestException(`Sản phẩm "${item.name}" không tồn tại`);
+      }
+      // FIX-C04: Check stock availability before creating order
+      if (product.stock < item.quantity) {
+        throw new BadRequestException(
+          `Sản phẩm "${product.name}" chỉ còn ${product.stock} sản phẩm trong kho`,
+        );
+      }
+      // Use DB price, not frontend price
+      const realPrice = product.discountPrice > 0 ? product.discountPrice : product.price;
+      verifiedItems.push({
+        product: item.product,
+        name: product.name,
+        price: realPrice,
+        quantity: item.quantity,
+        image: product.images?.[0] || item.image || '',
+      });
+    }
+
+    const subtotal = verifiedItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
-    const shippingFee = dto.shippingFee !== undefined ? dto.shippingFee : (subtotal >= 50000 ? 0 : 30000);
-    
-    let discount = dto.discount || 0;
+
+    // FIX-H03: Always compute shipping fee server-side (matching frontend 299K threshold)
+    const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+
+    let discount = 0;
     if (dto.promotionCode) {
       const promoResult = await this.promotionsService.apply(
         {
           code: dto.promotionCode,
           orderTotal: subtotal,
         },
+        userId, // Pass userId for duplicate check
         true, // Increment usage count
       );
       discount = promoResult.discount;
@@ -133,7 +165,7 @@ export class OrdersService {
     const order = new this.orderModel({
       orderCode: this.generateOrderCode(),
       customer: userId || null,
-      items: dto.items,
+      items: verifiedItems,
       shippingAddress: dto.shippingAddress,
       phone: dto.phone,
       note: dto.note,
@@ -144,18 +176,19 @@ export class OrdersService {
       shippingFee,
       discount,
       total,
+      promotionCode: dto.promotionCode ? dto.promotionCode.toUpperCase() : undefined,
     });
 
     const savedOrder = await order.save();
 
-    // Deduct stock and increment sold
-    for (const item of dto.items) {
-      await this.productsService.updateStock(item.product, -item.quantity);
+    // FIX-C04: Deduct stock with safe check
+    for (const item of verifiedItems) {
+      await this.productsService.deductStock(item.product, item.quantity);
       await this.productsService.incrementSold(item.product, item.quantity);
     }
 
     // Sync to Google Sheet (async)
-    this.syncToGoogleSheet(savedOrder).catch((err) => console.error(err));
+    this.syncToGoogleSheet(savedOrder).catch((err) => this.logger.error('Sheet sync failed', err));
 
     return savedOrder;
   }
@@ -255,12 +288,26 @@ export class OrdersService {
     const savedOrder = await order.save();
 
     // Sync to Google Sheet (async)
-    this.syncToGoogleSheet(savedOrder).catch((err) => console.error(err));
+    this.syncToGoogleSheet(savedOrder).catch((err) => this.logger.error('Sheet sync failed', err));
 
     return savedOrder;
   }
 
-  async cancel(id: string): Promise<OrderDocument> {
+  // FIX-C01: Cancel with ownership check
+  async cancel(id: string, userId?: string): Promise<OrderDocument> {
+    const order = await this.orderModel.findById(id).exec();
+    if (!order) throw new NotFoundException('Order not found');
+
+    // Only the order owner or admin/staff can cancel
+    if (userId && order.customer && order.customer.toString() !== userId.toString()) {
+      throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này');
+    }
+
+    // Only allow cancelling PENDING orders
+    if (order.orderStatus !== OrderStatus.PENDING) {
+      throw new BadRequestException('Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý');
+    }
+
     return this.updateStatus(id, { orderStatus: OrderStatus.CANCELLED });
   }
 

@@ -11,4 +11,9 @@ export const productService = {
   create: (data: any) => api.post('/products', data),
   update: (id: string, data: any) => api.patch(`/products/${id}`, data),
   delete: (id: string) => api.delete(`/products/${id}`),
+  getReviews: (id: string) => api.get(`/products/${id}/reviews`),
+  addReview: (id: string, data: any) => api.post(`/products/${id}/reviews`, data),
+  updateReview: (id: string, reviewId: string, data: any) => api.patch(`/products/${id}/reviews/${reviewId}`, data),
+  deleteReview: (id: string, reviewId: string) => api.delete(`/products/${id}/reviews/${reviewId}`),
 }
+

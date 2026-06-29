@@ -457,9 +457,101 @@ export class SeedService implements OnModuleInit {
       { name: 'Gối Ôm Cổ Capybara Đi Du Lịch Tiện Lợi', sku: 'LN-GOI-CO', description: 'Gối chữ U ôm cổ êm ái nhồi bông Capybara xinh xắn dùng đi tàu xe.', price: 160000, discountPrice: 139000, categoryIndex: 5, subOptions: ['Hộp quà'], brand: 'Trường Thành' }
     ];
 
-    const productsToCreate = rawProducts.map((p) => {
+    const getProductImage = (name: string, categoryIndex: number, idx: number): string => {
+      const nameLower = name.toLowerCase();
+      
+      // Category 0: Sách giáo khoa
+      if (categoryIndex === 0) {
+        const sgkImages = [
+          'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=500',
+          'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?w=500',
+          'https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=500',
+          'https://images.unsplash.com/photo-1513001900722-370f803f498d?w=500',
+          'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500',
+          'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=500',
+        ];
+        return sgkImages[idx % sgkImages.length];
+      }
+      
+      // Category 1: Sách tham khảo
+      if (categoryIndex === 1) {
+        const stkImages = [
+          'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=500',
+          'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=500',
+          'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=500',
+          'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=500',
+          'https://images.unsplash.com/photo-1495446815901-a7297e63b58d?w=500',
+          'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=500',
+        ];
+        return stkImages[idx % stkImages.length];
+      }
+      
+      // Category 2: Truyện tranh
+      if (categoryIndex === 2) {
+        if (nameLower.includes('conan')) {
+          return 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500';
+        }
+        if (nameLower.includes('doraemon')) {
+          return 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500';
+        }
+        const mangaImages = [
+          'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500',
+          'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500',
+          'https://images.unsplash.com/photo-1560942485-b2a11cc13456?w=500',
+          'https://images.unsplash.com/photo-1627389955805-72ff047c3bf3?w=500',
+          'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=500',
+        ];
+        return mangaImages[idx % mangaImages.length];
+      }
+      
+      // Category 3: Combo
+      if (categoryIndex === 3) {
+        const comboImages = [
+          'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=500',
+          'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=500',
+          'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=500',
+          'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=500',
+          'https://images.unsplash.com/photo-1519751138087-5bf79df62d5b?w=500',
+        ];
+        return comboImages[idx % comboImages.length];
+      }
+      
+      // Category 4: Đồ chơi
+      if (categoryIndex === 4) {
+        if (nameLower.includes('lego')) {
+          return 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=500';
+        }
+        if (nameLower.includes('rubik')) {
+          return 'https://images.unsplash.com/photo-1591261730799-ee4e6c2d16d7?w=500';
+        }
+        const toyImages = [
+          'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=500',
+          'https://images.unsplash.com/photo-1591261730799-ee4e6c2d16d7?w=500',
+          'https://images.unsplash.com/photo-1531214159280-079b95d26139?w=500',
+          'https://images.unsplash.com/photo-1515488042361-404e9250afef?w=500',
+          'https://images.unsplash.com/photo-1608889175123-8ee362201f81?w=500',
+        ];
+        return toyImages[idx % toyImages.length];
+      }
+      
+      // Category 5: Đồ lưu niệm
+      if (categoryIndex === 5) {
+        const souvenirImages = [
+          'https://images.unsplash.com/photo-1513201099705-a9746e1e201f?w=500',
+          'https://images.unsplash.com/photo-1507262925270-f55fd0147735?w=500',
+          'https://images.unsplash.com/photo-1590845947376-2638caa06a1a?w=500',
+          'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=500',
+          'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500',
+        ];
+        return souvenirImages[idx % souvenirImages.length];
+      }
+      
+      return categoryImages[categoryIndex] || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500';
+    };
+
+    const productsToCreate = rawProducts.map((p, idx) => {
       const categoryId = createdCombos[p.categoryIndex]._id;
-      const imageUrl = categoryImages[p.categoryIndex];
+      const imageUrl = getProductImage(p.name, p.categoryIndex, idx);
       return {
         name: p.name,
         slug: slugify(p.name),

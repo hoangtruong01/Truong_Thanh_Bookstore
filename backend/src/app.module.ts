@@ -12,6 +12,8 @@ import { PromotionsModule } from './modules/promotions/promotions.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { SeedModule } from './seeds/seed.module';
 import { LandingPagesModule } from './modules/landing-pages/landing-pages.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -23,6 +25,10 @@ import { LandingPagesModule } from './modules/landing-pages/landing-pages.module
       }),
       inject: [ConfigService],
     }),
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100, // 100 requests per minute
+    }]),
     AuthModule,
     UsersModule,
     ProductsModule,
@@ -34,6 +40,12 @@ import { LandingPagesModule } from './modules/landing-pages/landing-pages.module
     ReportsModule,
     SeedModule,
     LandingPagesModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

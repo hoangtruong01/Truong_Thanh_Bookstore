@@ -86,7 +86,7 @@
                 <td class="py-4 px-5 text-slate-500">{{ formatDate(order.createdAt) }}</td>
                 <!-- Payment method and status stacked (Matches Screenshot) -->
                 <td class="py-4 px-5">
-                  <p class="text-[10px] text-slate-800 font-extrabold">{{ order.paymentMethod === 'COD' ? 'COD' : 'Chuyển khoản' }}</p>
+                  <p class="text-[10px] text-slate-800 font-extrabold">{{ order.paymentMethod === 'COD' ? 'COD' : (order.paymentMethod === 'EWALLET' ? 'Ví điện tử' : 'Chuyển khoản') }}</p>
                   <p :class="['text-[9px] font-semibold mt-0.5', order.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-amber-600']">
                     {{ order.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán' }}
                   </p>
@@ -134,7 +134,7 @@
             </div>
             <div class="flex justify-between items-center">
               <span class="text-slate-400 font-bold">Phương thức:</span>
-              <span class="font-extrabold text-slate-800">{{ selectedOrder.paymentMethod === 'COD' ? 'COD' : 'Chuyển khoản' }}</span>
+              <span class="font-extrabold text-slate-800">{{ selectedOrder.paymentMethod === 'COD' ? 'COD' : (selectedOrder.paymentMethod === 'EWALLET' ? 'Ví điện tử' : 'Chuyển khoản') }}</span>
             </div>
           </div>
 
