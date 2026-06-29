@@ -21,6 +21,10 @@ import {
   InventoryTransactionSchema,
 } from '../modules/inventory/schemas/inventory.schema';
 import { Order, OrderSchema } from '../modules/orders/schemas/order.schema';
+import {
+  LandingPage,
+  LandingPageSchema,
+} from '../modules/landing-pages/schemas/landing-page.schema';
 
 @Module({
   imports: [
@@ -32,6 +36,7 @@ import { Order, OrderSchema } from '../modules/orders/schemas/order.schema';
       { name: Inventory.name, schema: InventorySchema },
       { name: InventoryTransaction.name, schema: InventoryTransactionSchema },
       { name: Order.name, schema: OrderSchema },
+      { name: LandingPage.name, schema: LandingPageSchema },
     ]),
   ],
   providers: [SeedService],

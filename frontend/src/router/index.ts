@@ -14,6 +14,7 @@ const Checkout = () => import('@/pages/customer/Checkout.vue')
 const Login = () => import('@/pages/customer/Login.vue')
 const Register = () => import('@/pages/customer/Register.vue')
 const LandingPageDetail = () => import('@/pages/customer/LandingPageDetail.vue')
+const DealHot = () => import('@/pages/customer/DealHot.vue')
 const MyOrders = () => import('@/pages/customer/MyOrders.vue')
 
 // Admin Pages - lazy loaded
@@ -42,6 +43,7 @@ const routes = [
       { path: 'cart', name: 'Cart', component: Cart },
       // BUG-01: Removed requiresAuth - allow guest checkout
       { path: 'checkout', name: 'Checkout', component: Checkout },
+      { path: 'deal-hot', name: 'DealHot', component: DealHot },
       { path: 't/:slug', name: 'LandingPageDetail', component: LandingPageDetail },
       { path: 'my-orders', name: 'MyOrders', component: MyOrders, meta: { requiresAuth: true } },
     ]

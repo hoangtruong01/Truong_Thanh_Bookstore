@@ -794,7 +794,7 @@
         <!-- See More Button -->
         <div class="flex justify-center pt-2 relative z-10">
           <router-link
-            to="/t/deal-hot"
+            to="/deal-hot"
             class="bg-white border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
           >
             Xem Thêm Deal Hot

@@ -23,6 +23,10 @@ import {
 } from '../modules/inventory/schemas/inventory.schema';
 import { Order, OrderDocument } from '../modules/orders/schemas/order.schema';
 import {
+  LandingPage,
+  LandingPageDocument,
+} from '../modules/landing-pages/schemas/landing-page.schema';
+import {
   UserRole,
   ProductStatus,
   DiscountType,
@@ -47,6 +51,8 @@ export class SeedService implements OnModuleInit {
     @InjectModel(InventoryTransaction.name)
     private transactionModel: Model<InventoryTransactionDocument>,
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
+    @InjectModel(LandingPage.name)
+    private landingPageModel: Model<LandingPageDocument>,
   ) {}
 
   async onModuleInit() {
@@ -109,6 +115,7 @@ export class SeedService implements OnModuleInit {
         this.logger.log('Promotions seeded successfully');
       }
     }
+    await this.seedDealHotLandingPage();
   }
 
   async clearDatabase() {
@@ -119,6 +126,83 @@ export class SeedService implements OnModuleInit {
     await this.transactionModel.deleteMany({});
     await this.promotionModel.deleteMany({});
     await this.orderModel.deleteMany({});
+    await this.landingPageModel.deleteMany({});
+  }
+
+  async seedDealHotLandingPage() {
+    const existing = await this.landingPageModel.findOne({ slug: 'deal-hot' }).exec();
+    if (!existing) {
+      this.logger.log('Seeding default deal-hot landing page...');
+      await this.landingPageModel.create({
+        title: 'Siêu Deal Hot Văn Phòng Phẩm & Đồ Dùng Học Tập',
+        slug: 'deal-hot',
+        description: 'Sở hữu ngay bộ combo văn phòng phẩm và đồ dùng học tập độc quyền từ Trường Thành Bookstore với mức giá cực kỳ ưu đãi. Cam kết hàng chính hãng 100%!',
+        images: ['https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=800'],
+        countdownMinutes: 30,
+        price: 99000,
+        originalPrice: 199000,
+        badgeText: 'MUA NGAY HÔM NAY - ƯU ĐÃI ĐỘC QUYỀN GIẢM GIÁ 50%',
+        primaryColor: '#dc2626',
+        backgroundColor: '#f8fafc',
+        textColor: '#1e293b',
+        status: true,
+        benefits: [
+          {
+            title: 'Giao Hàng Siêu Tốc',
+            description: 'Hỗ trợ giao hàng hoả tốc trong vòng 2h tại khu vực nội thành.',
+            icon: 'TruckIcon',
+          },
+          {
+            title: 'Cam Kết Chính Hãng',
+            description: 'Cam kết 100% sản phẩm chính hãng từ các thương hiệu lớn như Thiên Long, Hồng Hà, Pentel...',
+            icon: 'ShieldCheckIcon',
+          },
+          {
+            title: 'Đổi Trả Dễ Dàng',
+            description: 'Bảo hành 1 đổi 1 trong vòng 7 ngày nếu phát hiện bất kỳ lỗi nào từ nhà sản xuất.',
+            icon: 'ArrowPathIcon',
+          },
+        ],
+        packages: [
+          {
+            name: 'Gói Học Tập Cơ Bản (Hộp Bút + 5 Bút Gel)',
+            price: 49000,
+            originalPrice: 99000,
+            badge: 'Bán Chạy Nhất',
+            isBestSeller: true,
+          },
+          {
+            name: 'Gói Combo Siêu Hời (Hộp Bút + 10 Bút Bi + Sổ Tay + Tẩy)',
+            price: 99000,
+            originalPrice: 199000,
+            badge: 'Ưu Đãi Lớn',
+            isBestSeller: false,
+          },
+          {
+            name: 'Gói Học Đường Cao Cấp (Bình Giữ Nhiệt + Sổ Tay Da + Đèn Silicon)',
+            price: 249000,
+            originalPrice: 499000,
+            badge: 'Quà Tặng Đặc Biệt',
+            isBestSeller: false,
+          },
+        ],
+        testimonials: [
+          {
+            authorName: 'Chị Nguyễn Minh Anh',
+            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+            content: 'Bộ combo học tập siêu xinh luôn mọi người ơi, bé nhà mình thích lắm. Giao hàng siêu nhanh đóng gói cẩn thận nữa!',
+            rating: 5,
+          },
+          {
+            authorName: 'Anh Hoàng Quốc Trung',
+            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+            content: 'Sản phẩm chất lượng tốt, giá thành hợp lý so với mua lẻ. Khuyên mọi người nên mua combo to cho tiết kiệm.',
+            rating: 5,
+          },
+        ],
+      });
+      this.logger.log('Default deal-hot landing page seeded successfully');
+    }
   }
 
   async seed() {
@@ -475,5 +559,6 @@ export class SeedService implements OnModuleInit {
     ];
     await this.promotionModel.insertMany(promotions);
     this.logger.log('Promotions seeded');
+    await this.seedDealHotLandingPage();
   }
 }
