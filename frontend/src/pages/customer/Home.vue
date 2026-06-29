@@ -91,8 +91,8 @@
       <div
         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center relative z-10"
       >
-        <!-- Left Column: Text content -->
-        <div class="lg:col-span-7 space-y-5 text-left relative z-20">
+        <!-- Center Column: Text content -->
+        <div class="lg:col-span-12 space-y-5 text-center flex flex-col items-center justify-center relative z-20">
           <div
             class="inline-flex items-center gap-1.5 bg-orange-100/70 border border-orange-200 text-orange-800 text-[11px] font-black px-4 py-1.5 rounded-full w-fit animate-float"
           >
@@ -108,14 +108,14 @@
             >
           </h1>
           <p
-            class="text-slate-600 text-sm sm:text-base max-w-lg leading-relaxed reveal"
+            class="text-slate-600 text-sm sm:text-base max-w-xl leading-relaxed reveal text-center"
           >
             Khám phá bộ sưu tập dụng cụ học tập & văn phòng phẩm Trường Thành
             chất lượng vượt trội, đồng hành trên con đường chinh phục đỉnh cao
             tri thức của bạn.
           </p>
 
-          <div class="pt-1 flex flex-wrap gap-3 reveal delay-100">
+          <div class="pt-1 flex flex-wrap justify-center gap-3 reveal delay-100">
             <router-link
               to="/products"
               class="bg-gradient-to-r from-[#e11d24] to-[#fb5607] hover:opacity-95 text-white font-extrabold py-3.5 px-7 rounded-full shadow-lg shadow-red-500/20 transition-all text-sm flex items-center gap-2 group cursor-pointer"
@@ -145,7 +145,7 @@
           </div>
 
           <div
-            class="pt-4 flex flex-wrap gap-6 text-[11px] text-slate-500 font-bold"
+            class="pt-4 flex flex-wrap justify-center gap-6 text-[11px] text-slate-500 font-bold"
           >
             <div class="flex items-center gap-1.5">
               <svg
@@ -191,68 +191,6 @@
                 />
               </svg>
               <span>Đổi Trả 7 Ngày</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right Column: Product image showcase -->
-        <div
-          class="lg:col-span-5 relative flex justify-center lg:justify-end reveal delay-200 mt-8 lg:mt-0 overflow-hidden"
-        >
-          <!-- Orange organic blob behind the image -->
-          <div
-            class="absolute w-[110%] h-[110%] -left-[5%] -top-[5%] bg-gradient-to-br from-[#FDBA74]/50 to-[#FB923C]/40 rounded-[45%_55%_60%_40%/50%_60%_40%_50%] z-0 pointer-events-none"
-          ></div>
-
-          <div class="relative w-full max-w-[520px] z-10">
-            <img
-              :src="heroStationery"
-              alt="Truong Thanh Stationery Showcase"
-              class="w-full h-auto max-h-[420px] object-cover rounded-[20px] shadow-[0_16px_40px_rgba(0,0,0,0.12)]"
-            />
-            <!-- Upper-right badge -->
-            <div
-              class="absolute top-3 right-3 sm:top-5 sm:right-5 z-20 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-2.5 sm:p-3 pr-4 sm:pr-5 flex items-center gap-2 sm:gap-2.5 border border-slate-100/60"
-            >
-              <div
-                class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#059669] flex items-center justify-center text-white flex-shrink-0 text-sm sm:text-base"
-              >
-                ✨
-              </div>
-              <div class="text-left leading-tight">
-                <p
-                  class="text-[7px] sm:text-[8px] text-slate-400 font-bold uppercase tracking-wider"
-                >
-                  ĐỘC QUYỀN
-                </p>
-                <p
-                  class="text-[10px] sm:text-xs font-black text-slate-800 mt-0.5 whitespace-nowrap"
-                >
-                  10k+ Khách Hàng
-                </p>
-              </div>
-            </div>
-            <!-- Lower-left badge -->
-            <div
-              class="absolute bottom-3 left-3 sm:bottom-5 sm:left-5 z-20 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-2.5 sm:p-3 pr-4 sm:pr-5 flex items-center gap-2 sm:gap-2.5 border border-slate-100/60"
-            >
-              <div
-                class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-r from-[#e11d24] to-[#fb5607] flex items-center justify-center text-white font-black text-[10px] sm:text-xs flex-shrink-0"
-              >
-                -30%
-              </div>
-              <div class="text-left leading-tight">
-                <p
-                  class="text-[7px] sm:text-[8px] text-slate-400 font-bold uppercase tracking-wider"
-                >
-                  ƯU ĐÃI MÙA HÈ
-                </p>
-                <p
-                  class="text-[10px] sm:text-xs font-black text-slate-800 mt-0.5 whitespace-nowrap"
-                >
-                  Giảm giá cực sốc
-                </p>
-              </div>
             </div>
           </div>
         </div>
