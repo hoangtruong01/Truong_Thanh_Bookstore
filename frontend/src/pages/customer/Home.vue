@@ -27,7 +27,7 @@
 
     <!-- Section 1: Hero Section (Full width background) -->
     <div
-      class="relative overflow-hidden bg-gradient-to-br from-[#fff7ed] via-[#fff9f2] to-[#ffffff] border-b border-orange-100/30 py-14 md:py-24 min-h-[520px] md:min-h-[580px] flex items-center"
+      class="relative overflow-hidden bg-gradient-to-br from-[#fff7ed] via-[#fff9f2] to-[#ffffff] border-b border-orange-100/30 py-10 md:py-14 flex items-center"
     >
       <!-- Subtle dot grid & decorations pattern -->
       <div
@@ -198,7 +198,7 @@
     </div>
 
     <!-- Section 2: Trust Bar (Overlaid on bottom of Hero Card) -->
-    <div class="max-w-7xl mx-auto px-4 md:px-8 -mt-16 mb-10 relative z-20">
+    <div class="max-w-7xl mx-auto px-4 md:px-8 -mt-8 mb-6 relative z-20">
       <div
         class="bg-white border border-slate-100 rounded-[20px] shadow-lg py-5 px-6"
       >
