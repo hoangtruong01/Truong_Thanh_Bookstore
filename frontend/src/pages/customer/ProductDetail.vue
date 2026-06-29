@@ -927,7 +927,8 @@ async function saveEditReview() {
   }
 }
 
-async function deleteReview(reviewId: string) {
+async function deleteReview(reviewId?: string) {
+  if (!reviewId) return
   const prodId = route.params.id as string
   try {
     await productService.deleteReview(prodId, reviewId)
