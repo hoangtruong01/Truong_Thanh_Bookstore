@@ -236,3 +236,54 @@ body {
 header {
   overflow-anchor: none !important;
 }
+
+/* Responsive Flex Grid mimicking CSS grid but centering wrapped items in the last row */
+.responsive-flex-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem; /* gap-6 */
+}
+.responsive-flex-grid > * {
+  width: calc(50% - 0.75rem);
+}
+@media (min-width: 640px) {
+  .responsive-flex-grid > * {
+    width: calc(33.333% - 1rem);
+  }
+}
+@media (min-width: 768px) {
+  .responsive-flex-grid > * {
+    width: calc(25% - 1.125rem);
+  }
+}
+@media (min-width: 1024px) {
+  .responsive-flex-grid > * {
+    width: calc(20% - 1.2rem);
+  }
+}
+
+.responsive-flex-grid-gap-4 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem; /* gap-4 */
+}
+.responsive-flex-grid-gap-4 > * {
+  width: calc(50% - 0.5rem);
+}
+@media (min-width: 640px) {
+  .responsive-flex-grid-gap-4 > * {
+    width: calc(33.333% - 0.667rem);
+  }
+}
+@media (min-width: 768px) {
+  .responsive-flex-grid-gap-4 > * {
+    width: calc(25% - 0.75rem);
+  }
+}
+@media (min-width: 1024px) {
+  .responsive-flex-grid-gap-4 > * {
+    width: calc(20% - 0.8rem);
+  }
+}

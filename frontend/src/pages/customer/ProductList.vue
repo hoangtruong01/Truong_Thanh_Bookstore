@@ -152,7 +152,7 @@
         </div>
 
         <!-- Products Grid -->
-        <div v-if="loading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div v-if="loading" class="responsive-flex-grid-gap-4">
           <div v-for="n in 10" :key="n" class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 animate-pulse">
             <div class="bg-slate-200 rounded-xl aspect-square w-full"></div>
             <div class="h-4 bg-slate-200 rounded w-2/3"></div>
@@ -169,7 +169,7 @@
         </div>
 
         <div v-else class="space-y-8">
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div class="responsive-flex-grid-gap-4">
             <ProductCard
               v-for="prod in products"
               :key="prod._id"

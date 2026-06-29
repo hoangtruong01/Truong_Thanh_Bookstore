@@ -97,7 +97,7 @@ export class ProductsService {
     } = query;
     const filter: any = { isDeleted: false };
 
-    if (discounted === true || discounted === 'true') {
+    if (discounted === true || (discounted as any) === 'true') {
       filter.discountPrice = { $gt: 0 };
     }
 

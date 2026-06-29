@@ -10,7 +10,22 @@
 
     <!-- Image/Placeholder Container -->
     <div class="aspect-square bg-slate-50/70 rounded-xl overflow-hidden mb-4 relative flex items-center justify-center">
-      <img v-if="product.images && product.images.length > 0" :src="product.images[0]" class="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500" />
+      <!-- Blurred background to fill empty space -->
+      <img 
+        v-if="product.images && product.images[0] && !isImageBroken" 
+        :src="product.images[0]" 
+        class="absolute inset-0 w-full h-full object-cover blur-xl opacity-[0.22] scale-125 select-none pointer-events-none" 
+      />
+      
+      <!-- Main product image with drop shadow -->
+      <img 
+        v-if="product.images && product.images[0] && !isImageBroken" 
+        :src="product.images[0]" 
+        @error="handleImageError"
+        class="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-500 relative z-10 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.06)]" 
+      />
+      
+      <!-- Fallback Placeholder -->
       <div v-else :class="`w-full h-full ${placeholder.gradient} flex items-center justify-center group-hover:scale-105 transition-transform duration-500`">
         <!-- SVG Icon fallbacks -->
         <svg v-if="placeholder.icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-white/90">
@@ -73,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { formatCurrency, getDiscountPercent, formatNumber } from '@/utils/helpers'
 import type { Product } from '@/types'
@@ -87,6 +102,16 @@ defineEmits<{
 }>()
 
 const router = useRouter()
+
+const isImageBroken = ref(false)
+
+watch(() => props.product, () => {
+  isImageBroken.value = false
+})
+
+function handleImageError() {
+  isImageBroken.value = true
+}
 
 function goToDetail() {
   router.push(`/products/${props.product._id}`)

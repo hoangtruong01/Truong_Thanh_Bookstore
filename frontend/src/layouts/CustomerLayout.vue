@@ -721,12 +721,12 @@
         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
       >
         <!-- Testimonial & Newsletter -->
-        <div class="space-y-6">
-          <div class="space-y-4">
-            <h2 class="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+        <div class="space-y-6 text-center lg:text-left flex flex-col items-center lg:items-start">
+          <div class="space-y-4 w-full">
+            <h2 class="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent text-center lg:text-left">
               Văn Phòng Phẩm Trường Thành
             </h2>
-            <div class="pl-4 border-l-2 border-[#dc2626] space-y-1">
+            <div class="pl-0 lg:pl-4 border-l-0 lg:border-l-2 border-[#dc2626] space-y-1">
               <p class="text-[10px] font-bold text-[#dc2626] tracking-widest uppercase"></p>
               <p class="text-sm sm:text-base text-slate-300 font-medium italic leading-relaxed">
                 "Đồng hành cùng tri thức - Kiến tạo tương lai"
@@ -735,13 +735,13 @@
           </div>
 
           <!-- Newsletter Form -->
-          <form @submit.prevent="handleNewsletter" class="space-y-3 pt-2">
-            <div class="flex flex-wrap sm:flex-nowrap gap-2 max-w-md">
+          <form @submit.prevent="handleNewsletter" class="space-y-3 pt-2 flex flex-col items-center lg:items-start w-full max-w-md">
+            <div class="flex flex-col sm:flex-row gap-2 w-full justify-center lg:justify-start">
               <input
                 v-model="newsletterEmail"
                 type="email"
                 placeholder="Email của bạn..."
-                class="flex-1 bg-slate-950/60 border border-slate-800/80 rounded-xl px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-[#dc2626]/80 focus:ring-2 focus:ring-[#dc2626]/10 transition-all placeholder:text-slate-500 shadow-inner"
+                class="flex-1 bg-slate-950/60 border border-slate-800/80 rounded-xl px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-[#dc2626]/80 focus:ring-2 focus:ring-[#dc2626]/10 transition-all placeholder:text-slate-500 shadow-inner w-full"
                 required
               />
               <button
@@ -752,7 +752,7 @@
               </button>
             </div>
             <div
-              class="flex items-center gap-2 text-[10.5px] text-slate-500 font-medium"
+              class="flex items-center justify-center lg:justify-start gap-2 text-[10.5px] text-slate-500 font-medium w-full"
             >
               <!-- Gift Icon -->
               <svg
@@ -769,9 +769,8 @@
                   d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h17.25c.621 0 1.125-.504 1.125-1.125V8.25c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v2.25c0 .621.504 1.125 1.125 1.125Z"
                 />
               </svg>
-              <span
-                >Đăng ký nhận tin tức & khuyến mãi hấp dẫn từ Trường Thành
-                Stationery</span
+              <span class="text-center lg:text-left"
+                >Đăng ký nhận tin tức & khuyến mãi từ Trường Thành</span
               >
             </div>
           </form>
@@ -779,10 +778,10 @@
 
         <!-- Google Maps Store Address Card -->
         <div
-          class="bg-gradient-to-br from-slate-900/60 to-slate-950/60 border border-slate-800/80 rounded-3xl p-6 space-y-4 shadow-2xl backdrop-blur-sm max-w-md lg:ml-auto w-full group"
+          class="bg-gradient-to-br from-slate-900/60 to-slate-950/60 border border-slate-800/80 rounded-3xl p-6 space-y-4 shadow-2xl backdrop-blur-sm max-w-md mx-auto lg:ml-auto w-full group"
         >
           <!-- Title -->
-          <div class="flex items-center gap-2 text-white">
+          <div class="flex items-center justify-center lg:justify-start gap-2 text-white">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -822,10 +821,10 @@
 
           <!-- Details & Direct Navigation -->
           <div
-            class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1"
+            class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 text-center sm:text-left"
           >
-            <div class="space-y-1.5 text-[11px] text-slate-300">
-              <div class="flex items-center gap-2">
+            <div class="space-y-1.5 text-[11px] text-slate-300 flex flex-col items-center sm:items-start w-full sm:w-auto">
+              <div class="flex items-center justify-center sm:justify-start gap-2 w-full">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -845,9 +844,9 @@
                     d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"
                   />
                 </svg>
-                <span class="font-semibold">Chợ chanh - Nhân Hà, Ninh Bình, Vietnam</span>
+                <span class="font-semibold text-left">Chợ chanh - Nhân Hà, Ninh Bình, Vietnam</span>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center justify-center sm:justify-start gap-2 w-full">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -899,8 +898,8 @@
         class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12"
       >
         <!-- Col 1: Store Intro -->
-        <div class="space-y-5">
-          <div class="flex items-center gap-3 text-white">
+        <div class="space-y-5 flex flex-col items-center md:items-start text-center md:text-left">
+          <div class="flex items-center justify-center md:justify-start gap-3 text-white">
             <div
               class="w-8 h-8 rounded-lg bg-[#dc2626]/10 text-[#dc2626] flex items-center justify-center flex-shrink-0 shadow-sm border border-[#dc2626]/20"
             >
@@ -926,11 +925,11 @@
               Văn Phòng Phẩm<br />Trường Thành
             </h3>
           </div>
-          <p class="text-xs text-slate-400 leading-relaxed max-w-xs font-medium">
+          <p class="text-xs text-slate-400 leading-relaxed max-w-xs font-medium mx-auto md:mx-0">
             Hệ thống cung cấp thiết bị học tập và văn phòng phẩm chất lượng cao
             tại Việt Nam. Cam kết hàng chính hãng, giá tốt mỗi ngày.
           </p>
-          <div class="flex items-center gap-3 pt-2">
+          <div class="flex items-center justify-center md:justify-start gap-3 pt-2">
             <!-- Facebook -->
             <a
               href="https://www.facebook.com/profile.php?id=61589787305540&locale=vi_VN"
@@ -990,7 +989,7 @@
 
         <!-- Col 2: Customer Support -->
         <div class="space-y-5">
-          <div class="flex items-center gap-3 text-white">
+          <div class="flex items-center justify-center md:justify-start gap-3 text-white">
             <div
               class="w-8 h-8 rounded-lg bg-[#dc2626]/10 text-[#dc2626] flex items-center justify-center flex-shrink-0 shadow-sm border border-[#dc2626]/20"
             >
@@ -1014,7 +1013,7 @@
               Hỗ Trợ Khách Hàng
             </h3>
           </div>
-          <ul class="space-y-3.5 text-xs">
+          <ul class="space-y-3.5 text-xs flex flex-col items-center md:items-start">
             <li>
               <router-link
                 to="/products"
@@ -1065,7 +1064,7 @@
 
         <!-- Col 3: Popular Combos -->
         <div class="space-y-5">
-          <div class="flex items-center gap-3 text-white">
+          <div class="flex items-center justify-center md:justify-start gap-3 text-white">
             <div
               class="w-8 h-8 rounded-lg bg-[#dc2626]/10 text-[#dc2626] flex items-center justify-center flex-shrink-0 shadow-sm border border-[#dc2626]/20"
             >
@@ -1094,7 +1093,7 @@
               Combo Phổ Biến
             </h3>
           </div>
-          <ul class="space-y-3.5 text-xs">
+          <ul class="space-y-3.5 text-xs flex flex-col items-center md:items-start">
             <li>
               <router-link
                 to="/products?q=combo+bút"
@@ -1145,7 +1144,7 @@
 
         <!-- Col 4: Contact -->
         <div class="space-y-5">
-          <div class="flex items-center gap-3 text-white">
+          <div class="flex items-center justify-center md:justify-start gap-3 text-white">
             <div
               class="w-8 h-8 rounded-lg bg-[#dc2626]/10 text-[#dc2626] flex items-center justify-center flex-shrink-0 shadow-sm border border-[#dc2626]/20"
             >
@@ -1167,8 +1166,8 @@
             </div>
             <h3 class="text-xs font-black uppercase tracking-wider">Liên Hệ</h3>
           </div>
-          <ul class="space-y-3.5 text-xs text-slate-400 font-medium">
-            <li class="flex flex-col gap-1">
+          <ul class="space-y-3.5 text-xs text-slate-400 font-medium flex flex-col items-center md:items-start text-center md:text-left">
+            <li class="flex flex-col items-center md:items-start gap-1">
               <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Email</span>
               <a
                 href="mailto:giaoductruongthanh@gmail.com"
@@ -1177,7 +1176,7 @@
                 giaoductruongthanh@gmail.com
               </a>
             </li>
-            <li class="flex flex-col gap-1">
+            <li class="flex flex-col items-center md:items-start gap-1">
               <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Hotline</span>
               <a
                 href="tel:0982938316"
@@ -1186,7 +1185,7 @@
                 0982938316
               </a>
             </li>
-            <li class="flex flex-col gap-1">
+            <li class="flex flex-col items-center md:items-start gap-1">
               <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Địa chỉ</span>
               <span class="text-slate-300 leading-relaxed font-bold text-xs">
                 Chợ chanh - Nhân Hà, Ninh Bình, Vietnam

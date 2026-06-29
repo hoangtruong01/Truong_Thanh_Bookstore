@@ -32,13 +32,21 @@
               <div 
                 v-for="(img, idx) in product.images" 
                 :key="idx" 
-                class="w-full h-full flex-shrink-0 flex items-center justify-center bg-slate-50/70"
+                class="w-full h-full flex-shrink-0 flex items-center justify-center bg-slate-50/70 relative"
               >
+                <!-- Blurred background to fill empty space -->
+                <img 
+                  v-if="!brokenImages[img]"
+                  :src="img" 
+                  class="absolute inset-0 w-full h-full object-cover blur-xl opacity-[0.22] scale-125 select-none pointer-events-none" 
+                />
+                
+                <!-- Main product image with drop shadow -->
                 <img 
                   v-if="!brokenImages[img]"
                   :src="img" 
                   @error="handleImageError(img)"
-                  class="w-full h-full object-contain p-4" 
+                  class="w-full h-full object-contain p-4 relative z-10 filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.06)]" 
                 />
                 <div v-else :class="`w-full h-full ${getProductPlaceholder(product ? product.name : '').gradient} flex items-center justify-center`">
                   <svg v-if="getProductPlaceholder(product ? product.name : '').icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-white/90">

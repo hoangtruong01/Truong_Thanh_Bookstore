@@ -429,7 +429,7 @@
         <!-- Products -->
         <div
           v-if="loadingDiscount"
-          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 relative z-10"
+          class="responsive-flex-grid relative z-10"
         >
           <div
             v-for="n in 5"
@@ -444,7 +444,7 @@
 
         <div
           v-else
-          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 relative z-10"
+          class="responsive-flex-grid relative z-10"
         >
           <div
             v-for="(prod, n) in discounted.slice(0, 5)"
@@ -474,13 +474,21 @@
               <div
                 class="aspect-square bg-slate-50/50 rounded-2xl overflow-hidden flex items-center justify-center relative"
               >
+                <!-- Blurred background to fill empty space -->
+                <img 
+                  v-if="prod.images && prod.images[0] && !brokenImages[prod._id]" 
+                  :src="prod.images[0]" 
+                  class="absolute inset-0 w-full h-full object-cover blur-xl opacity-[0.22] scale-125 select-none pointer-events-none" 
+                />
+                
+                <!-- Main product image with drop shadow -->
                 <img
                   v-if="
                     prod.images && prod.images[0] && !brokenImages[prod._id]
                   "
                   :src="prod.images[0]"
                   @error="handleImageError(prod._id)"
-                  class="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+                  class="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300 relative z-10 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.06)]"
                   :alt="prod.name"
                 />
                 <!-- Fallback SVG -->
@@ -843,7 +851,7 @@
 
       <div
         v-if="loadingBest"
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <div
           v-for="n in 5"
@@ -858,7 +866,7 @@
 
       <div
         v-else
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <ProductCard
           v-for="(prod, idx) in bestSelling.slice(0, 10)"
@@ -919,7 +927,7 @@
 
       <div
         v-if="loadingNew"
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <div
           v-for="n in 5"
@@ -934,7 +942,7 @@
 
       <div
         v-else
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <ProductCard
           v-for="(prod, idx) in newProducts.slice(0, 10)"
@@ -994,7 +1002,7 @@
 
       <div
         v-if="loadingTextbook"
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <div
           v-for="n in 5"
@@ -1009,7 +1017,7 @@
 
       <div
         v-else
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <ProductCard
           v-for="(prod, idx) in textbookProducts.slice(0, 10)"
@@ -1069,7 +1077,7 @@
 
       <div
         v-if="loadingReference"
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <div
           v-for="n in 5"
@@ -1084,7 +1092,7 @@
 
       <div
         v-else
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <ProductCard
           v-for="(prod, idx) in referenceProducts.slice(0, 10)"
@@ -1218,7 +1226,7 @@
 
       <div
         v-if="loadingToy"
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <div
           v-for="n in 5"
@@ -1233,7 +1241,7 @@
 
       <div
         v-else
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <ProductCard
           v-for="(prod, idx) in toyProducts.slice(0, 10)"
@@ -1293,7 +1301,7 @@
 
       <div
         v-if="loadingComic"
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <div
           v-for="n in 5"
@@ -1308,7 +1316,7 @@
 
       <div
         v-else
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <ProductCard
           v-for="(prod, idx) in comicProducts.slice(0, 10)"
@@ -1368,7 +1376,7 @@
 
       <div
         v-if="loadingCombo"
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <div
           v-for="n in 5"
@@ -1383,7 +1391,7 @@
 
       <div
         v-else
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <ProductCard
           v-for="(prod, idx) in comboProducts.slice(0, 10)"
@@ -1443,7 +1451,7 @@
 
       <div
         v-if="loadingGift"
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <div
           v-for="n in 5"
@@ -1458,7 +1466,7 @@
 
       <div
         v-else
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+        class="responsive-flex-grid"
       >
         <ProductCard
           v-for="(prod, idx) in giftProducts.slice(0, 10)"
