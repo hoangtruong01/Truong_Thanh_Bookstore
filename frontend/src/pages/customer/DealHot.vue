@@ -2,22 +2,31 @@
   <div class="min-h-screen bg-slate-50/50 pb-20 selection:bg-red-500 selection:text-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <!-- Premium Hero Header -->
-      <div class="bg-gradient-to-r from-red-600 to-orange-500 rounded-3xl p-6 md:p-10 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
-        <div class="space-y-3 z-10 text-center md:text-left">
-          <span class="inline-flex items-center gap-1 bg-white/20 border border-white/20 text-white text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider animate-pulse">
-            🔥 SIÊU GIẢM GIÁ DUY NHẤT HÔM NAY!
-          </span>
-          <h1 class="text-2xl md:text-4xl font-black uppercase tracking-tight leading-tight">
-            DEAL SỐC GIỜ VÀNG
+      <div 
+        :style="{
+          backgroundImage: `url(${dealHotBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }"
+        class="rounded-3xl p-6 md:p-10 text-slate-950 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-100"
+      >
+        <div class="bg-white/85 backdrop-blur-md border border-white/60 rounded-2xl p-5 md:p-6 space-y-3 z-10 text-left max-w-xl shadow-xs">
+          <div>
+            <span class="inline-flex items-center gap-1 bg-red-600 text-white text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider animate-pulse">
+              🔥 SIÊU GIẢM GIÁ DUY NHẤT HÔM NAY!
+            </span>
+          </div>
+          <h1 class="text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-slate-900">
+            DEAL SỐC <span class="text-red-600">GIỜ VÀNG</span>
           </h1>
-          <p class="text-xs md:text-sm text-red-50/90 font-bold max-w-xl">
+          <p class="text-xs md:text-sm text-slate-700 font-extrabold leading-relaxed">
             Sở hữu ngay các sản phẩm văn phòng phẩm, sách và đồ dùng học tập tốt nhất với mức giá cực sốc! Số lượng có hạn, mua ngay kẻo lỡ!
           </p>
         </div>
 
         <!-- Timer Card -->
-        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-5 shrink-0 flex flex-col items-center md:items-end gap-2 z-10 w-full md:w-auto">
-          <span class="text-[10px] text-white/90 font-extrabold uppercase tracking-wider flex items-center gap-1 select-none">
+        <div class="bg-slate-900/80 backdrop-blur-md border border-slate-750/30 rounded-3xl p-5 shrink-0 flex flex-col items-center md:items-end gap-2 z-10 w-full md:w-auto">
+          <span class="text-[10px] text-white/95 font-extrabold uppercase tracking-wider flex items-center gap-1 select-none">
             ⏰ KẾT THÚC SAU:
           </span>
           <div class="flex items-center gap-2">
@@ -43,10 +52,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Decorative background blobs -->
-        <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
-        <div class="absolute -left-20 -top-20 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
       </div>
 
       <!-- Stats Bar -->
@@ -96,6 +101,7 @@ import { productService } from '@/services/product.service';
 import { useCartStore } from '@/stores/cart';
 import { useToast } from 'vue-toastification';
 import ProductCard from '@/components/ProductCard.vue';
+import dealHotBg from '@/assets/deal-hot-bg.jpg';
 
 const toast = useToast();
 const cartStore = useCartStore();
