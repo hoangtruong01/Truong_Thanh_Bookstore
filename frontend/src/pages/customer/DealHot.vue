@@ -32,36 +32,26 @@
           <div class="flex items-center gap-2">
             <div class="flex flex-col items-center">
               <div class="bg-white text-slate-900 font-mono font-black text-xl px-3 py-2 rounded-xl shadow-md min-w-[42px] text-center leading-none">
-                00
+                {{ timerHours }}
               </div>
               <span class="text-[8px] font-extrabold text-white/80 mt-1 uppercase">Giờ</span>
             </div>
             <span class="font-black text-white text-lg -mt-3">:</span>
             <div class="flex flex-col items-center">
               <div class="bg-white text-slate-900 font-mono font-black text-xl px-3 py-2 rounded-xl shadow-md min-w-[42px] text-center leading-none">
-                {{ formatTimerUnit(timerMinutes) }}
+                {{ timerMinutes }}
               </div>
               <span class="text-[8px] font-extrabold text-white/80 mt-1 uppercase">Phút</span>
             </div>
             <span class="font-black text-white text-lg -mt-3">:</span>
             <div class="flex flex-col items-center">
               <div class="bg-white text-slate-900 font-mono font-black text-xl px-3 py-2 rounded-xl shadow-md min-w-[42px] text-center leading-none">
-                {{ formatTimerUnit(timerSeconds) }}
+                {{ timerSeconds }}
               </div>
               <span class="text-[8px] font-extrabold text-white/80 mt-1 uppercase">Giây</span>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Stats Bar -->
-      <div class="bg-white border border-slate-200 rounded-2xl p-4 flex justify-between items-center shadow-xs">
-        <div class="text-xs md:text-sm text-slate-500 font-extrabold">
-          🔥 Đang có <span class="text-red-600 font-black">{{ dealProducts.length }}</span> sản phẩm chạy Deal Sốc
-        </div>
-        <router-link to="/products" class="text-xs font-black text-slate-500 hover:text-red-600 transition-colors uppercase tracking-wider">
-          Xem tất cả sản phẩm
-        </router-link>
       </div>
 
       <!-- Loading State -->
@@ -110,8 +100,9 @@ const loading = ref(true);
 const dealProducts = ref<any[]>([]);
 
 // Countdown Timer settings
-const timerMinutes = ref(30);
-const timerSeconds = ref(0);
+const timerHours = ref("00");
+const timerMinutes = ref("00");
+const timerSeconds = ref("00");
 let timerInterval: any = null;
 
 function addToCart(product: any) {
@@ -143,21 +134,22 @@ async function loadDealProducts() {
 
 function startTimer() {
   if (timerInterval) clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    if (timerSeconds.value > 0) {
-      timerSeconds.value--;
-    } else if (timerMinutes.value > 0) {
-      timerMinutes.value--;
-      timerSeconds.value = 59;
-    } else {
-      // Reset timer to keep urgency high
-      timerMinutes.value = 30;
-      timerSeconds.value = 0;
+  const updateTimer = () => {
+    const now = new Date();
+    const midnight = new Date();
+    midnight.setHours(24, 0, 0, 0);
+    const diff = midnight.getTime() - now.getTime();
+    if (diff <= 0) {
+      return;
     }
-  }, 1000);
-}
-
-function formatTimerUnit(val: number): string {
-  return val < 10 ? `0${val}` : `${val}`;
+    const h = Math.floor(diff / (1000 * 60 * 60));
+    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const s = Math.floor((diff % (1000 * 60)) / 1000);
+    timerHours.value = h.toString().padStart(2, "0");
+    timerMinutes.value = m.toString().padStart(2, "0");
+    timerSeconds.value = s.toString().padStart(2, "0");
+  };
+  updateTimer();
+  timerInterval = setInterval(updateTimer, 1000);
 }
 </script>
