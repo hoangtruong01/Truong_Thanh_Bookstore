@@ -4,7 +4,7 @@
     class="bg-white border border-slate-200/80 rounded-2xl p-4 hover:shadow-md hover:border-slate-300 transition-all flex flex-col group relative cursor-pointer"
   >
     <!-- Discount Badge -->
-    <span v-if="discountPercent > 0" class="absolute top-6 left-6 bg-[#dc2626] text-white text-[10px] font-black px-2 py-0.5 rounded-md z-10 shadow-xs">
+    <span v-if="discountPercent > 0" class="absolute top-6 left-6 bg-[#dc2626] text-white text-[10px] font-black px-2 py-0.5 rounded-md z-20 shadow-xs">
       -{{ discountPercent }}%
     </span>
 
