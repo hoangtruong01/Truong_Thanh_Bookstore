@@ -422,10 +422,10 @@
           <!-- Utility Icons -->
           <div class="flex items-center gap-3 sm:gap-6">
             <!-- Notifications -->
-            <div class="relative hidden md:block">
+            <div id="customer-notification-dropdown-container" class="relative hidden md:block">
               <button
-                @click="showCustNotif = !showCustNotif"
-                class="relative text-slate-700 hover:text-[#dc2626] transition-colors cursor-pointer"
+                @click="toggleCustomerNotifications"
+                class="relative text-slate-700 hover:text-[#dc2626] transition-colors cursor-pointer p-1"
                 title="Thông báo"
               >
                 <svg
@@ -442,20 +442,72 @@
                     d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
                   />
                 </svg>
-                <span class="absolute top-0 right-0 w-2 h-2 bg-red-600 rounded-full border border-white"></span>
+                <!-- Unread count badge -->
+                <span 
+                  v-if="customerUnreadCount > 0" 
+                  class="absolute top-0 right-0 w-4 h-4 bg-red-600 text-[9px] font-black text-white rounded-full flex items-center justify-center border border-white"
+                >
+                  {{ customerUnreadCount }}
+                </span>
               </button>
 
               <div 
                 v-if="showCustNotif" 
-                class="absolute right-0 mt-3 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4"
+                class="absolute right-0 mt-3 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden"
               >
-                <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2 mb-2">Thông báo của bạn</h4>
-                <div class="space-y-3">
-                  <div class="flex gap-2.5 p-2 rounded-xl bg-red-50/30 border border-red-100/50">
-                    <span class="text-sm mt-0.5">🎉</span>
-                    <div>
-                      <p class="text-xs font-bold text-slate-800">Chào mừng bạn!</p>
-                      <p class="text-[10px] text-slate-500 mt-0.5 leading-relaxed">Chào mừng bạn đến với Trường Thành Bookstore. Chúc bạn mua sắm vui vẻ!</p>
+                <!-- Header -->
+                <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                  <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Thông báo của bạn</span>
+                  <button 
+                    v-if="customerUnreadCount > 0" 
+                    @click="markAllCustomerAsRead" 
+                    class="text-[10px] font-extrabold text-[#dc2626] hover:underline cursor-pointer"
+                  >
+                    Đọc tất cả
+                  </button>
+                </div>
+
+                <!-- List -->
+                <div class="max-h-80 overflow-y-auto divide-y divide-slate-100 scrollbar-none">
+                  <div v-if="!authStore.isAuthenticated" class="p-6 text-center text-xs text-slate-400 font-medium">
+                    Vui lòng đăng nhập để xem thông báo.
+                  </div>
+                  <div v-else-if="customerNotifications.length === 0" class="p-6 text-center text-xs text-slate-400 font-medium">
+                    Không có thông báo nào.
+                  </div>
+                  <div 
+                    v-else
+                    v-for="item in customerNotifications" 
+                    :key="item._id" 
+                    @click="handleCustomerNotificationClick(item)"
+                    class="p-3.5 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer text-left"
+                    :class="{'bg-red-50/5 font-semibold': !customerReadIds.includes(item._id)}"
+                  >
+                    <!-- Icon -->
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm" :class="{
+                      'bg-red-50 text-red-600': item.type === 'order',
+                      'bg-orange-50 text-orange-600': item.type === 'promotion',
+                      'bg-blue-50 text-blue-600': item.type === 'system'
+                    }">
+                      <span v-if="item.type === 'order'">📦</span>
+                      <span v-else-if="item.type === 'promotion'">🎁</span>
+                      <span v-else>🔔</span>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="flex-grow min-w-0">
+                      <div class="flex justify-between items-baseline gap-1">
+                        <span class="text-xs font-bold text-slate-800 truncate">{{ item.title }}</span>
+                        <span class="text-[9px] text-slate-400 font-medium whitespace-nowrap">{{ formatTimeAgo(item.createdAt) }}</span>
+                      </div>
+                      <p class="text-[11px] text-slate-600 leading-relaxed mt-0.5 line-clamp-2 font-medium">
+                        {{ item.message }}
+                      </p>
+                    </div>
+
+                    <!-- Unread dot -->
+                    <div v-if="!customerReadIds.includes(item._id)" class="flex-shrink-0 self-center">
+                      <div class="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
                     </div>
                   </div>
                 </div>
@@ -1246,6 +1298,7 @@ import { formatCurrency } from "@/utils/helpers";
 import type { Category } from "@/types";
 import { useToast } from "vue-toastification";
 import ProfileModal from "@/components/ProfileModal.vue";
+import { notificationService } from "@/services/notification.service";
 
 const authStore = useAuthStore();
 const cartStore = useCartStore();
@@ -1267,6 +1320,99 @@ function handleNewsletter() {
 
 const mobileMenuOpen = ref(false);
 const showCustNotif = ref(false);
+
+const customerNotifications = ref<any[]>([]);
+const customerReadIds = ref<string[]>([]);
+
+function loadCustomerReadIds() {
+  const stored = localStorage.getItem('customer_read_notification_ids');
+  if (stored) {
+    try {
+      customerReadIds.value = JSON.parse(stored);
+    } catch (e) {
+      customerReadIds.value = [];
+    }
+  }
+}
+
+function saveCustomerReadIds() {
+  localStorage.setItem('customer_read_notification_ids', JSON.stringify(customerReadIds.value));
+}
+
+const customerUnreadCount = computed(() => {
+  if (!authStore.isAuthenticated) return 0;
+  return customerNotifications.value.filter(n => !customerReadIds.value.includes(n._id)).length;
+});
+
+async function fetchCustomerNotifications() {
+  if (!authStore.isAuthenticated) {
+    customerNotifications.value = [];
+    return;
+  }
+  try {
+    const res = await notificationService.getMyNotifications();
+    customerNotifications.value = res.data?.data || res.data || [];
+  } catch (err) {
+    console.error("Failed to fetch customer notifications:", err);
+  }
+}
+
+function toggleCustomerNotifications(event: Event) {
+  event.stopPropagation();
+  showCustNotif.value = !showCustNotif.value;
+  if (showCustNotif.value) {
+    fetchCustomerNotifications();
+  }
+}
+
+function markAllCustomerAsRead() {
+  customerNotifications.value.forEach(n => {
+    if (!customerReadIds.value.includes(n._id)) {
+      customerReadIds.value.push(n._id);
+    }
+  });
+  saveCustomerReadIds();
+}
+
+function handleCustomerNotificationClick(item: any) {
+  if (!customerReadIds.value.includes(item._id)) {
+    customerReadIds.value.push(item._id);
+    saveCustomerReadIds();
+  }
+  showCustNotif.value = false;
+  
+  if (item.type === 'order' || item.meta?.orderId) {
+    router.push('/my-orders');
+  } else if (item.type === 'promotion') {
+    router.push('/products');
+  }
+}
+
+function formatTimeAgo(dateStr: string) {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (seconds < 60) return 'Vừa xong';
+  
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} phút trước`;
+  
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Hôm qua';
+  return `${days} ngày trước`;
+}
+
+watch(() => authStore.isAuthenticated, (val) => {
+  if (val) {
+    fetchCustomerNotifications();
+  } else {
+    customerNotifications.value = [];
+  }
+});
 
 // Close menu and notifications on route changes
 watch(
@@ -1409,8 +1555,29 @@ const getSubcategoriesForActiveParent = computed(() => {
   });
 });
 
+let notificationInterval: any = null;
+
+function handleClickOutside(event: MouseEvent) {
+  const dropdown = document.getElementById('customer-notification-dropdown-container');
+  if (dropdown && !dropdown.contains(event.target as Node)) {
+    showCustNotif.value = false;
+  }
+}
+
 onMounted(async () => {
   window.addEventListener("scroll", handleScroll);
+  window.addEventListener("click", handleClickOutside);
+  
+  loadCustomerReadIds();
+  if (authStore.isAuthenticated) {
+    fetchCustomerNotifications();
+  }
+  notificationInterval = setInterval(() => {
+    if (authStore.isAuthenticated) {
+      fetchCustomerNotifications();
+    }
+  }, 30000);
+
   try {
     const res = await categoryService.getAll();
     allCategories.value = res.data;
@@ -1424,6 +1591,10 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener("scroll", handleScroll);
+  window.removeEventListener("click", handleClickOutside);
+  if (notificationInterval) {
+    clearInterval(notificationInterval);
+  }
 });
 
 function navigateToCategory(categoryId: string) {

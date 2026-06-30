@@ -4,6 +4,7 @@ import { Promotion, PromotionSchema } from './schemas/promotion.schema';
 import { PromotionsService } from './promotions.service';
 import { PromotionsController } from './promotions.controller';
 import { OrdersModule } from '../orders/orders.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { OrdersModule } from '../orders/orders.module';
       { name: Promotion.name, schema: PromotionSchema },
     ]),
     forwardRef(() => OrdersModule),
+    NotificationsModule,
   ],
   controllers: [PromotionsController],
   providers: [PromotionsService],

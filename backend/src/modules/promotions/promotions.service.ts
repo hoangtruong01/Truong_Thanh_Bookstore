@@ -9,6 +9,7 @@ import { Promotion, PromotionDocument } from './schemas/promotion.schema';
 import { CreatePromotionDto, ApplyPromotionDto } from './dto/promotion.dto';
 import { DiscountType, OrderStatus } from '../../common/enums';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PromotionsService {
@@ -17,11 +18,22 @@ export class PromotionsService {
     private promotionModel: Model<PromotionDocument>,
     @InjectModel(Order.name)
     private orderModel: Model<OrderDocument>,
+    private notificationsService: NotificationsService,
   ) {}
 
   async create(dto: CreatePromotionDto): Promise<PromotionDocument> {
     const promotion = new this.promotionModel(dto);
-    return promotion.save();
+    const savedPromo = await promotion.save();
+    
+    if (savedPromo.status) {
+      this.notificationsService.createGlobalPromo(
+        savedPromo.code,
+        savedPromo.name,
+        savedPromo.description,
+      ).catch((err) => console.error('Failed to create global promo notification', err));
+    }
+    
+    return savedPromo;
   }
 
   async findAll(): Promise<PromotionDocument[]> {
@@ -51,10 +63,22 @@ export class PromotionsService {
     id: string,
     dto: Partial<CreatePromotionDto>,
   ): Promise<PromotionDocument> {
+    const oldPromo = await this.promotionModel.findById(id).exec();
+    if (!oldPromo) throw new NotFoundException('Promotion not found');
+
     const promo = await this.promotionModel
       .findByIdAndUpdate(id, dto, { new: true })
       .exec();
-    if (!promo) throw new NotFoundException('Promotion not found');
+
+    // Trigger notification if promotion was disabled and is now enabled
+    if (promo.status && !oldPromo.status) {
+      this.notificationsService.createGlobalPromo(
+        promo.code,
+        promo.name,
+        promo.description,
+      ).catch((err) => console.error('Failed to create global promo notification on update', err));
+    }
+
     return promo;
   }
 

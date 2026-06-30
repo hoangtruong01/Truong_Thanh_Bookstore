@@ -12,6 +12,7 @@ import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
 import { OrderStatus } from '../../common/enums';
 import { ConfigService } from '@nestjs/config';
 import { PromotionsService } from '../promotions/promotions.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 // FIX-C03: Shipping fee threshold (must match frontend)
 const FREE_SHIPPING_THRESHOLD = 299000;
@@ -26,6 +27,7 @@ export class OrdersService {
     private productsService: ProductsService,
     private configService: ConfigService,
     private promotionsService: PromotionsService,
+    private notificationsService: NotificationsService,
   ) {}
 
   private generateOrderCode(): string {
@@ -190,6 +192,16 @@ export class OrdersService {
     // Sync to Google Sheet (async)
     this.syncToGoogleSheet(savedOrder).catch((err) => this.logger.error('Sheet sync failed', err));
 
+    if (userId) {
+      this.notificationsService.create({
+        userId,
+        title: 'Đặt hàng thành công',
+        message: `Đơn hàng #${savedOrder.orderCode} trị giá ${savedOrder.total.toLocaleString('vi-VN')}đ đã được tiếp nhận và đang chờ xử lý.`,
+        type: 'order',
+        meta: { orderId: savedOrder._id.toString(), orderCode: savedOrder.orderCode },
+      }).catch((err) => this.logger.error('Failed to create customer notification', err));
+    }
+
     return savedOrder;
   }
 
@@ -289,6 +301,34 @@ export class OrdersService {
 
     // Sync to Google Sheet (async)
     this.syncToGoogleSheet(savedOrder).catch((err) => this.logger.error('Sheet sync failed', err));
+
+    if (savedOrder.customer && savedOrder.orderStatus !== oldStatus) {
+      const customerId = savedOrder.customer.toString();
+      let statusText = '';
+      switch (savedOrder.orderStatus) {
+        case OrderStatus.CONFIRMED:
+          statusText = 'đã được xác nhận và đang được chuẩn bị';
+          break;
+        case OrderStatus.SHIPPING:
+          statusText = 'đang được giao đến bạn';
+          break;
+        case OrderStatus.COMPLETED:
+          statusText = 'đã giao thành công. Cảm ơn bạn đã mua sắm!';
+          break;
+        case OrderStatus.CANCELLED:
+          statusText = 'đã bị hủy';
+          break;
+      }
+      if (statusText) {
+        this.notificationsService.create({
+          userId: customerId,
+          title: `Cập nhật đơn hàng #${savedOrder.orderCode}`,
+          message: `Đơn hàng #${savedOrder.orderCode} của bạn ${statusText}.`,
+          type: 'order',
+          meta: { orderId: savedOrder._id.toString(), orderCode: savedOrder.orderCode },
+        }).catch((err) => this.logger.error('Failed to create customer notification for status change', err));
+      }
+    }
 
     return savedOrder;
   }
