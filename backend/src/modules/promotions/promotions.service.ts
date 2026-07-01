@@ -70,6 +70,8 @@ export class PromotionsService {
       .findByIdAndUpdate(id, dto, { new: true })
       .exec();
 
+    if (!promo) throw new NotFoundException('Promotion not found');
+
     // Trigger notification if promotion was disabled and is now enabled
     if (promo.status && !oldPromo.status) {
       this.notificationsService.createGlobalPromo(

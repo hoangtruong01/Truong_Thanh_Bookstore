@@ -381,8 +381,10 @@ export class OrdersService {
       {
         $group: {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-          revenue: { $sum: '$total' },
-          orders: { $sum: 1 },
+          total: { $sum: '$total' },
+          subtotal: { $sum: '$subtotal' },
+          discount: { $sum: '$discount' },
+          count: { $sum: 1 },
         },
       },
       { $sort: { _id: 1 } },

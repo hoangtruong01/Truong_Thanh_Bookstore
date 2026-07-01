@@ -126,53 +126,16 @@
             <div class="absolute inset-x-0 top-3/4 h-[1px] bg-slate-100/60"></div>
             
             <!-- Bars representing data -->
-            <div class="flex-1 flex flex-col items-center group relative h-full justify-end">
-              <div class="w-8 bg-gradient-to-t from-[#f97316] to-[#dc2626] rounded-t-md transition-all duration-300 hover:opacity-85 cursor-pointer" style="height: 48%;">
-                <span class="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 font-bold">1.450.000đ</span>
+            <div v-for="day in chartData" :key="day.dateLabel" class="flex-1 flex flex-col items-center group relative h-full justify-end">
+              <div 
+                class="w-8 bg-gradient-to-t from-[#f97316] to-[#dc2626] rounded-t-md transition-all duration-300 hover:opacity-85 cursor-pointer" 
+                :style="{ height: day.heightPercent + '%' }"
+              >
+                <span class="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 font-bold">
+                  {{ formatCurrency(day.value) }}
+                </span>
               </div>
-              <span class="text-[9px] text-slate-400 font-extrabold mt-2 absolute bottom-0">Thứ 2</span>
-            </div>
-            
-            <div class="flex-1 flex flex-col items-center group relative h-full justify-end">
-              <div class="w-8 bg-gradient-to-t from-[#f97316] to-[#dc2626] rounded-t-md transition-all duration-300 hover:opacity-85 cursor-pointer" style="height: 65%;">
-                <span class="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 font-bold">2.100.000đ</span>
-              </div>
-              <span class="text-[9px] text-slate-400 font-extrabold mt-2 absolute bottom-0">Thứ 3</span>
-            </div>
-            
-            <div class="flex-1 flex flex-col items-center group relative h-full justify-end">
-              <div class="w-8 bg-gradient-to-t from-[#f97316] to-[#dc2626] rounded-t-md transition-all duration-300 hover:opacity-85 cursor-pointer" style="height: 40%;">
-                <span class="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 font-bold">1.100.000đ</span>
-              </div>
-              <span class="text-[9px] text-slate-400 font-extrabold mt-2 absolute bottom-0">Thứ 4</span>
-            </div>
-            
-            <div class="flex-1 flex flex-col items-center group relative h-full justify-end">
-              <div class="w-8 bg-gradient-to-t from-[#f97316] to-[#dc2626] rounded-t-md transition-all duration-300 hover:opacity-85 cursor-pointer" style="height: 82%;">
-                <span class="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 font-bold">2.750.000đ</span>
-              </div>
-              <span class="text-[9px] text-slate-400 font-extrabold mt-2 absolute bottom-0">Thứ 5</span>
-            </div>
-            
-            <div class="flex-1 flex flex-col items-center group relative h-full justify-end">
-              <div class="w-8 bg-gradient-to-t from-[#f97316] to-[#dc2626] rounded-t-md transition-all duration-300 hover:opacity-85 cursor-pointer" style="height: 95%;">
-                <span class="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 font-bold">3.400.000đ</span>
-              </div>
-              <span class="text-[9px] text-slate-400 font-extrabold mt-2 absolute bottom-0">Thứ 6</span>
-            </div>
-            
-            <div class="flex-1 flex flex-col items-center group relative h-full justify-end">
-              <div class="w-8 bg-gradient-to-t from-[#f97316] to-[#dc2626] rounded-t-md transition-all duration-300 hover:opacity-85 cursor-pointer" style="height: 72%;">
-                <span class="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 font-bold">2.350.000đ</span>
-              </div>
-              <span class="text-[9px] text-slate-400 font-extrabold mt-2 absolute bottom-0">Thứ 7</span>
-            </div>
-            
-            <div class="flex-1 flex flex-col items-center group relative h-full justify-end">
-              <div class="w-8 bg-gradient-to-t from-[#f97316] to-[#dc2626] rounded-t-md transition-all duration-300 hover:opacity-85 cursor-pointer" style="height: 55%;">
-                <span class="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 font-bold">1.800.000đ</span>
-              </div>
-              <span class="text-[9px] text-slate-400 font-extrabold mt-2 absolute bottom-0">Chủ Nhật</span>
+              <span class="text-[9px] text-slate-400 font-extrabold mt-2 absolute bottom-0">{{ day.dateLabel }}</span>
             </div>
           </div>
         </div>
@@ -270,8 +233,59 @@ const stats = ref<DashboardStats | null>(null)
 const recentOrders = ref<Order[]>([])
 const bestSelling = ref<Product[]>([])
 const lowStockItems = ref<any[]>([])
+const chartData = ref<{ dateLabel: string; value: number; heightPercent: number }[]>([])
 const loading = ref(true)
 const toast = useToast()
+
+async function loadChartData() {
+  try {
+    const today = new Date()
+    const start = new Date()
+    start.setDate(today.getDate() - 6)
+    
+    const formatDate = (d: Date) => {
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+    
+    const startStr = formatDate(start)
+    const endStr = formatDate(today)
+    
+    const res = await reportService.getRevenue(startStr, endStr)
+    const dbData = res.data || []
+    
+    const days: { dateLabel: string; value: number; heightPercent: number }[] = []
+    const dayNames = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7']
+    
+    let maxVal = 0
+    for (let i = 0; i < 7; i++) {
+      const current = new Date(start)
+      current.setDate(start.getDate() + i)
+      const dateStr = formatDate(current)
+      
+      const match = dbData.find((item: any) => item._id === dateStr)
+      const val = match ? (match.total || 0) : 0
+      if (val > maxVal) maxVal = val
+      
+      const dayName = dayNames[current.getDay()]
+      days.push({
+        dateLabel: dayName,
+        value: val,
+        heightPercent: 0
+      })
+    }
+    
+    days.forEach(d => {
+      d.heightPercent = maxVal > 0 ? Math.max(8, Math.round((d.value / maxVal) * 85)) : 8
+    })
+    
+    chartData.value = days
+  } catch (err) {
+    console.error('Failed to load chart data:', err)
+  }
+}
 
 onMounted(async () => {
   try {
@@ -288,6 +302,8 @@ onMounted(async () => {
         timeout: 6000
       })
     }
+    
+    await loadChartData()
   } catch (err) {
     console.error('Error fetching dashboard stats or low stock items', err)
   } finally {
