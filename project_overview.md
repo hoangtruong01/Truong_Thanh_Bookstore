@@ -13,6 +13,7 @@ backend/
 ├── src/
 │   ├── main.ts                        # Khởi tạo ứng dụng NestJS, thiết lập CORS, Pipes, Filters
 │   ├── app.module.ts                  # Root Module kết nối Mongoose, Config và Throttler (Rate Limit)
+│   ├── app.controller.ts              # Controller cho các tác vụ hệ thống (như check health)
 │   ├── common/                        # Chứa các tiện ích dùng chung
 │   │   ├── decorators/                # Decorator tùy chỉnh (ví dụ: @GetUser lấy thông tin user từ JWT)
 │   │   ├── dto/                       # DTO dùng chung cho phân trang (PaginationDto)
@@ -56,6 +57,7 @@ frontend/
 │   ├── types/                         # Định nghĩa kiểu dữ liệu TypeScript (Product, Order, User,...)
 │   └── utils/                         # Hàm trợ giúp (formatCurrency, mã hóa JWT localStorage, helper date)
 ├── package.json                       # Quản lý thư viện phụ thuộc của Frontend
+├── vercel.json                        # Cấu hình định tuyến và URL rewrites khi deploy lên Vercel
 └── vite.config.ts                     # File cấu hình đóng gói và tối ưu của Vite
 ```
 
