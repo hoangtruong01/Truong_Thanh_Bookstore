@@ -314,6 +314,7 @@ sequenceDiagram
 | | `GET` | `/api/promotions/active`| Public | Lấy danh sách coupon đang hoạt động |
 | **Báo cáo** | `GET` | `/api/reports/dashboard`| Admin / Staff | Lấy tổng quan thống kê dashboard |
 | | `GET` | `/api/reports/revenue` | Admin / Staff | Báo cáo doanh thu theo dải ngày (local time) |
+| **Giám sát** | `GET` | `/api/health` | Public | Endpoint kiểm tra sức khỏe của server (cho Cron-job) |
 
 ---
 
@@ -356,6 +357,50 @@ npm run dev
 npm run build
 ```
 
+### 9.3. Hướng dẫn Triển khai Production (Deployment Guide)
+
+#### 1. Triển khai Backend lên Render (Web Service)
+- **Chuẩn bị**: Đăng ký MongoDB Atlas và thêm địa chỉ IP `0.0.0.0/0` vào IP Access List trên MongoDB Atlas Dashboard để cho phép Render kết nối đến Database từ bất cứ đâu.
+- **Tạo Web Service**:
+  - Chọn Repository dự án trên Render.
+  - Cấu hình:
+    - **Name**: `truong-thanh-bookstore-backend`
+    - **Language**: `Node` (hoặc sử dụng `Docker` qua Dockerfile đã viết sẵn)
+    - **Root Directory**: `backend`
+    - **Build Command**: `npm install && npm run build`
+    - **Start Command**: `npm run start:prod`
+  - **Environment Variables**: Thêm đầy đủ các biến môi trường sau trên Render Dashboard:
+    - `PORT`: `3000` (Render tự cấu hình cổng ngoài, nhưng server chạy cổng này nội bộ)
+    - `MONGODB_URI`: Chuỗi kết nối MongoDB Atlas (dạng `mongodb+srv://...`)
+    - `JWT_SECRET`: Khóa bảo mật ký token (nên đặt ngẫu nhiên và phức tạp)
+    - `JWT_EXPIRES_IN`: `7d`
+    - `FRONTEND_URL`: URL trang Frontend sau khi deploy trên Vercel (ví dụ: `https://truong-thanh-store.vercel.app`) để cấu hình CORS.
+    - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`: Các khóa tài khoản Cloudinary để lưu ảnh đại diện.
+    - `GEMINI_API_KEY` (Tùy chọn): API key cho Gemini AI tạo landing page.
+    - `GOOGLE_SHEET_WEBAPP_URL` (Tùy chọn): URL Script WebApp để đồng bộ đơn hàng sang Google Sheets.
+
+#### 2. Thiết lập Cron-job giữ Backend hoạt động liên tục
+Vì Render Free Tier tự động chuyển sang chế độ ngủ (sleep) sau 15 phút không nhận được yêu cầu nào, lượt truy cập đầu tiên sau đó sẽ mất khoảng 30-50 giây để khởi động lại server.
+- **Giải pháp**: Thiết lập một Cron-job định kỳ để gửi request kích hoạt tới backend.
+- **Cách thực hiện**:
+  - Sử dụng dịch vụ cron-job miễn phí như [cron-job.org](https://cron-job.org) hoặc UptimeRobot.
+  - Tạo một cron-job mới trỏ đến địa chỉ: `https://<YOUR_RENDER_BACKEND_URL>/api/health`.
+  - Đặt lịch chạy: Cứ mỗi **10 - 14 phút** (lặp lại liên tục).
+  - Endpoint `/api/health` phản hồi siêu nhanh mà không truy vấn cơ sở dữ liệu, giữ cho Render Backend hoạt động 24/7 một cách nhẹ nhàng.
+
+#### 3. Triển khai Frontend lên Vercel
+- **Tạo project trên Vercel**:
+  - Kết nối Vercel với kho mã nguồn GitHub của bạn.
+  - Chọn dự án `truong_thanh_store`.
+  - Cấu hình dự án:
+    - **Framework Preset**: `Vite`
+    - **Root Directory**: `frontend`
+    - **Build Command**: `npm run build`
+    - **Output Directory**: `dist`
+  - **Environment Variables**:
+    - Thêm biến `VITE_API_URL` trỏ về địa chỉ Render Backend (ví dụ: `https://your-backend.onrender.com/api`).
+- **Lưu ý**: Tệp `frontend/vercel.json` đã được cấu hình tự động để kích hoạt chế độ URL sạch và định tuyến toàn bộ yêu cầu về `index.html`, tránh lỗi `404 Not Found` khi F5 tải lại các trang con của Vue Router.
+
 ---
 
 ## 📜 10. LỊCH SỬ SỬA LỖI QA (QA BUG FIX HISTORY)
@@ -386,4 +431,5 @@ npm run build
 23. **L04 (Responsive Admin)**: Sửa giao diện Admin Layout bị tràn màn hình trên mobile (hỗ trợ đóng mở sidebar, backdrop mờ).
 24. **L05 (Trùng lặp slug)**: Thêm hậu tố ngẫu nhiên 4 ký tự vào slug khi tạo sản phẩm để tránh trùng link URL.
 25. **L06 (Dọn dẹp Console)**: Chuyển đổi toàn bộ lệnh debug `console.log` và `console.error` của server sang NestJS `Logger`.
+26. **Deploy Setup**: Thêm `/api/health` cho Render, cấu hình `vercel.json` định tuyến cho Vercel FE, nới lỏng CORS hỗ trợ Vercel previews.
 

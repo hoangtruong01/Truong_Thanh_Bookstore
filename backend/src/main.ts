@@ -16,14 +16,20 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
-  // FIX-C05: CORS — support multiple origins (comma-separated in FRONTEND_URL)
+  // CORS — support multiple origins & Vercel preview domains
   const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
     .split(',')
     .map(o => o.trim());
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       // Allow requests with no origin (server-to-server, curl, mobile apps)
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Also allow Vercel preview deployments (*.vercel.app) and local development
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        /^http:\/\/localhost(:\d+)?$/.test(origin)
+      ) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -68,7 +74,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   const logger = new Logger('Bootstrap');
   logger.log(`🚀 Server running on http://localhost:${port}`);
   logger.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);

@@ -15,6 +15,7 @@ import { LandingPagesModule } from './modules/landing-pages/landing-pages.module
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     LandingPagesModule,
     NotificationsModule,
   ],
+  controllers: [AppController],
   providers: [
     {
       provide: APP_GUARD,
