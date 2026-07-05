@@ -25,7 +25,7 @@ import { AppController } from './app.controller';
       useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('MONGODB_URI'),
         connectionFactory: (connection) => {
-          connection.on('error', (err) => {
+          connection.on('error', (err: any) => {
             console.error('❌ Mongoose connection error:', err);
           });
           connection.on('connected', () => {
