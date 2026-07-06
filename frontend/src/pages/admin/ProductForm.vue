@@ -236,7 +236,7 @@
       </div>
 
       <!-- Pricing & Stock -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 border-t border-slate-100 pt-6">
         <div>
           <label class="text-xs font-bold text-slate-700">Giá bán lẻ (VND) *</label>
           <input
@@ -257,6 +257,17 @@
             required
             min="0"
             placeholder="0"
+            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+          />
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-slate-700">Đơn vị tính *</label>
+          <input
+            v-model="form.unit"
+            type="text"
+            required
+            placeholder="Ví dụ: cái, quyển, vỉ..."
             class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
           />
         </div>
@@ -511,6 +522,7 @@ const form = reactive({
   price: 0,
   discountPrice: 0,
   stock: 0,
+  unit: 'cái',
   description: '',
   status: 'ACTIVE',
   isFeatured: false,
@@ -694,6 +706,7 @@ onMounted(() => {
         form.discountPrice = data.discountPrice || 0
         isHotDeal.value = (data.discountPrice || 0) > 0
         form.stock = data.stock
+        form.unit = data.unit || 'cái'
         form.description = data.description || ''
         form.status = data.status
         form.isFeatured = data.isFeatured || false

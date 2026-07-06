@@ -61,6 +61,11 @@ export class CreateProductDto {
   @Min(0)
   stock?: number;
 
+  @ApiPropertyOptional({ example: 'cái' })
+  @IsOptional()
+  @IsString()
+  unit?: string;
+
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
@@ -131,6 +136,11 @@ export class UpdateProductDto {
   @IsNumber()
   @Min(0)
   stock?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  unit?: string;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()

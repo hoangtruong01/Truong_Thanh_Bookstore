@@ -37,7 +37,7 @@
               </div>
             </div>
             <div class="text-right flex-shrink-0 ml-2">
-              <div class="text-xs font-black text-red-600">{{ item.currentStock }} / {{ item.minStock }}</div>
+              <div class="text-xs font-black text-red-600">{{ item.currentStock }} / {{ item.minStock }} {{ item.product?.unit || 'cái' }}</div>
               <p class="text-[8px] text-slate-400 uppercase font-bold">Hiện tại / Min</p>
             </div>
           </div>

@@ -36,6 +36,9 @@ export class Product {
   @Prop({ default: 0 })
   stock: number;
 
+  @Prop({ default: 'cái' })
+  unit: string;
+
   @Prop({ type: [String], default: [] })
   images: string[];
 

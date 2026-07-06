@@ -133,7 +133,7 @@
                 </div>
               </td>
               <td class="py-4 px-6">
-                <span :class="[prod.stock <= 10 ? 'text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded' : 'text-slate-700']">{{ prod.stock }}</span>
+                <span :class="[prod.stock <= 10 ? 'text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded' : 'text-slate-700']">{{ prod.stock }} {{ prod.unit || 'cái' }}</span>
               </td>
               <td class="py-4 px-6 text-slate-600 font-bold">{{ prod.sold }}</td>
               <td class="py-4 px-6">

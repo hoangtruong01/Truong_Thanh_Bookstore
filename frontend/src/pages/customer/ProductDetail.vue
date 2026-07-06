@@ -135,7 +135,7 @@
               <span class="text-slate-500 font-medium">Đã bán {{ product.sold }}</span>
               <span class="text-slate-400">|</span>
               <span :class="[product.stock > 0 ? 'text-green-600' : 'text-red-600', 'font-semibold']">
-                {{ product.stock > 0 ? `Còn hàng (${product.stock})` : 'Hết hàng' }}
+                {{ product.stock > 0 ? `Còn hàng (${product.stock} ${product.unit || 'cái'})` : 'Hết hàng' }}
               </span>
             </div>
           </div>

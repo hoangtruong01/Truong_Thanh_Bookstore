@@ -39,7 +39,7 @@
             class="bg-white border border-amber-200 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-slate-700 flex items-center gap-1.5"
           >
             <span>{{ getProductName(stk) }}</span>
-            <span class="text-red-600">(Còn {{ stk.currentStock }} / Tối thiểu {{ stk.minStock }})</span>
+            <span class="text-red-600">(Còn {{ stk.currentStock }} / Tối thiểu {{ stk.minStock }} {{ getProductUnit(stk) }})</span>
           </div>
         </div>
       </div>
@@ -118,7 +118,7 @@
                   <td class="py-4 px-6 font-mono text-[10px] font-bold text-slate-500">{{ getProductSku(stk) }}</td>
                   <!-- Stock counts -->
                   <td class="py-4 px-6 font-extrabold" :class="[stk.status === 'LOW_STOCK' || stk.currentStock <= stk.minStock ? 'text-[#dc2626] bg-red-50/50 rounded px-2 py-0.5' : 'text-slate-800']">
-                    {{ stk.currentStock }}
+                    {{ stk.currentStock }} {{ getProductUnit(stk) }}
                   </td>
                   <td class="py-4 px-6 text-slate-500 font-bold">{{ stk.minStock }} / {{ stk.maxStock }}</td>
                   <td class="py-4 px-6">
@@ -143,7 +143,7 @@
           <div v-else class="space-y-4">
             <div class="space-y-1">
               <h4 class="font-extrabold text-slate-800 text-xs leading-tight">{{ getProductName(selectedStock) }}</h4>
-              <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Mã SKU: {{ getProductSku(selectedStock) }} | Hiện tại: <span class="font-extrabold text-slate-800">{{ selectedStock.currentStock }}</span></p>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Mã SKU: {{ getProductSku(selectedStock) }} | Hiện tại: <span class="font-extrabold text-slate-800">{{ selectedStock.currentStock }} {{ getProductUnit(selectedStock) }}</span></p>
             </div>
 
             <!-- Adjust Options Form -->
@@ -247,9 +247,9 @@
                 </span>
               </td>
               <td class="py-4 px-6 font-extrabold text-slate-800">
-                <span v-if="tx.type === 'IMPORT'" class="text-emerald-600 font-extrabold">+{{ tx.quantity }}</span>
-                <span v-else-if="tx.type === 'EXPORT'" class="text-red-600 font-extrabold">-{{ tx.quantity }}</span>
-                <span v-else class="text-blue-600 font-extrabold">{{ tx.quantity }}</span>
+                <span v-if="tx.type === 'IMPORT'" class="text-emerald-600 font-extrabold">+{{ tx.quantity }} {{ tx.product?.unit || 'cái' }}</span>
+                <span v-else-if="tx.type === 'EXPORT'" class="text-red-600 font-extrabold">-{{ tx.quantity }} {{ tx.product?.unit || 'cái' }}</span>
+                <span v-else class="text-blue-600 font-extrabold">{{ tx.quantity }} {{ tx.product?.unit || 'cái' }}</span>
               </td>
               <td class="py-4 px-6 text-slate-600 font-bold">{{ tx.createdBy?.fullName || 'Hệ thống' }}</td>
               <td class="py-4 px-6 text-slate-500 italic max-w-[150px] truncate" :title="tx.note">{{ tx.note || '-' }}</td>
@@ -364,6 +364,11 @@ function getProductSku(stk: Inventory) {
 // Product Image helper
 function getProductImage(stk: Inventory) {
   return (stk.product && typeof stk.product === 'object') ? stk.product.images?.[0] : ''
+}
+
+function getProductUnit(stk: Inventory | null) {
+  if (!stk) return 'cái'
+  return (stk.product && typeof stk.product === 'object') ? stk.product.unit || 'cái' : 'cái'
 }
 
 async function submitAdjustment() {

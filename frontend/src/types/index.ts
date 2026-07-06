@@ -26,6 +26,7 @@ export interface Product {
   price: number
   discountPrice: number
   stock: number
+  unit?: string
   images: string[]
   rating: number
   sold: number
