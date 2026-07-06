@@ -1995,6 +1995,26 @@ function getProductPlaceholder(name: string) {
   };
 }
 
+// Watch product lists to trigger scroll reveal observation after they load asynchronously
+watch(
+  [
+    bestSelling,
+    newProducts,
+    textbookProducts,
+    referenceProducts,
+    toyProducts,
+    comicProducts,
+    comboProducts,
+    giftProducts,
+  ],
+  () => {
+    setTimeout(() => {
+      observeNewElements();
+    }, 100);
+  },
+  { deep: true }
+);
+
 onMounted(() => {
   startCountdown();
 
