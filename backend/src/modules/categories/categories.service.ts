@@ -31,6 +31,10 @@ export class CategoriesService {
     return this.categoryModel
       .find({ status: true })
       .populate('parentId')
+      .populate({
+        path: 'products',
+        match: { status: 'ACTIVE', isDeleted: false },
+      })
       .exec();
   }
 
