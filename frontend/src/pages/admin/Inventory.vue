@@ -87,7 +87,7 @@
               </thead>
               <tbody class="divide-y divide-slate-150 font-medium text-slate-800">
                 <tr
-                  v-for="stk in filteredStocks"
+                  v-for="stk in paginatedStocks"
                   :key="stk._id"
                   @click="selectStock(stk)"
                   class="hover:bg-slate-50/50 cursor-pointer transition-colors"
@@ -127,6 +127,38 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination -->
+          <div v-if="totalPages > 1" class="p-4 border-t border-slate-100 flex items-center justify-between bg-white text-xs">
+            <div class="text-slate-500 font-semibold">
+              Hiển thị {{ (currentPage - 1) * 15 + 1 }} - {{ Math.min(currentPage * 15, filteredStocks.length) }} trên {{ filteredStocks.length }} sản phẩm
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button 
+                @click="currentPage = Math.max(1, currentPage - 1)" 
+                :disabled="currentPage === 1"
+                class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Trước
+              </button>
+              <button 
+                v-for="page in visiblePages" 
+                :key="page"
+                @click="currentPage = page"
+                class="w-8 h-8 rounded-lg font-bold transition-colors cursor-pointer"
+                :class="currentPage === page ? 'bg-[#dc2626] text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-600'"
+              >
+                {{ page }}
+              </button>
+              <button 
+                @click="currentPage = Math.min(totalPages, currentPage + 1)" 
+                :disabled="currentPage === totalPages"
+                class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Sau
+              </button>
+            </div>
           </div>
         </div>
 
@@ -260,7 +292,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { inventoryService } from '@/services/inventory.service'
 import type { Inventory } from '@/types'
@@ -325,6 +357,39 @@ const filteredStocks = computed(() => {
     const sku = getProductSku(stk).toLowerCase()
     return name.includes(q) || sku.includes(q)
   })
+})
+
+// Pagination
+const currentPage = ref(1)
+
+const paginatedStocks = computed(() => {
+  const start = (currentPage.value - 1) * 15
+  const end = start + 15
+  return filteredStocks.value.slice(start, end)
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredStocks.value.length / 15) || 1
+})
+
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const maxVisible = 5
+  let start = Math.max(1, currentPage.value - 2)
+  let end = Math.min(totalPages.value, start + maxVisible - 1)
+
+  if (end - start < maxVisible - 1) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+  return pages
+})
+
+watch(stockQuery, () => {
+  currentPage.value = 1
 })
 
 const filteredTransactions = computed(() => {
