@@ -82,7 +82,6 @@
                   <th class="py-4 px-6">Sản phẩm</th>
                   <th class="py-4 px-6">SKU</th>
                   <th class="py-4 px-6">Kho</th>
-                  <th class="py-4 px-6">Định mức Min/Max</th>
                   <th class="py-4 px-6">Trạng thái</th>
                 </tr>
               </thead>
@@ -120,7 +119,6 @@
                   <td class="py-4 px-6 font-extrabold" :class="[stk.status === 'LOW_STOCK' || stk.currentStock <= stk.minStock ? 'text-[#dc2626] bg-red-50/50 rounded px-2 py-0.5' : 'text-slate-800']">
                     {{ stk.currentStock }} {{ getProductUnit(stk) }}
                   </td>
-                  <td class="py-4 px-6 text-slate-500 font-bold">{{ stk.minStock }} / {{ stk.maxStock }}</td>
                   <td class="py-4 px-6">
                     <span :class="['px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wide', getInventoryBadgeStyle(stk.status, stk.currentStock, stk.minStock)]">
                       {{ getInventoryStatusLabel(stk.status, stk.currentStock, stk.minStock) }}
