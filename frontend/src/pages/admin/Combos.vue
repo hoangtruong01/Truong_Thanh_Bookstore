@@ -60,9 +60,8 @@
             </thead>
             <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
               <tr v-for="combo in paginatedCombos" :key="combo._id" class="hover:bg-slate-50/50">
-                <td class="py-4 px-6">
+                <td class="py-4 px-6 whitespace-nowrap">
                   <div class="font-bold text-slate-800">{{ combo.name }}</div>
-                  <div class="text-xs text-slate-450 font-mono mt-0.5">{{ combo.slug }}</div>
                   <div v-if="combo.parentId" class="text-[10px] text-slate-500 font-semibold mt-1">
                     Thuộc: <span class="font-bold text-slate-700">{{ getParentName(combo.parentId) }}</span>
                   </div>
