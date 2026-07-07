@@ -136,12 +136,12 @@
                 <span :class="[prod.stock <= 10 ? 'text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded' : 'text-slate-700']">{{ prod.stock }} {{ prod.unit || 'cái' }}</span>
               </td>
               <td class="py-4 px-6 text-slate-600 font-bold">{{ prod.sold }}</td>
-              <td class="py-4 px-6">
+              <td class="py-4 px-6 whitespace-nowrap">
                 <span :class="['px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wide', getProductStatusStyle(prod.status)]">
                   {{ getProductStatusLabel(prod.status) }}
                 </span>
               </td>
-              <td class="py-4 px-6 text-right space-x-3">
+              <td class="py-4 px-6 text-right space-x-3 whitespace-nowrap">
                 <router-link :to="`/admin/products/${prod._id}/edit`" class="text-blue-600 hover:text-blue-800 inline-block font-extrabold">
                   Sửa
                 </router-link>

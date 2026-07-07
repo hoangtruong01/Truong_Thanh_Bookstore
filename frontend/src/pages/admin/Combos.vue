@@ -59,7 +59,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
-              <tr v-for="combo in filteredCombos" :key="combo._id" class="hover:bg-slate-50/50">
+              <tr v-for="combo in paginatedCombos" :key="combo._id" class="hover:bg-slate-50/50">
                 <td class="py-4 px-6">
                   <div class="font-bold text-slate-800">{{ combo.name }}</div>
                   <div class="text-xs text-slate-450 font-mono mt-0.5">{{ combo.slug }}</div>
@@ -87,12 +87,12 @@
                   </div>
                   <span v-else class="text-xs text-slate-400 italic">Chưa có sản phẩm</span>
                 </td>
-                <td class="py-4 px-6">
+                <td class="py-4 px-6 whitespace-nowrap">
                   <span :class="[combo.status ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-600 border border-slate-200', 'px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider']">
                     {{ combo.status ? 'Đang hoạt động' : 'Tạm khóa' }}
                   </span>
                 </td>
-                <td class="py-4 px-6 text-right space-x-3">
+                <td class="py-4 px-6 text-right space-x-3 whitespace-nowrap">
                   <button @click="openEditForm(combo)" class="text-blue-600 hover:text-blue-800 inline-block font-extrabold cursor-pointer">
                     Sửa
                   </button>
@@ -324,8 +324,40 @@
                   </tr>
                 </tbody>
               </table>
+          </div>
+
+          <!-- Pagination -->
+          <div v-if="totalPages > 1" class="p-4 border-t border-slate-100 flex items-center justify-between bg-white text-xs">
+            <div class="text-slate-500 font-semibold">
+              Hiển thị {{ (currentPage - 1) * 15 + 1 }} - {{ Math.min(currentPage * 15, filteredCombos.length) }} trên {{ filteredCombos.length }} combo
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button 
+                @click="currentPage = Math.max(1, currentPage - 1)" 
+                :disabled="currentPage === 1"
+                class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Trước
+              </button>
+              <button 
+                v-for="page in visiblePages" 
+                :key="page"
+                @click="currentPage = page"
+                class="w-8 h-8 rounded-lg font-bold transition-colors cursor-pointer"
+                :class="currentPage === page ? 'bg-[#dc2626] text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-600'"
+              >
+                {{ page }}
+              </button>
+              <button 
+                @click="currentPage = Math.min(totalPages, currentPage + 1)" 
+                :disabled="currentPage === totalPages"
+                class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Sau
+              </button>
             </div>
           </div>
+        </div>
 
           <!-- Combo Pricing -->
           <div class="border-t border-slate-100 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -464,6 +496,39 @@ const filteredCombos = computed(() => {
       c.name.toLowerCase().includes(query) ||
       (c.description && c.description.toLowerCase().includes(query))
   )
+})
+
+// Pagination
+const currentPage = ref(1)
+
+const paginatedCombos = computed(() => {
+  const start = (currentPage.value - 1) * 15
+  const end = start + 15
+  return filteredCombos.value.slice(start, end)
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredCombos.value.length / 15) || 1
+})
+
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const maxVisible = 5
+  let start = Math.max(1, currentPage.value - 2)
+  let end = Math.min(totalPages.value, start + maxVisible - 1)
+
+  if (end - start < maxVisible - 1) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+  return pages
+})
+
+watch(searchQuery, () => {
+  currentPage.value = 1
 })
 
 // Filter products inside dropdown based on search text (Name or SKU)
