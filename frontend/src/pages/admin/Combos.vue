@@ -19,7 +19,7 @@
     <!-- Main Content Grid -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
       <!-- Combos List -->
-      <div class="xl:col-span-2 bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+      <div :class="[showForm ? 'xl:col-span-2' : 'xl:col-span-3']" class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
         <!-- Search box -->
         <div class="p-4 border-b border-slate-100 flex gap-4 items-center">
           <div class="relative flex-grow">
@@ -48,7 +48,7 @@
         </div>
 
         <div v-else class="overflow-x-auto">
-          <table class="w-full text-left border-collapse text-sm">
+          <table class="w-full min-w-[800px] text-left border-collapse text-sm">
             <thead>
               <tr class="bg-slate-50 border-b border-slate-150 text-slate-400 font-bold text-xs uppercase tracking-wider">
                 <th class="py-4 px-6">Combo</th>
