@@ -831,306 +831,48 @@
     </section>
 
     <!-- Section 6: Best Sellers -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
-      <div
-        class="reveal flex items-end justify-between border-b border-slate-100 pb-4"
-      >
-        <div class="text-left">
-          <span
-            class="text-xs font-bold text-rose-600 tracking-[0.2em] uppercase"
-            >Mọi người yêu thích</span
-          >
-          <h2
-            class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1"
-          >
-            🔥 Sản phẩm bán chạy nhất
-          </h2>
-        </div>
-        <router-link
-          to="/products"
-          class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group"
-        >
-          <span>Xem tất cả</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke="currentColor"
-            class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m8.25 4.5 7.5 7.5-7.5 7.5"
-            />
-          </svg>
-        </router-link>
-      </div>
-
-      <div
-        v-if="loadingBest"
-        class="responsive-flex-grid"
-      >
-        <div
-          v-for="n in 5"
-          :key="n"
-          class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse"
-        >
-          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-        </div>
-      </div>
-
-      <div
-        v-else
-        class="responsive-flex-grid"
-      >
-        <ProductCard
-          v-for="(prod, idx) in bestSelling.slice(0, 10)"
-          :key="prod._id"
-          :product="prod"
-          :class="['reveal-scale', `delay-${(idx % 5) * 100}`]"
-          @add-to-cart="addToCart"
-        />
-      </div>
-
-      <div class="flex justify-center pt-6">
-        <router-link
-          to="/products"
-          class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
-        >
-          Xem Thêm Sản Phẩm
-        </router-link>
-      </div>
-    </section>
+    <CategoryProductSection
+      title="Sản phẩm bán chạy nhất"
+      subtitle="Mọi người yêu thích"
+      :products="bestSelling"
+      :loading="loadingBest"
+      viewAllLink="/products"
+      buttonLabel="Xem Thêm Sản Phẩm"
+      @add-to-cart="addToCart"
+    />
 
     <!-- Section 7: New Arrivals -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
-      <div
-        class="reveal flex items-end justify-between border-b border-slate-100 pb-4"
-      >
-        <div class="text-left">
-          <span
-            class="text-xs font-bold text-rose-600 tracking-[0.2em] uppercase font-black"
-            >Bộ sưu tập mới</span
-          >
-          <h2
-            class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1"
-          >
-            ✨ Hàng mới cập bến
-          </h2>
-        </div>
-        <router-link
-          to="/products?sort=newest"
-          class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group"
-        >
-          <span>Xem tất cả</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke="currentColor"
-            class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m8.25 4.5 7.5 7.5-7.5 7.5"
-            />
-          </svg>
-        </router-link>
-      </div>
+    <CategoryProductSection
+      title="Hàng mới cập bến"
+      subtitle="Bộ sưu tập mới"
+      :products="newProducts"
+      :loading="loadingNew"
+      viewAllLink="/products?sort=newest"
+      buttonLabel="Khám Phá Bộ Sưu Tập Mới"
+      @add-to-cart="addToCart"
+    />
 
-      <div
-        v-if="loadingNew"
-        class="responsive-flex-grid"
-      >
-        <div
-          v-for="n in 5"
-          :key="n"
-          class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse"
-        >
-          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-        </div>
-      </div>
+    <!-- Section 8: Sách Giáo Khoa -->
+    <CategoryProductSection
+      title="Sách Giáo Khoa 2026"
+      subtitle="Bộ sưu tập nổi bật"
+      :products="textbookProducts"
+      :loading="loadingTextbook"
+      :viewAllLink="'/products?category=' + getCategoryIdBySlug('sach-giao-khoa')"
+      buttonLabel="Khám Phá Sách Giáo Khoa"
+      @add-to-cart="addToCart"
+    />
 
-      <div
-        v-else
-        class="responsive-flex-grid"
-      >
-        <ProductCard
-          v-for="(prod, idx) in newProducts.slice(0, 10)"
-          :key="prod._id"
-          :product="prod"
-          :class="['reveal-scale', `delay-${(idx % 5) * 100}`]"
-          @add-to-cart="addToCart"
-        />
-      </div>
-
-      <div class="flex justify-center pt-6">
-        <router-link
-          to="/products?sort=newest"
-          class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
-        >
-          Khám Phá Bộ Sưu Tập Mới
-        </router-link>
-      </div>
-    </section>
-
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
-      <div
-        class="reveal flex items-end justify-between border-b border-slate-100 pb-4"
-      >
-        <div class="text-left">
-          <span
-            class="text-xs font-bold text-rose-600 tracking-[0.2em] uppercase font-black font-bold"
-            >Bộ sưu tập nổi bật</span
-          >
-          <h2
-            class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1"
-          >
-            ✨ Sách Giáo Khoa 2026
-          </h2>
-        </div>
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('sach-giao-khoa')"
-          class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group"
-        >
-          <span>Xem tất cả</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke="currentColor"
-            class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m8.25 4.5 7.5 7.5-7.5 7.5"
-            />
-          </svg>
-        </router-link>
-      </div>
-
-      <div
-        v-if="loadingTextbook"
-        class="responsive-flex-grid"
-      >
-        <div
-          v-for="n in 5"
-          :key="n"
-          class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse"
-        >
-          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-        </div>
-      </div>
-
-      <div
-        v-else
-        class="responsive-flex-grid"
-      >
-        <ProductCard
-          v-for="(prod, idx) in textbookProducts.slice(0, 10)"
-          :key="prod._id"
-          :product="prod"
-          :class="['reveal-scale', `delay-${(idx % 5) * 100}`]"
-          @add-to-cart="addToCart"
-        />
-      </div>
-
-      <div class="flex justify-center pt-6">
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('sach-giao-khoa')"
-          class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
-        >
-          Khám Phá Sách Giáo Khoa
-        </router-link>
-      </div>
-    </section>
-
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
-      <div
-        class="reveal flex items-end justify-between border-b border-slate-100 pb-4"
-      >
-        <div class="text-left">
-          <span
-            class="text-xs font-bold text-rose-600 tracking-[0.2em] uppercase font-black font-bold"
-            >Bộ sưu tập nổi bật</span
-          >
-          <h2
-            class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1"
-          >
-            ✨ Sách Tham Khảo
-          </h2>
-        </div>
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('sach-tham-khao')"
-          class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group"
-        >
-          <span>Xem tất cả</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke="currentColor"
-            class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m8.25 4.5 7.5 7.5-7.5 7.5"
-            />
-          </svg>
-        </router-link>
-      </div>
-
-      <div
-        v-if="loadingReference"
-        class="responsive-flex-grid"
-      >
-        <div
-          v-for="n in 5"
-          :key="n"
-          class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse"
-        >
-          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-        </div>
-      </div>
-
-      <div
-        v-else
-        class="responsive-flex-grid"
-      >
-        <ProductCard
-          v-for="(prod, idx) in referenceProducts.slice(0, 10)"
-          :key="prod._id"
-          :product="prod"
-          :class="['reveal-scale', `delay-${(idx % 5) * 100}`]"
-          @add-to-cart="addToCart"
-        />
-      </div>
-
-      <div class="flex justify-center pt-6">
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('sach-tham-khao')"
-          class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
-        >
-          Khám Phá Sách Tham Khảo
-        </router-link>
-      </div>
-    </section>
+    <!-- Section 9: Sách Tham Khảo -->
+    <CategoryProductSection
+      title="Sách Tham Khảo"
+      subtitle="Bộ sưu tập nổi bật"
+      :products="referenceProducts"
+      :loading="loadingReference"
+      :viewAllLink="'/products?category=' + getCategoryIdBySlug('sach-tham-khao')"
+      buttonLabel="Khám Phá Sách Tham Khảo"
+      @add-to-cart="addToCart"
+    />
 
     <!-- Section 5: Editorial Banner -->
     <section
@@ -1206,305 +948,49 @@
       </div>
     </section>
 
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
-      <div
-        class="reveal flex items-end justify-between border-b border-slate-100 pb-4"
-      >
-        <div class="text-left">
-          <span
-            class="text-xs font-bold text-rose-600 tracking-[0.2em] uppercase font-black font-bold"
-            >Bộ sưu tập nổi bật</span
-          >
-          <h2
-            class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1"
-          >
-            ✨ Đồ Chơi
-          </h2>
-        </div>
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('do-choi')"
-          class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group"
-        >
-          <span>Xem tất cả</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke="currentColor"
-            class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m8.25 4.5 7.5 7.5-7.5 7.5"
-            />
-          </svg>
-        </router-link>
-      </div>
+    <!-- Section 10: Đồ Chơi -->
+    <CategoryProductSection
+      title="Đồ Chơi"
+      subtitle="Bộ sưu tập nổi bật"
+      :products="toyProducts"
+      :loading="loadingToy"
+      :viewAllLink="'/products?category=' + getCategoryIdBySlug('do-choi')"
+      buttonLabel="Khám Phá Đồ Chơi"
+      @add-to-cart="addToCart"
+    />
 
-      <div
-        v-if="loadingToy"
-        class="responsive-flex-grid"
-      >
-        <div
-          v-for="n in 5"
-          :key="n"
-          class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse"
-        >
-          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-        </div>
-      </div>
+    <!-- Section 11: Truyện Tranh -->
+    <CategoryProductSection
+      title="Truyện Tranh"
+      subtitle="Bộ sưu tập nổi bật"
+      :products="comicProducts"
+      :loading="loadingComic"
+      :viewAllLink="'/products?category=' + getCategoryIdBySlug('truyen-tranh')"
+      buttonLabel="Khám Phá Truyện Tranh"
+      @add-to-cart="addToCart"
+    />
 
-      <div
-        v-else
-        class="responsive-flex-grid"
-      >
-        <ProductCard
-          v-for="(prod, idx) in toyProducts.slice(0, 10)"
-          :key="prod._id"
-          :product="prod"
-          :class="['reveal-scale', `delay-${(idx % 5) * 100}`]"
-          @add-to-cart="addToCart"
-        />
-      </div>
+    <!-- Section 12: Combo -->
+    <CategoryProductSection
+      title="COMBO"
+      subtitle="Bộ sưu tập nổi bật"
+      :products="comboProducts"
+      :loading="loadingCombo"
+      :viewAllLink="'/products?category=' + getCategoryIdBySlug('combo')"
+      buttonLabel="Khám Phá Combo"
+      @add-to-cart="addToCart"
+    />
 
-      <div class="flex justify-center pt-6">
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('do-choi')"
-          class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
-        >
-          Khám Phá Đồ Chơi
-        </router-link>
-      </div>
-    </section>
-
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
-      <div
-        class="reveal flex items-end justify-between border-b border-slate-100 pb-4"
-      >
-        <div class="text-left">
-          <span
-            class="text-xs font-bold text-rose-600 tracking-[0.2em] uppercase font-black font-bold"
-            >Bộ sưu tập nổi bật</span
-          >
-          <h2
-            class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1"
-          >
-            ✨ Truyện Tranh
-          </h2>
-        </div>
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('truyen-tranh')"
-          class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group"
-        >
-          <span>Xem tất cả</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke="currentColor"
-            class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m8.25 4.5 7.5 7.5-7.5 7.5"
-            />
-          </svg>
-        </router-link>
-      </div>
-
-      <div
-        v-if="loadingComic"
-        class="responsive-flex-grid"
-      >
-        <div
-          v-for="n in 5"
-          :key="n"
-          class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse"
-        >
-          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-        </div>
-      </div>
-
-      <div
-        v-else
-        class="responsive-flex-grid"
-      >
-        <ProductCard
-          v-for="(prod, idx) in comicProducts.slice(0, 10)"
-          :key="prod._id"
-          :product="prod"
-          :class="['reveal-scale', `delay-${(idx % 5) * 100}`]"
-          @add-to-cart="addToCart"
-        />
-      </div>
-
-      <div class="flex justify-center pt-6">
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('truyen-tranh')"
-          class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
-        >
-          Khám Phá Truyện Tranh
-        </router-link>
-      </div>
-    </section>
-
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
-      <div
-        class="reveal flex items-end justify-between border-b border-slate-100 pb-4"
-      >
-        <div class="text-left">
-          <span
-            class="text-xs font-bold text-rose-600 tracking-[0.2em] uppercase font-black font-bold"
-            >Bộ sưu tập nổi bật</span
-          >
-          <h2
-            class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1"
-          >
-            ✨ COMBO
-          </h2>
-        </div>
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('combo')"
-          class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group"
-        >
-          <span>Xem tất cả</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke="currentColor"
-            class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m8.25 4.5 7.5 7.5-7.5 7.5"
-            />
-          </svg>
-        </router-link>
-      </div>
-
-      <div
-        v-if="loadingCombo"
-        class="responsive-flex-grid"
-      >
-        <div
-          v-for="n in 5"
-          :key="n"
-          class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse"
-        >
-          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-        </div>
-      </div>
-
-      <div
-        v-else
-        class="responsive-flex-grid"
-      >
-        <ProductCard
-          v-for="(prod, idx) in comboProducts.slice(0, 10)"
-          :key="prod._id"
-          :product="prod"
-          :class="['reveal-scale', `delay-${(idx % 5) * 100}`]"
-          @add-to-cart="addToCart"
-        />
-      </div>
-
-      <div class="flex justify-center pt-6">
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('combo')"
-          class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
-        >
-          Khám Phá Combo
-        </router-link>
-      </div>
-    </section>
-
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
-      <div
-        class="reveal flex items-end justify-between border-b border-slate-100 pb-4"
-      >
-        <div class="text-left">
-          <span
-            class="text-xs font-bold text-rose-600 tracking-[0.2em] uppercase font-black font-bold"
-            >Bộ sưu tập nổi bật</span
-          >
-          <h2
-            class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1"
-          >
-            ✨ Đồ Lưu Niệm
-          </h2>
-        </div>
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('do-luu-niem')"
-          class="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group"
-        >
-          <span>Xem tất cả</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke="currentColor"
-            class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m8.25 4.5 7.5 7.5-7.5 7.5"
-            />
-          </svg>
-        </router-link>
-      </div>
-
-      <div
-        v-if="loadingGift"
-        class="responsive-flex-grid"
-      >
-        <div
-          v-for="n in 5"
-          :key="n"
-          class="bg-white rounded-3xl border border-slate-200 p-4 space-y-4 animate-pulse"
-        >
-          <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-          <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-          <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-        </div>
-      </div>
-
-      <div
-        v-else
-        class="responsive-flex-grid"
-      >
-        <ProductCard
-          v-for="(prod, idx) in giftProducts.slice(0, 10)"
-          :key="prod._id"
-          :product="prod"
-          :class="['reveal-scale', `delay-${(idx % 5) * 100}`]"
-          @add-to-cart="addToCart"
-        />
-      </div>
-
-      <div class="flex justify-center pt-6">
-        <router-link
-          :to="'/products?category=' + getCategoryIdBySlug('do-luu-niem')"
-          class="border border-[#dc2626] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-all duration-300 font-extrabold text-sm px-12 py-3.5 rounded-xl cursor-pointer shadow-xs hover:shadow-md"
-        >
-          Khám Phá Đồ Lưu Niệm
-        </router-link>
-      </div>
-    </section>
+    <!-- Section 13: Đồ Lưu Niệm -->
+    <CategoryProductSection
+      title="Đồ Lưu Niệm"
+      subtitle="Bộ sưu tập nổi bật"
+      :products="giftProducts"
+      :loading="loadingGift"
+      :viewAllLink="'/products?category=' + getCategoryIdBySlug('do-luu-niem')"
+      buttonLabel="Khám Phá Đồ Lưu Niệm"
+      @add-to-cart="addToCart"
+    />
   </div>
 </template>
 
@@ -1517,6 +1003,7 @@ import { productService } from "@/services/product.service";
 import { categoryService } from "@/services/category.service";
 import { formatCurrency, getDiscountPercent } from "@/utils/helpers";
 import ProductCard from "@/components/ProductCard.vue";
+import CategoryProductSection from "@/components/CategoryProductSection.vue";
 import { useScrollReveal } from "@/composables/useScrollReveal";
 import type { Product, Category } from "@/types";
 import flashSaleBg from "@/assets/flash-sale-bg.png";
@@ -1528,6 +1015,14 @@ import truyenTranhBg from "@/assets/truyen-tranh-bg.png";
 import sachThamKhaoBg from "@/assets/sach-tham-khao-bg.png";
 import doLuuNiemBg from "@/assets/do-luu-niem-bg.jpg";
 import inspirationBg from "@/assets/inspiration-bg.png";
+import { useSeoMeta } from "@/composables/useSeoMeta";
+import { useOrganizationSchema } from "@/composables/useStructuredData";
+
+useSeoMeta({
+  title: 'Trường Thành Stationery',
+  description: 'Hệ thống bán lẻ văn phòng phẩm & dụng cụ học tập chính hãng tại Việt Nam. Giảm giá đến 30%, giao hàng toàn quốc, đổi trả 7 ngày.',
+});
+useOrganizationSchema();
 
 const cartStore = useCartStore();
 const toast = useToast();

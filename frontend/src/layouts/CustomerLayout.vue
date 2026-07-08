@@ -1088,7 +1088,7 @@
           <ul class="space-y-3.5 text-xs flex flex-col items-center md:items-start">
             <li>
               <router-link
-                to="/products"
+                to="/info?tab=privacy"
                 class="group flex items-center gap-2 text-slate-400 hover:text-white transition-all duration-300 font-bold"
               >
                 <span class="w-1.5 h-1.5 rounded-full bg-[#dc2626] scale-0 group-hover:scale-100 transition-all duration-300 flex-shrink-0"></span>
@@ -1097,7 +1097,7 @@
             </li>
             <li>
               <router-link
-                to="/products"
+                to="/info?tab=shipping"
                 class="group flex items-center gap-2 text-slate-400 hover:text-white transition-all duration-300 font-bold"
               >
                 <span class="w-1.5 h-1.5 rounded-full bg-[#dc2626] scale-0 group-hover:scale-100 transition-all duration-300 flex-shrink-0"></span>
@@ -1106,7 +1106,7 @@
             </li>
             <li>
               <router-link
-                to="/products"
+                to="/info?tab=terms"
                 class="group flex items-center gap-2 text-slate-400 hover:text-white transition-all duration-300 font-bold"
               >
                 <span class="w-1.5 h-1.5 rounded-full bg-[#dc2626] scale-0 group-hover:scale-100 transition-all duration-300 flex-shrink-0"></span>
@@ -1115,7 +1115,7 @@
             </li>
             <li>
               <router-link
-                to="/products"
+                to="/info?tab=contact"
                 class="group flex items-center gap-2 text-slate-400 hover:text-white transition-all duration-300 font-bold"
               >
                 <span class="w-1.5 h-1.5 rounded-full bg-[#dc2626] scale-0 group-hover:scale-100 transition-all duration-300 flex-shrink-0"></span>
@@ -1124,7 +1124,7 @@
             </li>
             <li>
               <router-link
-                to="/products"
+                to="/info?tab=guide"
                 class="group flex items-center gap-2 text-slate-400 hover:text-white transition-all duration-300 font-bold"
               >
                 <span class="w-1.5 h-1.5 rounded-full bg-[#dc2626] scale-0 group-hover:scale-100 transition-all duration-300 flex-shrink-0"></span>
@@ -1274,9 +1274,9 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p class="font-medium">© 2026 Trường Thành Stationery. All rights reserved.</p>
           <div class="flex items-center gap-6 text-slate-600 text-[11px] font-semibold">
-            <router-link to="/products" class="hover:text-slate-400 transition-colors">Chính sách bảo mật</router-link>
+            <router-link to="/info?tab=privacy" class="hover:text-slate-400 transition-colors">Chính sách bảo mật</router-link>
             <span>•</span>
-            <router-link to="/products" class="hover:text-slate-400 transition-colors">Điều khoản dịch vụ</router-link>
+            <router-link to="/info?tab=terms" class="hover:text-slate-400 transition-colors">Điều khoản dịch vụ</router-link>
           </div>
         </div>
       </div>

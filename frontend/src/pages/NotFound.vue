@@ -41,5 +41,10 @@
 </template>
 
 <script setup lang="ts">
-// 404 Not Found page
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title: 'Không tìm thấy trang - 404',
+  description: 'Trang bạn tìm kiếm không tồn tại hoặc đã được di chuyển.',
+})
 </script>

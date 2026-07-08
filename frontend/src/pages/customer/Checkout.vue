@@ -258,6 +258,12 @@ import { productService } from '@/services/product.service'
 import { formatCurrency, getEffectivePrice } from '@/utils/helpers'
 import { promotionService } from '@/services/promotion.service'
 import type { Promotion } from '@/types'
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title: 'Thanh toán đơn hàng',
+  description: 'Hoàn tất thanh toán đơn hàng tại Trường Thành Stationery.',
+})
 
 const cartStore = useCartStore()
 const authStore = useAuthStore()

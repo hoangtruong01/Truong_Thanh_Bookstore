@@ -1,5 +1,8 @@
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <!-- Breadcrumb -->
+    <Breadcrumb :items="breadcrumbItems" />
+
     <div class="flex flex-col lg:flex-row gap-8">
       <!-- Filters Sidebar -->
       <aside class="w-full lg:w-64 flex-shrink-0 space-y-6">
@@ -213,14 +216,40 @@ import { productService } from '@/services/product.service'
 import { categoryService } from '@/services/category.service'
 import ProductCard from '@/components/ProductCard.vue'
 import type { Product, Category } from '@/types'
+import { useSeoMeta } from '@/composables/useSeoMeta'
+import Breadcrumb from '@/components/Breadcrumb.vue'
+
+useSeoMeta({
+  title: 'Danh sách sản phẩm',
+  description: 'Khám phá hơn 1000+ sản phẩm văn phòng phẩm, sách giáo khoa, đồ chơi, dụng cụ học tập chính hãng tại Trường Thành.',
+})
 
 const route = useRoute()
 const router = useRouter()
 const cartStore = useCartStore()
 const toast = useToast()
 
-const products = ref<Product[]>([])
 const categories = ref<Category[]>([])
+const selectedCategory = ref(route.query.category as string || '')
+
+const breadcrumbItems = computed(() => {
+  const items = [
+    { label: 'Trang chủ', to: '/' },
+    { label: 'Sản phẩm', to: '/products' }
+  ]
+  if (selectedCategory.value) {
+    const cat = categories.value.find(c => c._id === selectedCategory.value)
+    if (cat) {
+      items.push({
+        label: cat.name,
+        to: `/products?category=${cat._id}`
+      })
+    }
+  }
+  return items
+})
+
+const products = ref<Product[]>([])
 const loading = ref(true)
 
 const totalProducts = ref(0)
@@ -229,7 +258,6 @@ const currentPage = ref(1)
 const limit = 15
 
 // Filter values
-const selectedCategory = ref(route.query.category as string || '')
 const searchQuery = ref(route.query.q as string || '')
 const selectedSubOption = ref('')
 const minPrice = ref<number | null>(null)

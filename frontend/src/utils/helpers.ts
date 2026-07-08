@@ -73,20 +73,47 @@ export function getStatusLabel(status: string): string {
   return labels[status] || status
 }
 
+const OBFUSCATION_KEY = 'TruongThanhStore2026'
+
 export function encryptToken(value: string): string {
   if (!value) return ''
-  return btoa(value.split('').reverse().join(''))
+  try {
+    const xored = value
+      .split('')
+      .map((char, i) => String.fromCharCode(char.charCodeAt(0) ^ OBFUSCATION_KEY.charCodeAt(i % OBFUSCATION_KEY.length)))
+      .join('')
+    return btoa(unescape(encodeURIComponent(xored)))
+  } catch {
+    return btoa(value.split('').reverse().join(''))
+  }
 }
 
 export function decryptToken(value: string | null): string | null {
   if (!value) return null
   try {
+    // Skip if value is clearly not encrypted (raw JSON or non-base64)
     if (value.startsWith('{') || value.startsWith('[') || value.includes('"') || !/^[A-Za-z0-9+/=]+$/.test(value)) {
       return value
     }
+    // Try XOR decrypt first
+    const decoded = decodeURIComponent(escape(atob(value)))
+    const xored = decoded
+      .split('')
+      .map((char, i) => String.fromCharCode(char.charCodeAt(0) ^ OBFUSCATION_KEY.charCodeAt(i % OBFUSCATION_KEY.length)))
+      .join('')
+    // Validate: if result looks like a JWT or valid JSON, return it
+    if (xored.includes('.') || xored.startsWith('{') || xored.startsWith('ey')) {
+      return xored
+    }
+    // Fallback: try legacy base64-reverse decode
     return atob(value).split('').reverse().join('')
-  } catch (e) {
-    return value
+  } catch {
+    try {
+      // Legacy fallback
+      return atob(value).split('').reverse().join('')
+    } catch {
+      return value
+    }
   }
 }
 

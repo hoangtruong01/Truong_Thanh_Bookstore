@@ -74,6 +74,12 @@ import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title: 'Đăng nhập',
+  description: 'Đăng nhập tài khoản Trường Thành Stationery để mua sắm và quản lý đơn hàng.',
+})
 
 const authStore = useAuthStore()
 const toast = useToast()

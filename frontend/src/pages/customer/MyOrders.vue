@@ -133,6 +133,12 @@ import { useAuthStore } from '@/stores/auth'
 import { orderService } from '@/services/order.service'
 import { formatCurrency, getStatusLabel, formatDate } from '@/utils/helpers'
 import type { Order } from '@/types'
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title: 'Đơn hàng của tôi',
+  description: 'Xem và theo dõi tình trạng đơn hàng của bạn tại Trường Thành Stationery.',
+})
 
 const authStore = useAuthStore()
 const toast = useToast()

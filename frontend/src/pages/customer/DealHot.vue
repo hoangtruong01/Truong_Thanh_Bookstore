@@ -92,6 +92,12 @@ import { useCartStore } from '@/stores/cart';
 import { useToast } from 'vue-toastification';
 import ProductCard from '@/components/ProductCard.vue';
 import dealHotBg from '@/assets/deal-hot-bg.jpg';
+import { useSeoMeta } from '@/composables/useSeoMeta';
+
+useSeoMeta({
+  title: 'Deal Sốc Giờ Vàng',
+  description: 'Săn deal giảm giá cực sốc mỗi ngày tại Trường Thành Stationery. Văn phòng phẩm, sách, đồ chơi giảm đến 50%.',
+});
 
 const toast = useToast();
 const cartStore = useCartStore();

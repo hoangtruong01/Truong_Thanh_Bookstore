@@ -1,5 +1,8 @@
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <!-- Breadcrumb -->
+    <Breadcrumb :items="breadcrumbItems" />
+
     <div v-if="loading" class="bg-white border border-slate-200 rounded-3xl p-8 animate-pulse grid grid-cols-1 md:grid-cols-2 gap-8">
       <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
       <div class="space-y-6">
@@ -706,9 +709,37 @@ import { categoryService } from '@/services/category.service'
 import ProductCard from '@/components/ProductCard.vue'
 import { formatCurrency, getDiscountPercent } from '@/utils/helpers'
 import type { Product, Category } from '@/types'
+import { useSeoMeta } from '@/composables/useSeoMeta'
+import { useProductSchema } from '@/composables/useStructuredData'
+import Breadcrumb from '@/components/Breadcrumb.vue'
 
 const route = useRoute()
 const router = useRouter()
+
+const breadcrumbItems = computed(() => {
+  const items = [
+    { label: 'Trang chủ', to: '/' },
+    { label: 'Sản phẩm', to: '/products' }
+  ]
+  if (product.value) {
+    if (typeof product.value.category === 'object' && product.value.category) {
+      items.push({
+        label: product.value.category.name,
+        to: `/products?category=${product.value.category._id}`
+      })
+    } else if (categoryDetail.value) {
+      items.push({
+        label: categoryDetail.value.name,
+        to: `/products?category=${categoryDetail.value._id}`
+      })
+    }
+    items.push({
+      label: product.value.name,
+      to: `/products/${product.value._id}`
+    })
+  }
+  return items
+})
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const toast = useToast()
@@ -1012,6 +1043,27 @@ async function loadProduct() {
     product.value = res.data
     selectedImage.value = res.data.images[0] || ''
     quantity.value = 1
+
+    // Dynamic SEO meta for product page
+    useSeoMeta({
+      title: res.data.name,
+      description: res.data.description || `Mua ${res.data.name} chính hãng tại Trường Thành Stationery. Giá tốt, giao hàng nhanh.`,
+      ogImage: res.data.images?.[0] || '',
+      ogType: 'product',
+    })
+
+    // Inject Product JSON-LD structured data
+    useProductSchema({
+      name: res.data.name,
+      description: res.data.description,
+      image: res.data.images?.[0],
+      sku: res.data.sku,
+      brand: res.data.brand,
+      price: res.data.price,
+      discountPrice: res.data.discountPrice,
+      stock: res.data.stock,
+      rating: res.data.rating,
+    })
     
     // Load reviews
     loadReviews()

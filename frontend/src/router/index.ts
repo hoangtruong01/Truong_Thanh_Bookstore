@@ -16,6 +16,7 @@ const Register = () => import('@/pages/customer/Register.vue')
 const LandingPageDetail = () => import('@/pages/customer/LandingPageDetail.vue')
 const DealHot = () => import('@/pages/customer/DealHot.vue')
 const MyOrders = () => import('@/pages/customer/MyOrders.vue')
+const Info = () => import('@/pages/customer/Info.vue')
 
 // Admin Pages - lazy loaded
 const AdminDashboard = () => import('@/pages/admin/Dashboard.vue')
@@ -45,6 +46,7 @@ const routes = [
       { path: 'checkout', name: 'Checkout', component: Checkout },
       { path: 'deal-hot', name: 'DealHot', component: DealHot },
       { path: 't/:slug', name: 'LandingPageDetail', component: LandingPageDetail },
+      { path: 'info', name: 'Info', component: Info },
       { path: 'my-orders', name: 'MyOrders', component: MyOrders, meta: { requiresAuth: true } },
     ]
   },

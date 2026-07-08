@@ -4,11 +4,14 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -32,6 +35,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
           message = 'Validation failed';
         }
       }
+    }
+
+    if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
+      const req = ctx.getRequest();
+      const method = req.method;
+      const url = req.url;
+      const stack = exception instanceof Error ? exception.stack : JSON.stringify(exception);
+      this.logger.error(`[${method}] ${url} - Status: ${status} - Error: ${stack}`);
     }
 
     response.status(status).json({

@@ -1,0 +1,20 @@
+{
+  "name": "Trường Thành Stationery",
+  "short_name": "Trường Thành",
+  "description": "Hệ thống bán lẻ văn phòng phẩm & dụng cụ học tập chính hãng",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#dc2626",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "lang": "vi",
+  "orientation": "portrait-primary",
+  "categories": ["shopping", "education"]
+}
