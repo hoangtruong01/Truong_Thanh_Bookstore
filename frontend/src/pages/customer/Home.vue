@@ -30,236 +30,194 @@
       </div>
     </div>
 
-    <!-- Section 1: Hero Section (Full width background) -->
-    <div
-      class="relative overflow-hidden bg-gradient-to-br from-[#fff7ed] via-[#fff9f2] to-[#ffffff] border-b border-orange-100/30 py-10 md:py-14 flex items-center"
-    >
-      <!-- Subtle dot grid & decorations pattern -->
-      <div
-        class="absolute inset-0 opacity-[0.04]"
-        style="
-          background-image: radial-gradient(#000 1px, transparent 1px);
-          background-size: 20px 20px;
-        "
-      ></div>
-      <!-- Absolute decorative icons -->
-      <div
-        class="absolute top-10 left-10 text-slate-300 text-xl font-bold select-none opacity-20 pointer-events-none"
-      >
-        ✏️
-      </div>
-      <div
-        class="absolute bottom-10 left-[40%] text-slate-300 text-2xl font-bold select-none opacity-20 pointer-events-none"
-      >
-        📎
-      </div>
-      <div
-        class="absolute top-20 right-[45%] text-slate-300 text-lg font-bold select-none opacity-20 pointer-events-none"
-      >
-        📐
-      </div>
-      <div
-        class="absolute bottom-20 right-[35%] text-slate-300 text-xl font-bold select-none opacity-20 pointer-events-none"
-      >
-        📓
-      </div>
-
-      <div
-        class="absolute -right-20 -top-20 w-96 h-96 bg-orange-200/30 rounded-full blur-3xl animate-pulse-soft"
-      ></div>
-      <div
-        class="absolute left-10 bottom-10 w-80 h-80 bg-rose-200/20 rounded-full blur-3xl animate-pulse-soft delay-1000"
-      ></div>
-
-      <!-- Decorative stars -->
-      <div
-        class="absolute top-16 left-[45%] text-orange-300/60 text-xs animate-float pointer-events-none select-none"
-      >
-        ✦
-      </div>
-      <div
-        class="absolute top-32 left-[52%] text-rose-300/50 text-[10px] animate-float-reverse pointer-events-none select-none"
-      >
-        ✦
-      </div>
-      <div
-        class="absolute bottom-20 left-[48%] text-amber-300/40 text-sm animate-float pointer-events-none select-none"
-      >
-        +
-      </div>
-      <div
-        class="absolute top-24 right-[15%] text-orange-200/50 text-lg animate-float-reverse pointer-events-none select-none"
-      >
-        ✦
-      </div>
-
-      <div
-        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center relative z-10"
-      >
-        <!-- Center Column: Text content -->
-        <div class="lg:col-span-12 space-y-5 text-center flex flex-col items-center justify-center relative z-20">
-          <div
-            class="inline-flex items-center gap-1.5 bg-orange-100/70 border border-orange-200 text-orange-800 text-[11px] font-black px-4 py-1.5 rounded-full w-fit animate-float"
-          >
-            <span>✨ Siêu Ưu Đãi Mùa Tựu Trường</span>
-          </div>
-          <h1
-            class="text-4xl sm:text-5xl lg:text-[3.5rem] xl:text-6xl font-black tracking-tight leading-[1.1] uppercase hero-text text-[#0f172a]"
-          >
-            Khởi nguồn <br />
-            <span
-              class="inline-block pt-4 pb-3 pr-8 pl-4 -mt-4 -ml-4 overflow-visible bg-gradient-to-r from-[#e11d24] via-rose-500 to-[#fb5607] bg-clip-text text-transparent italic"
-              >Sự Sáng Tạo</span
+    <!-- Section 1: Hero Banner Grid (Fahasa-style) -->
+    <div class="bg-[#f5f5fa] py-3 md:py-4">
+      <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+        <!-- Top Row: Sidebar Left + Main Slider + Sidebar Right -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2.5 mb-2.5">
+          <!-- Sidebar Left -->
+          <div class="hidden lg:block lg:col-span-2">
+            <a
+              v-if="bannerGroups.sidebar_left && bannerGroups.sidebar_left[0]"
+              :href="bannerGroups.sidebar_left[0].linkUrl || '#'"
+              class="block w-full h-full rounded-xl overflow-hidden group"
             >
-          </h1>
-          <p
-            class="text-slate-600 text-sm sm:text-base max-w-xl leading-relaxed reveal text-center"
-          >
-            Khám phá bộ sưu tập dụng cụ học tập & văn phòng phẩm Trường Thành
-            chất lượng vượt trội, đồng hành trên con đường chinh phục đỉnh cao
-            tri thức của bạn.
-          </p>
-
-          <div class="pt-1 flex flex-wrap justify-center gap-3 reveal delay-100">
-            <router-link
-              to="/products"
-              class="bg-gradient-to-r from-[#e11d24] to-[#fb5607] hover:opacity-95 text-white font-extrabold py-3.5 px-7 rounded-full shadow-lg shadow-red-500/20 transition-all text-sm flex items-center gap-2 group cursor-pointer"
+              <img
+                :src="bannerGroups.sidebar_left[0].imageUrl"
+                :alt="bannerGroups.sidebar_left[0].title"
+                class="w-full h-full object-cover rounded-xl transition-transform duration-500 group-hover:scale-105"
+              />
+            </a>
+            <div
+              v-else
+              class="w-full h-full rounded-xl bg-gradient-to-br from-orange-100 via-amber-50 to-orange-50 flex flex-col items-center justify-center p-4 text-center min-h-[300px] border border-orange-200/40"
             >
-              <span>Mua sắm ngay</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="2.5"
-                stroke="currentColor"
-                class="w-4 h-4 group-hover:translate-x-1 transition-transform"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
-                />
-              </svg>
-            </router-link>
-            <router-link
-              to="/products?discounted=true"
-              class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-extrabold py-3.5 px-7 rounded-full transition-all text-sm flex items-center gap-2 cursor-pointer shadow-xs"
-            >
-              <span>🏷️ Xem ưu đãi</span>
-            </router-link>
+              <span class="text-3xl mb-2">📚</span>
+              <span class="text-xs font-black text-orange-800 uppercase tracking-wide">Sách giáo khoa</span>
+              <span class="text-[10px] text-orange-600/70 mt-1 font-semibold">Đầy đủ các cấp</span>
+            </div>
           </div>
 
-          <div
-            class="pt-4 flex flex-wrap justify-center gap-6 text-[11px] text-slate-500 font-bold"
-          >
-            <div class="flex items-center gap-1.5">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                class="w-4 h-4 text-emerald-500"
+          <!-- Main Slider -->
+          <div class="lg:col-span-7 relative rounded-xl overflow-hidden group min-h-[200px] sm:min-h-[280px] lg:min-h-[300px]">
+            <!-- Skeleton Loader -->
+            <div v-if="loadingBanners" class="w-full h-full bg-slate-200 rounded-xl animate-pulse min-h-[280px] lg:min-h-[300px]"></div>
+
+            <template v-else>
+              <!-- Slider Track -->
+              <div
+                v-if="mainSliderBanners.length > 0"
+                class="relative w-full h-full"
               >
-                <path
-                  fill-rule="evenodd"
-                  d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              <span>100% Chính Hãng</span>
+                <div
+                  v-for="(banner, idx) in mainSliderBanners"
+                  :key="banner._id || idx"
+                  class="absolute inset-0 transition-opacity duration-700 ease-in-out"
+                  :class="heroSlideIndex === idx ? 'opacity-100 z-10' : 'opacity-0 z-0'"
+                >
+                  <a :href="banner.linkUrl || '#'" class="block w-full h-full">
+                    <img
+                      :src="banner.imageUrl"
+                      :alt="banner.title"
+                      class="w-full h-full object-cover rounded-xl"
+                    />
+                  </a>
+                </div>
+
+                <!-- Prev/Next Arrows -->
+                <button
+                  v-if="mainSliderBanners.length > 1"
+                  @click="heroSlidePrev"
+                  class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full z-20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer backdrop-blur-xs"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                  </svg>
+                </button>
+                <button
+                  v-if="mainSliderBanners.length > 1"
+                  @click="heroSlideNext"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full z-20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer backdrop-blur-xs"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
+
+                <!-- Dots -->
+                <div v-if="mainSliderBanners.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                  <button
+                    v-for="(_, idx) in mainSliderBanners"
+                    :key="idx"
+                    @click="heroSlideGoTo(idx)"
+                    class="h-2 rounded-full transition-all duration-300 cursor-pointer"
+                    :class="heroSlideIndex === idx ? 'bg-white w-6 shadow-md' : 'bg-white/50 w-2 hover:bg-white/70'"
+                  ></button>
+                </div>
+              </div>
+
+              <!-- Fallback when no main slider banners -->
+              <div
+                v-else
+                class="w-full h-full rounded-xl bg-gradient-to-br from-[#e11d24] via-rose-500 to-[#fb5607] flex flex-col items-center justify-center p-8 text-center min-h-[280px] lg:min-h-[300px] relative overflow-hidden"
+              >
+                <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle, #fff 1px, transparent 1px); background-size: 16px 16px;"></div>
+                <h2 class="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight relative z-10 leading-tight">
+                  Khởi nguồn<br/><span class="italic">Sự Sáng Tạo</span>
+                </h2>
+                <p class="text-white/80 text-xs sm:text-sm mt-3 max-w-md relative z-10 font-medium">
+                  Khám phá bộ sưu tập dụng cụ học tập & văn phòng phẩm Trường Thành
+                </p>
+                <router-link
+                  to="/products"
+                  class="mt-5 bg-white text-[#e11d24] font-extrabold py-2.5 px-6 rounded-full text-sm hover:bg-slate-50 transition-all relative z-10 shadow-lg"
+                >
+                  Mua sắm ngay →
+                </router-link>
+              </div>
+            </template>
+          </div>
+
+          <!-- Sidebar Right (2 stacked banners) -->
+          <div class="hidden lg:flex lg:col-span-3 flex-col gap-2.5">
+            <!-- Right Top -->
+            <a
+              v-if="bannerGroups.sidebar_right_top && bannerGroups.sidebar_right_top[0]"
+              :href="bannerGroups.sidebar_right_top[0].linkUrl || '#'"
+              class="block flex-1 rounded-xl overflow-hidden group"
+            >
+              <img
+                :src="bannerGroups.sidebar_right_top[0].imageUrl"
+                :alt="bannerGroups.sidebar_right_top[0].title"
+                class="w-full h-full object-cover rounded-xl transition-transform duration-500 group-hover:scale-105"
+              />
+            </a>
+            <div
+              v-else
+              class="flex-1 rounded-xl bg-gradient-to-br from-blue-50 to-sky-100 flex flex-col items-center justify-center p-4 text-center border border-blue-200/40"
+            >
+              <span class="text-2xl mb-1">🎓</span>
+              <span class="text-xs font-black text-blue-800">Ưu đãi sinh viên</span>
+              <span class="text-[10px] text-blue-600/70 mt-0.5 font-semibold">Giảm đến 25%</span>
             </div>
-            <div class="flex items-center gap-1.5">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                class="w-4 h-4 text-emerald-500"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              <span>Giao Nhanh Toàn Quốc</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                class="w-4 h-4 text-emerald-500"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              <span>Đổi Trả 7 Ngày</span>
+
+            <!-- Right Bottom -->
+            <a
+              v-if="bannerGroups.sidebar_right_bottom && bannerGroups.sidebar_right_bottom[0]"
+              :href="bannerGroups.sidebar_right_bottom[0].linkUrl || '#'"
+              class="block flex-1 rounded-xl overflow-hidden group"
+            >
+              <img
+                :src="bannerGroups.sidebar_right_bottom[0].imageUrl"
+                :alt="bannerGroups.sidebar_right_bottom[0].title"
+                class="w-full h-full object-cover rounded-xl transition-transform duration-500 group-hover:scale-105"
+              />
+            </a>
+            <div
+              v-else
+              class="flex-1 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-100 flex flex-col items-center justify-center p-4 text-center border border-emerald-200/40"
+            >
+              <span class="text-2xl mb-1">🛡️</span>
+              <span class="text-xs font-black text-emerald-800">Miễn phí vận chuyển</span>
+              <span class="text-[10px] text-emerald-600/70 mt-0.5 font-semibold">Đơn từ 200k</span>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Section 2: Trust Bar (Overlaid on bottom of Hero Card) -->
-    <div class="max-w-7xl mx-auto px-4 md:px-8 -mt-8 mb-6 relative z-20">
-      <div
-        class="bg-white border border-slate-100 rounded-[20px] shadow-lg py-5 px-6"
-      >
-        <div
-          class="grid grid-cols-2 md:grid-cols-4 gap-6 text-xs text-slate-600 font-bold"
-        >
-          <div
-            class="flex items-center gap-3 justify-center border-r border-slate-100 last:border-0"
-          >
-            <span class="text-orange-500 text-xl">🔥</span>
-            <div class="text-left">
-              <p class="font-extrabold text-slate-800 leading-none">
-                Deal sốc mỗi ngày
-              </p>
-              <p class="text-[10px] text-slate-400 font-normal mt-1">
-                Cập nhật liên tục hàng giờ
-              </p>
+        <!-- Bottom Row: 4 promo banners -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+          <template v-if="bannerGroups.bottom_row && bannerGroups.bottom_row.length > 0">
+            <a
+              v-for="(banner, idx) in bannerGroups.bottom_row.slice(0, 4)"
+              :key="banner._id || idx"
+              :href="banner.linkUrl || '#'"
+              class="block rounded-xl overflow-hidden group relative"
+            >
+              <img
+                :src="banner.imageUrl"
+                :alt="banner.title"
+                class="w-full h-full object-cover rounded-xl aspect-[2.5/1] transition-transform duration-500 group-hover:scale-105"
+              />
+            </a>
+          </template>
+          <template v-else>
+            <div
+              v-for="(promo, idx) in defaultBottomPromos"
+              :key="idx"
+              class="rounded-xl overflow-hidden relative cursor-pointer group"
+            >
+              <div :class="promo.gradient" class="w-full aspect-[2.5/1] flex items-center justify-between p-4 rounded-xl border border-slate-200/40">
+                <div class="space-y-1 text-left relative z-10">
+                  <span class="text-[10px] font-black uppercase tracking-wider" :class="promo.labelColor">{{ promo.label }}</span>
+                  <h4 class="text-sm font-black text-slate-900 leading-tight">{{ promo.title }}</h4>
+                  <router-link :to="promo.link" class="inline-block text-[10px] font-extrabold uppercase tracking-wider mt-1 hover:underline" :class="promo.ctaColor">
+                    MUA NGAY →
+                  </router-link>
+                </div>
+                <span class="text-3xl opacity-80 select-none">{{ promo.emoji }}</span>
+              </div>
             </div>
-          </div>
-          <div
-            class="flex items-center gap-3 justify-center md:border-r border-slate-100 last:border-0"
-          >
-            <span class="text-orange-500 text-xl">🏷️</span>
-            <div class="text-left">
-              <p class="font-extrabold text-slate-800 leading-none">
-                Tiết kiệm đến 30%
-              </p>
-              <p class="text-[10px] text-slate-400 font-normal mt-1">
-                Với hàng ngàn ưu đãi
-              </p>
-            </div>
-          </div>
-          <div
-            class="flex items-center gap-3 justify-center border-r border-slate-100 last:border-0"
-          >
-            <span class="text-orange-500 text-xl">👥</span>
-            <div class="text-left">
-              <p class="font-extrabold text-slate-800 leading-none">
-                10.000+ Khách hàng
-              </p>
-              <p class="text-[10px] text-slate-400 font-normal mt-1">
-                Đã tin tưởng và ủng hộ
-              </p>
-            </div>
-          </div>
-          <div class="flex items-center gap-3 justify-center last:border-0">
-            <span class="text-orange-500 text-xl">🛡️</span>
-            <div class="text-left">
-              <p class="font-extrabold text-slate-800 leading-none">
-                Mua sắm an tâm
-              </p>
-              <p class="text-[10px] text-slate-400 font-normal mt-1">
-                Đổi trả dễ dàng trong 7 ngày
-              </p>
-            </div>
-          </div>
+          </template>
         </div>
       </div>
     </div>
@@ -1001,13 +959,13 @@ import { useToast } from "vue-toastification";
 import { useCartStore } from "@/stores/cart";
 import { productService } from "@/services/product.service";
 import { categoryService } from "@/services/category.service";
+import { bannerService } from "@/services/banner.service";
 import { formatCurrency, getDiscountPercent } from "@/utils/helpers";
 import ProductCard from "@/components/ProductCard.vue";
 import CategoryProductSection from "@/components/CategoryProductSection.vue";
 import { useScrollReveal } from "@/composables/useScrollReveal";
 import type { Product, Category } from "@/types";
 import flashSaleBg from "@/assets/flash-sale-bg.png";
-import heroStationery from "@/assets/hero_stationery.png";
 import sgkBg from "@/assets/sgk-bg.jpg";
 import doChoiBg from "@/assets/do-choi-bg.png";
 import comboBg from "@/assets/combo-bg.png";
@@ -1031,6 +989,91 @@ const router = useRouter();
 function goToDetail(id: string) {
   router.push(`/products/${id}`);
 }
+
+// ========== Banner Grid State ==========
+const loadingBanners = ref(true);
+const bannerGroups = ref<Record<string, any[]>>({});
+const heroSlideIndex = ref(0);
+let heroSlideTimer: any = null;
+
+const mainSliderBanners = computed(() => bannerGroups.value.main_slider || []);
+
+function startHeroSlider() {
+  stopHeroSlider();
+  if (mainSliderBanners.value.length > 1) {
+    heroSlideTimer = setInterval(() => {
+      heroSlideIndex.value = (heroSlideIndex.value + 1) % mainSliderBanners.value.length;
+    }, 4000);
+  }
+}
+
+function stopHeroSlider() {
+  if (heroSlideTimer) {
+    clearInterval(heroSlideTimer);
+    heroSlideTimer = null;
+  }
+}
+
+function heroSlideNext() {
+  stopHeroSlider();
+  if (mainSliderBanners.value.length > 0) {
+    heroSlideIndex.value = (heroSlideIndex.value + 1) % mainSliderBanners.value.length;
+  }
+  startHeroSlider();
+}
+
+function heroSlidePrev() {
+  stopHeroSlider();
+  if (mainSliderBanners.value.length > 0) {
+    heroSlideIndex.value = (heroSlideIndex.value - 1 + mainSliderBanners.value.length) % mainSliderBanners.value.length;
+  }
+  startHeroSlider();
+}
+
+function heroSlideGoTo(idx: number) {
+  stopHeroSlider();
+  heroSlideIndex.value = idx;
+  startHeroSlider();
+}
+
+const defaultBottomPromos = [
+  {
+    label: 'Đón hè rực rỡ',
+    title: 'Sale hết cỡ',
+    link: '/products?discounted=true',
+    gradient: 'bg-gradient-to-r from-red-50 to-orange-50',
+    labelColor: 'text-red-600',
+    ctaColor: 'text-red-600',
+    emoji: '🔥',
+  },
+  {
+    label: 'Ấn bản giới hạn',
+    title: 'Sách hay chọn lọc',
+    link: '/products',
+    gradient: 'bg-gradient-to-r from-amber-50 to-yellow-50',
+    labelColor: 'text-amber-700',
+    ctaColor: 'text-amber-700',
+    emoji: '📖',
+  },
+  {
+    label: 'Trang bị kỹ năng',
+    title: 'Giảm đến 25%',
+    link: '/products?discounted=true',
+    gradient: 'bg-gradient-to-r from-emerald-50 to-teal-50',
+    labelColor: 'text-emerald-700',
+    ctaColor: 'text-emerald-700',
+    emoji: '🎯',
+  },
+  {
+    label: 'Foreign Books',
+    title: 'Sale up to 20%',
+    link: '/products',
+    gradient: 'bg-gradient-to-r from-blue-50 to-indigo-50',
+    labelColor: 'text-blue-700',
+    ctaColor: 'text-blue-700',
+    emoji: '🌍',
+  },
+];
 
 function getCatNavIcon(slug: string): string {
   const iconMap: Record<string, string> = {
@@ -1513,6 +1556,20 @@ watch(
 onMounted(() => {
   startCountdown();
 
+  // Fetch banners
+  bannerService
+    .getActive()
+    .then((res: any) => {
+      bannerGroups.value = res.data || res || {};
+      startHeroSlider();
+    })
+    .catch((err: any) => {
+      console.error('Error loading banners', err);
+    })
+    .finally(() => {
+      loadingBanners.value = false;
+    });
+
   categoryService
     .getParents()
     .then(async (catRes) => {
@@ -1603,6 +1660,7 @@ onUnmounted(() => {
     clearInterval(countdownTimer);
   }
   stopAutoplay();
+  stopHeroSlider();
 });
 
 function addToCart(product: Product) {

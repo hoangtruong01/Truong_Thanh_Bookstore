@@ -29,6 +29,7 @@ const AdminPromotions = () => import('@/pages/admin/Promotions.vue')
 const AdminReports = () => import('@/pages/admin/Reports.vue')
 const AdminCombos = () => import('@/pages/admin/Combos.vue')
 const AdminLandingPages = () => import('@/pages/admin/LandingPages.vue')
+const AdminBanners = () => import('@/pages/admin/Banners.vue')
 
 // 404 Page (UX-04)
 const NotFound = () => import('@/pages/NotFound.vue')
@@ -69,6 +70,7 @@ const routes = [
       { path: 'promotions', name: 'AdminPromotions', component: AdminPromotions },
       { path: 'reports', name: 'AdminReports', component: AdminReports },
       { path: 'landing-pages', name: 'AdminLandingPages', component: AdminLandingPages },
+      { path: 'banners', name: 'AdminBanners', component: AdminBanners },
     ]
   },
   // UX-04: Proper 404 page instead of silent redirect

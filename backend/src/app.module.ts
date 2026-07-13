@@ -15,6 +15,7 @@ import { LandingPagesModule } from './modules/landing-pages/landing-pages.module
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { BannersModule } from './modules/banners/banners.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -52,6 +53,7 @@ import { AppController } from './app.controller';
     SeedModule,
     LandingPagesModule,
     NotificationsModule,
+    BannersModule,
   ],
   controllers: [AppController],
   providers: [

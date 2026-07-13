@@ -345,6 +345,10 @@ const SparklingIcon = {
   template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 21l-.813-5.096L3.096 15.09 8 14.277l.813-5.096.813 5.096 5.096.813-5.096.813ZM19.062 7.938 18.5 11.5l-.563-3.562L14.375 7.38 18 6.813l.563-3.563.563 3.563 3.562.563-3.562.562ZM19.062 17.938l-.562 3.562-.563-3.562-3.563-.563 3.563-.563.563-3.562.562 3.562 3.563.563-3.563.563Z" /></svg>`
 }
 
+const BannersIcon = {
+  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" /></svg>`
+}
+
 const navItems = [
   { name: 'AdminDashboard', label: 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
   { name: 'AdminProducts', label: 'Sản phẩm', to: '/admin/products', icon: ProductsIcon },
@@ -353,6 +357,7 @@ const navItems = [
   { name: 'AdminCombos', label: 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon },
   { name: 'AdminCustomers', label: 'Khách hàng', to: '/admin/customers', icon: CustomersIcon },
   { name: 'AdminPromotions', label: 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon },
+  { name: 'AdminBanners', label: 'Banners', to: '/admin/banners', icon: BannersIcon },
   { name: 'AdminReports', label: 'Báo cáo', to: '/admin/reports', icon: ReportsIcon },
   { name: 'AdminLandingPages', label: 'Tạo Page Nhanh', to: '/admin/landing-pages', icon: SparklingIcon },
 ]
