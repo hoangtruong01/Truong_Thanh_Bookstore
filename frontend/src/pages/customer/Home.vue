@@ -2,7 +2,7 @@
   <div class="space-y-0 pb-0 bg-slate-50/50 overflow-hidden">
     <!-- Category Navigation Bar -->
     <div class="bg-white border-b border-slate-100 hidden md:block">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8">
         <div
           class="flex items-center justify-start lg:justify-center gap-2 lg:gap-6 py-2.5 overflow-x-auto scrollbar-none"
         >
@@ -32,11 +32,11 @@
 
     <!-- Section 1: Hero Banner Grid (Fahasa-style) -->
     <div class="bg-[#f5f5fa] py-3 md:py-4">
-      <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+      <div class="max-w-[1500px] mx-auto px-3 sm:px-4 lg:px-6">
         <!-- Top Row: Sidebar Left + Main Slider + Sidebar Right -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2.5 mb-2.5">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-3 lg:h-[380px]">
           <!-- Sidebar Left -->
-          <div class="hidden lg:block lg:col-span-2">
+          <div class="hidden lg:block lg:col-span-3 h-full">
             <a
               v-if="bannerGroups.sidebar_left && bannerGroups.sidebar_left[0]"
               :href="bannerGroups.sidebar_left[0].linkUrl || '#'"
@@ -50,7 +50,7 @@
             </a>
             <div
               v-else
-              class="w-full h-full rounded-xl bg-gradient-to-br from-orange-100 via-amber-50 to-orange-50 flex flex-col items-center justify-center p-4 text-center min-h-[300px] border border-orange-200/40"
+              class="w-full h-full rounded-xl bg-gradient-to-br from-orange-100 via-amber-50 to-orange-50 flex flex-col items-center justify-center p-4 text-center border border-orange-200/40"
             >
               <span class="text-3xl mb-2">📚</span>
               <span class="text-xs font-black text-orange-800 uppercase tracking-wide">Sách giáo khoa</span>
@@ -59,9 +59,9 @@
           </div>
 
           <!-- Main Slider -->
-          <div class="lg:col-span-7 relative rounded-xl overflow-hidden group min-h-[200px] sm:min-h-[280px] lg:min-h-[300px]">
+          <div class="lg:col-span-6 relative rounded-xl overflow-hidden group h-full">
             <!-- Skeleton Loader -->
-            <div v-if="loadingBanners" class="w-full h-full bg-slate-200 rounded-xl animate-pulse min-h-[280px] lg:min-h-[300px]"></div>
+            <div v-if="loadingBanners" class="w-full h-full bg-slate-200 rounded-xl animate-pulse"></div>
 
             <template v-else>
               <!-- Slider Track -->
@@ -119,7 +119,7 @@
               <!-- Fallback when no main slider banners -->
               <div
                 v-else
-                class="w-full h-full rounded-xl bg-gradient-to-br from-[#e11d24] via-rose-500 to-[#fb5607] flex flex-col items-center justify-center p-8 text-center min-h-[280px] lg:min-h-[300px] relative overflow-hidden"
+                class="w-full h-full rounded-xl bg-gradient-to-br from-[#e11d24] via-rose-500 to-[#fb5607] flex flex-col items-center justify-center p-8 text-center relative overflow-hidden"
               >
                 <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle, #fff 1px, transparent 1px); background-size: 16px 16px;"></div>
                 <h2 class="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight relative z-10 leading-tight">
@@ -139,7 +139,7 @@
           </div>
 
           <!-- Sidebar Right (2 stacked banners) -->
-          <div class="hidden lg:flex lg:col-span-3 flex-col gap-2.5">
+          <div class="hidden lg:flex lg:col-span-3 flex-col gap-3 h-full">
             <!-- Right Top -->
             <a
               v-if="bannerGroups.sidebar_right_top && bannerGroups.sidebar_right_top[0]"
@@ -185,7 +185,7 @@
         </div>
 
         <!-- Bottom Row: 4 promo banners -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           <template v-if="bannerGroups.bottom_row && bannerGroups.bottom_row.length > 0">
             <a
               v-for="(banner, idx) in bannerGroups.bottom_row.slice(0, 4)"
@@ -232,7 +232,7 @@
       class="w-full py-16 relative overflow-hidden"
     >
       <div
-        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 relative z-10"
+        class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8 relative z-10"
       >
         <!-- Section Header -->
         <div
@@ -706,7 +706,7 @@
 
     <!-- Section 4: Horizontal Featured Categories -->
     <section class="py-10 px-4 md:px-8 bg-white border-y border-slate-100/80">
-      <div class="max-w-7xl mx-auto space-y-6">
+      <div class="max-w-[1500px] mx-auto space-y-6">
         <!-- Section Header -->
         <div class="reveal flex items-end justify-between">
           <div class="text-left">
@@ -846,7 +846,7 @@
         class="absolute inset-0 bg-gradient-to-r from-amber-50/90 via-amber-50/70 to-transparent pointer-events-none"
       ></div>
 
-      <div class="max-w-7xl mx-auto w-full relative z-10">
+      <div class="max-w-[1500px] mx-auto w-full relative z-10">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <!-- Text content aligned to the left, taking up 8 columns on large screens to prevent awkward line breaks -->
           <div

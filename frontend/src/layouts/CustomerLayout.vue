@@ -16,7 +16,7 @@
           : 'shadow-xs'
       "
     >
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-20 gap-4">
           <!-- Mobile Menu Toggle (UX-05) -->
           <button
@@ -790,7 +790,7 @@
     >
       <!-- Top Section: Testimonial & Google Maps -->
       <div
-        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
+        class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
       >
         <!-- Testimonial & Newsletter -->
         <div class="space-y-6 text-center lg:text-left flex flex-col items-center lg:items-start">
@@ -967,7 +967,7 @@
 
       <!-- Bottom Columns Grid -->
       <div
-        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12"
+        class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12"
       >
         <!-- Col 1: Store Intro -->
         <div class="space-y-5 flex flex-col items-center md:items-start text-center md:text-left">
@@ -1271,7 +1271,7 @@
       <div
         class="border-t border-slate-900/90 py-6 text-xs text-slate-500 bg-[#050810]"
       >
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p class="font-medium">© 2026 Trường Thành Stationery. All rights reserved.</p>
           <div class="flex items-center gap-6 text-slate-600 text-[11px] font-semibold">
             <router-link to="/info?tab=privacy" class="hover:text-slate-400 transition-colors">Chính sách bảo mật</router-link>

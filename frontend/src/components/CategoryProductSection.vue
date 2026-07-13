@@ -1,5 +1,5 @@
 <template>
-  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
+  <section class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-8">
     <div class="reveal flex items-end justify-between border-b border-slate-100 pb-4">
       <div class="text-left">
         <span class="text-xs font-bold text-rose-600 tracking-[0.2em] uppercase font-black">

@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <h1 class="text-2xl font-extrabold text-slate-900 mb-8">Thanh toán đơn hàng</h1>
 
     <div v-if="orderSuccess" class="bg-white border border-slate-200 rounded-3xl p-16 text-center max-w-xl mx-auto space-y-6 shadow-xs">

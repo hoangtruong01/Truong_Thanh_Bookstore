@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-slate-50/50 pb-20 selection:bg-red-500 selection:text-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <!-- Premium Hero Header -->
       <div 
         :style="{
