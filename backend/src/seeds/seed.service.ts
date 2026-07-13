@@ -549,7 +549,10 @@ export class SeedService implements OnModuleInit {
       return categoryImages[categoryIndex] || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500';
     };
 
-    const productsToCreate = rawProducts.map((p, idx) => {
+    const nonComboRawProducts = rawProducts.filter((p) => p.categoryIndex !== 3);
+    const comboRawProducts = rawProducts.filter((p) => p.categoryIndex === 3);
+
+    const nonComboProductsToCreate = nonComboRawProducts.map((p, idx) => {
       const categoryId = createdCombos[p.categoryIndex]._id;
       const imageUrl = getProductImage(p.name, p.categoryIndex, idx);
       return {
@@ -571,20 +574,145 @@ export class SeedService implements OnModuleInit {
       };
     });
 
-    const createdProducts = await this.productModel.insertMany(productsToCreate);
-    this.logger.log(`${createdProducts.length} Products seeded successfully`);
+    const createdNonComboProducts = await this.productModel.insertMany(nonComboProductsToCreate);
+    this.logger.log(`${createdNonComboProducts.length} Non-Combo Products seeded successfully`);
 
-    // Group product IDs by category index
-    const categoryProductIds: { [index: number]: any[] } = {
-      0: [], 1: [], 2: [], 3: [], 4: [], 5: []
+    // Group non-combo products by category index
+    const productsByCategoryIndex: { [key: number]: any[] } = {
+      0: [], 1: [], 2: [], 4: [], 5: []
     };
-
-    createdProducts.forEach((product: any, idx: number) => {
-      const rawProd = rawProducts[idx];
-      categoryProductIds[rawProd.categoryIndex].push(product._id);
+    createdNonComboProducts.forEach((product: any) => {
+      const rawProd = nonComboRawProducts.find((rp) => rp.sku === product.sku);
+      if (rawProd) {
+        productsByCategoryIndex[rawProd.categoryIndex].push(product);
+      }
     });
 
-    // Save bidirectional product reference into category model
+    // Create combo subcategories and combo products
+    const comboProductsToCreate: any[] = [];
+
+    for (let idx = 0; idx < comboRawProducts.length; idx++) {
+      const p = comboRawProducts[idx];
+      const opt = p.subOptions?.[0] || 'Học tập';
+      const selectedSubProducts: any[] = [];
+
+      if (opt === 'Học tập') {
+        const sgkList = productsByCategoryIndex[0] || [];
+        const stkList = productsByCategoryIndex[1] || [];
+        const souvenirList = productsByCategoryIndex[5] || [];
+        if (sgkList.length > 0) selectedSubProducts.push(sgkList[idx % sgkList.length]._id);
+        if (stkList.length > 0) selectedSubProducts.push(stkList[(idx + 1) % stkList.length]._id);
+        if (souvenirList.length > 0) {
+          const stationeryItems = souvenirList.filter(item => 
+            item.name.toLowerCase().includes('bút') || 
+            item.name.toLowerCase().includes('sổ') || 
+            item.name.toLowerCase().includes('hộp')
+          );
+          if (stationeryItems.length > 0) {
+            selectedSubProducts.push(stationeryItems[idx % stationeryItems.length]._id);
+          } else {
+            selectedSubProducts.push(souvenirList[idx % souvenirList.length]._id);
+          }
+        }
+      } else if (opt === 'Mỹ thuật') {
+        const toyList = productsByCategoryIndex[4] || [];
+        const craftToys = toyList.filter(item => 
+          item.name.toLowerCase().includes('đất') || 
+          item.name.toLowerCase().includes('cát') || 
+          item.name.toLowerCase().includes('tượng') || 
+          item.name.toLowerCase().includes('thủ công')
+        );
+        if (craftToys.length > 0) {
+          selectedSubProducts.push(craftToys[idx % craftToys.length]._id);
+          if (craftToys.length > 1) {
+            selectedSubProducts.push(craftToys[(idx + 1) % craftToys.length]._id);
+          }
+        } else if (toyList.length > 0) {
+          selectedSubProducts.push(toyList[idx % toyList.length]._id);
+        }
+      } else if (opt === 'Quà tặng') {
+        const souvenirList = productsByCategoryIndex[5] || [];
+        if (souvenirList.length > 0) {
+          selectedSubProducts.push(souvenirList[idx % souvenirList.length]._id);
+          if (souvenirList.length > 1) {
+            selectedSubProducts.push(souvenirList[(idx + 1) % souvenirList.length]._id);
+          }
+          if (souvenirList.length > 2) {
+            selectedSubProducts.push(souvenirList[(idx + 2) % souvenirList.length]._id);
+          }
+        }
+      } else if (opt === 'Đóng gói') {
+        const souvenirList = productsByCategoryIndex[5] || [];
+        const wrappingItems = souvenirList.filter(item => 
+          item.name.toLowerCase().includes('hộp') || 
+          item.name.toLowerCase().includes('sticker') || 
+          item.name.toLowerCase().includes('băng') || 
+          item.name.toLowerCase().includes('thư')
+        );
+        if (wrappingItems.length > 0) {
+          selectedSubProducts.push(wrappingItems[idx % wrappingItems.length]._id);
+          if (wrappingItems.length > 1) {
+            selectedSubProducts.push(wrappingItems[(idx + 1) % wrappingItems.length]._id);
+          }
+        } else if (souvenirList.length > 0) {
+          selectedSubProducts.push(souvenirList[idx % souvenirList.length]._id);
+        }
+      }
+
+      if (selectedSubProducts.length === 0 && createdNonComboProducts.length > 0) {
+        selectedSubProducts.push(createdNonComboProducts[idx % createdNonComboProducts.length]._id);
+      }
+
+      // Create unique subcategory for this combo
+      const subCategorySlug = `${slugify(p.name)}-cat`;
+      const subCat = new this.categoryModel({
+        name: p.name,
+        slug: subCategorySlug,
+        description: `Nhóm sản phẩm liên kết của ${p.name}`,
+        parentId: createdCombos[3]._id,
+        comboPrice: p.discountPrice || p.price,
+        products: selectedSubProducts,
+        status: true,
+      });
+      const savedSubCat = await subCat.save();
+
+      const imageUrl = getProductImage(p.name, 3, idx);
+      comboProductsToCreate.push({
+        name: p.name,
+        slug: slugify(p.name),
+        sku: p.sku,
+        description: p.description,
+        category: savedSubCat._id,
+        brand: p.brand,
+        price: p.price,
+        discountPrice: p.discountPrice,
+        stock: 100,
+        images: [imageUrl],
+        rating: 4.5 + Math.random() * 0.5,
+        sold: Math.floor(Math.random() * 200) + 10,
+        isFeatured: Math.random() > 0.7,
+        status: ProductStatus.ACTIVE,
+        subOptions: p.subOptions,
+      });
+    }
+
+    const createdComboProducts = await this.productModel.insertMany(comboProductsToCreate);
+    this.logger.log(`${createdComboProducts.length} Combo Products seeded successfully`);
+
+    // Combine all created products
+    const createdProducts = [...createdNonComboProducts, ...createdComboProducts];
+
+    // Group product IDs by category index for parent categories
+    const categoryProductIds: { [index: number]: any[] } = {
+      0: productsByCategoryIndex[0].map(p => p._id),
+      1: productsByCategoryIndex[1].map(p => p._id),
+      2: productsByCategoryIndex[2].map(p => p._id),
+      3: createdComboProducts.map(p => p._id),
+      4: productsByCategoryIndex[4].map(p => p._id),
+      5: productsByCategoryIndex[5].map(p => p._id),
+    };
+
+    // Save bidirectional product reference into parent categories
     for (let i = 0; i < 6; i++) {
       const catId = createdCombos[i]._id;
       const productIds = categoryProductIds[i];

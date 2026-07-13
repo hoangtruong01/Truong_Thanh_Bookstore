@@ -280,7 +280,7 @@ const activeSubOptions = computed(() => {
 onMounted(() => {
   categoryService.getAll()
     .then(catRes => {
-      categories.value = catRes.data
+      categories.value = catRes.data.filter((c: any) => !c.parentId)
     })
     .catch(err => {
       console.error('Error fetching categories', err)

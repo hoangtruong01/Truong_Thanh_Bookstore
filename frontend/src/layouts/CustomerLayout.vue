@@ -1548,6 +1548,7 @@ const parentCategories = computed(() => {
 
 const getSubcategoriesForActiveParent = computed(() => {
   if (!activeParent.value) return [];
+  if (activeParent.value.slug === 'combo') return [];
   return allCategories.value.filter((c) => {
     if (!c.parentId) return false;
     const pId = typeof c.parentId === "object" ? c.parentId._id : c.parentId;
