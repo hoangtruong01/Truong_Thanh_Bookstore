@@ -1280,6 +1280,25 @@
           </div>
         </div>
       </div>
+      
+      <!-- Mobile Search Bar (FIX-3.6) -->
+      <div class="px-4 pb-3 md:hidden">
+        <form @submit.prevent="handleSearch" class="relative w-full">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Tìm bút, sổ tay, giấy A4, kẹp giấy..."
+            class="w-full bg-slate-100 border border-slate-200 rounded-full py-2 px-4 pr-12 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:border-transparent"
+          />
+          <button
+            type="submit"
+            aria-label="Tìm kiếm"
+            class="absolute right-1 top-1/2 -translate-y-1/2 bg-[#dc2626] hover:bg-[#b91c1c] text-white p-1.5 px-3 rounded-full text-xs font-bold transition-colors cursor-pointer"
+          >
+            🔍
+          </button>
+        </form>
+      </div>
     </footer>
 
     <!-- Profile Modal -->
@@ -1511,7 +1530,7 @@ const performAutocomplete = debounce(async (query: string) => {
     const res = await productService.search(trimmed);
     searchResults.value = res.data.slice(0, 6);
   } catch (err) {
-    console.error("Autocomplete search failed:", err);
+    // FIX-2.3: silent fail for autocomplete
   } finally {
     loadingSearch.value = false;
   }
@@ -1586,7 +1605,7 @@ onMounted(async () => {
       activeParent.value = parentCategories.value[0];
     }
   } catch (error) {
-    console.error("Error fetching categories:", error);
+    // FIX-2.3: silent fail for categories
   }
 });
 

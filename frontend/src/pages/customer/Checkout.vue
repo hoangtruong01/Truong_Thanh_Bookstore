@@ -220,7 +220,7 @@
                   {{ cartStore.shippingFee === 0 ? 'Miễn phí' : formatCurrency(cartStore.shippingFee) }}
                 </span>
                 <span v-if="cartStore.shippingFee === 0" class="text-[9px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded-md mt-0.5 inline-block">
-                  Đơn hàng trên 50K
+                  Đơn hàng từ 299K
                 </span>
               </div>
             </div>
@@ -338,7 +338,7 @@ onMounted(async () => {
     const res = await promotionService.getActive()
     activePromotions.value = res.data || []
   } catch (err) {
-    console.error('Failed to load active promotions:', err)
+    // silently fail - promotions are optional
   }
 })
 

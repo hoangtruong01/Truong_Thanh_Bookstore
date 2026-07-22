@@ -10,7 +10,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, UpdateProfileDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto, ChangePasswordDto } from './dto/auth.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -43,6 +43,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Update current user profile info' })
   async updateProfile(@Request() req: any, @Body() updateProfileDto: UpdateProfileDto) {
     return this.authService.updateProfile(req.user._id, updateProfileDto);
+  }
+
+  @Put('change-password')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change current user password' })
+  async changePassword(@Request() req: any, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user._id, dto.currentPassword, dto.newPassword);
   }
 }
 

@@ -39,6 +39,10 @@ export class Inventory {
 
 export const InventorySchema = SchemaFactory.createForClass(Inventory);
 
+// FIX-2.4: Indexes for inventory queries
+InventorySchema.index({ status: 1 });
+InventorySchema.index({ currentStock: 1 });
+
 export type InventoryTransactionDocument = InventoryTransaction & Document;
 
 @Schema({ timestamps: true })

@@ -102,5 +102,21 @@ export class AuthService {
     }
     return updatedUser;
   }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      throw new UnauthorizedException('Mật khẩu hiện tại không đúng');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.usersService.update(userId, { password: hashedPassword });
+    return { success: true, message: 'Đổi mật khẩu thành công' };
+  }
 }
 

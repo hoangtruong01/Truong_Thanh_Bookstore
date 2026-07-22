@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authService } from '@/services/auth.service'
 import { encryptToken, decryptToken } from '@/utils/helpers'
+import router from '@/router'
 import type { User } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -73,12 +74,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // FIX-2.2: Use Vue Router instead of window.location to prevent full page reload
   function logout() {
     user.value = null
     token.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('user')
-    window.location.href = '/login'
+    router.push({ name: 'Login' })
   }
 
   return {

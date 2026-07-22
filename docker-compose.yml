@@ -22,9 +22,9 @@ services:
       - "3000:3000"
     environment:
       - PORT=3000
-      - MONGO_URI=mongodb://mongodb:27017/truong-thanh-stationery
-      - JWT_SECRET=TruongThanhSuperSecretKey2026!
-      - JWT_EXPIRATION=7d
+      - MONGODB_URI=mongodb://mongodb:27017/truong-thanh-stationery
+    env_file:
+      - ./backend/.env
     depends_on:
       - mongodb
     networks:

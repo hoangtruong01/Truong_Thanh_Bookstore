@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -13,6 +14,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PromotionsService {
+  private readonly logger = new Logger(PromotionsService.name);
+
   constructor(
     @InjectModel(Promotion.name)
     private promotionModel: Model<PromotionDocument>,
@@ -30,7 +33,7 @@ export class PromotionsService {
         savedPromo.code,
         savedPromo.name,
         savedPromo.description,
-      ).catch((err) => console.error('Failed to create global promo notification', err));
+      ).catch((err) => this.logger.error('Failed to create global promo notification', err));
     }
     
     return savedPromo;
@@ -69,6 +72,7 @@ export class PromotionsService {
     const promo = await this.promotionModel
       .findByIdAndUpdate(id, dto, { new: true })
       .exec();
+    if (!promo) throw new NotFoundException('Promotion not found');
 
     if (!promo) throw new NotFoundException('Promotion not found');
 
@@ -78,7 +82,7 @@ export class PromotionsService {
         promo.code,
         promo.name,
         promo.description,
-      ).catch((err) => console.error('Failed to create global promo notification on update', err));
+      ).catch((err) => this.logger.error('Failed to create global promo notification on update', err));
     }
 
     return promo;

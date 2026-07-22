@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 // Layouts (keep eager since they wrap everything)
 import CustomerLayout from '@/layouts/CustomerLayout.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import AuthLayout from '@/layouts/AuthLayout.vue'
 
 // Customer Pages - lazy loaded for better performance (PERF-01)
 const Home = () => import('@/pages/customer/Home.vue')
@@ -17,6 +18,7 @@ const LandingPageDetail = () => import('@/pages/customer/LandingPageDetail.vue')
 const DealHot = () => import('@/pages/customer/DealHot.vue')
 const MyOrders = () => import('@/pages/customer/MyOrders.vue')
 const Info = () => import('@/pages/customer/Info.vue')
+const OrderDetail = () => import('@/pages/customer/OrderDetail.vue')
 
 // Admin Pages - lazy loaded
 const AdminDashboard = () => import('@/pages/admin/Dashboard.vue')
@@ -43,16 +45,22 @@ const routes = [
       { path: 'products', name: 'ProductList', component: ProductList },
       { path: 'products/:id', name: 'ProductDetail', component: ProductDetail },
       { path: 'cart', name: 'Cart', component: Cart },
-      // BUG-01: Removed requiresAuth - allow guest checkout
       { path: 'checkout', name: 'Checkout', component: Checkout },
       { path: 'deal-hot', name: 'DealHot', component: DealHot },
       { path: 't/:slug', name: 'LandingPageDetail', component: LandingPageDetail },
       { path: 'info', name: 'Info', component: Info },
       { path: 'my-orders', name: 'MyOrders', component: MyOrders, meta: { requiresAuth: true } },
+      { path: 'my-orders/:id', name: 'OrderDetail', component: OrderDetail, meta: { requiresAuth: true } },
     ]
   },
-  { path: '/login', name: 'Login', component: Login, meta: { guestOnly: true } },
-  { path: '/register', name: 'Register', component: Register, meta: { guestOnly: true } },
+  {
+    path: '/',
+    component: AuthLayout,
+    children: [
+      { path: 'login', name: 'Login', component: Login, meta: { guestOnly: true } },
+      { path: 'register', name: 'Register', component: Register, meta: { guestOnly: true } },
+    ]
+  },
   {
     path: '/admin',
     component: AdminLayout,
@@ -103,6 +111,31 @@ router.beforeEach((to, _from, next) => {
   } else {
     next()
   }
+})
+
+// FIX-3.1: Dynamic SEO Document Title update on route changes
+router.afterEach((to) => {
+  const titles: Record<string, string> = {
+    Home: 'Trường Thành Stationery — Dụng Cụ Học Tập & Văn Phòng Phẩm Chính Hãng',
+    ProductList: 'Danh Sách Sản Phẩm — Trường Thành Stationery',
+    ProductDetail: 'Chi Tiết Sản Phẩm — Trường Thành Stationery',
+    Cart: 'Giỏ Hàng — Trường Thành Stationery',
+    Checkout: 'Thanh Toán — Trường Thành Stationery',
+    Login: 'Đăng Nhập — Trường Thành Stationery',
+    Register: 'Đăng Ký Tài Khoản — Trường Thành Stationery',
+    MyOrders: 'Đơn Hàng Của Tôi — Trường Thành Stationery',
+    OrderDetail: 'Chi Tiết Đơn Hàng — Trường Thành Stationery',
+    AdminDashboard: 'Tổng Quan Báo Cáo — Trường Thành Admin',
+    AdminProducts: 'Quản Lý Sản Phẩm — Trường Thành Admin',
+    AdminOrders: 'Quản Lý Đơn Hàng — Trường Thành Admin',
+    AdminInventory: 'Quản Lý Tồn Kho — Trường Thành Admin',
+    AdminCustomers: 'Quản Lý Khách Hàng — Trường Thành Admin',
+    AdminPromotions: 'Mã Khuyến Mãi — Trường Thành Admin',
+    AdminReports: 'Báo Cáo Doanh Thu — Trường Thành Admin',
+    NotFound: '404 - Không Tìm Thấy Trang — Trường Thành Stationery',
+  }
+  const pageTitle = titles[to.name as string] || 'Trường Thành Stationery'
+  document.title = pageTitle
 })
 
 export default router

@@ -164,6 +164,24 @@ export class OrdersService {
 
     const total = Math.max(0, subtotal + shippingFee - discount);
 
+    // FIX-1.3: Deduct stock BEFORE saving order to prevent zombie orders
+    // If any deductStock fails, no order is created (atomic behavior)
+    const deductedItems: { product: string; quantity: number }[] = [];
+    try {
+      for (const item of verifiedItems) {
+        await this.productsService.deductStock(item.product, item.quantity);
+        deductedItems.push({ product: item.product, quantity: item.quantity });
+        await this.productsService.incrementSold(item.product, item.quantity);
+      }
+    } catch (err) {
+      // Rollback: restore stock for items that were already deducted
+      for (const deducted of deductedItems) {
+        await this.productsService.updateStock(deducted.product, deducted.quantity);
+        await this.productsService.incrementSold(deducted.product, -deducted.quantity);
+      }
+      throw err; // Re-throw so the client gets the error
+    }
+
     const order = new this.orderModel({
       orderCode: this.generateOrderCode(),
       customer: userId || null,
@@ -182,12 +200,6 @@ export class OrdersService {
     });
 
     const savedOrder = await order.save();
-
-    // FIX-C04: Deduct stock with safe check
-    for (const item of verifiedItems) {
-      await this.productsService.deductStock(item.product, item.quantity);
-      await this.productsService.incrementSold(item.product, item.quantity);
-    }
 
     // Sync to Google Sheet (async)
     this.syncToGoogleSheet(savedOrder).catch((err) => this.logger.error('Sheet sync failed', err));

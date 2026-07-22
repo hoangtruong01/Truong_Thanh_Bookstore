@@ -111,14 +111,22 @@
               <span class="text-base font-black text-[#dc2626]">{{ formatCurrency(order.total) }}</span>
             </div>
 
-            <!-- Cancel Button (Only for PENDING orders) -->
-            <button
-              v-if="order.orderStatus === 'PENDING'"
-              @click="cancelOrder(order._id)"
-              class="px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-xl transition-all cursor-pointer"
-            >
-              Hủy đơn hàng
-            </button>
+            <div class="flex items-center gap-2">
+              <router-link
+                :to="`/my-orders/${order._id}`"
+                class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all inline-block"
+              >
+                Xem chi tiết
+              </router-link>
+              <!-- Cancel Button (Only for PENDING orders) -->
+              <button
+                v-if="order.orderStatus === 'PENDING'"
+                @click="cancelOrder(order._id)"
+                class="px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                Hủy đơn
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -153,7 +161,6 @@ async function fetchOrders() {
     const res = await orderService.getMyOrders()
     orders.value = Array.isArray(res.data) ? res.data : (res.data?.data || [])
   } catch (err: any) {
-    console.error('Failed to load my orders', err)
     toast.error('Không thể tải lịch sử đơn hàng')
   } finally {
     loading.value = false

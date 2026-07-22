@@ -83,3 +83,9 @@ export class Order {
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
+
+// FIX-2.4: Indexes for order queries
+OrderSchema.index({ customer: 1, createdAt: -1 });
+OrderSchema.index({ orderStatus: 1 });
+OrderSchema.index({ createdAt: -1 });
+OrderSchema.index({ promotionCode: 1 });

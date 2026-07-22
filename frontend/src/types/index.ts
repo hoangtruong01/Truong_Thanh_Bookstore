@@ -86,6 +86,7 @@ export interface Order {
   total: number
   customerName?: string
   customerEmail?: string
+  promotionCode?: string
   createdAt: string
   updatedAt: string
 }

@@ -63,7 +63,11 @@ export class Product {
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
 
-// Indexes for search and filter
+// FIX-2.4: Indexes for search and filter performance
 ProductSchema.index({ name: 'text', description: 'text' });
-ProductSchema.index({ category: 1 });
+ProductSchema.index({ category: 1, isDeleted: 1 });
 ProductSchema.index({ price: 1 });
+ProductSchema.index({ sold: -1 });
+ProductSchema.index({ isDeleted: 1, createdAt: -1 });
+ProductSchema.index({ isFeatured: 1, isDeleted: 1 });
+ProductSchema.index({ discountPrice: 1 });

@@ -54,3 +54,15 @@ export class UpdateProfileDto {
   avatar?: string;
 }
 
+export class ChangePasswordDto {
+  @ApiProperty({ example: 'OldPassword123' })
+  @IsNotEmpty()
+  currentPassword: string;
+
+  @ApiProperty({ example: 'NewPassword123' })
+  @IsNotEmpty()
+  @MinLength(6, { message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
+  newPassword: string;
+}
+
+
