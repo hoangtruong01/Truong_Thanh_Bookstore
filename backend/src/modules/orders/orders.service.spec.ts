@@ -23,7 +23,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     images: ['https://example.com/pen.jpg'],
   };
 
-  const mockOrderModel = function (dto) {
+  const mockOrderModel = function (dto: any) {
     this.data = dto;
     this.save = jest.fn().mockResolvedValue({ _id: 'order123', orderCode: 'TT123456', ...dto });
   };
