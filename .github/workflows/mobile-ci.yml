@@ -1,0 +1,61 @@
+name: Mobile CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+
+jobs:
+  build-and-test-mobile:
+    name: Build & Test Flutter Mobile App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get Dependencies
+        run: |
+          cd mobile
+          flutter pub get
+
+      - name: Static Code Analysis
+        run: |
+          cd mobile
+          flutter analyze --no-fatal-infos
+
+      - name: Run Flutter Widget Tests
+        run: |
+          cd mobile
+          flutter test
+
+      - name: Build Android APK (Release)
+        run: |
+          cd mobile
+          flutter build apk --release
+
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: truong-thanh-bookstore-android-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
