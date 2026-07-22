@@ -2,21 +2,33 @@ name: Backend CI
 
 on:
   push:
+    branches: [main]
     paths:
       - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
   pull_request:
+    branches: [main]
     paths:
       - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
 
 jobs:
   build-and-test:
+    name: Build & Test Backend
     runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
@@ -27,7 +39,25 @@ jobs:
           cd backend
           npm ci
 
-      - name: Build Code
+      - name: Run NestJS Build
         run: |
           cd backend
           npm run build
+
+      - name: Run Unit Tests
+        run: |
+          cd backend
+          npx jest
+        env:
+          MONGODB_URI: mongodb://localhost:27017/truong-thanh-test
+          JWT_SECRET: TestSuperSecretKey2026!
+          JWT_EXPIRATION: 7d
+
+      - name: Run End-to-End (E2E) Tests
+        run: |
+          cd backend
+          npx jest --config test/jest-e2e.json --runInBand
+        env:
+          MONGODB_URI: mongodb://localhost:27017/truong-thanh-test
+          JWT_SECRET: TestSuperSecretKey2026!
+          JWT_EXPIRATION: 7d

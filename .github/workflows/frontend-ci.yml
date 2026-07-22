@@ -2,21 +2,27 @@ name: Frontend CI
 
 on:
   push:
+    branches: [main]
     paths:
       - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
   pull_request:
+    branches: [main]
     paths:
       - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
 
 jobs:
   build-and-test:
+    name: Build & Check Frontend
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
@@ -27,7 +33,7 @@ jobs:
           cd frontend
           npm ci
 
-      - name: Compile and Build
+      - name: Compile & Build Frontend (Vite + Vue-TSC)
         run: |
           cd frontend
           npm run build
