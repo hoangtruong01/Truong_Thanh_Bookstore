@@ -3,14 +3,8 @@ name: Backend CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
   pull_request:
     branches: [main]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
 
 jobs:
   build-and-test:
@@ -30,34 +24,32 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
           cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: 'backend/package-lock.json'
 
       - name: Install dependencies
         run: |
           cd backend
           npm ci
 
-      - name: Run NestJS Build
+      - name: Build project
         run: |
           cd backend
           npm run build
 
-      - name: Run Unit Tests
+      - name: Run unit tests
         run: |
           cd backend
-          npx jest
+          npm run test
         env:
-          MONGODB_URI: mongodb://localhost:27017/truong-thanh-test
-          JWT_SECRET: TestSuperSecretKey2026!
-          JWT_EXPIRATION: 7d
+          MONGODB_URI: mongodb://localhost:27017/truongthanh_test
+          JWT_SECRET: test_jwt_secret_key_123456
 
-      - name: Run End-to-End (E2E) Tests
+      - name: Run E2E tests
         run: |
           cd backend
           npx jest --config test/jest-e2e.json --runInBand
         env:
-          MONGODB_URI: mongodb://localhost:27017/truong-thanh-test
-          JWT_SECRET: TestSuperSecretKey2026!
-          JWT_EXPIRATION: 7d
+          MONGODB_URI: mongodb://localhost:27017/truongthanh_test
+          JWT_SECRET: test_jwt_secret_key_123456

@@ -55,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ĐẮNG NHẬP'),
+        title: const Text('ĐĂNG NHẬP'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

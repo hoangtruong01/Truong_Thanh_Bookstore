@@ -42,7 +42,15 @@ class ProductProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        final List dataList = body['data']['data'] ?? [];
+        dynamic rawData = body['data'];
+        List dataList = [];
+        if (rawData is List) {
+          dataList = rawData;
+        } else if (rawData is Map && rawData['data'] is List) {
+          dataList = rawData['data'];
+        } else if (rawData is Map && rawData['items'] is List) {
+          dataList = rawData['items'];
+        }
         _products = dataList.map((item) => ProductModel.fromJson(item)).toList();
       }
     } catch (e) {
@@ -58,7 +66,13 @@ class ProductProvider with ChangeNotifier {
       final response = await http.get(Uri.parse(ApiConstants.categories));
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        final List dataList = body['data'] ?? [];
+        dynamic rawData = body['data'];
+        List dataList = [];
+        if (rawData is List) {
+          dataList = rawData;
+        } else if (rawData is Map && rawData['data'] is List) {
+          dataList = rawData['data'];
+        }
         _categories = dataList.map((item) => CategoryModel.fromJson(item)).toList();
         notifyListeners();
       }
