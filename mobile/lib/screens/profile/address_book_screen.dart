@@ -225,6 +225,9 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
                               'isDefault': isDefault,
                             };
 
+                            final messenger = ScaffoldMessenger.of(context);
+                            final navigator = Navigator.of(ctx);
+
                             try {
                               http.Response response;
                               if (address == null) {
@@ -248,11 +251,11 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
                               }
 
                               if (response.statusCode == 200 || response.statusCode == 201) {
-                                Navigator.pop(ctx);
+                                navigator.pop();
                                 _fetchAddresses();
                               }
                             } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(content: Text('Lỗi lưu địa chỉ: $e')),
                               );
                             }
