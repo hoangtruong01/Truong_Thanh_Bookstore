@@ -12,41 +12,91 @@ Dự án **Trường Thành Bookstore** là hệ thống thương mại điện 
 
 ```text
 Truong_Thanh_Bookstore/
-├── backend/                              # NestJS Backend
+├── backend/                              # NestJS Backend Application
 │   ├── src/
-│   │   ├── common/                       # Filters, Guards, Decorators, Enums chung
+│   │   ├── common/                       # Các middleware, guard, decorator và enum dùng chung
+│   │   │   ├── decorators/               # @Roles, @Public...
+│   │   │   ├── guards/                   # JwtAuthGuard, RolesGuard...
+│   │   │   ├── filters/                  # HttpExceptionFilter...
+│   │   │   └── enums/                    # order-status.enum.ts, payment-status.enum.ts...
 │   │   ├── modules/                      # Các mô đun nghiệp vụ chính
-│   │   │   ├── auth/                     # Xác thực, Quên mật khẩu & OTP
-│   │   │   ├── users/                    # Quản lý User & Sổ địa chỉ (Address Book)
-│   │   │   ├── products/                 # Sản phẩm & Bộ lọc nâng cao
-│   │   │   ├── orders/                   # Xử lý đơn hàng, Timeline & Hóa đơn PDF
-│   │   │   ├── promotions/               # Khuyến mãi & Voucher
-│   │   │   ├── notifications/            # Thông báo WebSocket Real-time
-│   │   │   └── reports/                  # Báo cáo Admin nâng cao (AOV, Voucher, Growth)
-│   │   └── main.ts                       # Điểm khởi chạy Backend
-│   └── test/                             # Kịch bản kiểm thử tích hợp (Jest)
+│   │   │   ├── auth/                     # Mô đun Xác thực người dùng
+│   │   │   │   ├── auth.controller.ts    # API Đăng nhập, Đăng ký, Quên mật khẩu, Xác nhận OTP
+│   │   │   │   ├── auth.service.ts       # Logic sinh mã OTP, băm bcrypt mật khẩu, cấp Token JWT
+│   │   │   │   └── dto/auth.dto.ts       # Định nghĩa đầu vào (LoginDto, RegisterDto, OTP Dtos)
+│   │   │   ├── users/                    # Mô đun người dùng & Địa chỉ
+│   │   │   │   ├── addresses.controller.ts  # REST API quản lý Sổ địa chỉ (Address book CRUD)
+│   │   │   │   ├── addresses.service.ts     # Logic đặt địa chỉ mặc định, đếm số lượng địa chỉ
+│   │   │   │   └── schemas/                 # address.schema.ts, user.schema.ts
+│   │   │   ├── products/                 # Mô đun quản lý Sản phẩm & Tìm kiếm
+│   │   │   │   ├── products.service.ts   # Tìm kiếm nâng cao (lọc theo khoảng giá, số sao, brand, tồn kho)
+│   │   │   │   └── dto/product.dto.ts    # ProductQueryDto mở rộng (minPrice, maxPrice, brand, minRating, inStock)
+│   │   │   ├── orders/                   # Mô đun đơn hàng
+│   │   │   │   ├── orders.controller.ts  # API Đặt hàng, Hủy đơn, Xuất hóa đơn PDF (:id/invoice)
+│   │   │   │   ├── orders.service.ts     # Xử lý Trừ tồn kho & Rollback nguyên tử, xuất PDF bằng pdfkit
+│   │   │   │   └── schemas/order.schema.ts  # Cấu trúc OrderItem, Order và OrderTimelineItem
+│   │   │   ├── notifications/            # Mô đun thông báo WebSocket Real-time
+│   │   │   │   ├── notifications.gateway.ts # WebSocket Gateway namespace '/notifications' quản lý kết nối
+│   │   │   │   └── notifications.service.ts # Đẩy thông báo tức thời qua Socket & Lưu DB
+│   │   │   └── reports/                  # Mô đun báo cáo thống kê dành cho Admin
+│   │   │       ├── reports.controller.ts # API /reports/dashboard/advanced
+│   │   │       └── reports.service.ts    # Tổng hợp dữ liệu AOV, Voucher, Phân bố đơn hàng
+│   │   ├── main.ts                       # Khởi chạy NestJS App, cấu hình CORS, ValidationPipe
+│   │   └── app.module.ts                 # Mô đun gốc liên kết MongooseModule và SocketGateway
+│   └── test/                             # Thư mục kiểm thử tự động
+│       └── all-fixes.spec.ts             # File test Jest xác thực 9 test cases nghiệp vụ lõi
 │
-├── frontend/                             # Vue 3 Web Frontend
+├── frontend/                             # Vue 3 Web Store & Dashboard Admin
 │   ├── src/
-│   │   ├── components/                   # Component tái sử dụng (ProductCard, Breadcrumb...)
-│   │   ├── layouts/                      # Giao diện khung (AdminLayout, CustomerLayout)
+│   │   ├── components/                   # Component dùng chung (ProductCard, Breadcrumb, Loading...)
+│   │   ├── layouts/                      # Layout khung định hình
+│   │   │   ├── CustomerLayout.vue        # Layout khách hàng (Header có giỏ hàng, Socket-toasts)
+│   │   │   └── AdminLayout.vue           # Layout Admin (Sidebar điều hướng, thống kê)
 │   │   ├── pages/                        # Các trang màn hình chính
-│   │   │   ├── admin/                    # Dashboard quản trị, doanh thu, voucher
-│   │   │   └── customer/                 # Mua sắm, Đặt hàng, Sổ địa chỉ, Quên mật khẩu
-│   │   ├── services/                     # Lớp kết nối HTTP API Axios
-│   │   ├── stores/                       # Quản lý trạng thái Pinia (auth, cart)
-│   │   └── router/                       # Định tuyến & Điều hướng Route Guard
+│   │   │   ├── admin/
+│   │   │   │   └── Dashboard.vue         # Báo cáo Admin nâng cao (AOV, Voucher table, Status charts)
+│   │   │   └── customer/
+│   │   │       ├── Addresses.vue         # Giao diện quản trị sổ địa chỉ cá nhân
+│   │   │       ├── ForgotPassword.vue    # Quên mật khẩu & Đặt lại qua mã OTP 6 số
+│   │   │       ├── OrderDetail.vue       # Chi tiết đơn hàng, Stepper hành trình đơn, nút tải hóa đơn PDF
+│   │   │       ├── ProductList.vue       # Sidebar lọc theo Brand, Rating, Price, Stock
+│   │   │       └── Checkout.vue          # Chọn nhanh địa chỉ từ Sổ địa chỉ, tính ship tự động
+│   │   ├── services/                     # Quản lý kết nối HTTP API Axios
+│   │   │   ├── order.service.ts          # Gọi API đặt hàng, lấy chi tiết, hủy đơn
+│   │   │   └── auth.service.ts           # Gọi API đăng nhập, quên mật khẩu, reset
+│   │   ├── stores/                       # Quản lý State bằng Pinia
+│   │   │   ├── auth.ts                   # Token mã hóa XOR-Base64, quyền hạn người dùng
+│   │   │   └── cart.ts                   # Giỏ hàng, phí ship local, áp voucher
+│   │   ├── router/
+│   │   │   └── index.ts                  # Định tuyến Route Guard yêu cầu đăng nhập/quyền Admin
+│   │   ├── App.vue                       # Điểm kết nối Socket.IO client tới gateway backend
+│   │   └── main.ts                       # Khởi tạo Vue App, Pinia, Toastification
+│   └── vite.config.ts                    # Cấu hình Vite build
 │
-└── mobile/                               # Flutter Mobile App
+└── mobile/                               # Flutter Mobile Application
     ├── lib/
-    │   ├── core/                         # Cấu hình Theme, Định dạng & API Constants
-    │   ├── models/                       # Data Models (Product, Order, Address, User...)
-    │   ├── providers/                    # Quản lý trạng thái bằng Provider (Auth, Cart, Product, Order)
-    │   └── screens/                      # Màn hình ứng dụng di động
-    │       ├── auth/                     # Đăng nhập, Đăng ký, Quên mật khẩu/OTP
-    │       ├── product/                  # Danh sách (có Drawer lọc), Chi tiết (có Zoom ảnh)
-    │       ├── order/                    # Lịch sử & Chi tiết đơn hàng (Timeline, link PDF)
-    │       └── profile/                  # Cá nhân & Sổ địa chỉ (CRUD)
+    │   ├── core/
+    │   │   ├── constants/api_constants.dart # Lưu trữ toàn bộ Endpoint và baseUrl động
+    │   │   └── theme/app_theme.dart      # Hệ màu và font chữ thương hiệu Trường Thành
+    │   ├── models/                       # Chuyển đổi dữ liệu JSON sang Object
+    │   │   ├── product_model.dart        # Chứa ProductModel và CategoryModel
+    │   │   └── order_model.dart          # Chứa OrderModel và OrderTimelineModel
+    │   ├── providers/                    # Quản lý trạng thái bằng Provider
+    │   │   ├── product_provider.dart     # Áp dụng bộ lọc nâng cao gửi lên Backend
+    │   │   ├── cart_provider.dart        # Giỏ hàng di động, áp mã voucher, ship local
+    │   │   └── auth_provider.dart        # Đăng nhập, đăng ký, quên mật khẩu
+    │   └── screens/                      # Giao diện màn hình ứng dụng di động
+    │       ├── auth/
+    │       │   └── forgot_password_screen.dart # Giao diện Quên mật khẩu nhập OTP 6 số trên Mobile
+    │       ├── product/
+    │       │   ├── product_list_screen.dart # Danh sách sản phẩm tích hợp Drawer bộ lọc nâng cao
+    │       │   └── product_detail_screen.dart # Chi tiết sản phẩm tích hợp Pinch-to-zoom InteractiveViewer
+    │       ├── order/
+    │       │   └── order_detail_screen.dart # Chi tiết đơn hàng, Stepper hành trình, nút tải PDF
+    │       └── profile/
+    │           └── address_book_screen.dart # Sổ địa chỉ cá nhân CRUD & Đặt địa chỉ mặc định
+    └── test/                             # Thư mục kiểm thử tự động
+        └── app_e2e_test.dart             # E2E test tích hợp trên mobile, test tab bar bằng Finder Icon
 ```
 
 ---
