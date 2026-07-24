@@ -90,7 +90,7 @@
                 v-model.number="minPrice"
                 type="number"
                 placeholder="0đ"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:bg-white"
               />
             </div>
             <div>
@@ -99,16 +99,62 @@
                 v-model.number="maxPrice"
                 type="number"
                 placeholder="Không giới hạn"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:bg-white"
               />
             </div>
             <button
               @click="applyFilters"
-              class="w-full bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors mt-2 cursor-pointer"
+              class="w-full bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all cursor-pointer shadow-sm hover:shadow-md"
             >
               Áp dụng
             </button>
           </div>
+        </div>
+
+        <!-- Brand Filter (Checklist) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-6">
+          <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider mb-4">Thương hiệu</h3>
+          <div class="space-y-2.5">
+            <label v-for="br in availableBrands" :key="br" class="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
+              <input 
+                type="checkbox" 
+                :value="br" 
+                v-model="selectedBrands"
+                class="rounded border-slate-300 text-[#dc2626] focus:ring-[#dc2626] w-4 h-4 cursor-pointer" 
+              />
+              <span>{{ br }}</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Rating Filter -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-6">
+          <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider mb-4">Đánh giá</h3>
+          <div class="space-y-2">
+            <button 
+              v-for="stars in [5, 4, 3]" 
+              :key="stars"
+              @click="toggleRatingFilter(stars)"
+              class="w-full text-left text-xs font-bold py-2 px-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+              :class="[selectedRating === stars ? 'bg-red-50 text-[#dc2626] font-bold border border-red-100' : 'text-slate-600 border border-transparent hover:bg-slate-50']"
+            >
+              <span class="text-amber-400 text-sm">★</span>
+              <span>Từ {{ stars }} sao trở lên</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Stock Status Filter -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-6">
+          <label class="flex items-center gap-2.5 text-xs font-extrabold text-slate-900 uppercase tracking-wider cursor-pointer">
+            <input 
+              type="checkbox" 
+              v-model="onlyInStock" 
+              @change="applyFilters"
+              class="rounded border-slate-300 text-[#dc2626] focus:ring-[#dc2626] w-4 h-4 cursor-pointer" 
+            />
+            <span>Chỉ sản phẩm còn hàng</span>
+          </label>
         </div>
       </aside>
 
@@ -265,6 +311,26 @@ const maxPrice = ref<number | null>(null)
 const sortBy = ref('newest')
 const isDiscounted = ref(route.query.discounted === 'true')
 
+const availableBrands = ['Thiên Long', 'Bến Nghé', 'Hồng Hà', 'Deli', 'Casio', 'Pentel']
+const selectedBrands = ref<string[]>([])
+const selectedRating = ref<number | null>(null)
+const onlyInStock = ref(false)
+
+function toggleRatingFilter(stars: number) {
+  if (selectedRating.value === stars) {
+    selectedRating.value = null
+  } else {
+    selectedRating.value = stars
+  }
+  currentPage.value = 1
+  fetchProducts()
+}
+
+watch(selectedBrands, () => {
+  currentPage.value = 1
+  fetchProducts()
+}, { deep: true })
+
 const activeSubOptions = computed(() => {
   const cat = categories.value.find(c => c._id === selectedCategory.value)
   if (cat && cat.optionsLabel && cat.optionsType && cat.options && cat.options.length > 0) {
@@ -313,6 +379,9 @@ async function fetchProducts() {
       maxPrice: maxPrice.value || undefined,
       sort: sortBy.value,
       discounted: isDiscounted.value ? true : undefined,
+      brand: selectedBrands.value.length > 0 ? selectedBrands.value.join(',') : undefined,
+      minRating: selectedRating.value || undefined,
+      inStock: onlyInStock.value ? true : undefined,
     }
     const res: any = await productService.getAll(params)
     products.value = res.data.data

@@ -11,12 +11,22 @@ class ProductProvider with ChangeNotifier {
   bool _isLoading = false;
   String _searchQuery = '';
   String? _selectedCategory;
+  double? _minPrice;
+  double? _maxPrice;
+  String? _selectedBrand;
+  double? _minRating;
+  bool _onlyInStock = false;
 
   List<ProductModel> get products => _products;
   List<CategoryModel> get categories => _categories;
   bool get isLoading => _isLoading;
   String get searchQuery => _searchQuery;
   String? get selectedCategory => _selectedCategory;
+  double? get minPrice => _minPrice;
+  double? get maxPrice => _maxPrice;
+  String? get selectedBrand => _selectedBrand;
+  double? get minRating => _minRating;
+  bool get onlyInStock => _onlyInStock;
 
   List<ProductModel> get featuredProducts =>
       _products.where((p) => p.isFeatured).toList();
@@ -35,6 +45,11 @@ class ProductProvider with ChangeNotifier {
         'limit': '50',
         if (_searchQuery.isNotEmpty) 'q': _searchQuery,
         if (_selectedCategory != null && _selectedCategory!.isNotEmpty) 'category': _selectedCategory!,
+        if (_minPrice != null) 'minPrice': _minPrice!.toString(),
+        if (_maxPrice != null) 'maxPrice': _maxPrice!.toString(),
+        if (_selectedBrand != null && _selectedBrand!.isNotEmpty) 'brand': _selectedBrand!,
+        if (_minRating != null) 'minRating': _minRating!.toString(),
+        if (_onlyInStock) 'inStock': 'true',
       };
 
       final uri = Uri.parse(ApiConstants.products).replace(queryParameters: queryParams);
@@ -88,6 +103,30 @@ class ProductProvider with ChangeNotifier {
 
   void selectCategory(String? catId) {
     _selectedCategory = catId;
+    fetchProducts();
+  }
+
+  void applyFilters({
+    double? minPrice,
+    double? maxPrice,
+    String? brand,
+    double? minRating,
+    bool? onlyInStock,
+  }) {
+    _minPrice = minPrice;
+    _maxPrice = maxPrice;
+    _selectedBrand = brand;
+    _minRating = minRating;
+    _onlyInStock = onlyInStock ?? false;
+    fetchProducts();
+  }
+
+  void clearFilters() {
+    _minPrice = null;
+    _maxPrice = null;
+    _selectedBrand = null;
+    _minRating = null;
+    _onlyInStock = false;
     fetchProducts();
   }
 }

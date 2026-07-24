@@ -34,6 +34,26 @@ class OrderItemModel {
   }
 }
 
+class OrderTimelineModel {
+  final String status;
+  final String note;
+  final String createdAt;
+
+  OrderTimelineModel({
+    required this.status,
+    required this.note,
+    required this.createdAt,
+  });
+
+  factory OrderTimelineModel.fromJson(Map<String, dynamic> json) {
+    return OrderTimelineModel(
+      status: json['status'] ?? '',
+      note: json['note'] ?? '',
+      createdAt: json['createdAt'] ?? '',
+    );
+  }
+}
+
 class OrderModel {
   final String id;
   final String orderCode;
@@ -52,6 +72,7 @@ class OrderModel {
   final String? customerEmail;
   final String? promotionCode;
   final String createdAt;
+  final List<OrderTimelineModel> timeline;
 
   OrderModel({
     required this.id,
@@ -71,12 +92,18 @@ class OrderModel {
     this.customerEmail,
     this.promotionCode,
     required this.createdAt,
+    required this.timeline,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     List<OrderItemModel> itemList = [];
     if (json['items'] != null) {
       itemList = (json['items'] as List).map((i) => OrderItemModel.fromJson(i)).toList();
+    }
+
+    List<OrderTimelineModel> timelineList = [];
+    if (json['timeline'] != null) {
+      timelineList = (json['timeline'] as List).map((t) => OrderTimelineModel.fromJson(t)).toList();
     }
 
     return OrderModel(
@@ -97,6 +124,7 @@ class OrderModel {
       customerEmail: json['customerEmail'],
       promotionCode: json['promotionCode'],
       createdAt: json['createdAt'] ?? '',
+      timeline: timelineList,
     );
   }
 }

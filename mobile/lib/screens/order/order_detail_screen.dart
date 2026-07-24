@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order_model.dart';
@@ -51,6 +52,30 @@ class OrderDetailScreen extends StatelessWidget {
                     'Ngày đặt: ${Formatters.formatDate(order.createdAt)}',
                     style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
                   ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 36,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final url = '${ApiConstants.baseUrl}/orders/${order.id}/invoice';
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Hóa đơn PDF khả dụng tại: $url'),
+                            action: SnackBarAction(
+                              label: 'Đóng',
+                              onPressed: () {},
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.picture_as_pdf, size: 16, color: AppTheme.primaryRed),
+                      label: const Text('Tải hóa đơn PDF', style: TextStyle(fontSize: 11, color: AppTheme.primaryRed)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.primaryRed),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -82,6 +107,97 @@ class OrderDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+
+            // Order Tracking Timeline Card
+            if (order.timeline.isNotEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('HÀNH TRÌNH ĐƠN HÀNG', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+                    const SizedBox(height: 16),
+                    ...List.generate(order.timeline.length, (index) {
+                      final reversedList = order.timeline.reversed.toList();
+                      final time = reversedList[index];
+                      final isLast = index == reversedList.length - 1;
+                      final isFirst = index == 0;
+
+                      return IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Column(
+                              children: [
+                                Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: isFirst ? AppTheme.primaryRed : Colors.grey.shade300,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isFirst ? AppTheme.primaryRed.withOpacity(0.2) : Colors.transparent,
+                                      width: isFirst ? 4 : 0,
+                                    ),
+                                  ),
+                                ),
+                                if (!isLast)
+                                  Expanded(
+                                    child: Container(
+                                      width: 2,
+                                      color: Colors.grey.shade200,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      time.status == 'PENDING' ? 'Chờ xử lý' :
+                                      time.status == 'CONFIRMED' ? 'Đã xác nhận' :
+                                      time.status == 'SHIPPING' ? 'Đang giao' :
+                                      time.status == 'COMPLETED' ? 'Hoàn thành' :
+                                      time.status == 'CANCELLED' ? 'Đã hủy' : time.status,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: isFirst ? AppTheme.primaryRed : AppTheme.darkSlate,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      Formatters.formatDate(time.createdAt),
+                                      style: TextStyle(color: Colors.grey.shade400, fontSize: 9.5),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      time.note,
+                                      style: const TextStyle(color: Color(0xFF475569), fontSize: 11.5),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // Order Items Box
             Container(

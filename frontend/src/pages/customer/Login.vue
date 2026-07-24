@@ -24,6 +24,7 @@
         <div>
           <div class="flex justify-between items-center">
             <label class="text-xs font-bold text-slate-700">Mật khẩu</label>
+            <router-link to="/forgot-password" class="text-xs text-[#dc2626] hover:underline font-bold">Quên mật khẩu?</router-link>
           </div>
           <div class="relative mt-1">
             <input

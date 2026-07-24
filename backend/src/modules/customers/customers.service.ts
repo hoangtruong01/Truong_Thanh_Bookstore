@@ -119,4 +119,24 @@ export class CustomersService {
       .limit(limit)
       .exec();
   }
+
+  async getCustomerGrowth(days = 30): Promise<any[]> {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return this.userModel.aggregate([
+      {
+        $match: {
+          role: UserRole.CUSTOMER,
+          createdAt: { $gte: date },
+        },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+  }
 }

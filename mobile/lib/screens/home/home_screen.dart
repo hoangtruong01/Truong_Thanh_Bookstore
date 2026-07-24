@@ -148,6 +148,40 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
+              // Hot Deals Section
+              if (productProvider.flashSaleProducts.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: const [
+                          Text('🔥 DEAL HOT GIỜ VÀNG', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppTheme.primaryRed)),
+                        ],
+                      ),
+                      const Text('Xem tất cả >', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryRed)),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 245,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: productProvider.flashSaleProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = productProvider.flashSaleProducts[index];
+                      return Container(
+                        width: 155,
+                        margin: const EdgeInsets.only(right: 12),
+                        child: ProductGridCard(product: product),
+                      );
+                    },
+                  ),
+                ),
+              ],
+
               // Categories Header & Scroll
               if (productProvider.categories.isNotEmpty) ...[
                 const Padding(

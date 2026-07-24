@@ -14,11 +14,13 @@ const Cart = () => import('@/pages/customer/Cart.vue')
 const Checkout = () => import('@/pages/customer/Checkout.vue')
 const Login = () => import('@/pages/customer/Login.vue')
 const Register = () => import('@/pages/customer/Register.vue')
+const ForgotPassword = () => import('@/pages/customer/ForgotPassword.vue')
 const LandingPageDetail = () => import('@/pages/customer/LandingPageDetail.vue')
 const DealHot = () => import('@/pages/customer/DealHot.vue')
 const MyOrders = () => import('@/pages/customer/MyOrders.vue')
 const Info = () => import('@/pages/customer/Info.vue')
 const OrderDetail = () => import('@/pages/customer/OrderDetail.vue')
+const Addresses = () => import('@/pages/customer/Addresses.vue')
 
 // Admin Pages - lazy loaded
 const AdminDashboard = () => import('@/pages/admin/Dashboard.vue')
@@ -51,6 +53,7 @@ const routes = [
       { path: 'info', name: 'Info', component: Info },
       { path: 'my-orders', name: 'MyOrders', component: MyOrders, meta: { requiresAuth: true } },
       { path: 'my-orders/:id', name: 'OrderDetail', component: OrderDetail, meta: { requiresAuth: true } },
+      { path: 'addresses', name: 'Addresses', component: Addresses, meta: { requiresAuth: true } },
     ]
   },
   {
@@ -59,6 +62,7 @@ const routes = [
     children: [
       { path: 'login', name: 'Login', component: Login, meta: { guestOnly: true } },
       { path: 'register', name: 'Register', component: Register, meta: { guestOnly: true } },
+      { path: 'forgot-password', name: 'ForgotPassword', component: ForgotPassword, meta: { guestOnly: true } },
     ]
   },
   {
@@ -123,8 +127,10 @@ router.afterEach((to) => {
     Checkout: 'Thanh Toán — Trường Thành Stationery',
     Login: 'Đăng Nhập — Trường Thành Stationery',
     Register: 'Đăng Ký Tài Khoản — Trường Thành Stationery',
+    ForgotPassword: 'Quên Mật Khẩu — Trường Thành Stationery',
     MyOrders: 'Đơn Hàng Của Tôi — Trường Thành Stationery',
     OrderDetail: 'Chi Tiết Đơn Hàng — Trường Thành Stationery',
+    Addresses: 'Sổ Địa Chỉ — Trường Thành Stationery',
     AdminDashboard: 'Tổng Quan Báo Cáo — Trường Thành Admin',
     AdminProducts: 'Quản Lý Sản Phẩm — Trường Thành Admin',
     AdminOrders: 'Quản Lý Đơn Hàng — Trường Thành Admin',

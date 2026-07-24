@@ -102,6 +102,8 @@ export class ProductsService {
       sort,
       q,
       discounted,
+      minRating,
+      inStock,
     } = query;
     const filter: any = { isDeleted: false };
 
@@ -128,12 +130,29 @@ export class ProductsService {
         }
       }
     }
-    if (brand) filter.brand = brand;
+
+    if (brand) {
+      if (typeof brand === 'string' && brand.includes(',')) {
+        filter.brand = { $in: brand.split(',').map((b) => b.trim()) };
+      } else {
+        filter.brand = brand;
+      }
+    }
+
     if (status) filter.status = status;
+
     if (minPrice || maxPrice) {
       filter.price = {};
-      if (minPrice) filter.price.$gte = minPrice;
-      if (maxPrice) filter.price.$lte = maxPrice;
+      if (minPrice) filter.price.$gte = Number(minPrice);
+      if (maxPrice) filter.price.$lte = Number(maxPrice);
+    }
+
+    if (minRating) {
+      filter.rating = { $gte: Number(minRating) };
+    }
+
+    if (inStock === true || inStock === 'true') {
+      filter.stock = { $gt: 0 };
     }
     if (q) {
       // FIX-M04: Limit search query length to prevent ReDoS

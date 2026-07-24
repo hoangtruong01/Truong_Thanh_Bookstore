@@ -9,6 +9,7 @@ import { Order } from '../src/modules/orders/schemas/order.schema';
 import { ProductSchema } from '../src/modules/products/schemas/product.schema';
 import { OrderSchema } from '../src/modules/orders/schemas/order.schema';
 import { InventorySchema } from '../src/modules/inventory/schemas/inventory.schema';
+import { AddressSchema } from '../src/modules/users/schemas/address.schema';
 import { BadRequestException } from '@nestjs/common';
 
 describe('ALL QA FIXES VERIFICATION SUITE', () => {
@@ -24,7 +25,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     images: ['https://example.com/pen.jpg'],
   };
 
-  const mockOrderModel = function (dto) {
+  const mockOrderModel = function (this: any, dto: any) {
     this.data = dto;
     this.save = jest.fn().mockResolvedValue({ _id: 'order123', orderCode: 'TT123456', ...dto });
   };
@@ -147,6 +148,36 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     it('InventorySchema should contain status index', () => {
       const indexes = InventorySchema.indexes();
       expect(indexes.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Task 2 & 3 & 8: Bookstore Upgrades Verification', () => {
+    it('AddressSchema should contain index for user query performance', () => {
+      const indexes = AddressSchema.indexes();
+      expect(indexes.length).toBeGreaterThan(0);
+    });
+
+    it('OrderSchema should contain timeline field definition', () => {
+      const paths = (OrderSchema as any).paths;
+      expect(paths.timeline).toBeDefined();
+    });
+
+    it('generateInvoicePdf should successfully generate a PDF document stream', async () => {
+      const dummyOrder = {
+        orderCode: 'TT998877',
+        customerName: 'Test Customer',
+        phone: '0123456789',
+        shippingAddress: 'Test Address',
+        items: [{ name: 'Test Product', price: 10000, quantity: 2 }],
+        subtotal: 20000,
+        shippingFee: 30000,
+        discount: 0,
+        total: 50000,
+        createdAt: new Date(),
+      };
+      const doc = await ordersService.generateInvoicePdf(dummyOrder);
+      expect(doc).toBeDefined();
+      expect(typeof doc.pipe).toBe('function');
     });
   });
 });

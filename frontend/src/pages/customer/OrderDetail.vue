@@ -35,6 +35,13 @@
           <span :class="['px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wide', getStatusBadgeStyle(order.orderStatus)]">
             {{ getStatusLabel(order.orderStatus) }}
           </span>
+          <button 
+            @click="downloadInvoice"
+            class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+          >
+            <span>📄</span>
+            Tải hóa đơn PDF
+          </button>
         </div>
       </div>
 
@@ -64,6 +71,35 @@
                 </span>
               </p>
               <p v-if="order.promotionCode"><strong>Mã giảm giá đã dùng:</strong> <span class="font-mono text-red-600 font-bold">{{ order.promotionCode }}</span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Tracking Timeline -->
+        <div v-if="order.timeline && order.timeline.length > 0" class="p-4 border border-slate-100 bg-slate-50/20 rounded-2xl space-y-4">
+          <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider">Hành trình đơn hàng</h4>
+          <div class="relative pl-6 space-y-4 border-l border-slate-200 ml-3">
+            <div 
+              v-for="(time, idx) in [...order.timeline].reverse()" 
+              :key="idx" 
+              class="relative"
+            >
+              <!-- Timeline Dot -->
+              <span 
+                class="absolute -left-[30px] top-1 w-4.5 h-4.5 rounded-full border-2 bg-white flex items-center justify-center"
+                :class="idx === 0 ? 'border-red-600 ring-4 ring-red-100' : 'border-slate-300'"
+              >
+                <span v-if="idx === 0" class="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
+              </span>
+              <div class="space-y-0.5">
+                <span class="text-xs font-black text-slate-800 uppercase">
+                  {{ getStatusLabel(time.status) }}
+                </span>
+                <span class="text-[10px] text-slate-400 font-medium block">
+                  {{ formatDate(time.createdAt) }}
+                </span>
+                <p class="text-xs text-slate-600 mt-1">{{ time.note }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -114,10 +150,11 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { orderService } from '@/services/order.service'
 import { formatCurrency, formatDate, getStatusLabel } from '@/utils/helpers'
+import api from '@/utils/api'
 import type { Order } from '@/types'
 
 const route = useRoute()
-const order = ref<Order | null>(null)
+const order = ref<any | null>(null)
 const loading = ref(true)
 const error = ref('')
 
@@ -138,6 +175,22 @@ function getStatusBadgeStyle(status: string) {
     case 'COMPLETED': return 'bg-green-100 text-green-800'
     case 'CANCELLED': return 'bg-red-100 text-red-800'
     default: return 'bg-slate-100 text-slate-600'
+  }
+}
+
+async function downloadInvoice() {
+  if (!order.value) return
+  try {
+    const res = await api.get(`/orders/${order.value._id}/invoice`, { responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([res.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `invoice-${order.value.orderCode}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  } catch (err) {
+    alert('Không thể tải hóa đơn. Vui lòng thử lại sau.')
   }
 }
 

@@ -582,6 +582,12 @@
                       >
                         Đơn hàng của tôi
                       </router-link>
+                      <router-link
+                        to="/addresses"
+                        class="block px-4 py-2 hover:bg-slate-100"
+                      >
+                        Sổ địa chỉ
+                      </router-link>
                       <button
                         @click="authStore.logout"
                         class="w-full text-left block px-4 py-2 hover:bg-red-50 text-red-600 cursor-pointer"
@@ -752,6 +758,12 @@
               class="flex items-center gap-2 text-xs font-bold text-slate-700 px-1"
             >
               📦 Đơn hàng của tôi
+            </router-link>
+            <router-link
+              to="/addresses"
+              class="flex items-center gap-2 text-xs font-bold text-slate-700 px-1"
+            >
+              📍 Sổ địa chỉ
             </router-link>
             <router-link
               v-if="authStore.isStaff"
@@ -1584,9 +1596,14 @@ function handleClickOutside(event: MouseEvent) {
   }
 }
 
+function handleRealtimeNotificationReceived() {
+  fetchCustomerNotifications();
+}
+
 onMounted(async () => {
   window.addEventListener("scroll", handleScroll);
   window.addEventListener("click", handleClickOutside);
+  window.addEventListener("notification_received", handleRealtimeNotificationReceived);
   
   loadCustomerReadIds();
   if (authStore.isAuthenticated) {
@@ -1612,6 +1629,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener("scroll", handleScroll);
   window.removeEventListener("click", handleClickOutside);
+  window.removeEventListener("notification_received", handleRealtimeNotificationReceived);
   if (notificationInterval) {
     clearInterval(notificationInterval);
   }

@@ -144,4 +144,46 @@ class AuthProvider with ChangeNotifier {
     await prefs.remove('user');
     notifyListeners();
   }
+
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.forgotPassword),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      final body = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return body['data'] ?? body;
+      } else {
+        throw Exception(body['message'] ?? 'Yêu cầu OTP thất bại');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> resetPassword(String email, String otp, String newPassword) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.resetPassword),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'otp': otp,
+          'newPassword': newPassword,
+        }),
+      );
+
+      final body = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        throw Exception(body['message'] ?? 'Đặt lại mật khẩu thất bại');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

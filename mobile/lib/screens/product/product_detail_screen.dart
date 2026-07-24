@@ -105,13 +105,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       itemBuilder: (context, index) {
                         return Padding(
                           padding: const EdgeInsets.all(16.0),
-                          child: Image.network(
-                            product.images[index],
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.menu_book_rounded,
-                              size: 80,
-                              color: Colors.grey,
+                          child: InteractiveViewer(
+                            panEnabled: true,
+                            minScale: 1.0,
+                            maxScale: 4.0,
+                            child: Image.network(
+                              product.images[index],
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.menu_book_rounded,
+                                size: 80,
+                                color: Colors.grey,
+                              ),
                             ),
                           ),
                         );

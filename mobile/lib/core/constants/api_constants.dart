@@ -18,6 +18,12 @@ class ApiConstants {
   static String get profile => '$baseUrl/auth/me';
   static String get updateProfile => '$baseUrl/auth/profile';
   static String get changePassword => '$baseUrl/auth/change-password';
+  static String get forgotPassword => '$baseUrl/auth/forgot-password';
+  static String get verifyOtp => '$baseUrl/auth/verify-otp';
+  static String get resetPassword => '$baseUrl/auth/reset-password';
+
+  // Addresses Endpoints
+  static String get addresses => '$baseUrl/addresses';
 
   // Product Endpoints
   static String get products => '$baseUrl/products';

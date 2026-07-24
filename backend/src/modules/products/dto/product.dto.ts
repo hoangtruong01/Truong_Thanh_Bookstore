@@ -204,4 +204,12 @@ export class ProductQueryDto extends PaginationDto {
   @IsOptional()
   @IsBoolean()
   discounted?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  minRating?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  inStock?: boolean | string;
 }

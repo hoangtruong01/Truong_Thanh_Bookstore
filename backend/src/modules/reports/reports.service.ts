@@ -128,4 +128,28 @@ export class ReportsService {
 
     return notifications;
   }
+
+  async getAdvancedDashboard() {
+    const [
+      statusDistribution,
+      aov,
+      voucherEffectiveness,
+      customerGrowth,
+      topProducts,
+    ] = await Promise.all([
+      this.ordersService.getStatusDistribution(),
+      this.ordersService.getAov(),
+      this.ordersService.getVoucherEffectiveness(),
+      this.customersService.getCustomerGrowth(30),
+      this.productsService.getBestSelling(10),
+    ]);
+
+    return {
+      statusDistribution,
+      aov,
+      voucherEffectiveness,
+      customerGrowth,
+      topProducts,
+    };
+  }
 }

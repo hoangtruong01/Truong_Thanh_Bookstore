@@ -17,6 +17,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { BannersModule } from './modules/banners/banners.module';
 import { AppController } from './app.controller';
+import { AddressesModule } from './modules/users/addresses.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { AppController } from './app.controller';
     LandingPagesModule,
     NotificationsModule,
     BannersModule,
+    AddressesModule,
   ],
   controllers: [AppController],
   providers: [

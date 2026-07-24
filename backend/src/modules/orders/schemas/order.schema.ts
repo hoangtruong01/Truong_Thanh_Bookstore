@@ -26,6 +26,20 @@ export class OrderItem {
 
 export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);
 
+@Schema()
+export class OrderTimelineItem {
+  @Prop({ type: String, enum: OrderStatus, required: true })
+  status: OrderStatus | string;
+
+  @Prop()
+  note: string;
+
+  @Prop({ default: Date.now })
+  createdAt: Date;
+}
+
+export const OrderTimelineItemSchema = SchemaFactory.createForClass(OrderTimelineItem);
+
 export type OrderDocument = Order & Document;
 
 @Schema({ timestamps: true })
@@ -77,6 +91,9 @@ export class Order {
 
   @Prop()
   promotionCode: string;
+
+  @Prop({ type: [OrderTimelineItemSchema], default: [] })
+  timeline: OrderTimelineItem[];
 
   createdAt: Date;
   updatedAt: Date;

@@ -3,12 +3,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Notification, NotificationDocument } from './schemas/notification.schema';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     @InjectModel(Notification.name)
     private notificationModel: Model<NotificationDocument>,
+    private gateway: NotificationsGateway,
   ) {}
 
   async create(dto: CreateNotificationDto): Promise<NotificationDocument> {
@@ -26,7 +28,19 @@ export class NotificationsService {
     }
 
     const notification = new this.notificationModel(data);
-    return notification.save();
+    const savedNotification = await notification.save();
+
+    try {
+      if (dto.userId) {
+        this.gateway.sendNotificationToUser(dto.userId, savedNotification);
+      } else {
+        this.gateway.broadcastNotification(savedNotification);
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return savedNotification;
   }
 
   async findByUser(userId: string): Promise<NotificationDocument[]> {

@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException, Logger, ForbiddenEx
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Order, OrderDocument } from './schemas/order.schema';
+import * as PDFDocument from 'pdfkit';
+import * as fs from 'fs';
 import {
   CreateOrderDto,
   UpdateOrderStatusDto,
@@ -197,6 +199,13 @@ export class OrdersService {
       discount,
       total,
       promotionCode: dto.promotionCode ? dto.promotionCode.toUpperCase() : undefined,
+      timeline: [
+        {
+          status: OrderStatus.PENDING,
+          note: 'Đơn hàng được tạo thành công, chờ xác nhận.',
+          createdAt: new Date(),
+        },
+      ],
     });
 
     const savedOrder = await order.save();
@@ -284,6 +293,35 @@ export class OrdersService {
 
     const oldStatus = order.orderStatus;
     order.orderStatus = dto.orderStatus;
+
+    if (!order.timeline) {
+      order.timeline = [];
+    }
+
+    let timelineNote = `Trạng thái đơn hàng: ${dto.orderStatus}`;
+    switch (dto.orderStatus) {
+      case OrderStatus.PENDING:
+        timelineNote = 'Đơn hàng đang chờ xử lý.';
+        break;
+      case OrderStatus.CONFIRMED:
+        timelineNote = 'Cửa hàng đã xác nhận đơn hàng của bạn.';
+        break;
+      case OrderStatus.SHIPPING:
+        timelineNote = 'Đơn hàng đang được vận chuyển đến địa chỉ nhận.';
+        break;
+      case OrderStatus.COMPLETED:
+        timelineNote = 'Giao hàng thành công. Đơn hàng hoàn tất.';
+        break;
+      case OrderStatus.CANCELLED:
+        timelineNote = 'Đơn hàng đã bị hủy bỏ.';
+        break;
+    }
+
+    order.timeline.push({
+      status: dto.orderStatus,
+      note: timelineNote,
+      createdAt: new Date(),
+    });
 
     // If cancelled, restore stock
     if (
@@ -410,5 +448,140 @@ export class OrdersService {
       .sort({ createdAt: -1 })
       .limit(limit)
       .exec();
+  }
+
+  async getStatusDistribution() {
+    return this.orderModel.aggregate([
+      {
+        $group: {
+          _id: '$orderStatus',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+  }
+
+  async getAov() {
+    const result = await this.orderModel.aggregate([
+      {
+        $match: {
+          orderStatus: { $ne: OrderStatus.CANCELLED },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          avgValue: { $avg: '$total' },
+        },
+      },
+    ]);
+    return result[0]?.avgValue || 0;
+  }
+
+  async getVoucherEffectiveness() {
+    return this.orderModel.aggregate([
+      {
+        $match: {
+          promotionCode: { $exists: true, $ne: null },
+          orderStatus: { $ne: OrderStatus.CANCELLED },
+        },
+      },
+      {
+        $group: {
+          _id: '$promotionCode',
+          count: { $sum: 1 },
+          totalSavings: { $sum: '$discount' },
+        },
+      },
+      { $sort: { count: -1 } },
+    ]);
+  }
+
+  async generateInvoicePdf(order: any): Promise<any> {
+    const doc = new PDFDocument({ margin: 50 });
+    const winFont = 'C:\\Windows\\Fonts\\Arial.ttf';
+    let fontName = 'Helvetica'; // safe fallback, always available in pdfkit
+    if (fs.existsSync(winFont)) {
+      doc.registerFont('Arial', winFont);
+      fontName = 'Arial';
+    }
+    doc.font(fontName);
+
+    // Header
+    doc.fontSize(16).text('VĂN PHÒNG PHẨM TRƯỜNG THÀNH', { align: 'center' });
+    doc.fontSize(10).text('Địa chỉ: Chợ Chanh - Nhân Hà, Ninh Bình, Việt Nam', { align: 'center' });
+    doc.fontSize(10).text('Điện thoại: 0982938316 | Email: giaoductruongthanh@gmail.com', { align: 'center' });
+    doc.moveDown(1);
+    
+    // Invoice Title
+    doc.fontSize(14).text('HÓA ĐƠN BÁN HÀNG', { align: 'center', underline: true });
+    doc.fontSize(10).text(`Mã đơn hàng: #${order.orderCode}`, { align: 'center' });
+    doc.fontSize(10).text(`Ngày đặt: ${new Date(order.createdAt).toLocaleString('vi-VN')}`, { align: 'center' });
+    doc.moveDown(1.5);
+
+    // Customer Info
+    doc.fontSize(11).text('THÔNG TIN KHÁCH HÀNG', { underline: true });
+    doc.fontSize(10).text(`Họ và tên: ${order.customerName || 'Khách vãng lai'}`);
+    doc.fontSize(10).text(`Số điện thoại: ${order.phone}`);
+    doc.fontSize(10).text(`Email: ${order.customerEmail || 'N/A'}`);
+    doc.fontSize(10).text(`Địa chỉ nhận hàng: ${order.shippingAddress}`);
+    doc.moveDown(1.5);
+
+    // Table Header
+    doc.fontSize(11).text('DANH SÁCH SẢN PHẨM', { underline: true });
+    doc.moveDown(0.5);
+
+    const startX = 50;
+    let startY = doc.y;
+
+    doc.fontSize(9);
+    doc.text('STT', startX, startY);
+    doc.text('Tên sản phẩm', startX + 30, startY);
+    doc.text('Đơn giá', startX + 280, startY, { width: 60, align: 'right' });
+    doc.text('SL', startX + 350, startY, { width: 30, align: 'center' });
+    doc.text('Thành tiền', startX + 390, startY, { width: 80, align: 'right' });
+    
+    doc.moveTo(startX, startY + 15).lineTo(500, startY + 15).stroke();
+    
+    startY += 20;
+    
+    order.items.forEach((item: any, index: number) => {
+      doc.text((index + 1).toString(), startX, startY);
+      doc.text(item.name, startX + 30, startY, { width: 240 });
+      doc.text(item.price.toLocaleString('vi-VN') + 'đ', startX + 280, startY, { width: 60, align: 'right' });
+      doc.text(item.quantity.toString(), startX + 350, startY, { width: 30, align: 'center' });
+      doc.text((item.price * item.quantity).toLocaleString('vi-VN') + 'đ', startX + 390, startY, { width: 80, align: 'right' });
+      
+      const textHeight = doc.heightOfString(item.name, { width: 240 });
+      startY += Math.max(15, textHeight) + 5;
+    });
+
+    doc.moveTo(startX, startY).lineTo(500, startY).stroke();
+    startY += 10;
+
+    // Summary Info
+    doc.fontSize(10);
+    doc.text('Cộng tiền hàng:', startX + 280, startY, { width: 100, align: 'left' });
+    doc.text(order.subtotal.toLocaleString('vi-VN') + 'đ', startX + 390, startY, { width: 80, align: 'right' });
+    
+    startY += 15;
+    doc.text('Phí vận chuyển:', startX + 280, startY, { width: 100, align: 'left' });
+    doc.text((order.shippingFee === 0 ? 'Miễn phí' : order.shippingFee.toLocaleString('vi-VN') + 'đ'), startX + 390, startY, { width: 80, align: 'right' });
+
+    if (order.discount > 0) {
+      startY += 15;
+      doc.text('Giảm giá:', startX + 280, startY, { width: 100, align: 'left' });
+      doc.text('-' + order.discount.toLocaleString('vi-VN') + 'đ', startX + 390, startY, { width: 80, align: 'right' });
+    }
+
+    startY += 20;
+    doc.fontSize(11).font(fontName);
+    doc.text('TỔNG CỘNG:', startX + 280, startY, { width: 100, align: 'left' });
+    doc.text(order.total.toLocaleString('vi-VN') + 'đ', startX + 390, startY, { width: 80, align: 'right' });
+
+    doc.moveDown(2);
+    doc.fontSize(10).text('Cảm ơn quý khách đã tin tưởng và mua sắm tại Trường Thành Bookstore!', { align: 'center' });
+
+    return doc;
   }
 }

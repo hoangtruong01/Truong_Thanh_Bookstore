@@ -65,4 +65,35 @@ export class ChangePasswordDto {
   newPassword: string;
 }
 
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'user@example.com' })
+  @IsEmail({}, { message: 'Email không đúng định dạng' })
+  email: string;
+}
+
+export class VerifyOtpDto {
+  @ApiProperty({ example: 'user@example.com' })
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ example: '123456' })
+  @IsNotEmpty()
+  otp: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({ example: 'user@example.com' })
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ example: '123456' })
+  @IsNotEmpty()
+  otp: string;
+
+  @ApiProperty({ example: 'NewPassword123' })
+  @IsNotEmpty()
+  @MinLength(6, { message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
+  newPassword: string;
+}
+
 

@@ -53,4 +53,10 @@ export class ReportsController {
   getNotifications() {
     return this.reportsService.getNotifications();
   }
+
+  @Get('dashboard/advanced')
+  @ApiOperation({ summary: 'Get advanced dashboard reports' })
+  getAdvancedDashboard() {
+    return this.reportsService.getAdvancedDashboard();
+  }
 }

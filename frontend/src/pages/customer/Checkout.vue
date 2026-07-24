@@ -23,6 +23,22 @@
         <!-- Shipping details -->
         <div class="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
           <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3">Thông tin giao nhận</h3>
+          
+          <!-- Address Selection from Address Book -->
+          <div v-if="authStore.isAuthenticated && addresses.length > 0" class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 mb-4">
+            <label class="text-xs font-bold text-slate-700 block">Chọn nhanh từ Sổ địa chỉ</label>
+            <select 
+              v-model="selectedAddressId"
+              @change="onAddressSelectChange"
+              class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+            >
+              <option value="" disabled>-- Chọn địa chỉ --</option>
+              <option v-for="addr in addresses" :key="addr._id" :value="addr._id">
+                [{{ addr.label }}] {{ addr.recipientName }} - {{ addr.phone }} ({{ addr.detail }}, {{ addr.ward }}, {{ addr.district }}, {{ addr.province }})
+              </option>
+            </select>
+          </div>
+
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="sm:col-span-2">
               <label class="text-xs font-bold text-slate-700">Họ và tên người nhận</label>
@@ -287,6 +303,38 @@ const shippingInfo = reactive({
   note: '',
 })
 
+import api from '@/utils/api'
+const addresses = ref<any[]>([])
+const selectedAddressId = ref('')
+
+async function fetchUserAddresses() {
+  if (!authStore.isAuthenticated) return
+  try {
+    const res = await api.get('/addresses')
+    addresses.value = res.data.data || res.data
+    const def = addresses.value.find(a => a.isDefault)
+    if (def) {
+      selectedAddressId.value = def._id
+      applyAddress(def)
+    }
+  } catch (err) {
+    // optional
+  }
+}
+
+function applyAddress(addr: any) {
+  shippingInfo.fullName = addr.recipientName
+  shippingInfo.phone = addr.phone
+  shippingInfo.address = `${addr.detail}, ${addr.ward}, ${addr.district}, ${addr.province}`
+}
+
+function onAddressSelectChange() {
+  const addr = addresses.value.find(a => a._id === selectedAddressId.value)
+  if (addr) {
+    applyAddress(addr)
+  }
+}
+
 const paymentMethod = ref<'COD' | 'BANK_TRANSFER' | 'EWALLET'>('COD')
 
 const paymentMethods = [
@@ -332,6 +380,7 @@ onMounted(async () => {
     shippingInfo.fullName = authStore.user.fullName || ''
     shippingInfo.phone = authStore.user.phone || ''
     shippingInfo.email = authStore.user.email || ''
+    await fetchUserAddresses()
   }
 
   try {

@@ -51,7 +51,7 @@
       </div>
 
       <!-- Stats grid (Matches Screenshot) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         <!-- Revenue Card -->
         <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs relative overflow-hidden group">
           <div class="space-y-1">
@@ -104,6 +104,17 @@
           </div>
           <div class="absolute right-4 bottom-4 text-emerald-50 bg-emerald-100/50 p-2 rounded-lg group-hover:scale-105 transition-transform">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 text-emerald-600"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.97 5.97 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg>
+          </div>
+        </div>
+
+        <!-- AOV Card -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs relative overflow-hidden group">
+          <div class="space-y-1">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Đơn hàng trung bình (AOV)</span>
+            <p class="text-xl font-extrabold text-indigo-600">{{ advancedStats ? formatCurrency(advancedStats.aov) : '...' }}</p>
+          </div>
+          <div class="absolute right-4 bottom-4 text-indigo-50 bg-indigo-100/50 p-2 rounded-lg group-hover:scale-105 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 text-indigo-600"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" /></svg>
           </div>
         </div>
       </div>
@@ -162,6 +173,66 @@
               <div class="text-right flex-shrink-0">
                 <span class="text-[11px] font-bold text-slate-800">{{ prod.sold }}</span>
                 <p class="text-[8px] text-slate-400 uppercase font-semibold">đã bán</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Analytics Row -->
+      <div v-if="advancedStats" class="grid grid-cols-1 lg:grid-cols-10 gap-6">
+        <!-- 60% width: Voucher Effectiveness Table -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col lg:col-span-6">
+          <div class="border-b border-slate-100 pb-4 mb-4">
+            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Hiệu quả Voucher</h3>
+            <p class="text-[10px] text-slate-400 font-medium">Thống kê số lần sử dụng và chi phí giảm giá</p>
+          </div>
+          <div class="overflow-y-auto max-h-60">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="text-slate-400 font-bold border-b border-slate-100 pb-2">
+                  <th class="pb-2">MÃ VOUCHER</th>
+                  <th class="pb-2 text-center">LƯỢT DÙNG</th>
+                  <th class="pb-2 text-right">TIẾT KIỆM CHO USER</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="item in advancedStats.voucherEffectiveness" :key="item._id" class="hover:bg-slate-50">
+                  <td class="py-2.5 font-mono font-bold text-[#dc2626]">{{ item._id }}</td>
+                  <td class="py-2.5 text-center font-bold">{{ item.count }}</td>
+                  <td class="py-2.5 text-right font-bold text-slate-900">{{ formatCurrency(item.totalSavings) }}</td>
+                </tr>
+                <tr v-if="advancedStats.voucherEffectiveness.length === 0">
+                  <td colspan="3" class="text-center py-6 text-slate-400">Chưa có dữ liệu sử dụng voucher</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 40% width: Order Status Distribution -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col lg:col-span-4">
+          <div class="border-b border-slate-100 pb-4 mb-4">
+            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Phân bố đơn hàng</h3>
+            <p class="text-[10px] text-slate-400 font-medium">Tỷ lệ đơn hàng theo trạng thái</p>
+          </div>
+          <div class="space-y-4">
+            <div v-for="item in advancedStats.statusDistribution" :key="item._id" class="space-y-1.5">
+              <div class="flex justify-between items-center text-xs">
+                <span class="font-bold text-slate-700">{{ getStatusLabel(item._id) }}</span>
+                <span class="font-bold text-slate-900">{{ item.count }} đơn</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div 
+                  class="h-full rounded-full" 
+                  :class="[
+                    item._id === 'COMPLETED' ? 'bg-emerald-500' :
+                    item._id === 'PENDING' ? 'bg-amber-500' :
+                    item._id === 'CONFIRMED' ? 'bg-red-500' :
+                    item._id === 'SHIPPING' ? 'bg-blue-500' : 'bg-slate-400'
+                  ]"
+                  :style="{ width: getStatusWidthPercent(item.count) + '%' }"
+                ></div>
               </div>
             </div>
           </div>
@@ -227,6 +298,7 @@ import { reportService } from '@/services/report.service'
 import { inventoryService } from '@/services/inventory.service'
 import { useToast } from 'vue-toastification'
 import { formatCurrency, getStatusLabel } from '@/utils/helpers'
+import api from '@/utils/api'
 import type { DashboardStats, Order, Product } from '@/types'
 
 const stats = ref<DashboardStats | null>(null)
@@ -234,8 +306,27 @@ const recentOrders = ref<Order[]>([])
 const bestSelling = ref<Product[]>([])
 const lowStockItems = ref<any[]>([])
 const chartData = ref<{ dateLabel: string; value: number; heightPercent: number }[]>([])
+const advancedStats = ref<any>(null)
+const advancedLoading = ref(true)
 const loading = ref(true)
 const toast = useToast()
+
+function getStatusWidthPercent(count: number) {
+  if (!advancedStats.value?.statusDistribution) return 0
+  const total = advancedStats.value.statusDistribution.reduce((acc: number, cur: any) => acc + cur.count, 0)
+  return total > 0 ? Math.round((count / total) * 100) : 0
+}
+
+async function loadAdvancedStats() {
+  try {
+    const res = await api.get('/reports/dashboard/advanced')
+    advancedStats.value = res.data.data || res.data
+  } catch (err) {
+    console.error('Failed to load advanced reports', err)
+  } finally {
+    advancedLoading.value = false
+  }
+}
 
 async function loadChartData() {
   try {
@@ -304,6 +395,7 @@ onMounted(async () => {
     }
     
     await loadChartData()
+    await loadAdvancedStats()
   } catch (err) {
     console.error('Error fetching dashboard stats or low stock items', err)
   } finally {

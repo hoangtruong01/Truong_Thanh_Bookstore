@@ -9,7 +9,9 @@ import {
   Query,
   UseGuards,
   Request,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
@@ -57,6 +59,18 @@ export class OrdersController {
     return this.ordersService.findByUser(req.user._id, query);
   }
 
+  @Get(':id/invoice')
+  @ApiOperation({ summary: 'Export invoice PDF' })
+  async getInvoice(@Param('id') id: string, @Res() res: Response) {
+    const order = await this.ordersService.findById(id);
+    const pdfDoc = await this.ordersService.generateInvoicePdf(order);
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderCode}.pdf`);
+    pdfDoc.pipe(res);
+    pdfDoc.end();
+  }
+
   // FIX-C02: Require authentication to view order details
   @Get(':id')
   @UseGuards(AuthGuard('jwt'))
@@ -83,4 +97,5 @@ export class OrdersController {
   cancel(@Param('id') id: string, @Request() req: any) {
     return this.ordersService.cancel(id, req.user._id);
   }
+
 }

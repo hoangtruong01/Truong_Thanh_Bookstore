@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../auth/login_screen.dart';
+import 'address_book_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -169,6 +170,18 @@ class ProfileScreen extends StatelessWidget {
                     title: const Text('Đổi mật khẩu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     trailing: const Icon(Icons.chevron_right, size: 20),
                     onTap: () => _showChangePasswordDialog(context),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: const Icon(Icons.location_on_outlined, color: AppTheme.darkSlate),
+                    title: const Text('Sổ địa chỉ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    trailing: const Icon(Icons.chevron_right, size: 20),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AddressBookScreen()),
+                      );
+                    },
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   ListTile(

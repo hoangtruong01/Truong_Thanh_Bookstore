@@ -27,6 +27,12 @@ export class User {
   @Prop({ default: true })
   status: boolean;
 
+  @Prop()
+  resetOtp?: string;
+
+  @Prop()
+  resetOtpExpiry?: Date;
+
   createdAt: Date;
   updatedAt: Date;
 }
