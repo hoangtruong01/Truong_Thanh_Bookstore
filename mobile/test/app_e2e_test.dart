@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/main.dart';
 import 'package:mobile/models/product_model.dart';
@@ -45,12 +46,12 @@ void main() {
       expect(find.text('TRƯỜNG THÀNH'), findsOneWidget);
       expect(find.text('VĂN PHÒNG PHẨM & DỤNG CỤ HỌC TẬP'), findsOneWidget);
 
-      // Verify Bottom Navigation Bar items
+      // Verify Bottom Navigation Bar items (Active item has text, others have icons)
       expect(find.text('Trang chủ'), findsOneWidget);
-      expect(find.text('Sản phẩm'), findsOneWidget);
-      expect(find.text('Giỏ hàng'), findsOneWidget);
-      expect(find.text('Đơn hàng'), findsOneWidget);
-      expect(find.text('Tài khoản'), findsOneWidget);
+      expect(find.byIcon(Icons.grid_view_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.shopping_bag_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.receipt_long_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.person_outline_rounded), findsOneWidget);
     });
 
     test('E2E-02: Cart & Pricing Logic E2E (Add, Quantity, Voucher & Free Shipping)', () {
@@ -121,22 +122,22 @@ void main() {
       await tester.pump();
 
       // Switch to Products Tab
-      await tester.tap(find.text('Sản phẩm'));
+      await tester.tap(find.byIcon(Icons.grid_view_outlined));
       await tester.pumpAndSettle();
       expect(find.text('DANH SÁCH SẢN PHẨM'), findsOneWidget);
 
       // Switch to Cart Tab
-      await tester.tap(find.text('Giỏ hàng'));
+      await tester.tap(find.byIcon(Icons.shopping_bag_outlined));
       await tester.pumpAndSettle();
       expect(find.text('GIỎ HÀNG CỦA BẠN'), findsOneWidget);
 
       // Switch to Orders Tab
-      await tester.tap(find.text('Đơn hàng'));
+      await tester.tap(find.byIcon(Icons.receipt_long_outlined));
       await tester.pumpAndSettle();
       expect(find.text('ĐƠN HÀNG CỦA TÔI'), findsOneWidget);
 
       // Switch to Account Tab
-      await tester.tap(find.text('Tài khoản'));
+      await tester.tap(find.byIcon(Icons.person_outline_rounded));
       await tester.pumpAndSettle();
       expect(find.text('TÀI KHOẢN'), findsOneWidget);
     });
