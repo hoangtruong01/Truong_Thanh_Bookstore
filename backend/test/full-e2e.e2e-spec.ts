@@ -136,7 +136,12 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
       expect(res.body.data.total).toBeDefined();
 
       if (res.body.data.data.length > 0) {
-        testProductId = res.body.data.data[0]._id;
+        // Find a product with price < 299,000 to ensure shipping fee of 30,000 is triggered in guest checkout tests
+        const cheapProduct = res.body.data.data.find((p: any) => {
+          const actualPrice = p.discountPrice > 0 ? p.discountPrice : p.price;
+          return actualPrice < 299000;
+        });
+        testProductId = cheapProduct ? cheapProduct._id : res.body.data.data[0]._id;
       }
     });
 
