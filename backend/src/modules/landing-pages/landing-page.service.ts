@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, isValidObjectId } from 'mongoose';
 import {
   LandingPage,
   LandingPageDocument,
@@ -37,8 +37,12 @@ export class LandingPageService {
   }
 
   async findBySlug(slug: string): Promise<LandingPageDocument> {
+    if (!slug) {
+      throw new BadRequestException('Slug không được để trống');
+    }
+    const cleanSlug = slug.toLowerCase().trim();
     const page = await this.landingPageModel
-      .findOne({ slug, status: true })
+      .findOne({ slug: cleanSlug, status: true })
       .exec();
     if (!page) {
       throw new NotFoundException('Không tìm thấy trang bán hàng');
@@ -47,6 +51,9 @@ export class LandingPageService {
   }
 
   async findOne(id: string): Promise<LandingPageDocument> {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('ID trang bán hàng không hợp lệ');
+    }
     const page = await this.landingPageModel.findById(id).exec();
     if (!page) {
       throw new NotFoundException('Không tìm thấy trang bán hàng');
@@ -54,31 +61,87 @@ export class LandingPageService {
     return page;
   }
 
+  /**
+   * Helper function to convert Vietnamese text to clean slug
+   */
+  public generateSlug(text: string): string {
+    if (!text) return '';
+    return text
+      .toString()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/\-\-+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+  }
+
+  /**
+   * Sanitizes and cleans incoming DTO payload to prevent Mongoose schema validation failures
+   */
   private cleanLandingPageDto(dto: CreateLandingPageDto): CreateLandingPageDto {
     const cleaned = { ...dto };
+
+    // Clean title & slug
+    cleaned.title = cleaned.title?.trim() || 'Landing Page Mới';
+    if (!cleaned.slug || !cleaned.slug.trim()) {
+      cleaned.slug = this.generateSlug(cleaned.title) || `page-${Date.now()}`;
+    } else {
+      cleaned.slug = cleaned.slug
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '');
+    }
+
+    // Clean numeric values
+    cleaned.price = Math.max(0, Number(cleaned.price) || 0);
+    cleaned.originalPrice = Math.max(0, Number(cleaned.originalPrice) || 0);
+    cleaned.countdownMinutes = Math.max(1, Number(cleaned.countdownMinutes) || 30);
+
+    // Clean packages
     if (cleaned.packages && Array.isArray(cleaned.packages)) {
       cleaned.packages = cleaned.packages
         .filter((pkg) => pkg && (pkg.name?.trim() || pkg.price > 0))
         .map((pkg, idx) => ({
           ...pkg,
           name: pkg.name?.trim() || `Gói Combo ${idx + 1}`,
-          price: Number(pkg.price) || 0,
-          originalPrice: Number(pkg.originalPrice) || 0,
-          badge: pkg.badge || '',
+          price: Math.max(0, Number(pkg.price) || 0),
+          originalPrice: Math.max(0, Number(pkg.originalPrice) || 0),
+          badge: pkg.badge?.trim() || '',
           image: pkg.image || '',
           isBestSeller: Boolean(pkg.isBestSeller),
         }));
+    } else {
+      cleaned.packages = [];
     }
+
+    // Synchronize root price with packages
+    if (cleaned.packages.length > 0) {
+      const best = cleaned.packages.find((p) => p.isBestSeller) || cleaned.packages[0];
+      cleaned.price = best.price;
+      cleaned.originalPrice = best.originalPrice;
+    }
+
+    // Clean benefits
     if (cleaned.benefits && Array.isArray(cleaned.benefits)) {
       cleaned.benefits = cleaned.benefits
         .filter((b) => b && b.title?.trim())
         .map((b) => ({
           ...b,
           title: b.title.trim(),
-          description: b.description || '',
-          icon: b.icon || 'SparklesIcon',
+          description: b.description?.trim() || '',
+          icon: b.icon?.trim() || 'SparklesIcon',
         }));
+    } else {
+      cleaned.benefits = [];
     }
+
+    // Clean testimonials
     if (cleaned.testimonials && Array.isArray(cleaned.testimonials)) {
       cleaned.testimonials = cleaned.testimonials
         .filter((t) => t && t.authorName?.trim() && t.content?.trim())
@@ -87,9 +150,19 @@ export class LandingPageService {
           authorName: t.authorName.trim(),
           content: t.content.trim(),
           avatar: t.avatar || '',
-          rating: Number(t.rating) || 5,
+          rating: Math.min(5, Math.max(1, Number(t.rating) || 5)),
         }));
+    } else {
+      cleaned.testimonials = [];
     }
+
+    // Clean colors & css
+    cleaned.primaryColor = cleaned.primaryColor?.trim() || '#dc2626';
+    cleaned.backgroundColor = cleaned.backgroundColor?.trim() || '#ffffff';
+    cleaned.textColor = cleaned.textColor?.trim() || '#1e293b';
+    cleaned.customCss = cleaned.customCss || '';
+    cleaned.status = cleaned.status !== undefined ? Boolean(cleaned.status) : true;
+
     return cleaned;
   }
 
@@ -108,6 +181,9 @@ export class LandingPageService {
     id: string,
     dto: CreateLandingPageDto,
   ): Promise<LandingPageDocument> {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('ID trang bán hàng không hợp lệ');
+    }
     const cleanedDto = this.cleanLandingPageDto(dto);
     const existing = await this.landingPageModel
       .findOne({ slug: cleanedDto.slug, _id: { $ne: id } })
@@ -127,6 +203,9 @@ export class LandingPageService {
   }
 
   async remove(id: string): Promise<{ message: string }> {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('ID trang bán hàng không hợp lệ');
+    }
     const result = await this.landingPageModel.findByIdAndDelete(id).exec();
     if (!result) {
       throw new NotFoundException('Không tìm thấy trang bán hàng');
@@ -135,14 +214,24 @@ export class LandingPageService {
   }
 
   async submitOrder(dto: SubmitOrderDto): Promise<OrderDocument> {
+    if (!dto.landingPageId || !isValidObjectId(dto.landingPageId)) {
+      throw new BadRequestException('ID trang bán hàng không hợp lệ');
+    }
+    if (!dto.fullName || !dto.phone || !dto.address) {
+      throw new BadRequestException('Vui lòng điền đầy đủ họ tên, số điện thoại và địa chỉ');
+    }
+
     const page = await this.landingPageModel.findById(dto.landingPageId).exec();
     if (!page) {
       throw new NotFoundException('Không tìm thấy trang bán hàng');
     }
 
-    // Find selected package details
-    const selectedPkg = page.packages.find((p) => p.name === dto.packageName);
-    const orderPrice = selectedPkg ? selectedPkg.price : page.price;
+    // Find selected package details flexibly
+    const searchPkgName = (dto.packageName || '').trim().toLowerCase();
+    const selectedPkg = page.packages?.find(
+      (p) => p.name?.trim().toLowerCase() === searchPkgName,
+    );
+    const orderPrice = selectedPkg ? selectedPkg.price : (page.price || 0);
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderCode = `LP${new Date().toISOString().slice(2, 10).replace(/-/g, '')}${randomSuffix}`;
@@ -151,15 +240,15 @@ export class LandingPageService {
     const newOrder = new this.orderModel({
       orderCode,
       customer: null, // Guest checkout
-      customerName: dto.fullName,
-      customerEmail: `${dto.phone}@truongthanh.vn`, // Dummy email
-      phone: dto.phone,
-      shippingAddress: dto.address,
-      note: dto.note ? `${dto.packageName} - ${dto.note}` : dto.packageName,
+      customerName: dto.fullName.trim(),
+      customerEmail: `${dto.phone.replace(/\s+/g, '')}@truongthanh.vn`, // Standardized phone email
+      phone: dto.phone.trim(),
+      shippingAddress: dto.address.trim(),
+      note: dto.note ? `${dto.packageName} - ${dto.note}` : (dto.packageName || 'Đơn hàng từ Landing Page'),
       items: [
         {
           product: null,
-          name: `${page.title} (${dto.packageName})`,
+          name: `${page.title} (${dto.packageName || 'Mặc định'})`,
           price: orderPrice,
           quantity: 1,
           image: page.images?.[0] || '',
@@ -179,7 +268,7 @@ export class LandingPageService {
     // Sync to Google Sheet (async)
     this.ordersService
       .syncToGoogleSheet(savedOrder)
-      .catch((err) => this.logger.error(err));
+      .catch((err) => this.logger.error(`Error syncing order to Google Sheet: ${err.message}`));
 
     return savedOrder;
   }
@@ -197,8 +286,8 @@ export class LandingPageService {
       `Calling Gemini AI for landing page generation: ${dto.title}`,
     );
 
-    // Gemini API via Google AI Studio (không cần Google Cloud Console)
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
+    // Gemini API v1beta endpoint
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const promptText = `
 Bạn là chuyên gia thiết kế và lập trình viên landing page bán hàng chuyên nghiệp, có tỷ lệ chuyển đổi (CR) cực kỳ cao.
@@ -242,6 +331,11 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
           parts.push({
             inlineData: { mimeType: matches[1], data: matches[2] },
           });
+        } else if (base64Img.length > 100) {
+          // Fallback if raw base64 string without data URI prefix is provided
+          parts.push({
+            inlineData: { mimeType: 'image/jpeg', data: base64Img },
+          });
         }
       }
     }
@@ -249,7 +343,6 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
     parts.push({ text: promptText });
 
     try {
-      // Add timeout for Gemini API call (90 seconds)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 90000);
 
@@ -267,7 +360,7 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`Gemini API Error: ${errorText}`);
+        this.logger.error(`Gemini API Error (${response.status}): ${errorText}`);
         throw new Error(`Gemini API responded with status ${response.status}`);
       }
 
@@ -277,15 +370,13 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
         throw new Error('Gemini API returned an empty response');
       }
 
-      const cleanJson = generatedText
-        .trim()
-        .replace(/^```json\n?/, '')
-        .replace(/\n?```$/, '')
-        .trim();
+      // Robust JSON extraction using regex matching for JSON objects
+      const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+      const cleanJson = jsonMatch ? jsonMatch[0] : generatedText;
       return JSON.parse(cleanJson);
     } catch (error) {
       this.logger.warn(
-        `Gemini API error (${error.message}). Falling back to premium template...`,
+        `Gemini API error (${error.message}). Falling back to template...`,
       );
       return this.generateFallbackTemplate(dto);
     }
@@ -356,7 +447,7 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
           },
         ];
 
-    const retailPrice = Number(dto.price);
+    const retailPrice = Number(dto.price) || 150000;
     const originalPrice = dto.originalPrice
       ? Number(dto.originalPrice)
       : Math.round(retailPrice * 1.5);
