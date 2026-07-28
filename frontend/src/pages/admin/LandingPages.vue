@@ -930,7 +930,7 @@ function openEditModal(page: any) {
 
 function addPackage() {
   form.value.packages.push({
-    name: 'Combo Mới',
+    name: `Gói Combo ${form.value.packages.length + 1}`,
     price: 0,
     originalPrice: 0,
     badge: '',
@@ -979,16 +979,53 @@ function removeTestimonial(idx: number) {
   form.value.testimonials.splice(idx, 1);
 }
 
-// Convert uploaded package image file to base64
-function handlePackageImageUpload(event: any, idx: number) {
+// Client-side image compression to prevent exceeding MongoDB 16MB document limit
+function compressImage(file: File, maxWidth = 1000, quality = 0.75): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } else {
+          resolve(e.target.result);
+        }
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
+// Convert uploaded package image file to compressed base64
+async function handlePackageImageUpload(event: any, idx: number) {
   const files: FileList = event.target.files;
   if (!files || files.length === 0) return;
-  const file = files[0];
-  const reader = new FileReader();
-  reader.onload = (e: any) => {
-    form.value.packages[idx].image = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  try {
+    const compressed = await compressImage(files[0], 800, 0.75);
+    if (compressed) {
+      form.value.packages[idx].image = compressed;
+    }
+  } catch {
+    toast.error('Lỗi khi tải ảnh gói sản phẩm.');
+  }
 }
 
 function removeImage(idx: number) {
@@ -998,18 +1035,20 @@ function removeImage(idx: number) {
   }
 }
 
-// Convert uploaded image files to base64 strings
-function handleImageUpload(event: any) {
+// Convert uploaded image files to compressed base64 strings
+async function handleImageUpload(event: any) {
   const files: FileList = event.target.files;
   if (!files || files.length === 0) return;
 
   for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      form.value.images.push(e.target.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(files[i], 1000, 0.75);
+      if (compressed) {
+        form.value.images.push(compressed);
+      }
+    } catch {
+      toast.error('Lỗi khi xử lý hình ảnh: ' + files[i].name);
+    }
   }
 }
 
@@ -1061,38 +1100,57 @@ async function generateLandingPageAI() {
 }
 
 async function saveLandingPage() {
-  if (!form.value.title || !form.value.slug) {
-    toast.warning('Vui lòng nhập đầy đủ tiêu đề và slug.');
+  if (!form.value.title || !form.value.title.trim()) {
+    toast.warning('Vui lòng nhập tiêu đề Landing Page.');
     return;
+  }
+
+  if (!form.value.slug || !form.value.slug.trim()) {
+    form.value.slug = generateSlug(form.value.title);
   }
 
   // Auto lowercase slug and remove spaces/special characters
   form.value.slug = form.value.slug.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
+  if (!form.value.slug) {
+    toast.warning('Vui lòng nhập đường dẫn (slug) hợp lệ.');
+    return;
+  }
+
+  // Sanitize and ensure every package has a non-empty name and number prices
+  const cleanedPackages = (form.value.packages || []).map((pkg: any, idx: number) => ({
+    name: pkg.name && pkg.name.trim() ? pkg.name.trim() : `Gói Combo ${idx + 1}`,
+    price: Number(pkg.price) || 0,
+    originalPrice: Number(pkg.originalPrice) || 0,
+    badge: pkg.badge || '',
+    image: pkg.image || '',
+    isBestSeller: Boolean(pkg.isBestSeller),
+  }));
+
   // Synchronize form.price and form.originalPrice with the selected/first package
-  if (form.value.packages && form.value.packages.length > 0) {
-    const bestSeller = form.value.packages.find((p: any) => p.isBestSeller) || form.value.packages[0];
+  if (cleanedPackages.length > 0) {
+    const bestSeller = cleanedPackages.find((p: any) => p.isBestSeller) || cleanedPackages[0];
     form.value.price = bestSeller.price || 0;
     form.value.originalPrice = bestSeller.originalPrice || 0;
   }
 
   // Prepare a clean payload to prevent forbidNonWhitelisted pipe issues on backend
   const payload = {
-    title: form.value.title,
+    title: form.value.title.trim(),
     slug: form.value.slug,
-    description: form.value.description,
+    description: form.value.description || '',
     images: form.value.images || [],
     countdownMinutes: Number(form.value.countdownMinutes) || 30,
     price: Number(form.value.price) || 0,
     originalPrice: Number(form.value.originalPrice) || 0,
-    badgeText: form.value.badgeText,
+    badgeText: form.value.badgeText || '',
     benefits: form.value.benefits || [],
-    packages: form.value.packages || [],
+    packages: cleanedPackages,
     testimonials: form.value.testimonials || [],
-    primaryColor: form.value.primaryColor,
-    backgroundColor: form.value.backgroundColor,
-    textColor: form.value.textColor,
-    customCss: form.value.customCss,
+    primaryColor: form.value.primaryColor || '#dc2626',
+    backgroundColor: form.value.backgroundColor || '#ffffff',
+    textColor: form.value.textColor || '#1e293b',
+    customCss: form.value.customCss || '',
     status: form.value.status !== undefined ? form.value.status : true,
   };
 
@@ -1108,7 +1166,8 @@ async function saveLandingPage() {
     showModal.value = false;
     fetchLandingPages();
   } catch (error: any) {
-    toast.error('Lỗi khi lưu Landing Page: ' + (error.response?.data?.message || error.message));
+    const errMessage = error.response?.data?.message || error.message || 'Lỗi không xác định';
+    toast.error('Lỗi khi lưu Landing Page: ' + errMessage);
   } finally {
     saving.value = false;
   }

@@ -54,22 +54,63 @@ export class LandingPageService {
     return page;
   }
 
+  private cleanLandingPageDto(dto: CreateLandingPageDto): CreateLandingPageDto {
+    const cleaned = { ...dto };
+    if (cleaned.packages && Array.isArray(cleaned.packages)) {
+      cleaned.packages = cleaned.packages
+        .filter((pkg) => pkg && (pkg.name?.trim() || pkg.price > 0))
+        .map((pkg, idx) => ({
+          ...pkg,
+          name: pkg.name?.trim() || `Gói Combo ${idx + 1}`,
+          price: Number(pkg.price) || 0,
+          originalPrice: Number(pkg.originalPrice) || 0,
+          badge: pkg.badge || '',
+          image: pkg.image || '',
+          isBestSeller: Boolean(pkg.isBestSeller),
+        }));
+    }
+    if (cleaned.benefits && Array.isArray(cleaned.benefits)) {
+      cleaned.benefits = cleaned.benefits
+        .filter((b) => b && b.title?.trim())
+        .map((b) => ({
+          ...b,
+          title: b.title.trim(),
+          description: b.description || '',
+          icon: b.icon || 'SparklesIcon',
+        }));
+    }
+    if (cleaned.testimonials && Array.isArray(cleaned.testimonials)) {
+      cleaned.testimonials = cleaned.testimonials
+        .filter((t) => t && t.authorName?.trim() && t.content?.trim())
+        .map((t) => ({
+          ...t,
+          authorName: t.authorName.trim(),
+          content: t.content.trim(),
+          avatar: t.avatar || '',
+          rating: Number(t.rating) || 5,
+        }));
+    }
+    return cleaned;
+  }
+
   async create(dto: CreateLandingPageDto): Promise<LandingPageDocument> {
+    const cleanedDto = this.cleanLandingPageDto(dto);
     const existing = await this.landingPageModel
-      .findOne({ slug: dto.slug })
+      .findOne({ slug: cleanedDto.slug })
       .exec();
     if (existing) {
       throw new BadRequestException('Đường dẫn (slug) đã được sử dụng');
     }
-    return this.landingPageModel.create(dto);
+    return this.landingPageModel.create(cleanedDto);
   }
 
   async update(
     id: string,
     dto: CreateLandingPageDto,
   ): Promise<LandingPageDocument> {
+    const cleanedDto = this.cleanLandingPageDto(dto);
     const existing = await this.landingPageModel
-      .findOne({ slug: dto.slug, _id: { $ne: id } })
+      .findOne({ slug: cleanedDto.slug, _id: { $ne: id } })
       .exec();
     if (existing) {
       throw new BadRequestException(
@@ -77,7 +118,7 @@ export class LandingPageService {
       );
     }
     const page = await this.landingPageModel
-      .findByIdAndUpdate(id, dto, { new: true })
+      .findByIdAndUpdate(id, cleanedDto, { new: true })
       .exec();
     if (!page) {
       throw new NotFoundException('Không tìm thấy trang bán hàng');

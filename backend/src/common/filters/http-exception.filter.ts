@@ -35,6 +35,24 @@ export class HttpExceptionFilter implements ExceptionFilter {
           message = 'Validation failed';
         }
       }
+    } else if (exception && typeof exception === 'object') {
+      const err = exception as any;
+      const errMsg = err.message || '';
+      if (err.name === 'RangeError' || err.name === 'MongoServerError' && errMsg.includes('too large') || errMsg.includes('OUT_OF_RANGE')) {
+        status = HttpStatus.BAD_REQUEST;
+        message = 'Dung lượng dữ liệu hoặc hình ảnh quá lớn (vượt quá giới hạn 16MB của CSDL). Vui lòng giảm kích thước ảnh trước khi tải lên!';
+      } else if (err.name === 'ValidationError' && err.errors) {
+        status = HttpStatus.BAD_REQUEST;
+        const msgList = Object.values(err.errors).map((e: any) => e.message);
+        message = `Dữ liệu không hợp lệ: ${msgList.join('; ')}`;
+        errors = msgList;
+      } else if (err.code === 11000) {
+        status = HttpStatus.BAD_REQUEST;
+        message = 'Đường dẫn hoặc dữ liệu đã tồn tại (trùng lặp)';
+      } else if (err.name === 'CastError') {
+        status = HttpStatus.BAD_REQUEST;
+        message = `Giá trị trường '${err.path}' không hợp lệ`;
+      }
     }
 
     if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
