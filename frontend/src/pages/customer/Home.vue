@@ -839,7 +839,7 @@
         backgroundSize: 'cover',
         backgroundPosition: 'right center',
       }"
-      class="relative min-h-[50vh] flex items-center bg-no-repeat py-20 px-4 md:px-8 overflow-hidden border-t border-b border-orange-100/50"
+      class="keep-light relative min-h-[50vh] flex items-center bg-no-repeat py-20 px-4 md:px-8 overflow-hidden border-t border-b border-orange-100/50"
     >
       <!-- Soft warm glow overlays for premium feel -->
       <div
