@@ -850,7 +850,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <!-- Text content aligned to the left, taking up 8 columns on large screens to prevent awkward line breaks -->
           <div
-            class="lg:col-span-8 xl:col-span-7 space-y-4 sm:space-y-6 text-left bg-white/70 lg:bg-transparent backdrop-blur-md lg:backdrop-blur-none p-6 sm:p-8 lg:p-0 rounded-[2rem] border border-orange-200/20 lg:border-none shadow-lg lg:shadow-none reveal"
+            class="lg:col-span-8 xl:col-span-7 space-y-4 sm:space-y-6 text-left reveal"
           >
             <div>
               <span

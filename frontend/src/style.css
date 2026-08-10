@@ -420,5 +420,10 @@ header {
   background-image: linear-gradient(to right, #b25e1d, #d97706) !important;
 }
 
+.dark .keep-light div[class*="from-amber-50"] {
+  background-image: linear-gradient(to right, rgba(254, 243, 199, 0.9), rgba(254, 243, 199, 0.7), transparent) !important;
+}
+
+
 
 
