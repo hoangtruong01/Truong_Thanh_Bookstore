@@ -755,7 +755,7 @@
             :key="cat.name"
             :to="cat.to"
             :class="[
-              'relative overflow-hidden rounded-[18px] p-5 border flex items-center justify-between group transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer min-h-[100px]',
+              'featured-category-card relative overflow-hidden rounded-[18px] p-5 border flex items-center justify-between group transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer min-h-[100px]',
               cat.gradient,
             ]"
           >

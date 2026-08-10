@@ -424,6 +424,35 @@ header {
   background-image: linear-gradient(to right, rgba(254, 243, 199, 0.9), rgba(254, 243, 199, 0.7), transparent) !important;
 }
 
+/* Featured Category Cards: Force dark text color even in dark mode */
+.dark .featured-category-card h3,
+.dark .featured-category-card [class*="text-slate-900"],
+.dark .featured-category-card [class*="text-[#0f172a]"] {
+  color: #0f172a !important;
+}
+
+.dark .featured-category-card p,
+.dark .featured-category-card [class*="text-slate-600"] {
+  color: #475569 !important;
+}
+
+/* Rating Stats Panel: Make text labels light for readability in dark mode */
+.dark .rating-stats-panel .text-slate-800,
+.dark .rating-stats-panel [class*="text-slate-800"] {
+  color: #f8fafc !important;
+}
+
+.dark .rating-stats-panel .text-slate-500,
+.dark .rating-stats-panel [class*="text-slate-500"] {
+  color: #e2e8f0 !important;
+}
+
+.dark .rating-stats-panel .text-slate-400,
+.dark .rating-stats-panel [class*="text-slate-400"] {
+  color: #cbd5e1 !important;
+}
+
+
 
 
 

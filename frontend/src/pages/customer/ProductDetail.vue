@@ -445,7 +445,7 @@
         </div>
 
         <!-- Rating Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+        <div class="rating-stats-panel grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
           <div class="md:col-span-4 text-center space-y-2 border-r border-slate-100 py-4">
             <div class="text-5xl font-black text-slate-800">{{ averageRating }}</div>
             <div class="flex justify-center gap-1">
