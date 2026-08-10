@@ -190,7 +190,7 @@
             </h3>
             
             <div class="space-y-3">
-              <div v-for="item in categoryDetail.products" :key="item._id" class="flex items-center gap-3 p-2.5 bg-white rounded-xl border border-slate-100 shadow-xs">
+              <div v-for="item in (showAllComboProducts ? categoryDetail.products : categoryDetail.products.slice(0, 5))" :key="item._id" class="flex items-center gap-3 p-2.5 bg-white rounded-xl border border-slate-100 shadow-xs">
                 <img 
                   :src="item.images && item.images[0] ? item.images[0] : 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=100'" 
                   class="w-12 h-12 object-cover rounded-lg bg-slate-50 border border-slate-100 flex-shrink-0"
@@ -205,6 +205,28 @@
                   <div v-if="item.discountPrice" class="text-[9px] text-slate-400 line-through">{{ formatCurrency(item.price) }}</div>
                 </div>
               </div>
+            </div>
+
+            <!-- Expand/Collapse Toggle Button -->
+            <div v-if="categoryDetail.products.length > 5" class="flex justify-center pt-1 border-t border-slate-100/50">
+              <button 
+                type="button"
+                @click="showAllComboProducts = !showAllComboProducts"
+                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-extrabold text-[#dc2626] hover:bg-[#dc2626]/5 active:scale-95 transition-all cursor-pointer focus:outline-none"
+              >
+                <span>{{ showAllComboProducts ? 'Thu gọn danh sách' : `Xem thêm ${categoryDetail.products.length - 5} sản phẩm` }}</span>
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke-width="2.5" 
+                  stroke="currentColor" 
+                  class="w-3.5 h-3.5 transition-transform duration-300"
+                  :class="{ 'rotate-180': showAllComboProducts }"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
             </div>
             
             <div class="pt-3 border-t border-dashed border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
@@ -789,6 +811,7 @@ import Breadcrumb from '@/components/Breadcrumb.vue'
 
 const route = useRoute()
 const router = useRouter()
+const showAllComboProducts = ref(false)
 
 const breadcrumbItems = computed(() => {
   const items = [
