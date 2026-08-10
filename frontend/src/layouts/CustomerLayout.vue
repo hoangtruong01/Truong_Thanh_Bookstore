@@ -7,21 +7,6 @@
       <span>🚚</span> Miễn phí giao hàng cho đơn từ 299K
     </div>
 
-    <!-- Flash Sale Banner -->
-    <div
-      v-if="flashSaleTimer"
-      class="bg-gradient-to-r from-amber-500 via-red-600 to-rose-600 text-white text-[11px] py-2 px-4 text-center font-bold tracking-wide flex flex-col sm:flex-row items-center justify-center gap-2 relative z-30 shadow-inner"
-    >
-      <div class="flex items-center gap-1">
-        <span>⚡</span>
-        <span class="uppercase tracking-wider">FLASH SALE SIÊU ĐẬM:</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <span>Thời gian còn lại:</span>
-        <span class="bg-black/35 text-white px-2 py-0.5 rounded font-mono text-[11px] font-black">{{ flashSaleTimer }}</span>
-      </div>
-      <router-link to="/products?isFlashSale=true" class="underline hover:text-amber-200 transition-colors ml-2">Săn deal ngay &gt;</router-link>
-    </div>
 
     <!-- Main Header -->
     <header
@@ -1637,6 +1622,7 @@ const currentLocale = computed(() => locale.value);
 function changeLocale(lang: "vi" | "en") {
   locale.value = lang;
   localStorage.setItem("lang", lang);
+  document.documentElement.setAttribute("lang", lang);
 }
 
 // Dark Mode logic
@@ -1649,6 +1635,19 @@ function toggleDarkMode() {
   } else {
     document.documentElement.classList.remove("dark");
     localStorage.setItem("theme", "light");
+  }
+}
+
+// Cross-tab theme and language synchronization
+function handleStorageChange(event: StorageEvent) {
+  if (event.key === "theme") {
+    const isDark = event.newValue === "dark";
+    isDarkMode.value = isDark;
+    document.documentElement.classList.toggle("dark", isDark);
+  } else if (event.key === "lang") {
+    const newLang = (event.newValue || "vi") as "vi" | "en";
+    locale.value = newLang;
+    document.documentElement.setAttribute("lang", newLang);
   }
 }
 
@@ -1876,6 +1875,16 @@ onMounted(async () => {
   } catch (error) {
     // FIX-2.3: silent fail for categories
   }
+
+  // Initialize theme & language states from localStorage on mount
+  isDarkMode.value = localStorage.getItem("theme") === "dark";
+  document.documentElement.classList.toggle("dark", isDarkMode.value);
+
+  locale.value = (localStorage.getItem("lang") || "vi") as "vi" | "en";
+  document.documentElement.setAttribute("lang", locale.value);
+
+  // Sync state reactively across open tabs/windows
+  window.addEventListener("storage", handleStorageChange);
 });
 
 onUnmounted(() => {
@@ -1888,6 +1897,7 @@ onUnmounted(() => {
   if (flashSaleInterval) {
     clearInterval(flashSaleInterval);
   }
+  window.removeEventListener("storage", handleStorageChange);
 });
 
 function navigateToCategory(categoryId: string) {

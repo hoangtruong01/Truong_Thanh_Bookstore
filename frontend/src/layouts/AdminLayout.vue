@@ -73,6 +73,26 @@
             <span v-else>🌙</span>
           </button>
 
+          <!-- Language Switcher -->
+          <div class="relative group/lang flex items-center">
+            <button class="text-xs font-black text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1 cursor-pointer">
+              <span>🌐</span>
+              <span class="uppercase font-bold">{{ currentLocale.toUpperCase() }}</span>
+            </button>
+            <div class="absolute right-0 top-full pt-2 hidden group-hover/lang:block z-50">
+              <div class="w-24 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1 text-slate-700 dark:text-slate-350 text-xs font-bold">
+                <button @click="changeLocale('vi')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer flex items-center justify-between">
+                  <span>Tiếng Việt</span>
+                  <span v-if="currentLocale === 'vi'">✓</span>
+                </button>
+                <button @click="changeLocale('en')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer flex items-center justify-between">
+                  <span>English</span>
+                  <span v-if="currentLocale === 'en'">✓</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Notification bell -->
           <div id="notification-dropdown-container" class="relative">
             <button 
@@ -183,6 +203,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { reportService } from '@/services/report.service'
 import ProfileModal from '@/components/ProfileModal.vue'
+import { useI18n } from 'vue-i18n'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -211,6 +232,16 @@ const adminRole = computed(() => {
   return 'Admin'
 })
 
+// Language setup
+const { locale } = useI18n()
+const currentLocale = computed(() => locale.value)
+
+function changeLocale(lang: 'vi' | 'en') {
+  locale.value = lang
+  localStorage.setItem('lang', lang)
+  document.documentElement.setAttribute('lang', lang)
+}
+
 // Dark Mode logic
 const isDarkMode = ref(localStorage.getItem("theme") === "dark")
 function toggleDarkMode() {
@@ -221,6 +252,19 @@ function toggleDarkMode() {
   } else {
     document.documentElement.classList.remove("dark")
     localStorage.setItem("theme", "light")
+  }
+}
+
+// Cross-tab theme and language synchronization
+function handleStorageChange(event: StorageEvent) {
+  if (event.key === 'theme') {
+    const isDark = event.newValue === 'dark'
+    isDarkMode.value = isDark
+    document.documentElement.classList.toggle('dark', isDark)
+  } else if (event.key === 'lang') {
+    const newLang = (event.newValue || 'vi') as 'vi' | 'en'
+    locale.value = newLang
+    document.documentElement.setAttribute('lang', newLang)
   }
 }
 
@@ -320,21 +364,24 @@ function formatTimeAgo(dateStr: string) {
 }
 
 onMounted(() => {
-  if (isDarkMode.value) {
-    document.documentElement.classList.add("dark")
-  } else {
-    document.documentElement.classList.remove("dark")
-  }
+  // Initialize theme & language states from localStorage on mount
+  isDarkMode.value = localStorage.getItem("theme") === "dark"
+  document.documentElement.classList.toggle("dark", isDarkMode.value)
+
+  locale.value = (localStorage.getItem("lang") || "vi") as "vi" | "en"
+  document.documentElement.setAttribute("lang", locale.value)
 
   loadReadIds()
   fetchNotifications()
   
   const interval = setInterval(fetchNotifications, 30000)
   window.addEventListener('click', handleClickOutside)
+  window.addEventListener('storage', handleStorageChange)
   
   onUnmounted(() => {
     clearInterval(interval)
     window.removeEventListener('click', handleClickOutside)
+    window.removeEventListener('storage', handleStorageChange)
   })
 })
 
@@ -374,18 +421,18 @@ const BannersIcon = {
   template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" /></svg>`
 }
 
-const navItems = [
-  { name: 'AdminDashboard', label: 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
-  { name: 'AdminProducts', label: 'Sản phẩm', to: '/admin/products', icon: ProductsIcon },
-  { name: 'AdminOrders', label: 'Đơn hàng', to: '/admin/orders', icon: OrdersIcon },
-  { name: 'AdminInventory', label: 'Kho', to: '/admin/inventory', icon: InventoryIcon },
-  { name: 'AdminCombos', label: 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon },
-  { name: 'AdminCustomers', label: 'Khách hàng', to: '/admin/customers', icon: CustomersIcon },
-  { name: 'AdminPromotions', label: 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon },
-  { name: 'AdminBanners', label: 'Banners', to: '/admin/banners', icon: BannersIcon },
-  { name: 'AdminReports', label: 'Báo cáo', to: '/admin/reports', icon: ReportsIcon },
-  { name: 'AdminLandingPages', label: 'Tạo Page Nhanh', to: '/admin/landing-pages', icon: SparklingIcon },
-]
+const navItems = computed(() => [
+  { name: 'AdminDashboard', label: locale.value === 'en' ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
+  { name: 'AdminProducts', label: locale.value === 'en' ? 'Products' : 'Sản phẩm', to: '/admin/products', icon: ProductsIcon },
+  { name: 'AdminOrders', label: locale.value === 'en' ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: OrdersIcon },
+  { name: 'AdminInventory', label: locale.value === 'en' ? 'Inventory' : 'Kho hàng', to: '/admin/inventory', icon: InventoryIcon },
+  { name: 'AdminCombos', label: locale.value === 'en' ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon },
+  { name: 'AdminCustomers', label: locale.value === 'en' ? 'Customers' : 'Khách hàng', to: '/admin/customers', icon: CustomersIcon },
+  { name: 'AdminPromotions', label: locale.value === 'en' ? 'Promotions' : 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon },
+  { name: 'AdminBanners', label: locale.value === 'en' ? 'Banners' : 'Banners', to: '/admin/banners', icon: BannersIcon },
+  { name: 'AdminReports', label: locale.value === 'en' ? 'Reports' : 'Báo cáo', to: '/admin/reports', icon: ReportsIcon },
+  { name: 'AdminLandingPages', label: locale.value === 'en' ? 'Quick Pages' : 'Tạo Page Nhanh', to: '/admin/landing-pages', icon: SparklingIcon },
+])
 
 function handleLogout() {
   authStore.logout()

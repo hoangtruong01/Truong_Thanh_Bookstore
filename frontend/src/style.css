@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (.dark &);
+
 :root {
   --color-primary: #dc2626;
   --color-primary-light: #ef4444;
@@ -287,3 +289,105 @@ header {
     width: calc(20% - 0.8rem);
   }
 }
+
+/* Global Dark Mode Overrides */
+.dark {
+  background-color: #0b0f19 !important; /* Sleek dark blue-grey background */
+  color: #e2e8f0 !important;
+}
+
+.dark body {
+  background-color: #0b0f19 !important;
+  color: #e2e8f0 !important;
+}
+
+/* Container & Background Overrides */
+.dark header,
+.dark footer,
+.dark aside,
+.dark [class*="bg-white"],
+.dark [class*="bg-slate-50"],
+.dark [class*="bg-slate-100"],
+.dark [class*="bg-[#f5f5fa]"],
+.dark [class*="bg-[#f8fafc]"] {
+  background-color: #111827 !important; /* Slate-900 background for cards and headers */
+  color: #f1f5f9 !important;
+  border-color: #1f2937 !important;
+}
+
+.dark [class*="bg-slate-50/50"] {
+  background-color: #0b0f19 !important;
+}
+
+/* Forms & Inputs */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+  border-color: #374151 !important;
+}
+
+/* Text Colors */
+.dark [class*="text-slate-900"],
+.dark [class*="text-slate-800"],
+.dark [class*="text-slate-700"],
+.dark [class*="text-slate-600"],
+.dark [class*="text-[#0f172a]"] {
+  color: #cbd5e1 !important; /* Soft text color */
+}
+
+.dark [class*="text-slate-500"],
+.dark [class*="text-slate-400"] {
+  color: #94a3b8 !important; /* Muted details */
+}
+
+/* Border Overrides */
+.dark .border,
+.dark [class*="border-slate-100"],
+.dark [class*="border-slate-200"],
+.dark [class*="border-slate-300"] {
+  border-color: #1f2937 !important;
+}
+
+/* Category card overrides - make gradients darker and more premium in dark mode */
+.dark [class*="from-orange-100"],
+.dark [class*="from-blue-100"],
+.dark [class*="from-emerald-100"] {
+  --tw-gradient-from: #1e293b !important;
+  --tw-gradient-to: #0f172a !important;
+  background-image: linear-gradient(to bottom right, #1e293b, #0f172a) !important;
+  color: #e2e8f0 !important;
+}
+
+.dark [class*="via-amber-50"],
+.dark [class*="via-sky-50"],
+.dark [class*="via-teal-50"] {
+  background-image: linear-gradient(to bottom right, #1e293b, #0f172a) !important;
+}
+
+.dark [class*="to-orange-50"],
+.dark [class*="to-blue-50"],
+.dark [class*="to-emerald-50"] {
+  background-image: linear-gradient(to bottom right, #1e293b, #0f172a) !important;
+}
+
+.dark [class*="hover:bg-red-50"]:hover {
+  background-color: #1f2937 !important;
+}
+
+/* Custom Component & Banner Fixes */
+.dark .glass-panel {
+  background: rgba(17, 24, 39, 0.75) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .glass-card {
+  background: rgba(17, 24, 39, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+.dark .glass-card:hover {
+  background: rgba(17, 24, 39, 0.8) !important;
+}
+
+

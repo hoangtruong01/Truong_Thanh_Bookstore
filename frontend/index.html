@@ -52,6 +52,18 @@
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;750;850&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function() {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        const lang = localStorage.getItem('lang') || 'vi';
+        document.documentElement.setAttribute('lang', lang);
+      })();
+    </script>
   </head>
   <body>
     <noscript>
