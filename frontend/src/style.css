@@ -452,6 +452,12 @@ header {
   color: #cbd5e1 !important;
 }
 
+/* Rating Stats Panel: Make the progress bar track visible in dark mode */
+.dark .rating-stats-panel [class*="bg-slate-100"] {
+  background-color: #374151 !important; /* Lighter slate-700 background for the track */
+}
+
+
 
 
 
