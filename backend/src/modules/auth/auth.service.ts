@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -9,6 +10,7 @@ import { UsersService } from '../users/users.service';
 import { RegisterDto, LoginDto, UpdateProfileDto } from './dto/auth.dto';
 import { UserRole } from '../../common/enums';
 import { CloudinaryService } from '../users/cloudinary.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +18,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private cloudinaryService: CloudinaryService,
+    private emailService: EmailService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -122,11 +125,11 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      // Return success message even if email not found for security reasons
-      // but in development we can also show a message or just standard message.
-      // Wait, let's throw an exception or return a standard message. Returning a mock message is standard.
-      // But since we need to test it, let's throw NotFoundException or similar if user doesn't exist, so tests can run cleanly.
-      throw new ConflictException('Email không tồn tại trong hệ thống');
+      // BUG-19: Do not disclose email existence to prevent user enumeration
+      return {
+        success: true,
+        message: 'Mã OTP đã được gửi đến email của bạn',
+      };
     }
 
     // Generate 6 digit OTP
@@ -139,11 +142,26 @@ export class AuthService {
     user.resetOtpExpiry = expiry;
     await user.save();
 
-    return {
+    // Send OTP email (async)
+    this.emailService.sendOtpEmail(email, otp).catch((err) => {
+      const logger = new Logger(AuthService.name);
+      logger.error(`Failed to send OTP email to ${email}:`, err);
+    });
+
+    const logger = new Logger(AuthService.name);
+    logger.log(`ForgotPassword OTP for ${email}: ${otp}`);
+
+    const response: any = {
       success: true,
       message: 'Mã OTP đã được gửi đến email của bạn',
-      otp, // Returning OTP directly for development testing
     };
+
+    // BUG-02: Only include OTP in response when NOT in production
+    if (process.env.NODE_ENV !== 'production') {
+      response.otp = otp;
+    }
+
+    return response;
   }
 
   async verifyOtp(email: string, otp: string) {

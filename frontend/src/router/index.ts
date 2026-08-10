@@ -21,6 +21,7 @@ const MyOrders = () => import('@/pages/customer/MyOrders.vue')
 const Info = () => import('@/pages/customer/Info.vue')
 const OrderDetail = () => import('@/pages/customer/OrderDetail.vue')
 const Addresses = () => import('@/pages/customer/Addresses.vue')
+const Wishlist = () => import('@/pages/customer/Wishlist.vue')
 
 // Admin Pages - lazy loaded
 const AdminDashboard = () => import('@/pages/admin/Dashboard.vue')
@@ -54,6 +55,7 @@ const routes = [
       { path: 'my-orders', name: 'MyOrders', component: MyOrders, meta: { requiresAuth: true } },
       { path: 'my-orders/:id', name: 'OrderDetail', component: OrderDetail, meta: { requiresAuth: true } },
       { path: 'addresses', name: 'Addresses', component: Addresses, meta: { requiresAuth: true } },
+      { path: 'wishlist', name: 'Wishlist', component: Wishlist, meta: { requiresAuth: true } },
     ]
   },
   {
@@ -131,6 +133,7 @@ router.afterEach((to) => {
     MyOrders: 'Đơn Hàng Của Tôi — Trường Thành Stationery',
     OrderDetail: 'Chi Tiết Đơn Hàng — Trường Thành Stationery',
     Addresses: 'Sổ Địa Chỉ — Trường Thành Stationery',
+    Wishlist: 'Danh Sách Yêu Thích — Trường Thành Stationery',
     AdminDashboard: 'Tổng Quan Báo Cáo — Trường Thành Admin',
     AdminProducts: 'Quản Lý Sản Phẩm — Trường Thành Admin',
     AdminOrders: 'Quản Lý Đơn Hàng — Trường Thành Admin',

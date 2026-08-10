@@ -3,10 +3,34 @@
     @click="goToDetail"
     class="bg-white border border-slate-200/80 rounded-2xl p-4 hover:shadow-md hover:border-slate-300 transition-all flex flex-col group relative cursor-pointer"
   >
-    <!-- Discount Badge -->
-    <span v-if="discountPercent > 0" class="absolute top-6 left-6 bg-[#dc2626] text-white text-[10px] font-black px-2 py-0.5 rounded-md z-20 shadow-xs">
+    <!-- Discount / Flash Sale Badge -->
+    <span v-if="product.isFlashSale" class="absolute top-6 left-6 bg-gradient-to-r from-amber-500 to-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md z-20 shadow-xs flex items-center gap-0.5">
+      ⚡ FLASH SALE
+    </span>
+    <span v-else-if="discountPercent > 0" class="absolute top-6 left-6 bg-[#dc2626] text-white text-[10px] font-black px-2 py-0.5 rounded-md z-20 shadow-xs">
       -{{ discountPercent }}%
     </span>
+
+    <!-- Wishlist Heart Button -->
+    <button
+      @click.stop="onWishlistToggle"
+      class="absolute top-6 right-6 w-8 h-8 bg-white/90 backdrop-blur-xs border border-slate-200/80 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:scale-105 active:scale-95 transition-all z-20 shadow-xs cursor-pointer"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        :fill="isWishlisted ? '#dc2626' : 'none'"
+        viewBox="0 0 24 24"
+        stroke-width="2"
+        :stroke="isWishlisted ? '#dc2626' : 'currentColor'"
+        class="w-4 h-4"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
+        />
+      </svg>
+    </button>
 
     <!-- Image/Placeholder Container -->
     <div class="aspect-square bg-slate-50/70 rounded-xl overflow-hidden mb-4 relative flex items-center justify-center">
@@ -52,6 +76,12 @@
       </div>
     </div>
 
+    <!-- Flash Sale Countdown Timer -->
+    <div v-if="product.isFlashSale && timeRemaining" class="bg-amber-50 dark:bg-amber-950/20 text-[#d97706] font-mono text-[9px] font-black px-2 py-1 rounded-lg text-center flex items-center justify-center gap-1.5 border border-amber-100 dark:border-amber-900/30 mb-2 mt-1">
+      <span>⚡ Còn:</span>
+      <span>{{ timeRemaining }}</span>
+    </div>
+
     <!-- Title -->
     <h3 class="text-xs font-bold text-slate-800 line-clamp-2 min-h-[36px] group-hover:text-[#dc2626] transition-colors leading-tight">
       <router-link :to="`/products/${product._id}`">{{ product.name }}</router-link>
@@ -88,10 +118,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { formatCurrency, getDiscountPercent, formatNumber } from '@/utils/helpers'
 import type { Product } from '@/types'
+import { useAuthStore } from '@/stores/auth'
+import { useToast } from 'vue-toastification'
 
 const props = defineProps<{
   product: Product
@@ -102,6 +134,64 @@ defineEmits<{
 }>()
 
 const router = useRouter()
+const authStore = useAuthStore()
+const toast = useToast()
+
+const isWishlisted = computed(() => {
+  if (!authStore.isAuthenticated || !authStore.user?.wishlist) return false
+  return authStore.user.wishlist.includes(props.product._id)
+})
+
+async function onWishlistToggle() {
+  if (!authStore.isAuthenticated) {
+    toast.info('Vui lòng đăng nhập để lưu sản phẩm yêu thích!')
+    return
+  }
+  const success = await authStore.toggleWishlist(props.product._id)
+  if (success) {
+    if (isWishlisted.value) {
+      toast.success('Đã thêm vào danh sách yêu thích!')
+    } else {
+      toast.success('Đã xóa khỏi danh sách yêu thích!')
+    }
+  }
+}
+
+// Flash Sale Countdown Logic
+const timeRemaining = ref('')
+let timerInterval: any = null
+
+function updateCountdown() {
+  if (!props.product.isFlashSale || !props.product.flashSaleExpiry) {
+    timeRemaining.value = ''
+    return
+  }
+  const now = new Date()
+  const expiry = new Date(props.product.flashSaleExpiry)
+  const diff = expiry.getTime() - now.getTime()
+  
+  if (diff <= 0) {
+    timeRemaining.value = 'Hết hạn'
+    return
+  }
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+  
+  timeRemaining.value = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+}
+
+onMounted(() => {
+  if (props.product.isFlashSale) {
+    updateCountdown()
+    timerInterval = setInterval(updateCountdown, 1000)
+  }
+})
+
+onUnmounted(() => {
+  if (timerInterval) clearInterval(timerInterval)
+})
 
 const isImageBroken = ref(false)
 

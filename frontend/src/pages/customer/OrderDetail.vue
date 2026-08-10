@@ -75,6 +75,34 @@
           </div>
         </div>
 
+        <!-- Tracking QR Code & Share link -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 bg-slate-50/70 border border-slate-100 rounded-2xl">
+          <div class="flex items-center gap-4">
+            <img 
+              :src="`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(trackingUrl)}`" 
+              class="w-20 h-20 bg-white border border-slate-200 rounded-xl p-1 flex-shrink-0"
+              alt="Order QR Code" 
+            />
+            <div class="space-y-1">
+              <h5 class="text-xs font-black text-slate-800 uppercase">Mã QR đơn hàng</h5>
+              <p class="text-[10.5px] text-slate-500 leading-snug">Quét mã QR để nhanh chóng xem tình trạng giao hàng trên thiết bị di động.</p>
+            </div>
+          </div>
+
+          <div class="flex flex-col justify-center space-y-2">
+            <h5 class="text-xs font-black text-slate-800 uppercase">Chia sẻ đơn hàng</h5>
+            <p class="text-[10.5px] text-slate-500">Gửi liên kết theo dõi đơn hàng này cho bạn bè hoặc người thân của bạn.</p>
+            <div class="flex gap-2">
+              <button 
+                @click="copyTrackingLink"
+                class="bg-white hover:bg-slate-100 text-slate-700 font-bold py-1.5 px-3 border border-slate-200 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+              >
+                <span>🔗</span> Sao chép liên kết
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Order Tracking Timeline -->
         <div v-if="order.timeline && order.timeline.length > 0" class="p-4 border border-slate-100 bg-slate-50/20 rounded-2xl space-y-4">
           <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider">Hành trình đơn hàng</h4>
@@ -152,6 +180,20 @@ import { orderService } from '@/services/order.service'
 import { formatCurrency, formatDate, getStatusLabel } from '@/utils/helpers'
 import api from '@/utils/api'
 import type { Order } from '@/types'
+import { computed } from 'vue'
+import { useToast } from 'vue-toastification'
+
+const toast = useToast()
+
+const trackingUrl = computed(() => {
+  if (!order.value) return ''
+  return `${window.location.origin}/my-orders/${order.value._id}`
+})
+
+function copyTrackingLink() {
+  navigator.clipboard.writeText(trackingUrl.value)
+  toast.success('Đã sao chép liên kết theo dõi!')
+}
 
 const route = useRoute()
 const order = ref<any | null>(null)

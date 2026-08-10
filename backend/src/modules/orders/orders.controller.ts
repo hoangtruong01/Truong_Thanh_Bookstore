@@ -10,6 +10,7 @@ import {
   UseGuards,
   Request,
   Res,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
@@ -60,9 +61,22 @@ export class OrdersController {
   }
 
   @Get(':id/invoice')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Export invoice PDF' })
-  async getInvoice(@Param('id') id: string, @Res() res: Response) {
+  async getInvoice(@Param('id') id: string, @Request() req: any, @Res() res: Response) {
     const order = await this.ordersService.findById(id);
+    
+    // BUG-03: Verify ownership of the invoice before rendering the PDF
+    if (
+      order.customer &&
+      order.customer._id.toString() !== req.user._id.toString() &&
+      req.user.role !== 'ADMIN' &&
+      req.user.role !== 'STAFF'
+    ) {
+      throw new ForbiddenException('Bạn không có quyền tải hóa đơn này');
+    }
+    
     const pdfDoc = await this.ordersService.generateInvoicePdf(order);
     
     res.setHeader('Content-Type', 'application/pdf');

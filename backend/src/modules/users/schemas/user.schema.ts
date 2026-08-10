@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types, SchemaTypes } from 'mongoose';
 import { UserRole } from '../../../common/enums';
 
 export type UserDocument = User & Document;
@@ -32,6 +32,9 @@ export class User {
 
   @Prop()
   resetOtpExpiry?: Date;
+
+  @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: 'Product' }], default: [] })
+  wishlist: Types.ObjectId[];
 
   createdAt: Date;
   updatedAt: Date;

@@ -38,7 +38,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
     } else if (exception && typeof exception === 'object') {
       const err = exception as any;
       const errMsg = err.message || '';
-      if (err.name === 'RangeError' || err.name === 'MongoServerError' && errMsg.includes('too large') || errMsg.includes('OUT_OF_RANGE')) {
+      if (
+        err.name === 'RangeError' ||
+        (err.name === 'MongoServerError' && errMsg.includes('too large')) ||
+        errMsg.includes('OUT_OF_RANGE')
+      ) {
         status = HttpStatus.BAD_REQUEST;
         message = 'Dung lượng dữ liệu hoặc hình ảnh quá lớn (vượt quá giới hạn 16MB của CSDL). Vui lòng giảm kích thước ảnh trước khi tải lên!';
       } else if (err.name === 'ValidationError' && err.errors) {

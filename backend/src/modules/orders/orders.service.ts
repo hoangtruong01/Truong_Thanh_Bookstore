@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { Order, OrderDocument } from './schemas/order.schema';
 import * as PDFDocument from 'pdfkit';
 import * as fs from 'fs';
+import * as QRCode from 'qrcode';
 import {
   CreateOrderDto,
   UpdateOrderStatusDto,
@@ -15,6 +16,7 @@ import { OrderStatus } from '../../common/enums';
 import { ConfigService } from '@nestjs/config';
 import { PromotionsService } from '../promotions/promotions.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EmailService } from '../email/email.service';
 
 // FIX-C03: Shipping fee threshold (must match frontend)
 const FREE_SHIPPING_THRESHOLD = 299000;
@@ -30,6 +32,7 @@ export class OrdersService {
     private configService: ConfigService,
     private promotionsService: PromotionsService,
     private notificationsService: NotificationsService,
+    private emailService: EmailService,
   ) {}
 
   private generateOrderCode(): string {
@@ -223,6 +226,25 @@ export class OrdersService {
       }).catch((err) => this.logger.error('Failed to create customer notification', err));
     }
 
+    // Send confirmation email (async)
+    let emailRecipient = savedOrder.customerEmail;
+    if (!emailRecipient && userId) {
+      try {
+        const user = await this.orderModel.db.model('User').findById(userId).exec();
+        if (user) {
+          emailRecipient = user.email;
+        }
+      } catch (err) {
+        this.logger.error('Failed to fetch user email for confirmation:', err);
+      }
+    }
+
+    if (emailRecipient) {
+      this.emailService.sendOrderConfirmationEmail(emailRecipient, savedOrder).catch((err) => {
+        this.logger.error(`Failed to send order confirmation email to ${emailRecipient}:`, err);
+      });
+    }
+
     return savedOrder;
   }
 
@@ -232,10 +254,11 @@ export class OrdersService {
 
     if (status) filter.orderStatus = status;
     if (search) {
+      const safeSearch = search.substring(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { orderCode: { $regex: search, $options: 'i' } },
-        { customerName: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
+        { orderCode: { $regex: safeSearch, $options: 'i' } },
+        { customerName: { $regex: safeSearch, $options: 'i' } },
+        { phone: { $regex: safeSearch, $options: 'i' } },
       ];
     }
 
@@ -354,6 +377,15 @@ export class OrdersService {
 
     if (savedOrder.customer && savedOrder.orderStatus !== oldStatus) {
       const customerId = savedOrder.customer.toString();
+      
+      // Ensure customer is populated to get email
+      if (typeof savedOrder.customer === 'object' && !(savedOrder.customer as any).email) {
+        await savedOrder.populate('customer', 'fullName email');
+      }
+      
+      const customerObj = savedOrder.customer as any;
+      const customerEmail = customerObj.email || savedOrder.customerEmail;
+
       let statusText = '';
       switch (savedOrder.orderStatus) {
         case OrderStatus.CONFIRMED:
@@ -377,6 +409,13 @@ export class OrdersService {
           type: 'order',
           meta: { orderId: savedOrder._id.toString(), orderCode: savedOrder.orderCode },
         }).catch((err) => this.logger.error('Failed to create customer notification for status change', err));
+
+        // Send email notification (async)
+        if (customerEmail) {
+          this.emailService.sendOrderStatusEmail(customerEmail, savedOrder, statusText).catch((err) => {
+            this.logger.error(`Failed to send order status email to ${customerEmail}:`, err);
+          });
+        }
       }
     }
 
@@ -406,12 +445,16 @@ export class OrdersService {
   }
 
   async getTodayRevenue(): Promise<number> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const tzOffset = 7 * 60 * 60 * 1000;
+    const vnTime = new Date(now.getTime() + tzOffset);
+    vnTime.setUTCHours(0, 0, 0, 0);
+    const startOfTodayVN = new Date(vnTime.getTime() - tzOffset);
+
     const result = await this.orderModel.aggregate([
       {
         $match: {
-          createdAt: { $gte: today },
+          createdAt: { $gte: startOfTodayVN },
           orderStatus: { $ne: OrderStatus.CANCELLED },
         },
       },
@@ -430,7 +473,7 @@ export class OrdersService {
       },
       {
         $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
           total: { $sum: '$total' },
           subtotal: { $sum: '$subtotal' },
           discount: { $sum: '$discount' },
@@ -559,8 +602,24 @@ export class OrdersService {
     doc.moveTo(startX, startY).lineTo(500, startY).stroke();
     startY += 10;
 
+    // Generate QR Code data URL dynamically
+    let qrDataUrl = '';
+    try {
+      const qrText = `${this.configService.get('FRONTEND_URL') || 'http://localhost:5173'}/my-orders/${order._id.toString()}`;
+      qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 100 });
+    } catch (err) {
+      this.logger.error('Failed to generate QR Code for invoice:', err);
+    }
+
     // Summary Info
     doc.fontSize(10);
+    
+    // Draw QR code if generated
+    if (qrDataUrl) {
+      doc.image(qrDataUrl, startX, startY, { width: 80 });
+      doc.fontSize(7).text('Quét tra cứu đơn hàng', startX, startY + 85, { width: 80, align: 'center' });
+    }
+
     doc.text('Cộng tiền hàng:', startX + 280, startY, { width: 100, align: 'left' });
     doc.text(order.subtotal.toLocaleString('vi-VN') + 'đ', startX + 390, startY, { width: 80, align: 'right' });
     
@@ -579,7 +638,7 @@ export class OrdersService {
     doc.text('TỔNG CỘNG:', startX + 280, startY, { width: 100, align: 'left' });
     doc.text(order.total.toLocaleString('vi-VN') + 'đ', startX + 390, startY, { width: 80, align: 'right' });
 
-    doc.moveDown(2);
+    doc.moveDown(3);
     doc.fontSize(10).text('Cảm ơn quý khách đã tin tưởng và mua sắm tại Trường Thành Bookstore!', { align: 'center' });
 
     return doc;

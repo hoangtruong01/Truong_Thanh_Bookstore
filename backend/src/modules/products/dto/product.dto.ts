@@ -76,6 +76,16 @@ export class CreateProductDto {
   @IsBoolean()
   isFeatured?: boolean;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isFlashSale?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  flashSaleExpiry?: string;
+
   @ApiPropertyOptional({ enum: ProductStatus })
   @IsOptional()
   @IsEnum(ProductStatus)
@@ -152,6 +162,16 @@ export class UpdateProductDto {
   @IsBoolean()
   isFeatured?: boolean;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isFlashSale?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  flashSaleExpiry?: string;
+
   @ApiPropertyOptional({ enum: ProductStatus })
   @IsOptional()
   @IsEnum(ProductStatus)
@@ -212,4 +232,9 @@ export class ProductQueryDto extends PaginationDto {
   @ApiPropertyOptional()
   @IsOptional()
   inStock?: boolean | string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isFlashSale?: boolean;
 }

@@ -55,6 +55,12 @@ export class Product {
   isFeatured: boolean;
 
   @Prop({ default: false })
+  isFlashSale: boolean;
+
+  @Prop()
+  flashSaleExpiry: Date;
+
+  @Prop({ default: false })
   isDeleted: boolean;
 
   createdAt: Date;

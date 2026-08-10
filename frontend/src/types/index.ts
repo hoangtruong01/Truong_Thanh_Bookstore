@@ -6,6 +6,7 @@ export interface User {
   role: 'ADMIN' | 'STAFF' | 'CUSTOMER'
   avatar?: string
   status: boolean
+  wishlist?: string[]
   createdAt: string
   updatedAt: string
 }
@@ -33,6 +34,8 @@ export interface Product {
   status: string
   isFeatured: boolean
   isDeleted: boolean
+  isFlashSale?: boolean
+  flashSaleExpiry?: string
   subOptions?: string[]
   createdAt: string
   updatedAt: string
@@ -69,6 +72,12 @@ export interface OrderItem {
   image?: string
 }
 
+export interface OrderTimelineItem {
+  status: string
+  note: string
+  createdAt: string
+}
+
 export interface Order {
   _id: string
   orderCode: string
@@ -87,6 +96,7 @@ export interface Order {
   customerName?: string
   customerEmail?: string
   promotionCode?: string
+  timeline?: OrderTimelineItem[]
   createdAt: string
   updatedAt: string
 }

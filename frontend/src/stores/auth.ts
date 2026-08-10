@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authService } from '@/services/auth.service'
+import { userService } from '@/services/user.service'
 import { encryptToken, decryptToken } from '@/utils/helpers'
 import router from '@/router'
 import type { User } from '@/types'
@@ -83,6 +84,22 @@ export const useAuthStore = defineStore('auth', () => {
     router.push({ name: 'Login' })
   }
 
+  async function toggleWishlist(productId: string) {
+    if (!isAuthenticated.value) return false;
+    try {
+      const res = await userService.toggleWishlist(productId);
+      const updatedList = res.data.wishlist || res.data;
+      if (user.value) {
+        user.value.wishlist = updatedList;
+        localStorage.setItem('user', encryptToken(JSON.stringify(user.value)));
+      }
+      return true;
+    } catch (e) {
+      console.error('Failed to toggle wishlist:', e);
+      return false;
+    }
+  }
+
   return {
     user,
     token,
@@ -94,6 +111,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     fetchProfile,
     updateProfile,
-    logout
+    logout,
+    toggleWishlist
   }
 })

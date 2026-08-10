@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './modules/auth/auth.module';
@@ -18,6 +18,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { BannersModule } from './modules/banners/banners.module';
 import { AppController } from './app.controller';
 import { AddressesModule } from './modules/users/addresses.module';
+import { EmailModule } from './modules/email/email.module';
 
 @Module({
   imports: [
@@ -27,11 +28,12 @@ import { AddressesModule } from './modules/users/addresses.module';
       useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('MONGODB_URI'),
         connectionFactory: (connection) => {
+          const logger = new Logger('Database');
           connection.on('error', (err: any) => {
-            console.error('❌ Mongoose connection error:', err);
+            logger.error(`❌ Mongoose connection error: ${err.message || err}`);
           });
           connection.on('connected', () => {
-            console.log('✅ Mongoose connected successfully');
+            logger.log('✅ Mongoose connected successfully');
           });
           return connection;
         },
@@ -56,6 +58,7 @@ import { AddressesModule } from './modules/users/addresses.module';
     NotificationsModule,
     BannersModule,
     AddressesModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [

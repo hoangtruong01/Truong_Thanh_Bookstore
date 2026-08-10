@@ -15,5 +15,6 @@ export const productService = {
   addReview: (id: string, data: any) => api.post(`/products/${id}/reviews`, data),
   updateReview: (id: string, reviewId: string, data: any) => api.patch(`/products/${id}/reviews/${reviewId}`, data),
   deleteReview: (id: string, reviewId: string) => api.delete(`/products/${id}/reviews/${reviewId}`),
+  subscribeStockAlert: (id: string, email: string) => api.post(`/products/${id}/alert`, { email }),
 }
 

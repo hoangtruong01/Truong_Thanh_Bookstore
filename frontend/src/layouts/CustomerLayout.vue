@@ -7,6 +7,22 @@
       <span>🚚</span> Miễn phí giao hàng cho đơn từ 299K
     </div>
 
+    <!-- Flash Sale Banner -->
+    <div
+      v-if="flashSaleTimer"
+      class="bg-gradient-to-r from-amber-500 via-red-600 to-rose-600 text-white text-[11px] py-2 px-4 text-center font-bold tracking-wide flex flex-col sm:flex-row items-center justify-center gap-2 relative z-30 shadow-inner"
+    >
+      <div class="flex items-center gap-1">
+        <span>⚡</span>
+        <span class="uppercase tracking-wider">FLASH SALE SIÊU ĐẬM:</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span>Thời gian còn lại:</span>
+        <span class="bg-black/35 text-white px-2 py-0.5 rounded font-mono text-[11px] font-black">{{ flashSaleTimer }}</span>
+      </div>
+      <router-link to="/products?isFlashSale=true" class="underline hover:text-amber-200 transition-colors ml-2">Săn deal ngay &gt;</router-link>
+    </div>
+
     <!-- Main Header -->
     <header
       class="sticky top-0 z-50 transition-all duration-300 bg-white/95 backdrop-blur-md border-b border-slate-200/80"
@@ -325,94 +341,151 @@
 
               <!-- Autocomplete Dropdown -->
               <div
-                v-if="
-                  showDropdown &&
-                  (suggestions.length > 0 || searchResults.length > 0)
-                "
-                class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-3xl shadow-xl z-50 p-6"
+                v-if="showDropdown"
+                class="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl z-50 p-6"
                 style="contain: layout"
               >
-                <!-- Suggestions Section -->
-                <div v-if="suggestions.length > 0" class="mb-5">
-                  <div
-                    class="text-sm font-black text-slate-800 flex items-center gap-2 mb-3"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="2.5"
-                      stroke="currentColor"
-                      class="w-4 h-4 text-slate-500"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                      />
-                    </svg>
-                    Gợi ý
+                <!-- Empty Search Query (Popular + History) -->
+                <div v-if="!searchQuery.trim()">
+                  <!-- Popular Searches -->
+                  <div class="mb-4">
+                    <div class="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                      <span>🔥</span> {{ $t('search.popular') }}
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        v-for="keyword in popularSearches"
+                        :key="keyword"
+                        type="button"
+                        @mousedown="selectSuggestion(keyword)"
+                        class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs px-3.5 py-1.5 rounded-full transition-colors cursor-pointer border border-slate-200/50 dark:border-slate-700"
+                      >
+                        {{ keyword }}
+                      </button>
+                    </div>
                   </div>
-                  <div class="flex flex-wrap gap-2">
-                    <div
-                      v-for="tag in suggestions"
-                      :key="tag"
-                      @mousedown="selectSuggestion(tag)"
-                      class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs px-3.5 py-2 rounded-xl transition-colors cursor-pointer select-none"
-                    >
-                      {{ tag }}
+
+                  <!-- Search History -->
+                  <div v-if="searchHistory.length > 0">
+                    <div class="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center justify-between">
+                      <span class="flex items-center gap-1.5"><span>⏱️</span> {{ $t('search.history') }}</span>
+                      <button @mousedown="clearAllHistory" class="text-[10px] font-black text-red-500 hover:underline hover:text-red-600 cursor-pointer">Xóa tất cả</button>
+                    </div>
+                    <div class="space-y-1">
+                      <div
+                        v-for="(item, idx) in searchHistory"
+                        :key="item"
+                        @mousedown="selectSuggestion(item)"
+                        class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer group/history"
+                      >
+                        <span class="text-xs text-slate-600 dark:text-slate-400 font-medium group-hover/history:text-[#dc2626]">{{ item }}</span>
+                        <button
+                          @mousedown="removeHistoryItem(idx, $event)"
+                          class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 text-xs"
+                          title="Xóa"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <!-- Products Section -->
-                <div
-                  v-if="searchResults.length > 0"
-                  class="border-t border-slate-100 pt-4"
-                >
-                  <div
-                    class="text-sm font-black text-slate-800 flex items-center gap-2 mb-3"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="2.5"
-                      stroke="currentColor"
-                      class="w-4 h-4 text-slate-500"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941"
-                      />
-                    </svg>
-                    Sản phẩm
-                  </div>
-                  <div class="grid grid-cols-3 gap-4">
+                <!-- Suggestions Section (Active Search Query) -->
+                <div v-else>
+                  <div v-if="suggestions.length > 0" class="mb-5">
                     <div
-                      v-for="prod in searchResults"
-                      :key="prod._id"
-                      @mousedown="selectProduct(prod._id)"
-                      class="flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer group"
+                      class="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"
                     >
-                      <img
-                        :src="
-                          prod.images && prod.images[0]
-                            ? prod.images[0]
-                            : 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=100'
-                        "
-                        class="w-12 h-12 object-cover rounded-xl bg-slate-50 border border-slate-100 flex-shrink-0"
-                        alt="Product image"
-                      />
-                      <div class="min-w-0 flex-1">
-                        <div
-                          class="text-xs font-semibold text-slate-700 group-hover:text-[#dc2626] line-clamp-2 leading-snug"
-                        >
-                          {{ prod.name }}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2.5"
+                        stroke="currentColor"
+                        class="w-4 h-4 text-slate-500"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                        />
+                      </svg>
+                      {{ $t('search.suggestions') }}
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <div
+                        v-for="tag in suggestions"
+                        :key="tag"
+                        @mousedown="selectSuggestion(tag)"
+                        class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs px-3.5 py-2 rounded-xl transition-colors cursor-pointer select-none"
+                      >
+                        {{ tag }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Products Section -->
+                  <div
+                    v-if="searchResults.length > 0"
+                    class="border-t border-slate-100 dark:border-slate-800 pt-4"
+                  >
+                    <div
+                      class="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2.5"
+                        stroke="currentColor"
+                        class="w-4 h-4 text-slate-500"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941"
+                        />
+                      </svg>
+                      {{ $t('search.results') }}
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                      <div
+                        v-for="prod in searchResults"
+                        :key="prod._id"
+                        @mousedown="selectProduct(prod._id)"
+                        class="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent hover:border-slate-100 dark:hover:border-slate-800 transition-all cursor-pointer group"
+                      >
+                        <img
+                          :src="
+                            prod.images && prod.images[0]
+                              ? prod.images[0]
+                              : 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=100'
+                          "
+                          class="w-12 h-12 object-cover rounded-xl bg-slate-50 border border-slate-100 dark:border-slate-800 flex-shrink-0"
+                          alt="Product image"
+                        />
+                        <div class="min-w-0 flex-1">
+                          <div
+                            class="text-xs font-bold text-slate-850 dark:text-slate-200 group-hover:text-[#dc2626] line-clamp-1 leading-snug"
+                          >
+                            {{ prod.name }}
+                          </div>
+                          <div class="flex items-center gap-1.5 mt-0.5">
+                            <span class="text-xs font-bold text-red-600">
+                              {{ formatCurrency(prod.discountPrice > 0 ? prod.discountPrice : prod.price) }}
+                            </span>
+                          </div>
+                          <div class="flex items-center justify-between text-[9px] text-slate-400 mt-0.5">
+                            <span class="text-yellow-600 font-bold">★ {{ (prod.rating || 4.8).toFixed(1) }}</span>
+                            <span>Đã bán {{ prod.sold || 0 }}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
+                  </div>
+                  <div v-else-if="!loadingSearch" class="text-center py-6 text-xs text-slate-400 font-bold">
+                    {{ $t('search.empty') }}
                   </div>
                 </div>
               </div>
@@ -568,7 +641,7 @@
                         to="/admin/dashboard"
                         class="block px-4 py-2 hover:bg-slate-100"
                       >
-                        Quản trị Admin
+                        {{ $t('nav.admin') }}
                       </router-link>
                       <button
                         @click="showProfile = true"
@@ -580,13 +653,19 @@
                         to="/my-orders"
                         class="block px-4 py-2 hover:bg-slate-100"
                       >
-                        Đơn hàng của tôi
+                        {{ $t('nav.myOrders') }}
                       </router-link>
                       <router-link
                         to="/addresses"
                         class="block px-4 py-2 hover:bg-slate-100"
                       >
-                        Sổ địa chỉ
+                        {{ $t('nav.addresses') }}
+                      </router-link>
+                      <router-link
+                        to="/wishlist"
+                        class="block px-4 py-2 hover:bg-slate-100"
+                      >
+                        {{ $t('nav.wishlist') }}
                       </router-link>
                       <button
                         @click="authStore.logout"
@@ -621,6 +700,32 @@
                 </router-link>
               </template>
             </div>
+
+            <!-- Language Switcher -->
+            <div class="relative group/lang hidden md:block">
+              <button class="text-xs font-black text-slate-700 hover:text-[#dc2626] transition-colors flex items-center gap-1 cursor-pointer">
+                <span>🌐</span>
+                <span class="uppercase font-bold">{{ currentLocale.toUpperCase() }}</span>
+              </button>
+              <div class="absolute right-0 top-full pt-2 hidden group-hover/lang:block z-50">
+                <div class="w-24 bg-white border border-slate-200 rounded-xl shadow-lg py-1 text-slate-700 text-xs font-bold">
+                  <button @click="changeLocale('vi')" class="w-full text-left px-3 py-2 hover:bg-slate-100 cursor-pointer flex items-center justify-between">
+                    <span>Tiếng Việt</span>
+                    <span v-if="currentLocale === 'vi'">✓</span>
+                  </button>
+                  <button @click="changeLocale('en')" class="w-full text-left px-3 py-2 hover:bg-slate-100 cursor-pointer flex items-center justify-between">
+                    <span>English</span>
+                    <span v-if="currentLocale === 'en'">✓</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dark Mode Toggle -->
+            <button @click="toggleDarkMode" class="text-slate-700 hover:text-[#dc2626] transition-colors p-1 cursor-pointer" :title="$t('theme.' + (isDarkMode ? 'light' : 'dark'))">
+              <span v-if="isDarkMode">☀️</span>
+              <span v-else>🌙</span>
+            </button>
           </div>
         </div>
       </div>
@@ -661,53 +766,105 @@
 
         <!-- Autocomplete Dropdown for Mobile Search -->
         <div
-          v-if="
-            showDropdown &&
-            (suggestions.length > 0 || searchResults.length > 0)
-          "
-          class="absolute left-4 right-4 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4"
+          v-if="showDropdown"
+          class="absolute left-4 right-4 top-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 p-4"
           style="contain: layout"
         >
-          <!-- Suggestions Section -->
-          <div v-if="suggestions.length > 0" class="mb-4">
-            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-              Gợi ý
+          <!-- Empty Search Query (Popular + History) -->
+          <div v-if="!searchQuery.trim()">
+            <!-- Popular Searches -->
+            <div class="mb-3">
+              <div class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+                <span>🔥</span> {{ $t('search.popular') }}
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="keyword in popularSearches"
+                  :key="keyword"
+                  type="button"
+                  @mousedown="selectSuggestion(keyword)"
+                  class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] px-2.5 py-1.5 rounded-full transition-colors cursor-pointer border border-slate-200/50 dark:border-slate-700"
+                >
+                  {{ keyword }}
+                </button>
+              </div>
             </div>
-            <div class="flex flex-wrap gap-1.5">
-              <div
-                v-for="tag in suggestions"
-                :key="tag"
-                @mousedown="selectSuggestion(tag)"
-                class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-[10px] px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer select-none"
-              >
-                {{ tag }}
+
+            <!-- Search History -->
+            <div v-if="searchHistory.length > 0">
+              <div class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center justify-between">
+                <span class="flex items-center gap-1"><span>⏱️</span> {{ $t('search.history') }}</span>
+                <button @mousedown="clearAllHistory" class="text-[9px] font-black text-red-500 hover:underline cursor-pointer">Xóa tất cả</button>
+              </div>
+              <div class="space-y-1">
+                <div
+                  v-for="(item, idx) in searchHistory"
+                  :key="item"
+                  @mousedown="selectSuggestion(item)"
+                  class="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer group/history"
+                >
+                  <span class="text-[11px] text-slate-600 dark:text-slate-400 font-medium truncate group-hover/history:text-[#dc2626]">{{ item }}</span>
+                  <button
+                    @mousedown="removeHistoryItem(idx, $event)"
+                    class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 text-[10px]"
+                    title="Xóa"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Products Section -->
-          <div v-if="searchResults.length > 0" class="border-t border-slate-100 pt-3">
-            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-              Sản phẩm
+          <!-- Active Search Query -->
+          <div v-else>
+            <!-- Suggestions Section -->
+            <div v-if="suggestions.length > 0" class="mb-3">
+              <div class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+                {{ $t('search.suggestions') }}
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                <div
+                  v-for="tag in suggestions"
+                  :key="tag"
+                  @mousedown="selectSuggestion(tag)"
+                  class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-[10px] px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer select-none"
+                >
+                  {{ tag }}
+                </div>
+              </div>
             </div>
-            <div class="grid grid-cols-1 gap-2">
-              <div
-                v-for="prod in searchResults"
-                :key="prod._id"
-                @mousedown="selectProduct(prod._id)"
-                class="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer group"
-              >
-                <img
-                  :src="prod.images && prod.images[0] ? prod.images[0] : 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=100'"
-                  class="w-8 h-8 object-cover rounded-lg bg-slate-50 border border-slate-100 flex-shrink-0"
-                  alt="Product image"
-                />
-                <div class="min-w-0 flex-1">
-                  <div class="text-[11px] font-semibold text-slate-700 group-hover:text-[#dc2626] line-clamp-1 leading-snug">
-                    {{ prod.name }}
+
+            <!-- Products Section -->
+            <div v-if="searchResults.length > 0" class="border-t border-slate-100 dark:border-slate-800 pt-3">
+              <div class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+                {{ $t('search.results') }}
+              </div>
+              <div class="grid grid-cols-1 gap-2">
+                <div
+                  v-for="prod in searchResults"
+                  :key="prod._id"
+                  @mousedown="selectProduct(prod._id)"
+                  class="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent hover:border-slate-100 dark:hover:border-slate-800 transition-all cursor-pointer group"
+                >
+                  <img
+                    :src="prod.images && prod.images[0] ? prod.images[0] : 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=100'"
+                    class="w-9 h-9 object-cover rounded-lg bg-slate-50 border border-slate-100 dark:border-slate-800 flex-shrink-0"
+                    alt="Product image"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <div class="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-[#dc2626] line-clamp-1 leading-snug">
+                      {{ prod.name }}
+                    </div>
+                    <div class="text-[10px] font-bold text-red-600 mt-0.5">
+                      {{ formatCurrency(prod.discountPrice > 0 ? prod.discountPrice : prod.price) }}
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+            <div v-else-if="!loadingSearch" class="text-center py-4 text-[10px] text-slate-400 font-bold">
+              {{ $t('search.empty') }}
             </div>
           </div>
         </div>
@@ -766,6 +923,12 @@
               📍 Sổ địa chỉ
             </router-link>
             <router-link
+              to="/wishlist"
+              class="flex items-center gap-2 text-xs font-bold text-slate-700 px-1"
+            >
+              ❤️ {{ $t('nav.wishlist') }}
+            </router-link>
+            <router-link
               v-if="authStore.isStaff"
               to="/admin/dashboard"
               class="flex items-center gap-2 text-xs font-bold text-[#dc2626] px-1"
@@ -787,6 +950,18 @@
               🔑 Đăng nhập
             </router-link>
           </template>
+          
+          <!-- Mobile Dark Mode & Language Toggles -->
+          <div class="border-t border-slate-100 pt-3 flex items-center justify-between px-1">
+            <button @click="toggleDarkMode" class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer">
+              <span v-if="isDarkMode">☀️ Chế độ sáng</span>
+              <span v-else>🌙 Chế độ tối</span>
+            </button>
+            <div class="flex gap-2">
+              <button @click="changeLocale('vi')" class="text-xs font-bold px-2.5 py-1 rounded-md" :class="currentLocale === 'vi' ? 'bg-[#dc2626] text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'">VI</button>
+              <button @click="changeLocale('en')" class="text-xs font-bold px-2.5 py-1 rounded-md" :class="currentLocale === 'en' ? 'bg-[#dc2626] text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'">EN</button>
+            </div>
+          </div>
         </div>
       </div>
     </header>
@@ -1454,6 +1629,51 @@ watch(
   },
 );
 
+import { useI18n } from "vue-i18n";
+
+const { locale } = useI18n();
+const currentLocale = computed(() => locale.value);
+
+function changeLocale(lang: "vi" | "en") {
+  locale.value = lang;
+  localStorage.setItem("lang", lang);
+}
+
+// Dark Mode logic
+const isDarkMode = ref(localStorage.getItem("theme") === "dark");
+function toggleDarkMode() {
+  isDarkMode.value = !isDarkMode.value;
+  if (isDarkMode.value) {
+    document.documentElement.classList.add("dark");
+    localStorage.setItem("theme", "dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+    localStorage.setItem("theme", "light");
+  }
+}
+
+// Flash Sale Timer
+const flashSaleTimer = ref("");
+let flashSaleInterval: any = null;
+
+function updateFlashSaleTimer() {
+  const now = new Date();
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  
+  const diff = endOfDay.getTime() - now.getTime();
+  if (diff <= 0) {
+    flashSaleTimer.value = "00:00:00";
+    return;
+  }
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  
+  flashSaleTimer.value = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
 const searchQuery = ref("");
 const allCategories = ref<Category[]>([]);
 const showMenu = ref(false);
@@ -1470,6 +1690,35 @@ function handleScroll() {
 const showDropdown = ref(false);
 const searchResults = ref<any[]>([]);
 const loadingSearch = ref(false);
+
+const popularSearches = ["Bút Thiên Long", "Sổ Hồng Hà", "Máy tính Casio", "Giấy in Double A", "Bút sáp Deli"];
+const searchHistory = ref<string[]>(JSON.parse(localStorage.getItem("search_history") || "[]"));
+
+function saveSearchQuery(q: string) {
+  const trimmed = q.trim();
+  if (!trimmed) return;
+  const index = searchHistory.value.indexOf(trimmed);
+  if (index > -1) {
+    searchHistory.value.splice(index, 1);
+  }
+  searchHistory.value.unshift(trimmed);
+  if (searchHistory.value.length > 8) {
+    searchHistory.value.pop();
+  }
+  localStorage.setItem("search_history", JSON.stringify(searchHistory.value));
+}
+
+function removeHistoryItem(index: number, event: Event) {
+  event.stopPropagation();
+  searchHistory.value.splice(index, 1);
+  localStorage.setItem("search_history", JSON.stringify(searchHistory.value));
+}
+
+function clearAllHistory(event: Event) {
+  event.stopPropagation();
+  searchHistory.value = [];
+  localStorage.removeItem("search_history");
+}
 
 const commonKeywords = [
   "bút bi",
@@ -1542,11 +1791,11 @@ const performAutocomplete = debounce(async (query: string) => {
     const res = await productService.search(trimmed);
     searchResults.value = res.data.slice(0, 6);
   } catch (err) {
-    // FIX-2.3: silent fail for autocomplete
+    // silent fail
   } finally {
     loadingSearch.value = false;
   }
-}, 250);
+}, 300);
 
 watch(searchQuery, (newVal) => {
   if (!newVal.trim()) {
@@ -1615,6 +1864,9 @@ onMounted(async () => {
     }
   }, 30000);
 
+  updateFlashSaleTimer();
+  flashSaleInterval = setInterval(updateFlashSaleTimer, 1000);
+
   try {
     const res = await categoryService.getAll();
     allCategories.value = res.data;
@@ -1633,6 +1885,9 @@ onUnmounted(() => {
   if (notificationInterval) {
     clearInterval(notificationInterval);
   }
+  if (flashSaleInterval) {
+    clearInterval(flashSaleInterval);
+  }
 });
 
 function navigateToCategory(categoryId: string) {
@@ -1641,8 +1896,11 @@ function navigateToCategory(categoryId: string) {
 }
 
 function handleSearch() {
-  if (searchQuery.value.trim()) {
-    router.push(`/products?q=${encodeURIComponent(searchQuery.value.trim())}`);
+  const q = searchQuery.value.trim();
+  if (q) {
+    saveSearchQuery(q);
+    router.push(`/products?q=${encodeURIComponent(q)}`);
+    showDropdown.value = false;
   }
 }
 </script>

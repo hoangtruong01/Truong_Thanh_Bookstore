@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -147,5 +148,18 @@ export class ProductsController {
       req.user._id,
       req.user.role,
     );
+  }
+
+  @Post(':id/alert')
+  @ApiOperation({ summary: 'Subscribe to back-in-stock alerts for a product' })
+  async subscribeToStockAlert(
+    @Param('id') id: string,
+    @Body('email') email: string,
+  ) {
+    if (!email) {
+      throw new BadRequestException('Email không được để trống');
+    }
+    const success = await this.productsService.subscribeToStockAlert(id, email);
+    return { success, message: 'Đăng ký nhận thông báo thành công!' };
   }
 }

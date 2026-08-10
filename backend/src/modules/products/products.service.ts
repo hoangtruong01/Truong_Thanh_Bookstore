@@ -3,6 +3,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { Review, ReviewDocument } from './schemas/review.schema';
+import { StockAlert, StockAlertDocument } from './schemas/stock-alert.schema';
+import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -40,16 +43,18 @@ export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Review.name) private reviewModel: Model<ReviewDocument>,
+    @InjectModel(StockAlert.name) private stockAlertModel: Model<StockAlertDocument>,
+    private emailService: EmailService,
+    private configService: ConfigService,
   ) {}
 
-  // FIX-L05: Generate slug with uniqueness check
   private generateSlug(name: string): string {
     const base = name
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'd')
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/đ/g, 'd')
-      .replace(/Đ/g, 'D')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
     // Append short random suffix to prevent duplicate slugs
@@ -153,6 +158,11 @@ export class ProductsService {
 
     if (inStock === true || inStock === 'true') {
       filter.stock = { $gt: 0 };
+    }
+
+    if (query.isFlashSale === true || (query.isFlashSale as any) === 'true') {
+      filter.isFlashSale = true;
+      filter.flashSaleExpiry = { $gt: new Date() };
     }
     if (q) {
       // FIX-M04: Limit search query length to prevent ReDoS
@@ -303,6 +313,9 @@ export class ProductsService {
   }
 
   async updateStock(id: string, quantity: number): Promise<void> {
+    const productBefore = await this.productModel.findById(id).exec();
+    const oldStock = productBefore?.stock || 0;
+
     const updated = await this.productModel
       .findByIdAndUpdate(id, { $inc: { stock: quantity } }, { new: true })
       .exec();
@@ -326,10 +339,20 @@ export class ProductsService {
       } catch (err) {
         // Ignore if model not registered
       }
+
+      // Trigger back-in-stock alerts if stock transitioned from <= 0 to > 0
+      if (oldStock <= 0 && updated.stock > 0) {
+        this.checkAndTriggerStockAlerts(id, updated.stock).catch((err) =>
+          this.logger.error('Failed to trigger stock alerts:', err),
+        );
+      }
     }
   }
 
   async setStock(id: string, quantity: number): Promise<void> {
+    const productBefore = await this.productModel.findById(id).exec();
+    const oldStock = productBefore?.stock || 0;
+
     const updated = await this.productModel
       .findByIdAndUpdate(id, { stock: quantity }, { new: true })
       .exec();
@@ -352,6 +375,13 @@ export class ProductsService {
           .exec();
       } catch (err) {
         // Ignore
+      }
+
+      // Trigger back-in-stock alerts if stock transitioned from <= 0 to > 0
+      if (oldStock <= 0 && updated.stock > 0) {
+        this.checkAndTriggerStockAlerts(id, updated.stock).catch((err) =>
+          this.logger.error('Failed to trigger stock alerts:', err),
+        );
       }
     }
   }
@@ -488,5 +518,72 @@ export class ProductsService {
     const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
     const avgRating = Math.round((sum / reviews.length) * 10) / 10;
     await this.productModel.findByIdAndUpdate(productId, { rating: avgRating }).exec();
+  }
+
+  async subscribeToStockAlert(productId: string, email: string, userId?: string): Promise<boolean> {
+    const product = await this.productModel.findById(productId).exec();
+    if (!product) throw new NotFoundException('Sản phẩm không tồn tại');
+
+    // Check if subscription already exists
+    const existing = await this.stockAlertModel.findOne({
+      product: new Types.ObjectId(productId),
+      email: email.toLowerCase().trim(),
+    }).exec();
+
+    if (existing) {
+      return true; // Already subscribed
+    }
+
+    await this.stockAlertModel.create({
+      product: new Types.ObjectId(productId),
+      email: email.toLowerCase().trim(),
+      user: userId ? new Types.ObjectId(userId) : undefined,
+    });
+
+    return true;
+  }
+
+  async checkAndTriggerStockAlerts(productId: string, newStock: number): Promise<void> {
+    if (newStock <= 0) return;
+
+    // Fetch all alerts for this product
+    const alerts = await this.stockAlertModel.find({ product: new Types.ObjectId(productId) }).exec();
+    if (alerts.length === 0) return;
+
+    const product = await this.productModel.findById(productId).exec();
+    if (!product) return;
+
+    this.logger.log(`🔔 Triggering back-in-stock alerts for "${product.name}" to ${alerts.length} subscribers`);
+
+    // Trigger emails async
+    for (const alert of alerts) {
+      const subject = `[Có hàng trở lại] Sản phẩm "${product.name}" đã có hàng!`;
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; background-color: #ffffff;">
+          <h2 style="color: #dc2626; text-align: center; border-bottom: 2px solid #dc2626; padding-bottom: 10px; margin-bottom: 20px;">SẢN PHẨM CÓ HÀNG TRỞ LẠI</h2>
+          <p>Xin chào,</p>
+          <p>Sản phẩm mà bạn đang quan tâm: <strong>"${product.name}"</strong> hiện đã có hàng trở lại tại <strong>Trường Thành Bookstore</strong>!</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${this.configService.get('FRONTEND_URL') || 'http://localhost:5173'}/products/${product._id}" 
+               style="background-color: #dc2626; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              Mua Ngay
+            </a>
+          </div>
+
+          <p style="color: #64748b; font-size: 12px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 15px; margin-top: 30px;">
+            Cảm ơn bạn đã quan tâm đến Trường Thành Bookstore.<br>
+            Hotline: 0982938316
+          </p>
+        </div>
+      `;
+
+      this.emailService.sendMail(alert.email, subject, html).catch((err) => {
+        this.logger.error(`Failed to send stock alert email to ${alert.email}:`, err);
+      });
+    }
+
+    // Clear alerts
+    await this.stockAlertModel.deleteMany({ product: new Types.ObjectId(productId) }).exec();
   }
 }

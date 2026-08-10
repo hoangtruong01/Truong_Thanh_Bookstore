@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { UserRole } from '../../common/enums';
 
@@ -38,5 +38,38 @@ export class UsersService {
       .findByIdAndUpdate(id, data, { new: true })
       .select('-password')
       .exec();
+  }
+
+  async toggleWishlist(userId: string, productId: string): Promise<string[]> {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) throw new NotFoundException('User not found');
+    
+    if (!user.wishlist) {
+      user.wishlist = [];
+    }
+
+    const prodId = new Types.ObjectId(productId);
+    const index = user.wishlist.findIndex((id) => id.toString() === productId);
+    
+    if (index > -1) {
+      user.wishlist.splice(index, 1);
+    } else {
+      user.wishlist.push(prodId);
+    }
+
+    await user.save();
+    return user.wishlist.map(id => id.toString());
+  }
+
+  async getWishlist(userId: string): Promise<any[]> {
+    const user = await this.userModel.findById(userId)
+      .populate({
+        path: 'wishlist',
+        match: { isDeleted: false },
+        populate: { path: 'category', select: 'name' }
+      })
+      .exec();
+    if (!user) throw new NotFoundException('User not found');
+    return user.wishlist || [];
   }
 }

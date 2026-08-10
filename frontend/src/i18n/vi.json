@@ -1,0 +1,66 @@
+{
+  "nav": {
+    "home": "Trang chủ",
+    "products": "Sản phẩm",
+    "cart": "Giỏ hàng",
+    "checkout": "Thanh toán",
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "forgotPassword": "Quên mật khẩu",
+    "myOrders": "Đơn hàng của tôi",
+    "addresses": "Sổ địa chỉ",
+    "wishlist": "Danh sách yêu thích",
+    "admin": "Quản trị Admin",
+    "logout": "Đăng xuất"
+  },
+  "search": {
+    "placeholder": "Tìm kiếm bút, sổ tay, văn phòng phẩm...",
+    "popular": "Tìm kiếm phổ biến",
+    "history": "Lịch sử tìm kiếm",
+    "suggestions": "Gợi ý",
+    "results": "Sản phẩm tìm thấy",
+    "empty": "Không tìm thấy sản phẩm nào"
+  },
+  "product": {
+    "rating": "Đánh giá",
+    "sold": "Đã bán {count}",
+    "addToCart": "Thêm vào giỏ",
+    "buyNow": "Mua ngay",
+    "inStock": "Còn hàng",
+    "outOfStock": "Hết hàng",
+    "notifyWhenInStock": "Thông báo khi có hàng",
+    "description": "Mô tả sản phẩm",
+    "reviews": "Đánh giá từ khách hàng",
+    "writeReview": "Viết đánh giá của bạn",
+    "brand": "Thương hiệu",
+    "share": "Chia sẻ sản phẩm"
+  },
+  "cartPage": {
+    "title": "Giỏ hàng của bạn",
+    "subtotal": "Cộng tiền hàng",
+    "shipping": "Phí vận chuyển",
+    "discount": "Giảm giá",
+    "total": "TỔNG CỘNG",
+    "couponPlaceholder": "Nhập mã giảm giá",
+    "apply": "Áp dụng",
+    "empty": "Giỏ hàng của bạn trống",
+    "checkout": "Tiến hành thanh toán"
+  },
+  "order": {
+    "code": "Mã đơn hàng",
+    "status": "Trạng thái",
+    "paymentMethod": "Phương thức thanh toán",
+    "paymentStatus": "Thanh toán",
+    "date": "Ngày đặt",
+    "recipient": "Người nhận",
+    "phone": "Số điện thoại",
+    "address": "Địa chỉ giao hàng",
+    "note": "Ghi chú",
+    "timeline": "Hành trình đơn hàng",
+    "downloadInvoice": "Tải hóa đơn PDF"
+  },
+  "theme": {
+    "dark": "Tối",
+    "light": "Sáng"
+  }
+}

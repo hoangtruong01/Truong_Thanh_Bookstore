@@ -1,0 +1,66 @@
+{
+  "nav": {
+    "home": "Home",
+    "products": "Products",
+    "cart": "Cart",
+    "checkout": "Checkout",
+    "login": "Login",
+    "register": "Register",
+    "forgotPassword": "Forgot Password",
+    "myOrders": "My Orders",
+    "addresses": "Address Book",
+    "wishlist": "Wishlist",
+    "admin": "Admin Panel",
+    "logout": "Logout"
+  },
+  "search": {
+    "placeholder": "Search for pens, notebooks, office supplies...",
+    "popular": "Popular Searches",
+    "history": "Search History",
+    "suggestions": "Suggestions",
+    "results": "Products Found",
+    "empty": "No products found"
+  },
+  "product": {
+    "rating": "Rating",
+    "sold": "{count} sold",
+    "addToCart": "Add to Cart",
+    "buyNow": "Buy Now",
+    "inStock": "In Stock",
+    "outOfStock": "Out of Stock",
+    "notifyWhenInStock": "Notify when in stock",
+    "description": "Product Description",
+    "reviews": "Customer Reviews",
+    "writeReview": "Write a review",
+    "brand": "Brand",
+    "share": "Share product"
+  },
+  "cartPage": {
+    "title": "Your Shopping Cart",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping Fee",
+    "discount": "Discount",
+    "total": "TOTAL",
+    "couponPlaceholder": "Enter coupon code",
+    "apply": "Apply",
+    "empty": "Your cart is empty",
+    "checkout": "Proceed to Checkout"
+  },
+  "order": {
+    "code": "Order Code",
+    "status": "Status",
+    "paymentMethod": "Payment Method",
+    "paymentStatus": "Payment Status",
+    "date": "Order Date",
+    "recipient": "Recipient",
+    "phone": "Phone",
+    "address": "Shipping Address",
+    "note": "Note",
+    "timeline": "Order Timeline",
+    "downloadInvoice": "Download Invoice PDF"
+  },
+  "theme": {
+    "dark": "Dark",
+    "light": "Light"
+  }
+}

@@ -4,6 +4,7 @@ import { ProductsService } from '../products/products.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ConfigService } from '@nestjs/config';
+import { EmailService } from '../email/email.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Order } from './schemas/order.schema';
 import { ProductSchema } from '../products/schemas/product.schema';
@@ -51,6 +52,12 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     get: jest.fn().mockReturnValue(''),
   };
 
+  const mockEmailService = {
+    sendMail: jest.fn().mockResolvedValue(true),
+    sendOrderConfirmationEmail: jest.fn().mockResolvedValue(true),
+    sendStockAlert: jest.fn().mockResolvedValue(true),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -62,6 +69,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: getModelToken(Order.name), useValue: mockOrderModel },
+        { provide: EmailService, useValue: mockEmailService },
       ],
     }).compile();
 

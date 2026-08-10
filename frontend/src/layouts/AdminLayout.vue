@@ -67,6 +67,12 @@
 
         <!-- Right User details -->
         <div class="flex items-center gap-5">
+          <!-- Dark Mode Toggle -->
+          <button @click="toggleDarkMode" class="text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200 transition-colors p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" :title="isDarkMode ? 'Bật chế độ sáng' : 'Bật chế độ tối'">
+            <span v-if="isDarkMode">☀️</span>
+            <span v-else>🌙</span>
+          </button>
+
           <!-- Notification bell -->
           <div id="notification-dropdown-container" class="relative">
             <button 
@@ -205,6 +211,19 @@ const adminRole = computed(() => {
   return 'Admin'
 })
 
+// Dark Mode logic
+const isDarkMode = ref(localStorage.getItem("theme") === "dark")
+function toggleDarkMode() {
+  isDarkMode.value = !isDarkMode.value
+  if (isDarkMode.value) {
+    document.documentElement.classList.add("dark")
+    localStorage.setItem("theme", "dark")
+  } else {
+    document.documentElement.classList.remove("dark")
+    localStorage.setItem("theme", "light")
+  }
+}
+
 // Notifications State & Logic
 const showNotifications = ref(false)
 const notifications = ref<any[]>([])
@@ -301,6 +320,12 @@ function formatTimeAgo(dateStr: string) {
 }
 
 onMounted(() => {
+  if (isDarkMode.value) {
+    document.documentElement.classList.add("dark")
+  } else {
+    document.documentElement.classList.remove("dark")
+  }
+
   loadReadIds()
   fetchNotifications()
   
