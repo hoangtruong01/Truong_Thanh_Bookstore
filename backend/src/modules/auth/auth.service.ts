@@ -137,9 +137,10 @@ export class AuthService {
     const expiry = new Date();
     expiry.setMinutes(expiry.getMinutes() + 10); // 10 minutes expiry
 
-    // Save to user
+    // Save to user and reset attempts
     user.resetOtp = otp;
     user.resetOtpExpiry = expiry;
+    user.resetOtpAttempts = 0;
     await user.save();
 
     // Send OTP email (async)
@@ -148,16 +149,12 @@ export class AuthService {
       logger.error(`Failed to send OTP email to ${email}:`, err);
     });
 
-    const logger = new Logger(AuthService.name);
-    logger.log(`ForgotPassword OTP for ${email}: ${otp}`);
-
     const response: any = {
       success: true,
       message: 'Mã OTP đã được gửi đến email của bạn',
     };
 
-    // BUG-02: Only include OTP in response when NOT in production
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging') {
       response.otp = otp;
     }
 
@@ -170,12 +167,40 @@ export class AuthService {
       throw new UnauthorizedException('Email không tồn tại');
     }
 
-    if (!user.resetOtp || user.resetOtp !== otp) {
-      throw new UnauthorizedException('Mã OTP không đúng');
+    if (!user.resetOtp) {
+      throw new UnauthorizedException('Không tìm thấy mã OTP. Vui lòng yêu cầu lại');
+    }
+
+    // Check if max attempts reached (5 attempts max)
+    const currentAttempts = user.resetOtpAttempts || 0;
+    if (currentAttempts >= 5) {
+      user.resetOtp = undefined;
+      user.resetOtpExpiry = undefined;
+      user.resetOtpAttempts = 0;
+      await user.save();
+      throw new UnauthorizedException('Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới');
     }
 
     if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
-      throw new UnauthorizedException('Mã OTP đã hết hạn');
+      user.resetOtp = undefined;
+      user.resetOtpExpiry = undefined;
+      user.resetOtpAttempts = 0;
+      await user.save();
+      throw new UnauthorizedException('Mã OTP đã hết hạn. Vui lòng yêu cầu mã OTP mới');
+    }
+
+    if (user.resetOtp !== otp) {
+      user.resetOtpAttempts = currentAttempts + 1;
+      if (user.resetOtpAttempts >= 5) {
+        user.resetOtp = undefined;
+        user.resetOtpExpiry = undefined;
+        user.resetOtpAttempts = 0;
+        await user.save();
+        throw new UnauthorizedException('Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới');
+      }
+      await user.save();
+      const remaining = 5 - user.resetOtpAttempts;
+      throw new UnauthorizedException(`Mã OTP không đúng. Bạn còn ${remaining} lần thử`);
     }
 
     return { success: true, message: 'Xác thực OTP thành công' };
@@ -187,12 +212,39 @@ export class AuthService {
       throw new UnauthorizedException('Email không tồn tại');
     }
 
-    if (!user.resetOtp || user.resetOtp !== otp) {
-      throw new UnauthorizedException('Mã OTP không đúng');
+    if (!user.resetOtp) {
+      throw new UnauthorizedException('Mã OTP không hợp lệ hoặc đã hết hạn');
+    }
+
+    const currentAttempts = user.resetOtpAttempts || 0;
+    if (currentAttempts >= 5) {
+      user.resetOtp = undefined;
+      user.resetOtpExpiry = undefined;
+      user.resetOtpAttempts = 0;
+      await user.save();
+      throw new UnauthorizedException('Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới');
     }
 
     if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
+      user.resetOtp = undefined;
+      user.resetOtpExpiry = undefined;
+      user.resetOtpAttempts = 0;
+      await user.save();
       throw new UnauthorizedException('Mã OTP đã hết hạn');
+    }
+
+    if (user.resetOtp !== otp) {
+      user.resetOtpAttempts = currentAttempts + 1;
+      if (user.resetOtpAttempts >= 5) {
+        user.resetOtp = undefined;
+        user.resetOtpExpiry = undefined;
+        user.resetOtpAttempts = 0;
+        await user.save();
+        throw new UnauthorizedException('Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới');
+      }
+      await user.save();
+      const remaining = 5 - user.resetOtpAttempts;
+      throw new UnauthorizedException(`Mã OTP không đúng. Bạn còn ${remaining} lần thử`);
     }
 
     // Update password
@@ -200,6 +252,7 @@ export class AuthService {
     user.password = hashedPassword;
     user.resetOtp = undefined;
     user.resetOtpExpiry = undefined;
+    user.resetOtpAttempts = 0;
     await user.save();
 
     return { success: true, message: 'Đặt lại mật khẩu thành công' };

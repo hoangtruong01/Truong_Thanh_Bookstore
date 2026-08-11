@@ -163,6 +163,8 @@ export class OrdersService {
         },
         userId, // Pass userId for duplicate check
         true, // Increment usage count
+        dto.customerEmail,
+        dto.phone,
       );
       discount = promoResult.discount;
     }
@@ -277,12 +279,23 @@ export class OrdersService {
     return paginate(data, total, page, limit);
   }
 
-  async findById(id: string): Promise<OrderDocument> {
+  async findById(id: string, userId?: string, userRole?: string): Promise<OrderDocument> {
     const order = await this.orderModel
       .findById(id)
       .populate('customer', 'fullName email phone')
       .exec();
     if (!order) throw new NotFoundException('Order not found');
+
+    if (
+      userId &&
+      userRole !== 'ADMIN' &&
+      userRole !== 'STAFF' &&
+      order.customer &&
+      order.customer._id.toString() !== userId.toString()
+    ) {
+      throw new ForbiddenException('Bạn không có quyền xem thông tin đơn hàng này');
+    }
+
     return order;
   }
 

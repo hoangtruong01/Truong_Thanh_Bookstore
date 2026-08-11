@@ -85,13 +85,13 @@ export class OrdersController {
     pdfDoc.end();
   }
 
-  // FIX-C02: Require authentication to view order details
+  // Require authentication & ownership check to view order details
   @Get(':id')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get order by ID (authenticated)' })
-  findById(@Param('id') id: string) {
-    return this.ordersService.findById(id);
+  @ApiOperation({ summary: 'Get order by ID (authenticated owner or staff/admin)' })
+  findById(@Param('id') id: string, @Request() req: any) {
+    return this.ordersService.findById(id, req.user._id, req.user.role);
   }
 
   @Patch(':id/status')

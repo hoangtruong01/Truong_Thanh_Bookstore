@@ -13,12 +13,18 @@ import { UsersModule } from '../users/users.module';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'fallback_secret',
-        signOptions: {
-          expiresIn: configService.get('JWT_EXPIRES_IN') || configService.get('JWT_EXPIRATION') || '7d',
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret && process.env.NODE_ENV === 'production') {
+          throw new Error('CRITICAL SECURITY ALERT: JWT_SECRET environment variable is not defined!');
+        }
+        return {
+          secret: secret || 'TruongThanhDevDefaultSecretKey2026!',
+          signOptions: {
+            expiresIn: configService.get('JWT_EXPIRES_IN') || configService.get('JWT_EXPIRATION') || '7d',
+          },
+        };
+      },
       inject: [ConfigService],
     }),
   ],

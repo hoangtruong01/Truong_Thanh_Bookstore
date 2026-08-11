@@ -95,6 +95,8 @@ export class PromotionsService {
     dto: ApplyPromotionDto,
     userId?: string,
     incrementUsage = false,
+    guestEmail?: string,
+    guestPhone?: string,
   ): Promise<{ discount: number; code: string; promotion: PromotionDocument }> {
     const promo = await this.promotionModel
       .findOne({
@@ -120,17 +122,28 @@ export class PromotionsService {
       );
     }
 
-    // FIX-M02: Prevent duplicate promotion usage per user
+    // Prevent duplicate promotion usage per user or guest email/phone
+    const matchConditions: any[] = [];
     if (userId) {
+      matchConditions.push({ customer: userId as any });
+    }
+    if (guestEmail && guestEmail.trim()) {
+      matchConditions.push({ customerEmail: guestEmail.trim().toLowerCase() });
+    }
+    if (guestPhone && guestPhone.trim()) {
+      matchConditions.push({ phone: guestPhone.trim() });
+    }
+
+    if (matchConditions.length > 0) {
       const alreadyUsed = await this.orderModel
         .findOne({
-          customer: userId as any,
+          $or: matchConditions,
           promotionCode: promo.code,
           orderStatus: { $ne: OrderStatus.CANCELLED as any },
         } as any)
         .exec();
       if (alreadyUsed) {
-        throw new BadRequestException('Bạn đã sử dụng mã giảm giá này cho một đơn hàng trước đó.');
+        throw new BadRequestException('Bạn hoặc thông tin đặt hàng này đã sử dụng mã giảm giá này cho một đơn hàng trước đó.');
       }
     }
 

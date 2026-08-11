@@ -73,6 +73,11 @@ export function getStatusLabel(status: string): string {
   return labels[status] || status
 }
 
+/**
+ * Client-side token storage helper.
+ * NOTE: Storing JWT tokens in localStorage is susceptible to XSS.
+ * For maximum production security, set up HttpOnly, Secure, SameSite cookies on backend.
+ */
 const OBFUSCATION_KEY = 'TruongThanhStore2026'
 
 export function encryptToken(value: string): string {
@@ -91,7 +96,7 @@ export function encryptToken(value: string): string {
 export function decryptToken(value: string | null): string | null {
   if (!value) return null
   try {
-    // Skip if value is clearly not encrypted (raw JSON or non-base64)
+    // Skip if value is raw JSON or non-base64 format
     if (value.startsWith('{') || value.startsWith('[') || value.includes('"') || !/^[A-Za-z0-9+/=]+$/.test(value)) {
       return value
     }
@@ -101,7 +106,7 @@ export function decryptToken(value: string | null): string | null {
       .split('')
       .map((char, i) => String.fromCharCode(char.charCodeAt(0) ^ OBFUSCATION_KEY.charCodeAt(i % OBFUSCATION_KEY.length)))
       .join('')
-    // Validate: if result looks like a JWT or valid JSON, return it
+    // Validate: if result looks like a JWT token or JSON object, return it
     if (xored.includes('.') || xored.startsWith('{') || xored.startsWith('ey')) {
       return xored
     }
@@ -109,7 +114,6 @@ export function decryptToken(value: string | null): string | null {
     return atob(value).split('').reverse().join('')
   } catch {
     try {
-      // Legacy fallback
       return atob(value).split('').reverse().join('')
     } catch {
       return value

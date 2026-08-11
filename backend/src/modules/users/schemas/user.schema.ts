@@ -33,6 +33,9 @@ export class User {
   @Prop()
   resetOtpExpiry?: Date;
 
+  @Prop({ default: 0 })
+  resetOtpAttempts?: number;
+
   @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: 'Product' }], default: [] })
   wishlist: Types.ObjectId[];
 
