@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/product_grid_card.dart';
+import '../../core/widgets/shimmer_loading.dart';
 import '../../providers/product_provider.dart';
-import '../home/home_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
@@ -329,7 +330,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
           // Grid View
           Expanded(
             child: productProvider.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.64,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: 6,
+                    itemBuilder: (_, __) => const ProductCardSkeleton(),
+                  )
                 : productProvider.products.isEmpty
                     ? const Center(
                         child: Text(
@@ -341,7 +352,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          childAspectRatio: 0.66,
+                          childAspectRatio: 0.64,
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
                         ),

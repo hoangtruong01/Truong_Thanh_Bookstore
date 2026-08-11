@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../auth/login_screen.dart';
 import 'address_book_screen.dart';
+import 'wishlist_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -165,6 +166,18 @@ class ProfileScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.favorite_outline_rounded, color: AppTheme.primaryRed),
+                    title: const Text('Sản phẩm yêu thích', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    trailing: const Icon(Icons.chevron_right, size: 20),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const WishlistScreen()),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
                   ListTile(
                     leading: const Icon(Icons.key_outlined, color: AppTheme.darkSlate),
                     title: const Text('Đổi mật khẩu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),

@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/product_grid_card.dart';
 import '../../models/product_model.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/wishlist_provider.dart';
 import '../checkout/checkout_screen.dart';
-import '../home/home_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final ProductModel product;
@@ -21,6 +22,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _quantity = 1;
   int _currentImageIndex = 0;
   final PageController _pageController = PageController();
+
+  final List<Map<String, dynamic>> _mockReviews = [
+    {
+      'user': 'Trần Văn Hoàng',
+      'rating': 5,
+      'date': '10/08/2026',
+      'comment': 'Sản phẩm giao nhanh, đóng gói rất cẩn thận. Viết rất êm tay!',
+    },
+    {
+      'user': 'Nguyễn Thị Mai',
+      'rating': 5,
+      'date': '08/08/2026',
+      'comment': 'Chất lượng chính hãng Thiên Long, ủng hộ Trường Thành Store dài dài.',
+    },
+    {
+      'user': 'Lê Quốc Bảo',
+      'rating': 4,
+      'date': '05/08/2026',
+      'comment': 'Hàng đẹp đúng như hình mô tả. Phí ship rẻ.',
+    },
+  ];
 
   @override
   void dispose() {
@@ -43,14 +65,81 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           content: Text('Đã thêm $_quantity x "${widget.product.name}" vào giỏ hàng!'),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: 'Xem giỏ',
-            textColor: Colors.white,
-            onPressed: () {},
-          ),
         ),
       );
     }
+  }
+
+  void _showAddReviewDialog() {
+    int selectedStars = 5;
+    final textController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Viết đánh giá sản phẩm', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  final starNum = index + 1;
+                  return IconButton(
+                    icon: Icon(
+                      starNum <= selectedStars ? Icons.star_rounded : Icons.star_border_rounded,
+                      color: const Color(0xFFFFB703),
+                      size: 32,
+                    ),
+                    onPressed: () {
+                      setDialogState(() {
+                        selectedStars = starNum;
+                      });
+                    },
+                  );
+                }),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: textController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Chia sẻ cảm nhận của bạn về sản phẩm này...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (textController.text.isNotEmpty) {
+                setState(() {
+                  _mockReviews.insert(0, {
+                    'user': 'Tôi (Khách hàng)',
+                    'rating': selectedStars,
+                    'date': 'Hôm nay',
+                    'comment': textController.text,
+                  });
+                });
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã gửi đánh giá thành công! Cảm ơn bạn.')),
+                );
+              }
+            },
+            child: const Text('Gửi đánh giá'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -58,12 +147,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final product = widget.product;
     final discount = Formatters.getDiscountPercent(product.price, product.discountPrice);
     final productProvider = Provider.of<ProductProvider>(context);
+    final wishlistProvider = Provider.of<WishlistProvider>(context);
+    final isFav = wishlistProvider.isFavorite(product.id);
 
-    // Filter related products (exclude current product)
     final relatedProducts = productProvider.products
         .where((p) => p.id != product.id)
         .take(6)
         .toList();
+
+    final hasDesc = product.description != null && product.description!.isNotEmpty;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -74,6 +166,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              color: isFav ? AppTheme.primaryRed : AppTheme.darkSlate,
+            ),
+            onPressed: () {
+              wishlistProvider.toggleFavorite(product);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(isFav ? 'Đã xóa khỏi Yêu thích' : 'Đã thêm vào Yêu thích ❤️'),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.share_outlined),
             onPressed: () {
@@ -88,7 +195,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Big Product Image Gallery Carousel
+            // 1. Image Carousel
             Container(
               height: 320,
               width: double.infinity,
@@ -131,7 +238,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     ),
 
-                  // Discount Badge
                   if (discount > 0)
                     Positioned(
                       top: 16,
@@ -151,35 +257,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                         child: Text(
                           '-$discount%',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900),
                         ),
                       ),
                     ),
 
-                  // Page Indicator Dots
                   if (product.images.length > 1)
                     Positioned(
-                      bottom: 12,
+                      bottom: 16,
                       left: 0,
                       right: 0,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(
                           product.images.length,
-                          (idx) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
+                          (idx) => Container(
                             margin: const EdgeInsets.symmetric(horizontal: 3),
-                            width: _currentImageIndex == idx ? 18 : 6,
+                            width: _currentImageIndex == idx ? 16 : 6,
                             height: 6,
                             decoration: BoxDecoration(
-                              color: _currentImageIndex == idx
-                                  ? AppTheme.primaryRed
-                                  : const Color(0xFFCBD5E1),
-                              borderRadius: BorderRadius.circular(4),
+                              color: _currentImageIndex == idx ? AppTheme.primaryRed : const Color(0xFFCBD5E1),
+                              borderRadius: BorderRadius.circular(6),
                             ),
                           ),
                         ),
@@ -189,25 +287,50 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
 
-            // 2. Price & Title Section
+            // 2. Product Info
             Container(
+              padding: const EdgeInsets.all(16),
               color: Colors.white,
-              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     product.name,
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.darkSlate,
-                      height: 1.3,
-                    ),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.darkSlate),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, size: 18, color: Color(0xFFFFB703)),
+                      const SizedBox(width: 4),
+                      Text(
+                        product.rating > 0 ? product.rating.toStringAsFixed(1) : '4.8',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '| Đã bán ${product.sold}',
+                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: product.stock > 0 ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          product.stock > 0 ? 'Còn hàng (${product.stock})' : 'Hết hàng',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: product.stock > 0 ? const Color(0xFF166534) : const Color(0xFF991B1B),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
-
-                  // Price row
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
@@ -215,11 +338,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       if (product.discountPrice > 0) ...[
                         Text(
                           Formatters.formatCurrency(product.discountPrice),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.primaryRed,
-                          ),
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.primaryRed),
                         ),
                         const SizedBox(width: 10),
                         Text(
@@ -233,207 +352,153 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ] else
                         Text(
                           Formatters.formatCurrency(product.price),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.primaryRed,
-                          ),
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.primaryRed),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Rating, Sold & Stock status
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                            const SizedBox(width: 3),
-                            Text(
-                              product.rating.toStringAsFixed(1),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 12,
-                                color: Color(0xFF92400E),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '•  Đã bán ${product.sold}',
-                        style: const TextStyle(
-                          color: Color(0xFF64748B),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: product.stock > 0 ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          product.stock > 0 ? 'Còn hàng (${product.stock})' : 'Hết hàng',
-                          style: TextStyle(
-                            color: product.stock > 0 ? const Color(0xFF166534) : const Color(0xFF991B1B),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ],
               ),
             ),
+
             const SizedBox(height: 10),
 
-            // 3. Trust Policy Bar
+            // Trust Policy Badges
             Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               color: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: const [
-                  _PolicyBadge(icon: Icons.verified_user_outlined, label: '100% Chính Hãng'),
-                  _PolicyBadge(icon: Icons.local_shipping_outlined, label: 'Giao Nhanh 2h'),
-                  _PolicyBadge(icon: Icons.published_with_changes_rounded, label: 'Đổi Trả 7 Ngày'),
+                  _PolicyBadge(icon: Icons.verified_outlined, label: '100% Chính hãng'),
+                  _PolicyBadge(icon: Icons.local_shipping_outlined, label: 'Freeship đơn 299K'),
+                  _PolicyBadge(icon: Icons.replay_outlined, label: 'Đổi trả 7 ngày'),
                 ],
               ),
             ),
+
             const SizedBox(height: 10),
 
-            // 4. Detailed Product Specifications (Thông tin sản phẩm)
+            // Product Details / Specs
             Container(
+              padding: const EdgeInsets.all(16),
               color: Colors.white,
-              padding: const EdgeInsets.all(20),
-              width: double.infinity,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'THÔNG TIN SẢN PHẨM',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.darkSlate,
-                      letterSpacing: 0.5,
-                    ),
+                  const Text('THÔNG TIN SẢN PHẨM', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                  const SizedBox(height: 12),
+                  _SpecRow(label: 'Mã SKU', value: product.sku.isNotEmpty ? product.sku : 'TT-BOOKSTORE'),
+                  const Divider(height: 16),
+                  _SpecRow(label: 'Thương hiệu', value: 'Trường Thành Official'),
+                  const Divider(height: 16),
+                  _SpecRow(label: 'Tình trạng', value: product.stock > 0 ? 'Mới 100%' : 'Hết hàng'),
+                  const SizedBox(height: 16),
+                  const Text('MÔ TẢ SẢN PHẨM', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  Text(
+                    hasDesc
+                        ? product.description!
+                        : 'Sản phẩm ${product.name} chính hãng chất lượng cao, độ bền tốt, sử dụng mượt mà, phục vụ nhu cầu học tập và công việc hàng ngày.',
+                    style: const TextStyle(color: Color(0xFF334155), height: 1.5, fontSize: 13),
                   ),
-                  const SizedBox(height: 14),
-                  _SpecRow(label: 'Mã SKU', value: product.sku.isNotEmpty ? product.sku : 'TTB-${product.id.substring(0, 6)}'),
-                  const Divider(height: 18),
-                  const _SpecRow(label: 'Thương hiệu', value: 'Trường Thành Bookstore'),
-                  const Divider(height: 18),
-                  const _SpecRow(label: 'Xuất xứ', value: 'Việt Nam'),
-                  const Divider(height: 18),
-                  _SpecRow(label: 'Trạng thái kho', value: product.stock > 0 ? 'Sẵn hàng tại kho' : 'Tạm hết hàng'),
                 ],
               ),
             ),
+
             const SizedBox(height: 10),
 
-            // 5. Description Box
-            if (product.description != null && product.description!.isNotEmpty)
-              Container(
-                color: Colors.white,
-                padding: const EdgeInsets.all(20),
-                width: double.infinity,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'MÔ TẢ SẢN PHẨM',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.darkSlate,
-                        letterSpacing: 0.5,
+            // Ratings & Reviews Section
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('ĐÁNH GIÁ TỪ KHÁCH HÀNG ⭐', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                      TextButton(
+                        onPressed: _showAddReviewDialog,
+                        child: const Text('+ Viết đánh giá', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 12)),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      product.description!,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF475569),
-                        height: 1.6,
-                      ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _mockReviews.length,
+                    separatorBuilder: (_, __) => const Divider(height: 20),
+                    itemBuilder: (context, index) {
+                      final rev = _mockReviews[index];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(rev['user'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text(rev['date'], style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: List.generate(
+                              5,
+                              (i) => Icon(
+                                i < (rev['rating'] as int) ? Icons.star_rounded : Icons.star_border_rounded,
+                                size: 14,
+                                color: const Color(0xFFFFB703),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(rev['comment'], style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                        ],
+                      );
+                    },
+                  ),
+                ],
               ),
+            ),
+
             const SizedBox(height: 10),
 
-            // 6. Suggested Related Products Section (Gợi ý sản phẩm khác)
+            // Related Products
             if (relatedProducts.isNotEmpty)
               Container(
+                padding: const EdgeInsets.all(16),
                 color: Colors.white,
-                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text(
-                          'SẢN PHẨM TƯƠNG TỰ',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.darkSlate,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        Text(
-                          'Xem tất cả >',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryRed,
-                          ),
-                        ),
-                      ],
-                    ),
+                    const Text('SẢN PHẨM TƯƠNG TỰ', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                     const SizedBox(height: 16),
-
-                    // Grid of related products
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: 0.66,
+                        childAspectRatio: 0.64,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
                       ),
                       itemCount: relatedProducts.length,
                       itemBuilder: (context, index) {
-                        final item = relatedProducts[index];
-                        return ProductGridCard(product: item);
+                        return ProductGridCard(product: relatedProducts[index]);
                       },
                     ),
                   ],
                 ),
               ),
 
-            const SizedBox(height: 110),
+            const SizedBox(height: 100),
           ],
         ),
       ),
 
-      // 7. Dual Action Bottom Bar (Add to Cart + Buy Now)
+      // Fixed Action Bottom Sheet
       bottomSheet: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
@@ -449,7 +514,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ),
         child: Row(
           children: [
-            // Quantity buttons
             Container(
               decoration: BoxDecoration(
                 color: const Color(0xFFF1F5F9),
@@ -478,7 +542,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
             const SizedBox(width: 10),
 
-            // Nút 1: THÊM GIỎ HÀNG
             Expanded(
               child: SizedBox(
                 height: 46,
@@ -500,7 +563,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
             const SizedBox(width: 8),
 
-            // Nút 2: MUA NGAY
             Expanded(
               child: SizedBox(
                 height: 46,
@@ -583,4 +645,3 @@ class _SpecRow extends StatelessWidget {
     );
   }
 }
-

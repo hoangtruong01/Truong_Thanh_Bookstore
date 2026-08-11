@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../providers/cart_provider.dart';
 import '../checkout/checkout_screen.dart';
+import 'widgets/voucher_bottom_sheet.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -24,6 +25,11 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
+
+    final double threshold = 299000;
+    final double subtotal = cart.subtotal.toDouble();
+    final double remaining = threshold - subtotal;
+    final double progress = (subtotal / threshold).clamp(0.0, 1.0);
 
     return Scaffold(
       appBar: AppBar(
@@ -54,6 +60,58 @@ class _CartScreenState extends State<CartScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Free Shipping Progress Bar
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: progress >= 1.0 ? const Color(0xFFF0FDF4) : const Color(0xFFFFEDD5),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: progress >= 1.0 ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              progress >= 1.0 ? '🎉' : '🚀',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                progress >= 1.0
+                                    ? 'Chúc mừng! Đơn hàng của bạn đã đủ điều kiện MIỄN PHÍ VẬN CHUYỂN.'
+                                    : 'Mua thêm ${Formatters.formatCurrency(remaining)} để được MIỄN PHÍ VẬN CHUYỂN (Mốc 299k)',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: progress >= 1.0 ? const Color(0xFF166534) : const Color(0xFFC2410C),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 6,
+                            backgroundColor: Colors.white,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              progress >= 1.0 ? const Color(0xFF22C55E) : AppTheme.primaryOrange,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
                   // Item list
                   ListView.separated(
                     shrinkWrap: true,
@@ -158,7 +216,25 @@ class _CartScreenState extends State<CartScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('MÃ GIẢM GIÁ (VOUCHER)', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('MÃ GIẢM GIÁ (VOUCHER)', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+                            GestureDetector(
+                              onTap: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                                  ),
+                                  builder: (_) => const VoucherBottomSheet(),
+                                );
+                              },
+                              child: const Text('Chọn Voucher >', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 11)),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 10),
                         if (cart.appliedPromotion != null)
                           Container(
