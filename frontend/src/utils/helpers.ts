@@ -121,3 +121,49 @@ export function decryptToken(value: string | null): string | null {
   }
 }
 
+/**
+ * Parses basic markdown syntax (bold **text** and bullet points - item) to safe HTML strings.
+ */
+export function parseMarkdown(text: string): string {
+  if (!text) return ''
+  // Basic XSS escape
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+
+  // Bold: **text** -> <strong>text</strong>
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+
+  // Bullet points: lines starting with "- " or "* " -> list items
+  const lines = html.split('\n')
+  let inList = false
+  const processedLines = lines.map(line => {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      const content = trimmed.substring(2)
+      let prefix = ''
+      if (!inList) {
+        inList = true
+        prefix = '<ul class="list-disc pl-5 my-2 space-y-1">'
+      }
+      return `${prefix}<li>${content}</li>`
+    } else {
+      let suffix = ''
+      if (inList) {
+        inList = false
+        suffix = '</ul>'
+      }
+      return `${suffix}${line}`
+    }
+  })
+  if (inList) {
+    processedLines.push('</ul>')
+  }
+
+  return processedLines.join('<br />')
+}
+
+

@@ -7,6 +7,9 @@ import '../../providers/cart_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../screens/product/product_detail_screen.dart';
 
+import 'package:cached_network_image/cached_network_image.dart';
+import 'shimmer_loading.dart';
+
 class ProductGridCard extends StatelessWidget {
   final ProductModel product;
 
@@ -48,17 +51,24 @@ class ProductGridCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: Container(
-                    height: 135,
-                    width: double.infinity,
-                    color: const Color(0xFFF8FAFC),
-                    child: product.images.isNotEmpty
-                        ? Image.network(
-                            product.images[0],
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.menu_book_rounded, size: 48, color: Color(0xFFCBD5E1)),
-                          )
-                        : const Icon(Icons.menu_book_rounded, size: 48, color: Color(0xFFCBD5E1)),
+                  child: AspectRatio(
+                    aspectRatio: 1.25,
+                    child: Container(
+                      width: double.infinity,
+                      color: const Color(0xFFF8FAFC),
+                      child: product.images.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: product.images[0],
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => const ShimmerSkeleton(
+                                width: double.infinity,
+                                height: double.infinity,
+                                borderRadius: 0,
+                              ),
+                              errorWidget: (_, __, ___) => const Icon(Icons.menu_book_rounded, size: 48, color: Color(0xFFCBD5E1)),
+                            )
+                          : const Icon(Icons.menu_book_rounded, size: 48, color: Color(0xFFCBD5E1)),
+                    ),
                   ),
                 ),
 

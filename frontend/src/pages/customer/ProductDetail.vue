@@ -417,9 +417,10 @@
       <!-- Description Block -->
       <div class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xs">
         <h2 class="text-lg font-extrabold text-slate-900 border-b border-slate-100 pb-4 mb-6">Mô tả sản phẩm</h2>
-        <div class="prose max-w-none text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
-          {{ product.description || 'Chưa có thông tin mô tả chi tiết cho sản phẩm này.' }}
-        </div>
+        <div 
+          class="prose max-w-none text-slate-600 text-sm leading-relaxed" 
+          v-html="parseMarkdown(product.description || 'Chưa có thông tin mô tả chi tiết cho sản phẩm này.')"
+        ></div>
       </div>
 
       <!-- Product Specifications Block -->
@@ -803,7 +804,7 @@ import { useAuthStore } from '@/stores/auth'
 import { productService } from '@/services/product.service'
 import { categoryService } from '@/services/category.service'
 import ProductCard from '@/components/ProductCard.vue'
-import { formatCurrency, getDiscountPercent } from '@/utils/helpers'
+import { formatCurrency, getDiscountPercent, parseMarkdown } from '@/utils/helpers'
 import type { Product, Category } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 import { useProductSchema } from '@/composables/useStructuredData'
