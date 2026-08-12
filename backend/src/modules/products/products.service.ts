@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { Review, ReviewDocument } from './schemas/review.schema';
 import { StockAlert, StockAlertDocument } from './schemas/stock-alert.schema';
@@ -312,12 +312,18 @@ export class ProductsService {
     return this.productModel.countDocuments({ isDeleted: false }).exec();
   }
 
-  async updateStock(id: string, quantity: number): Promise<void> {
-    const productBefore = await this.productModel.findById(id).exec();
+  async updateStock(id: string, quantity: number, session?: ClientSession): Promise<void> {
+    const beforeQuery = this.productModel.findById(id);
+    if (session) beforeQuery.session(session);
+    const productBefore = await beforeQuery.exec();
     const oldStock = productBefore?.stock || 0;
 
     const updated = await this.productModel
-      .findByIdAndUpdate(id, { $inc: { stock: quantity } }, { new: true })
+      .findByIdAndUpdate(
+        id,
+        { $inc: { stock: quantity } },
+        { new: true, ...(session ? { session } : {}) },
+      )
       .exec();
     if (updated) {
       try {
@@ -333,7 +339,7 @@ export class ProductsService {
           .findOneAndUpdate(
             { product: id },
             { currentStock: updated.stock, status, lastUpdated: new Date() },
-            { upsert: true },
+            { upsert: true, ...(session ? { session } : {}) },
           )
           .exec();
       } catch (err) {
@@ -387,12 +393,12 @@ export class ProductsService {
   }
 
   // FIX-C04: Safe stock deduction with atomic check
-  async deductStock(id: string, quantity: number): Promise<void> {
+  async deductStock(id: string, quantity: number, session?: ClientSession): Promise<void> {
     const updated = await this.productModel
       .findOneAndUpdate(
         { _id: id, stock: { $gte: quantity } },
         { $inc: { stock: -quantity } },
-        { new: true },
+        { new: true, ...(session ? { session } : {}) },
       )
       .exec();
     if (!updated) {
@@ -414,7 +420,7 @@ export class ProductsService {
         .findOneAndUpdate(
           { product: id },
           { currentStock: updated.stock, status, lastUpdated: new Date() },
-          { upsert: true },
+          { upsert: true, ...(session ? { session } : {}) },
         )
         .exec();
     } catch (err) {
@@ -422,9 +428,13 @@ export class ProductsService {
     }
   }
 
-  async incrementSold(id: string, quantity: number): Promise<void> {
+  async incrementSold(id: string, quantity: number, session?: ClientSession): Promise<void> {
     await this.productModel
-      .findByIdAndUpdate(id, { $inc: { sold: quantity } })
+      .findByIdAndUpdate(
+        id,
+        { $inc: { sold: quantity } },
+        session ? { session } : {},
+      )
       .exec();
   }
 

@@ -906,6 +906,27 @@ const quantity = ref(1)
 const loading = ref(true)
 const categoryDetail = ref<Category | null>(null)
 
+useSeoMeta(() => ({
+  title: product.value?.name || 'Chi tiết sản phẩm',
+  description:
+    product.value?.description ||
+    'Sản phẩm chính hãng tại Trường Thành Stationery. Giá tốt, giao hàng nhanh.',
+  ogImage: product.value?.images?.[0] || '',
+  ogType: 'product',
+}))
+
+useProductSchema({
+  get name() { return product.value?.name || '' },
+  get description() { return product.value?.description },
+  get image() { return product.value?.images?.[0] },
+  get sku() { return product.value?.sku || '' },
+  get brand() { return product.value?.brand },
+  get price() { return product.value?.price || 0 },
+  get discountPrice() { return product.value?.discountPrice },
+  get stock() { return product.value?.stock || 0 },
+  get rating() { return product.value?.rating },
+})
+
 const comboRetailTotal = computed(() => {
   if (!categoryDetail.value || !categoryDetail.value.products || !categoryDetail.value.products.length) return 0
   if (!categoryDetail.value.comboPrice) return 0
@@ -1192,7 +1213,7 @@ async function loadProduct() {
     selectedImage.value = res.data.images[0] || ''
     quantity.value = 1
 
-    // Dynamic SEO meta for product page
+    /*
     useSeoMeta({
       title: res.data.name,
       description: res.data.description || `Mua ${res.data.name} chính hãng tại Trường Thành Stationery. Giá tốt, giao hàng nhanh.`,
@@ -1212,6 +1233,7 @@ async function loadProduct() {
       stock: res.data.stock,
       rating: res.data.rating,
     })
+    */
     
     // Load reviews
     loadReviews()

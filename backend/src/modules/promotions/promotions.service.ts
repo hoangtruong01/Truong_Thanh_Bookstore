@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { ClientSession, Model } from 'mongoose';
 import { Promotion, PromotionDocument } from './schemas/promotion.schema';
 import { CreatePromotionDto, ApplyPromotionDto } from './dto/promotion.dto';
 import { DiscountType, OrderStatus } from '../../common/enums';
@@ -97,13 +97,14 @@ export class PromotionsService {
     incrementUsage = false,
     guestEmail?: string,
     guestPhone?: string,
+    session?: ClientSession,
   ): Promise<{ discount: number; code: string; promotion: PromotionDocument }> {
-    const promo = await this.promotionModel
-      .findOne({
-        code: dto.code.toUpperCase(),
-        status: true,
-      })
-      .exec();
+    const promoQuery = this.promotionModel.findOne({
+      code: dto.code.toUpperCase(),
+      status: true,
+    });
+    if (session) promoQuery.session(session);
+    let promo = await promoQuery.exec();
 
     if (!promo) throw new NotFoundException('Promotion code not found');
 
@@ -135,13 +136,13 @@ export class PromotionsService {
     }
 
     if (matchConditions.length > 0) {
-      const alreadyUsed = await this.orderModel
-        .findOne({
+      const usedQuery = this.orderModel.findOne({
           $or: matchConditions,
           promotionCode: promo.code,
           orderStatus: { $ne: OrderStatus.CANCELLED as any },
-        } as any)
-        .exec();
+        } as any);
+      if (session) usedQuery.session(session);
+      const alreadyUsed = await usedQuery.exec();
       if (alreadyUsed) {
         throw new BadRequestException('Bạn hoặc thông tin đặt hàng này đã sử dụng mã giảm giá này cho một đơn hàng trước đó.');
       }
@@ -159,11 +160,28 @@ export class PromotionsService {
     }
 
     if (incrementUsage) {
-      // Increment usage
-      promo.usedCount += 1;
-      await promo.save();
+      const consumed = await this.promotionModel.findOneAndUpdate(
+        {
+          _id: promo._id,
+          status: true,
+          usedCount: { $lt: promo.usageLimit },
+        },
+        { $inc: { usedCount: 1 } },
+        { new: true, ...(session ? { session } : {}) },
+      ).exec();
+      if (!consumed) {
+        throw new BadRequestException('Promotion usage limit reached');
+      }
+      promo = consumed;
     }
 
     return { discount, code: promo.code, promotion: promo };
+  }
+
+  async releaseUsage(code: string): Promise<void> {
+    await this.promotionModel.updateOne(
+      { code: code.toUpperCase(), usedCount: { $gt: 0 } },
+      { $inc: { usedCount: -1 } },
+    ).exec();
   }
 }

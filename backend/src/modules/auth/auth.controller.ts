@@ -6,7 +6,10 @@ import {
   Body,
   UseGuards,
   Request,
+  Res,
+  Headers,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -18,18 +21,63 @@ import { RegisterDto, LoginDto, UpdateProfileDto, ChangePasswordDto, ForgotPassw
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  private setAuthCookie(response: Response, token: string) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const configuredSameSite = process.env.COOKIE_SAME_SITE?.toLowerCase();
+    const sameSite = configuredSameSite === 'none'
+      ? 'none'
+      : configuredSameSite === 'strict'
+        ? 'strict'
+        : 'lax';
+    response.cookie('access_token', token, {
+      httpOnly: true,
+      secure: isProduction || sameSite === 'none',
+      sameSite,
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+  }
+
+  private finishBrowserOrMobileAuth(
+    result: any,
+    response: Response,
+    clientPlatform?: string,
+  ) {
+    this.setAuthCookie(response, result.accessToken);
+    if (clientPlatform?.toLowerCase() === 'mobile') return result;
+    const { accessToken: _accessToken, ...browserSafeResult } = result;
+    return browserSafeResult;
+  }
+
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Register a new user' })
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Headers('x-client-platform') clientPlatform: string | undefined,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = await this.authService.register(registerDto);
+    return this.finishBrowserOrMobileAuth(result, response, clientPlatform);
   }
 
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Login with email and password' })
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Headers('x-client-platform') clientPlatform: string | undefined,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = await this.authService.login(loginDto);
+    return this.finishBrowserOrMobileAuth(result, response, clientPlatform);
+  }
+
+  @Post('logout')
+  @ApiOperation({ summary: 'Clear the browser authentication session' })
+  logout(@Res({ passthrough: true }) response: Response) {
+    response.clearCookie('access_token', { path: '/' });
+    return { success: true };
   }
 
   @Get('me')

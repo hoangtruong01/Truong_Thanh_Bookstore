@@ -2,14 +2,14 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authService } from '@/services/auth.service'
 import { userService } from '@/services/user.service'
-import { encryptToken, decryptToken } from '@/utils/helpers'
+import { decodeLegacyStorage } from '@/utils/helpers'
 import router from '@/router'
 import type { User } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
   const getStoredUser = (): User | null => {
     const rawUser = localStorage.getItem('user')
-    const decrypted = decryptToken(rawUser)
+    const decrypted = decodeLegacyStorage(rawUser)
     try {
       return decrypted ? JSON.parse(decrypted) : null
     } catch {
@@ -18,10 +18,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const user = ref<User | null>(getStoredUser())
-  const token = ref<string | null>(decryptToken(localStorage.getItem('token')))
   const loading = ref(false)
 
-  const isAuthenticated = computed(() => !!token.value)
+  const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
   const isStaff = computed(() => user.value?.role === 'STAFF' || user.value?.role === 'ADMIN')
 
@@ -30,9 +29,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await authService.login(email, password)
       user.value = res.data.user
-      token.value = res.data.accessToken
-      localStorage.setItem('token', encryptToken(token.value!))
-      localStorage.setItem('user', encryptToken(JSON.stringify(user.value)))
+      localStorage.removeItem('token')
+      localStorage.setItem('user', JSON.stringify(user.value))
       return res.data
     } finally {
       loading.value = false
@@ -44,9 +42,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await authService.register(data)
       user.value = res.data.user
-      token.value = res.data.accessToken
-      localStorage.setItem('token', encryptToken(token.value!))
-      localStorage.setItem('user', encryptToken(JSON.stringify(user.value)))
+      localStorage.removeItem('token')
+      localStorage.setItem('user', JSON.stringify(user.value))
       return res.data
     } finally {
       loading.value = false
@@ -57,9 +54,10 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await authService.getProfile()
       user.value = res.data
-      localStorage.setItem('user', encryptToken(JSON.stringify(user.value)))
+      localStorage.setItem('user', JSON.stringify(user.value))
     } catch (e) {
-      logout()
+      clearSession()
+      throw e
     }
   }
 
@@ -68,7 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await authService.updateProfile(data)
       user.value = res.data
-      localStorage.setItem('user', encryptToken(JSON.stringify(user.value)))
+      localStorage.setItem('user', JSON.stringify(user.value))
       return res.data
     } finally {
       loading.value = false
@@ -76,11 +74,18 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // FIX-2.2: Use Vue Router instead of window.location to prevent full page reload
-  function logout() {
+  function clearSession() {
     user.value = null
-    token.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+  }
+
+  async function logout() {
+    try {
+      await authService.logout()
+    } finally {
+      clearSession()
+    }
     router.push({ name: 'Login' })
   }
 
@@ -91,7 +96,7 @@ export const useAuthStore = defineStore('auth', () => {
       const updatedList = res.data.wishlist || res.data;
       if (user.value) {
         user.value.wishlist = updatedList;
-        localStorage.setItem('user', encryptToken(JSON.stringify(user.value)));
+        localStorage.setItem('user', JSON.stringify(user.value));
       }
       return true;
     } catch (e) {
@@ -102,7 +107,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user,
-    token,
     loading,
     isAuthenticated,
     isAdmin,
@@ -112,6 +116,7 @@ export const useAuthStore = defineStore('auth', () => {
     fetchProfile,
     updateProfile,
     logout,
+    clearSession,
     toggleWishlist
   }
 })

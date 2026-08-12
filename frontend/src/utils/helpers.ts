@@ -73,27 +73,10 @@ export function getStatusLabel(status: string): string {
   return labels[status] || status
 }
 
-/**
- * Client-side token storage helper.
- * NOTE: Storing JWT tokens in localStorage is susceptible to XSS.
- * For maximum production security, set up HttpOnly, Secure, SameSite cookies on backend.
- */
+/** Decode user-profile values written by releases before HttpOnly cookies. */
 const OBFUSCATION_KEY = 'TruongThanhStore2026'
 
-export function encryptToken(value: string): string {
-  if (!value) return ''
-  try {
-    const xored = value
-      .split('')
-      .map((char, i) => String.fromCharCode(char.charCodeAt(0) ^ OBFUSCATION_KEY.charCodeAt(i % OBFUSCATION_KEY.length)))
-      .join('')
-    return btoa(unescape(encodeURIComponent(xored)))
-  } catch {
-    return btoa(value.split('').reverse().join(''))
-  }
-}
-
-export function decryptToken(value: string | null): string | null {
+export function decodeLegacyStorage(value: string | null): string | null {
   if (!value) return null
   try {
     // Skip if value is raw JSON or non-base64 format
@@ -106,8 +89,7 @@ export function decryptToken(value: string | null): string | null {
       .split('')
       .map((char, i) => String.fromCharCode(char.charCodeAt(0) ^ OBFUSCATION_KEY.charCodeAt(i % OBFUSCATION_KEY.length)))
       .join('')
-    // Validate: if result looks like a JWT token or JSON object, return it
-    if (xored.includes('.') || xored.startsWith('{') || xored.startsWith('ey')) {
+    if (xored.startsWith('{') || xored.startsWith('[')) {
       return xored
     }
     // Fallback: try legacy base64-reverse decode

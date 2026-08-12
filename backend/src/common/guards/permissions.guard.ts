@@ -23,6 +23,10 @@ export class PermissionsGuard implements CanActivate {
     }
 
     // ADMIN always has full access — bypass permission checks
+    if (!user.status) {
+      throw new ForbiddenException('Tài khoản đã bị khóa');
+    }
+
     if (user.role === 'ADMIN') {
       return true;
     }

@@ -5,6 +5,8 @@ import {
   IsString,
   IsArray,
   IsEnum,
+  MaxLength,
+  Matches,
   ValidateNested,
   Min,
   ArrayMinSize,
@@ -95,6 +97,15 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   promotionCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Random client-generated key used to safely retry checkout',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  @Matches(/^[A-Za-z0-9._:-]{16,128}$/)
+  idempotencyKey?: string;
 }
 
 export class UpdateOrderStatusDto {

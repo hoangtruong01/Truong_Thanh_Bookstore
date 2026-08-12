@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 
 const SCRIPT_ID_PREFIX = 'structured-data-'
 
@@ -39,6 +39,9 @@ export function useStructuredData(id: string, data: Record<string, any> | (() =>
 
   onMounted(inject)
   onUnmounted(cleanup)
+  if (typeof data === 'function') {
+    watch(data, inject, { deep: true, immediate: true })
+  }
 }
 
 /**
@@ -88,7 +91,9 @@ export function useProductSchema(product: {
   reviewCount?: number
   url?: string
 }) {
-  useStructuredData('product', () => ({
+  useStructuredData('product', () => {
+    if (!product.name || !product.sku || product.price <= 0) return {}
+    return ({
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
@@ -121,7 +126,8 @@ export function useProductSchema(product: {
       },
     } : {}),
     url: product.url || window.location.href,
-  }))
+    })
+  })
 }
 
 /**

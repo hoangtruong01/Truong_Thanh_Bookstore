@@ -14,13 +14,14 @@ import {
   InventoryTransactionDto,
   AdjustInventoryDto,
 } from './dto/inventory.dto';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { StaffPermission } from '../../common/enums';
 
 @ApiTags('inventory')
 @Controller('inventory')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('ADMIN', 'STAFF')
+@UseGuards(AuthGuard('jwt'), PermissionsGuard)
+@Permissions(StaffPermission.MANAGE_INVENTORY)
 @ApiBearerAuth()
 export class InventoryController {
   constructor(private inventoryService: InventoryService) {}

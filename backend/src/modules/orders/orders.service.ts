@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { ClientSession, Model } from 'mongoose';
+import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { Order, OrderDocument } from './schemas/order.schema';
 import * as PDFDocument from 'pdfkit';
 import * as fs from 'fs';
@@ -12,7 +13,12 @@ import {
 } from './dto/order.dto';
 import { ProductsService } from '../products/products.service';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
-import { OrderStatus } from '../../common/enums';
+import {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  StaffPermission,
+} from '../../common/enums';
 import { ConfigService } from '@nestjs/config';
 import { PromotionsService } from '../promotions/promotions.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -44,6 +50,26 @@ export class OrdersService {
     const d = now.getDate().toString().padStart(2, '0');
     const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
     return `TT${y}${m}${d}${rand}`;
+  }
+
+  private hashSecret(value: string): string {
+    return createHash('sha256').update(value).digest('hex');
+  }
+
+  private isTransactionUnsupported(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    return /Transaction numbers are only allowed|replica set|mongos/i.test(message);
+  }
+
+  private getEnabledPaymentMethods(): PaymentMethod[] {
+    const configured = this.configService
+      .get<string>('ENABLED_PAYMENT_METHODS')
+      ?.split(',')
+      .map((value) => value.trim().toUpperCase())
+      .filter((value): value is PaymentMethod =>
+        Object.values(PaymentMethod).includes(value as PaymentMethod),
+      );
+    return configured?.length ? configured : [PaymentMethod.COD];
   }
 
   async syncToGoogleSheet(order: any) {
@@ -123,7 +149,235 @@ export class OrdersService {
     }
   }
 
-  async create(dto: CreateOrderDto, userId?: string): Promise<OrderDocument> {
+  async create(dto: CreateOrderDto, userId?: string): Promise<any> {
+    return this.createAtomic(dto, userId);
+  }
+
+  private async createAtomic(dto: CreateOrderDto, userId?: string): Promise<any> {
+    const paymentMethod = dto.paymentMethod || PaymentMethod.COD;
+    if (!this.getEnabledPaymentMethods().includes(paymentMethod)) {
+      throw new BadRequestException(
+        'Phương thức thanh toán này chưa được kích hoạt. Vui lòng chọn thanh toán khi nhận hàng.',
+      );
+    }
+
+    const guestAccessToken = userId
+      ? undefined
+      : dto.idempotencyKey || randomBytes(32).toString('base64url');
+    const idempotencyKeyHash = dto.idempotencyKey
+      ? this.hashSecret(dto.idempotencyKey)
+      : undefined;
+
+    if (idempotencyKeyHash) {
+      const existingQuery = this.orderModel.findOne({
+        idempotencyKeyHash,
+        ...(userId ? { customer: userId } : { customer: null, phone: dto.phone }),
+      });
+      if (existingQuery?.exec) {
+        const existing = await existingQuery.exec();
+        if (existing) {
+          const existingResult = existing.toObject
+            ? existing.toObject()
+            : existing;
+          return guestAccessToken
+            ? { ...existingResult, guestAccessToken }
+            : existingResult;
+        }
+      }
+    }
+
+    const verifiedItems: Array<{
+      product: string;
+      name: string;
+      price: number;
+      quantity: number;
+      image: string;
+    }> = [];
+    for (const item of dto.items) {
+      const product = await this.productsService.findById(item.product);
+      if (product.stock < item.quantity) {
+        throw new BadRequestException(
+          `Sản phẩm "${product.name}" chỉ còn ${product.stock} sản phẩm trong kho`,
+        );
+      }
+      verifiedItems.push({
+        product: item.product,
+        name: product.name,
+        price:
+          product.discountPrice > 0 ? product.discountPrice : product.price,
+        quantity: item.quantity,
+        image: product.images?.[0] || item.image || '',
+      });
+    }
+
+    const subtotal = verifiedItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+    const shippingFee =
+      subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+
+    const persist = async (session?: ClientSession): Promise<OrderDocument> => {
+      const deductedItems: Array<{ product: string; quantity: number }> = [];
+      let promotionConsumed = false;
+      try {
+        let discount = 0;
+        if (dto.promotionCode) {
+          const promoResult = await this.promotionsService.apply(
+            { code: dto.promotionCode, orderTotal: subtotal },
+            userId,
+            true,
+            dto.customerEmail,
+            dto.phone,
+            session,
+          );
+          discount = promoResult.discount;
+          promotionConsumed = true;
+        }
+
+        for (const item of verifiedItems) {
+          if (session) {
+            await this.productsService.deductStock(
+              item.product,
+              item.quantity,
+              session,
+            );
+            await this.productsService.incrementSold(
+              item.product,
+              item.quantity,
+              session,
+            );
+          } else {
+            await this.productsService.deductStock(item.product, item.quantity);
+            await this.productsService.incrementSold(item.product, item.quantity);
+          }
+          deductedItems.push({ product: item.product, quantity: item.quantity });
+        }
+
+        const order = new this.orderModel({
+          orderCode: this.generateOrderCode(),
+          customer: userId || null,
+          guestAccessTokenHash: guestAccessToken
+            ? this.hashSecret(guestAccessToken)
+            : undefined,
+          idempotencyKeyHash,
+          items: verifiedItems,
+          shippingAddress: dto.shippingAddress,
+          phone: dto.phone,
+          note: dto.note,
+          paymentMethod,
+          customerName: dto.customerName,
+          customerEmail: dto.customerEmail?.trim().toLowerCase(),
+          subtotal,
+          shippingFee,
+          discount,
+          total: Math.max(0, subtotal + shippingFee - discount),
+          promotionCode: dto.promotionCode?.toUpperCase(),
+          timeline: [
+            {
+              status: OrderStatus.PENDING,
+              note: 'Đơn hàng được tạo thành công, chờ xác nhận.',
+              createdAt: new Date(),
+            },
+          ],
+        });
+        return await order.save(session ? { session } : undefined);
+      } catch (error) {
+        if (!session) {
+          for (const deducted of deductedItems.reverse()) {
+            await this.productsService
+              .updateStock(deducted.product, deducted.quantity)
+              .catch((rollbackError) =>
+                this.logger.error('Stock rollback failed', rollbackError),
+              );
+            await this.productsService
+              .incrementSold(deducted.product, -deducted.quantity)
+              .catch((rollbackError) =>
+                this.logger.error('Sold counter rollback failed', rollbackError),
+              );
+          }
+          if (promotionConsumed && dto.promotionCode) {
+            await this.promotionsService
+              .releaseUsage(dto.promotionCode)
+              .catch((rollbackError) =>
+                this.logger.error('Promotion rollback failed', rollbackError),
+              );
+          }
+        }
+        throw error;
+      }
+    };
+
+    let savedOrder: OrderDocument;
+    const connection = (this.orderModel as any).db;
+    if (connection?.startSession) {
+      const session: ClientSession = await connection.startSession();
+      try {
+        let transactionResult: OrderDocument | undefined;
+        await session.withTransaction(async () => {
+          transactionResult = await persist(session);
+        });
+        if (!transactionResult) {
+          throw new Error('Order transaction completed without a result');
+        }
+        savedOrder = transactionResult;
+      } catch (error) {
+        if (!this.isTransactionUnsupported(error)) throw error;
+        this.logger.warn(
+          'MongoDB transactions are unavailable; using compensated checkout mode.',
+        );
+        savedOrder = await persist();
+      } finally {
+        await session.endSession();
+      }
+    } else {
+      savedOrder = await persist();
+    }
+
+    if (userId) {
+      const points = Math.floor(savedOrder.total / 1000);
+      if (points > 0) {
+        await this.usersService.addLoyaltyPoints(userId, points).catch((error) =>
+          this.logger.error('Failed to add loyalty points', error),
+        );
+      }
+      this.notificationsService.create({
+        userId,
+        title: 'Đặt hàng thành công',
+        message: `Đơn hàng #${savedOrder.orderCode} đã được tiếp nhận.`,
+        type: 'order',
+        meta: {
+          orderId: savedOrder._id.toString(),
+          orderCode: savedOrder.orderCode,
+        },
+      }).catch((error) =>
+        this.logger.error('Failed to create order notification', error),
+      );
+    }
+
+    this.syncToGoogleSheet(savedOrder).catch((error) =>
+      this.logger.error('Sheet sync failed', error),
+    );
+
+    let emailRecipient: string | undefined = savedOrder.customerEmail;
+    if (!emailRecipient && userId) {
+      const user = await this.usersService.findById(userId).catch(() => null);
+      emailRecipient = user?.email;
+    }
+    if (emailRecipient) {
+      this.emailService
+        .sendOrderConfirmationEmail(emailRecipient, savedOrder)
+        .catch((error) =>
+          this.logger.error('Failed to send confirmation email', error),
+        );
+    }
+
+    const result = savedOrder.toObject ? savedOrder.toObject() : savedOrder;
+    return guestAccessToken ? { ...result, guestAccessToken } : result;
+  }
+
+  /** @deprecated Kept temporarily for safe comparison during migration. */
+  private async createLegacy(dto: CreateOrderDto, userId?: string): Promise<OrderDocument> {
     // FIX-C03: Fetch real prices from DB instead of trusting frontend
     const verifiedItems = [];
     for (const item of dto.items) {
@@ -311,6 +565,50 @@ export class OrdersService {
     return order;
   }
 
+  async findByIdForActor(
+    id: string,
+    actor: { _id: string; role: string; permissions?: string[] },
+  ): Promise<OrderDocument> {
+    const order = await this.findById(id);
+    if (actor.role === 'ADMIN') return order;
+    if (
+      actor.role === 'STAFF' &&
+      actor.permissions?.includes(StaffPermission.MANAGE_ORDERS)
+    ) {
+      return order;
+    }
+    const customerId = order.customer
+      ? ((order.customer as any)._id || order.customer).toString()
+      : undefined;
+    if (actor.role !== 'CUSTOMER' || customerId !== actor._id.toString()) {
+      throw new ForbiddenException('Bạn không có quyền xem thông tin đơn hàng này');
+    }
+    return order;
+  }
+
+  async findGuestById(id: string, accessToken?: string): Promise<OrderDocument> {
+    if (!accessToken) {
+      throw new ForbiddenException('Thiếu mã truy cập đơn hàng');
+    }
+    const order = await this.orderModel
+      .findById(id)
+      .select('+guestAccessTokenHash')
+      .exec();
+    if (!order || order.customer || !order.guestAccessTokenHash) {
+      throw new NotFoundException('Order not found');
+    }
+    const expected = Buffer.from(order.guestAccessTokenHash, 'hex');
+    const actual = Buffer.from(this.hashSecret(accessToken), 'hex');
+    if (
+      expected.length !== actual.length ||
+      !timingSafeEqual(expected, actual)
+    ) {
+      throw new ForbiddenException('Mã truy cập đơn hàng không hợp lệ');
+    }
+    order.guestAccessTokenHash = undefined;
+    return order;
+  }
+
   async findByUser(
     userId: string,
     query: OrderQueryDto,
@@ -340,6 +638,18 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Order not found');
 
     const oldStatus = order.orderStatus;
+    const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+      [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
+      [OrderStatus.CONFIRMED]: [OrderStatus.SHIPPING, OrderStatus.CANCELLED],
+      [OrderStatus.SHIPPING]: [OrderStatus.COMPLETED],
+      [OrderStatus.COMPLETED]: [],
+      [OrderStatus.CANCELLED]: [],
+    };
+    if (!allowedTransitions[oldStatus]?.includes(dto.orderStatus)) {
+      throw new BadRequestException(
+        `Không thể chuyển trạng thái từ ${oldStatus} sang ${dto.orderStatus}`,
+      );
+    }
     order.orderStatus = dto.orderStatus;
 
     if (!order.timeline) {
@@ -404,8 +714,11 @@ export class OrdersService {
     }
 
     // If completed, mark as paid
-    if (dto.orderStatus === OrderStatus.COMPLETED) {
-      order.paymentStatus = 'PAID' as any;
+    if (
+      dto.orderStatus === OrderStatus.COMPLETED &&
+      order.paymentMethod === PaymentMethod.COD
+    ) {
+      order.paymentStatus = PaymentStatus.PAID;
     }
 
     const savedOrder = await order.save();
@@ -475,6 +788,42 @@ export class OrdersService {
       throw new BadRequestException('Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý');
     }
 
+    return this.updateStatus(id, { orderStatus: OrderStatus.CANCELLED });
+  }
+
+  async cancelForActor(
+    id: string,
+    actor: { _id: string; role: string; permissions?: string[] },
+  ): Promise<OrderDocument> {
+    const order = await this.orderModel.findById(id).exec();
+    if (!order) throw new NotFoundException('Order not found');
+
+    const isAdmin = actor.role === 'ADMIN';
+    const isAuthorizedStaff =
+      actor.role === 'STAFF' &&
+      actor.permissions?.includes(StaffPermission.MANAGE_ORDERS);
+    const isOwner =
+      actor.role === 'CUSTOMER' &&
+      !!order.customer &&
+      order.customer.toString() === actor._id.toString();
+    if (!isAdmin && !isAuthorizedStaff && !isOwner) {
+      throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này');
+    }
+    if (order.orderStatus !== OrderStatus.PENDING) {
+      throw new BadRequestException(
+        'Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý',
+      );
+    }
+    return this.updateStatus(id, { orderStatus: OrderStatus.CANCELLED });
+  }
+
+  async cancelGuest(id: string, accessToken?: string): Promise<OrderDocument> {
+    const order = await this.findGuestById(id, accessToken);
+    if (order.orderStatus !== OrderStatus.PENDING) {
+      throw new BadRequestException(
+        'Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý',
+      );
+    }
     return this.updateStatus(id, { orderStatus: OrderStatus.CANCELLED });
   }
 

@@ -7,13 +7,14 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { StaffPermission } from '../../common/enums';
 
 @ApiTags('reports')
 @Controller('reports')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('ADMIN')
+@UseGuards(AuthGuard('jwt'), PermissionsGuard)
+@Permissions(StaffPermission.VIEW_REPORTS)
 @ApiBearerAuth()
 export class ReportsController {
   constructor(private reportsService: ReportsService) {}

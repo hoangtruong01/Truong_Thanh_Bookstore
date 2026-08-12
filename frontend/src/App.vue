@@ -22,13 +22,9 @@ function connectSocket() {
 
   const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
   const socketUrl = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase
-  const userId = authStore.user?._id
-
   socket = io(`${socketUrl}/notifications`, {
-    query: {
-      userId: userId || '',
-    },
     transports: ['websocket'],
+    withCredentials: true,
   })
 
   socket.on('notification_received', (data: any) => {
@@ -56,12 +52,16 @@ watch(() => authStore.isAuthenticated, (val) => {
 })
 
 onMounted(() => {
-  if (authStore.isAuthenticated) {
-    connectSocket()
-  }
+  window.addEventListener('auth-session-expired', authStore.clearSession)
+  authStore.fetchProfile()
+    .then(() => {
+      if (authStore.isAuthenticated) connectSocket()
+    })
+    .catch(() => undefined)
 })
 
 onUnmounted(() => {
+  window.removeEventListener('auth-session-expired', authStore.clearSession)
   disconnectSocket()
 })
 </script>

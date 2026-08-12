@@ -1,26 +1,14 @@
 import axios from 'axios'
 import router from '@/router'
-import { decryptToken } from '@/utils/helpers'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
   timeout: 15000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 })
-
-api.interceptors.request.use(
-  (config) => {
-    const rawToken = localStorage.getItem('token')
-    const token = decryptToken(rawToken)
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => Promise.reject(error)
-)
 
 // Response interceptor for API calls
 api.interceptors.response.use(
@@ -41,6 +29,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      window.dispatchEvent(new CustomEvent('auth-session-expired'))
       // BUG-04: Use Vue Router instead of window.location to avoid state loss and flash
       const currentPath = window.location.pathname
       if (currentPath !== '/login' && currentPath !== '/register') {

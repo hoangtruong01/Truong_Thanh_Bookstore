@@ -50,6 +50,16 @@ export class Order {
   @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   customer: Types.ObjectId;
 
+  /**
+   * Hashes only: the raw guest/idempotency tokens are returned once to the
+   * client and must never be persisted or serialized in API responses.
+   */
+  @Prop({ select: false })
+  guestAccessTokenHash?: string;
+
+  @Prop({ select: false })
+  idempotencyKeyHash?: string;
+
   @Prop({ type: [OrderItemSchema], required: true })
   items: OrderItem[];
 
@@ -106,3 +116,7 @@ OrderSchema.index({ customer: 1, createdAt: -1 });
 OrderSchema.index({ orderStatus: 1 });
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ promotionCode: 1 });
+OrderSchema.index(
+  { customer: 1, idempotencyKeyHash: 1 },
+  { unique: true, sparse: true },
+);

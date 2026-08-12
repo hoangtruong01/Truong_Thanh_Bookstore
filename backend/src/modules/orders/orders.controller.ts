@@ -11,6 +11,7 @@ import {
   Request,
   Res,
   ForbiddenException,
+  Headers,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
@@ -66,7 +67,10 @@ export class OrdersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Export invoice PDF' })
   async getInvoice(@Param('id') id: string, @Request() req: any, @Res() res: Response) {
-    const order = await this.ordersService.findById(id);
+    const order = await this.ordersService.findByIdForActor(id, {
+      ...req.user,
+      _id: req.user._id.toString(),
+    });
     
     // BUG-03: Verify ownership of the invoice before rendering the PDF
     if (
@@ -86,13 +90,43 @@ export class OrdersController {
     pdfDoc.end();
   }
 
+  @Get('guest/:id/invoice')
+  @ApiOperation({ summary: 'Export a guest invoice using its private access token' })
+  async getGuestInvoice(
+    @Param('id') id: string,
+    @Headers('x-guest-order-token') accessToken: string | undefined,
+    @Res() res: Response,
+  ) {
+    const order = await this.ordersService.findGuestById(id, accessToken);
+    const pdfDoc = await this.ordersService.generateInvoicePdf(order);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=invoice-${order.orderCode}.pdf`,
+    );
+    pdfDoc.pipe(res);
+    pdfDoc.end();
+  }
+
+  @Get('guest/:id')
+  @ApiOperation({ summary: 'Get a guest order using its private access token' })
+  findGuestById(
+    @Param('id') id: string,
+    @Headers('x-guest-order-token') accessToken: string | undefined,
+  ) {
+    return this.ordersService.findGuestById(id, accessToken);
+  }
+
   // Require authentication & ownership check to view order details
   @Get(':id')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get order by ID (authenticated owner or staff/admin)' })
   findById(@Param('id') id: string, @Request() req: any) {
-    return this.ordersService.findById(id, req.user._id, req.user.role);
+    return this.ordersService.findByIdForActor(id, {
+      ...req.user,
+      _id: req.user._id.toString(),
+    });
   }
 
   @Patch(':id/status')
@@ -110,7 +144,19 @@ export class OrdersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cancel an order (owner or admin only)' })
   cancel(@Param('id') id: string, @Request() req: any) {
-    return this.ordersService.cancel(id, req.user._id);
+    return this.ordersService.cancelForActor(id, {
+      ...req.user,
+      _id: req.user._id.toString(),
+    });
+  }
+
+  @Delete('guest/:id')
+  @ApiOperation({ summary: 'Cancel a pending guest order using its private access token' })
+  cancelGuest(
+    @Param('id') id: string,
+    @Headers('x-guest-order-token') accessToken: string | undefined,
+  ) {
+    return this.ordersService.cancelGuest(id, accessToken);
   }
 
 }

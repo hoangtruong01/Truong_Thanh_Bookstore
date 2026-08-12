@@ -12,9 +12,18 @@
           Mã đơn hàng của bạn là <span class="font-mono font-bold text-slate-800">{{ orderCode }}</span>. Chúng tôi sẽ sớm liên hệ xác nhận đơn hàng của bạn.
         </p>
       </div>
-      <router-link to="/" class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3 px-8 rounded-xl transition-colors inline-block text-sm">
-        Trở về trang chủ
-      </router-link>
+      <div class="flex flex-col sm:flex-row justify-center gap-3">
+        <router-link
+          v-if="createdOrderId"
+          :to="authStore.isAuthenticated ? `/my-orders/${createdOrderId}` : `/guest-orders/${createdOrderId}`"
+          class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3 px-8 rounded-xl transition-colors inline-block text-sm"
+        >
+          Xem tình trạng đơn hàng
+        </router-link>
+        <router-link to="/" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 px-8 rounded-xl transition-colors inline-block text-sm">
+          Trở về trang chủ
+        </router-link>
+      </div>
     </div>
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -339,9 +348,12 @@ const paymentMethod = ref<'COD' | 'BANK_TRANSFER' | 'EWALLET'>('COD')
 
 const paymentMethods = [
   { value: 'COD', label: 'Thanh toán khi nhận hàng (COD)', description: 'Thanh toán bằng tiền mặt khi shipper giao hàng.' },
-  { value: 'BANK_TRANSFER', label: 'Chuyển khoản ngân hàng', description: 'Chuyển khoản qua số tài khoản ngân hàng của cửa hàng.' },
-  { value: 'EWALLET', label: 'Thanh toán qua ví điện tử', description: 'Momo, ZaloPay, ShopeePay...' },
 ]
+
+const checkoutIdempotencyKey =
+  sessionStorage.getItem('checkout-idempotency-key') || crypto.randomUUID()
+sessionStorage.setItem('checkout-idempotency-key', checkoutIdempotencyKey)
+const createdOrderId = ref('')
 
 // UX-06: Phone validation
 const isPhoneValid = computed(() => {
@@ -438,6 +450,7 @@ async function placeOrder() {
       promotionCode: cartStore.appliedPromotion?.code || undefined,
       customerName: shippingInfo.fullName,
       customerEmail: shippingInfo.email,
+      idempotencyKey: checkoutIdempotencyKey,
     }
 
     let response: any
@@ -448,6 +461,14 @@ async function placeOrder() {
     }
 
     orderCode.value = response.data.orderCode
+    createdOrderId.value = response.data._id
+    if (!authStore.isAuthenticated && response.data.guestAccessToken) {
+      localStorage.setItem(
+        `guest-order-token:${response.data._id}`,
+        response.data.guestAccessToken,
+      )
+    }
+    sessionStorage.removeItem('checkout-idempotency-key')
     orderSuccess.value = true
     cartStore.clearCheckedOutItems()
   } catch (err: any) {

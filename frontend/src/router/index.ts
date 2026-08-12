@@ -54,6 +54,7 @@ const routes = [
       { path: 'info', name: 'Info', component: Info },
       { path: 'my-orders', name: 'MyOrders', component: MyOrders, meta: { requiresAuth: true } },
       { path: 'my-orders/:id', name: 'OrderDetail', component: OrderDetail, meta: { requiresAuth: true } },
+      { path: 'guest-orders/:id', name: 'GuestOrderDetail', component: OrderDetail },
       { path: 'addresses', name: 'Addresses', component: Addresses, meta: { requiresAuth: true } },
       { path: 'wishlist', name: 'Wishlist', component: Wishlist, meta: { requiresAuth: true } },
     ]

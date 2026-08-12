@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { createHash, randomInt, timingSafeEqual } from 'crypto';
 import { UsersService } from '../users/users.service';
 import { RegisterDto, LoginDto, UpdateProfileDto } from './dto/auth.dto';
 import { UserRole } from '../../common/enums';
@@ -20,6 +21,16 @@ export class AuthService {
     private cloudinaryService: CloudinaryService,
     private emailService: EmailService,
   ) {}
+
+  private hashOtp(otp: string): string {
+    return createHash('sha256').update(otp).digest('hex');
+  }
+
+  private isOtpHashValid(storedHash: string, otp: string): boolean {
+    const expected = Buffer.from(storedHash, 'hex');
+    const actual = Buffer.from(this.hashOtp(otp), 'hex');
+    return expected.length === actual.length && timingSafeEqual(expected, actual);
+  }
 
   async register(registerDto: RegisterDto) {
     const existingUser = await this.usersService.findByEmail(registerDto.email);
@@ -53,6 +64,9 @@ export class AuthService {
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+    if (!user.status) {
+      throw new UnauthorizedException('Tài khoản đã bị khóa');
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -139,12 +153,12 @@ export class AuthService {
     }
 
     // Generate 6 digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = randomInt(100000, 1000000).toString();
     const expiry = new Date();
     expiry.setMinutes(expiry.getMinutes() + 10); // 10 minutes expiry
 
     // Save to user and reset attempts
-    user.resetOtp = otp;
+    user.resetOtp = this.hashOtp(otp);
     user.resetOtpExpiry = expiry;
     user.resetOtpAttempts = 0;
     await user.save();
@@ -159,10 +173,6 @@ export class AuthService {
       success: true,
       message: 'Mã OTP đã được gửi đến email của bạn',
     };
-
-    if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'staging') {
-      response.otp = otp;
-    }
 
     return response;
   }
@@ -195,7 +205,7 @@ export class AuthService {
       throw new UnauthorizedException('Mã OTP đã hết hạn. Vui lòng yêu cầu mã OTP mới');
     }
 
-    if (user.resetOtp !== otp) {
+    if (!this.isOtpHashValid(user.resetOtp, otp)) {
       user.resetOtpAttempts = currentAttempts + 1;
       if (user.resetOtpAttempts >= 5) {
         user.resetOtp = undefined;
@@ -239,7 +249,7 @@ export class AuthService {
       throw new UnauthorizedException('Mã OTP đã hết hạn');
     }
 
-    if (user.resetOtp !== otp) {
+    if (!this.isOtpHashValid(user.resetOtp, otp)) {
       user.resetOtpAttempts = currentAttempts + 1;
       if (user.resetOtpAttempts >= 5) {
         user.resetOtp = undefined;

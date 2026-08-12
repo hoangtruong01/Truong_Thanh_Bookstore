@@ -74,7 +74,7 @@
               <section class="space-y-2">
                 <h2 class="text-base font-extrabold text-slate-800">4. Bảo mật dữ liệu tài khoản</h2>
                 <p class="text-xs text-slate-500 leading-relaxed">
-                  Mật khẩu tài khoản của bạn được mã hóa một chiều ở phía máy chủ. Token phiên đăng nhập trên trình duyệt được mã hóa bảo mật nhằm tránh rò rỉ dữ liệu phiên hoạt động của khách hàng.
+                  Mật khẩu tài khoản được băm một chiều ở phía máy chủ. Phiên đăng nhập web được lưu trong cookie HttpOnly, Secure và SameSite để giảm nguy cơ bị mã JavaScript truy cập trái phép.
                 </p>
               </section>
             </div>

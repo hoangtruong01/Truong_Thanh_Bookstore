@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex items-center justify-between mb-6">
-      <router-link to="/my-orders" class="text-xs font-bold text-slate-600 hover:text-[#dc2626] flex items-center gap-1">
+      <router-link :to="isGuestOrder ? '/' : '/my-orders'" class="text-xs font-bold text-slate-600 hover:text-[#dc2626] flex items-center gap-1">
         &larr; Quay lại danh sách đơn hàng
       </router-link>
     </div>
@@ -178,7 +178,6 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { orderService } from '@/services/order.service'
 import { formatCurrency, formatDate, getStatusLabel } from '@/utils/helpers'
-import api from '@/utils/api'
 import type { Order } from '@/types'
 import { computed } from 'vue'
 import { useToast } from 'vue-toastification'
@@ -196,6 +195,10 @@ function copyTrackingLink() {
 }
 
 const route = useRoute()
+const isGuestOrder = computed(() => route.name === 'GuestOrderDetail')
+const guestAccessToken = computed(() =>
+  localStorage.getItem(`guest-order-token:${route.params.id as string}`) || '',
+)
 const order = ref<any | null>(null)
 const loading = ref(true)
 const error = ref('')
@@ -223,7 +226,9 @@ function getStatusBadgeStyle(status: string) {
 async function downloadInvoice() {
   if (!order.value) return
   try {
-    const res = await api.get(`/orders/${order.value._id}/invoice`, { responseType: 'blob' })
+    const res = isGuestOrder.value
+      ? await orderService.getGuestInvoice(order.value._id, guestAccessToken.value)
+      : await orderService.getInvoice(order.value._id)
     const url = window.URL.createObjectURL(new Blob([res.data]))
     const link = document.createElement('a')
     link.href = url
@@ -245,7 +250,12 @@ onMounted(async () => {
   }
 
   try {
-    const res = await orderService.getById(orderId)
+    if (isGuestOrder.value && !guestAccessToken.value) {
+      throw new Error('Không tìm thấy mã truy cập đơn hàng trên thiết bị này')
+    }
+    const res = isGuestOrder.value
+      ? await orderService.getGuestById(orderId, guestAccessToken.value)
+      : await orderService.getById(orderId)
     order.value = res.data
   } catch (err: any) {
     error.value = err.message || 'Không thể tìm thấy thông tin đơn hàng'
