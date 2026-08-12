@@ -11,6 +11,7 @@ import { ProductSchema } from '../products/schemas/product.schema';
 import { OrderSchema } from './schemas/order.schema';
 import { InventorySchema } from '../inventory/schemas/inventory.schema';
 import { BadRequestException } from '@nestjs/common';
+import { UsersService } from '../users/users.service';
 
 describe('ALL QA FIXES VERIFICATION SUITE', () => {
   let ordersService: OrdersService;
@@ -58,6 +59,11 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     sendStockAlert: jest.fn().mockResolvedValue(true),
   };
 
+  const mockUsersService = {
+    addLoyaltyPoints: jest.fn().mockResolvedValue({}),
+    deductLoyaltyPoints: jest.fn().mockResolvedValue({}),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -70,6 +76,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
         { provide: ConfigService, useValue: mockConfigService },
         { provide: getModelToken(Order.name), useValue: mockOrderModel },
         { provide: EmailService, useValue: mockEmailService },
+        { provide: UsersService, useValue: mockUsersService },
       ],
     }).compile();
 
