@@ -20,8 +20,9 @@ import {
   ProductQueryDto,
 } from './dto/product.dto';
 import { CreateReviewDto, UpdateReviewDto } from './dto/review.dto';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { StaffPermission } from '../../common/enums';
 
 @ApiTags('products')
 @Controller('products')
@@ -71,8 +72,8 @@ export class ProductsController {
   }
 
   @Post()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PRODUCTS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a product' })
   create(@Body() dto: CreateProductDto) {
@@ -80,8 +81,8 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PRODUCTS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a product' })
   update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
@@ -89,8 +90,8 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PRODUCTS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Soft delete a product' })
   delete(@Param('id') id: string) {

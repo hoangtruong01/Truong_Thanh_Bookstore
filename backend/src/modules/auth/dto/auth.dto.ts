@@ -20,7 +20,10 @@ export class RegisterDto {
 
   @ApiProperty({ example: 'Password@123' })
   @IsNotEmpty()
-  @MinLength(6)
+  @MinLength(8, { message: 'Mật khẩu phải có ít nhất 8 ký tự' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
+    message: 'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số',
+  })
   password: string;
 
   @ApiPropertyOptional({ example: '0901234567' })
@@ -61,7 +64,10 @@ export class ChangePasswordDto {
 
   @ApiProperty({ example: 'NewPassword123' })
   @IsNotEmpty()
-  @MinLength(6, { message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
+  @MinLength(8, { message: 'Mật khẩu mới phải có ít nhất 8 ký tự' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
+    message: 'Mật khẩu mới phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số',
+  })
   newPassword: string;
 }
 
@@ -92,7 +98,10 @@ export class ResetPasswordDto {
 
   @ApiProperty({ example: 'NewPassword123' })
   @IsNotEmpty()
-  @MinLength(6, { message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
+  @MinLength(8, { message: 'Mật khẩu mới phải có ít nhất 8 ký tự' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
+    message: 'Mật khẩu mới phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số',
+  })
   newPassword: string;
 }
 

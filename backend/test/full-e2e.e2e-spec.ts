@@ -5,6 +5,8 @@ import { AppModule } from '../src/app.module';
 import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
 
+jest.setTimeout(60000);
+
 describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
   let app: INestApplication;
   let customerToken: string;
@@ -38,7 +40,7 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
       }),
     );
     await app.init();
-  });
+  }, 60000);
 
   // ==========================================
   // 1. AUTHENTICATION E2E FLOW

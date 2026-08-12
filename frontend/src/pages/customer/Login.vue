@@ -18,8 +18,14 @@
             required
             autofocus
             placeholder="name@example.com"
-            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
+            @blur="isEmailDirty = true"
+            @input="isEmailDirty = true"
+            :class="[
+              'w-full mt-1 bg-slate-50 border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:bg-white',
+              emailError ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-[#dc2626]'
+            ]"
           />
+          <p v-if="emailError" class="text-[11px] text-red-500 mt-1 font-bold">{{ emailError }}</p>
         </div>
         <div>
           <div class="flex justify-between items-center">
@@ -55,7 +61,7 @@
 
         <button
           type="submit"
-          :disabled="authStore.loading"
+          :disabled="authStore.loading || !!emailError"
           class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center text-sm uppercase tracking-wider shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none cursor-pointer"
         >
           {{ authStore.loading ? 'Đang xử lý...' : 'Đăng nhập' }}
@@ -71,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
@@ -90,6 +96,17 @@ const route = useRoute()
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
+
+const isEmailDirty = ref(false)
+const emailError = computed(() => {
+  if (!isEmailDirty.value) return ''
+  if (!email.value) return 'Vui lòng nhập email'
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.value)) {
+    return 'Địa chỉ email không đúng định dạng'
+  }
+  return ''
+})
 
 async function handleLogin() {
   if (!email.value || !password.value) return

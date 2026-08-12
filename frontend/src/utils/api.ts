@@ -22,9 +22,22 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
+// Response interceptor for API calls
 api.interceptors.response.use(
   (response) => response.data?.data !== undefined ? response.data : response,
   (error) => {
+    // Handle network errors or server offline
+    if (!error.response) {
+      if (error.code === 'ECONNABORTED') {
+        return Promise.reject({
+          message: 'Yêu cầu kết nối quá hạn (Timeout). Vui lòng thử lại.',
+        })
+      }
+      return Promise.reject({
+        message: 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng hoặc thử lại sau.',
+      })
+    }
+
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')

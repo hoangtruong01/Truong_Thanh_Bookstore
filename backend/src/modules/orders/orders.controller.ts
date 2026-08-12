@@ -21,8 +21,9 @@ import {
   UpdateOrderStatusDto,
   OrderQueryDto,
 } from './dto/order.dto';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { StaffPermission } from '../../common/enums';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -44,8 +45,8 @@ export class OrdersController {
   }
 
   @Get()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN', 'STAFF')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_ORDERS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all orders (admin)' })
   findAll(@Query() query: OrderQueryDto) {
@@ -95,8 +96,8 @@ export class OrdersController {
   }
 
   @Patch(':id/status')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN', 'STAFF')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_ORDERS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update order status' })
   updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {

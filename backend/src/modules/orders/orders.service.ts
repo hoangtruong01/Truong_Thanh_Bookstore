@@ -17,6 +17,7 @@ import { ConfigService } from '@nestjs/config';
 import { PromotionsService } from '../promotions/promotions.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
+import { UsersService } from '../users/users.service';
 
 // FIX-C03: Shipping fee threshold (must match frontend)
 const FREE_SHIPPING_THRESHOLD = 299000;
@@ -33,6 +34,7 @@ export class OrdersService {
     private promotionsService: PromotionsService,
     private notificationsService: NotificationsService,
     private emailService: EmailService,
+    private usersService: UsersService,
   ) {}
 
   private generateOrderCode(): string {
@@ -215,6 +217,16 @@ export class OrdersService {
 
     const savedOrder = await order.save();
 
+    // Award loyalty points
+    if (userId) {
+      const points = Math.floor(savedOrder.total / 1000);
+      if (points > 0) {
+        await this.usersService.addLoyaltyPoints(userId, points).catch((err) =>
+          this.logger.error(`Failed to add loyalty points for user ${userId}:`, err)
+        );
+      }
+    }
+
     // Sync to Google Sheet (async)
     this.syncToGoogleSheet(savedOrder).catch((err) => this.logger.error('Sheet sync failed', err));
 
@@ -373,6 +385,19 @@ export class OrdersService {
           await this.productsService.incrementSold(
             item.product.toString(),
             -item.quantity,
+          );
+        }
+      }
+
+      // Deduct loyalty points if order was placed by a registered user
+      if (order.customer) {
+        const points = Math.floor(order.total / 1000);
+        if (points > 0) {
+          await this.usersService.deductLoyaltyPoints(
+            order.customer.toString(),
+            points,
+          ).catch((err) =>
+            this.logger.error(`Failed to deduct loyalty points for user ${order.customer}:`, err)
           );
         }
       }
@@ -618,7 +643,8 @@ export class OrdersService {
     // Generate QR Code data URL dynamically
     let qrDataUrl = '';
     try {
-      const qrText = `${this.configService.get('FRONTEND_URL') || 'http://localhost:5173'}/my-orders/${order._id.toString()}`;
+      const orderIdStr = order._id ? order._id.toString() : '';
+      const qrText = `${this.configService.get('FRONTEND_URL') || 'http://localhost:5173'}/my-orders/${orderIdStr}`;
       qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 100 });
     } catch (err) {
       this.logger.error('Failed to generate QR Code for invoice:', err);

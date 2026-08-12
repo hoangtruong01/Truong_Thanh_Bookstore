@@ -27,9 +27,15 @@
             v-model="email"
             type="email"
             required
+            @blur="isEmailDirty = true"
+            @input="isEmailDirty = true"
             placeholder="name@example.com"
-            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
+            :class="[
+              'w-full mt-1 bg-slate-50 border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:bg-white',
+              emailError ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-[#dc2626]'
+            ]"
           />
+          <p v-if="emailError" class="text-[11px] text-red-500 mt-1 font-bold">{{ emailError }}</p>
         </div>
         <div>
           <label class="text-xs font-bold text-slate-700">Số điện thoại</label>
@@ -53,8 +59,13 @@
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
               required
-              placeholder="Tối thiểu 6 ký tự"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-12 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
+              @blur="isPasswordDirty = true"
+              @input="isPasswordDirty = true"
+              placeholder="Tối thiểu 8 ký tự, có chữ hoa, số"
+              :class="[
+                'w-full bg-slate-50 border rounded-xl pl-4 pr-12 py-2.5 text-sm focus:outline-none focus:ring-2 focus:bg-white',
+                isPasswordDirty && passwordErrors.length > 0 ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-[#dc2626]'
+              ]"
             />
             <button
               type="button"
@@ -73,14 +84,29 @@
               </svg>
             </button>
           </div>
-          <p v-if="password && password.length < 6" class="text-[10px] text-red-500 mt-1 font-medium">
-            Mật khẩu phải có ít nhất 6 ký tự
-          </p>
+          
+          <!-- Password strength bar -->
+          <div v-if="password" class="mt-2 space-y-1">
+            <div class="flex justify-between items-center text-[10px] font-bold">
+              <span class="text-slate-400">Độ mạnh mật khẩu:</span>
+              <span :class="pwdStrengthText === 'Mạnh' ? 'text-emerald-500' : pwdStrengthText === 'Trung bình' ? 'text-amber-500' : 'text-red-500'">{{ pwdStrengthText }}</span>
+            </div>
+            <div class="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div :class="['h-full transition-all duration-300', pwdStrengthColor]" :style="{ width: (pwdStrength / 4) * 100 + '%' }"></div>
+            </div>
+          </div>
+
+          <!-- Password error checklist -->
+          <div v-if="isPasswordDirty && passwordErrors.length > 0" class="mt-2 text-[10px] text-red-500 font-semibold space-y-0.5">
+            <p v-for="err in passwordErrors" :key="err" class="flex items-center gap-1">
+              <span>✕</span> {{ err }}
+            </p>
+          </div>
         </div>
 
         <button
           type="submit"
-          :disabled="authStore.loading || (!!phone && !isPhoneValid) || (!!password && password.length < 6)"
+          :disabled="authStore.loading || isFormInvalid"
           class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center text-sm uppercase tracking-wider shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none cursor-pointer"
         >
           {{ authStore.loading ? 'Đang đăng ký...' : 'Đăng ký tài khoản' }}
@@ -117,10 +143,68 @@ const phone = ref('')
 const password = ref('')
 const showPassword = ref(false)
 
-// UX-06: Phone number validation for Vietnamese format
+const isEmailDirty = ref(false)
+const emailError = computed(() => {
+  if (!isEmailDirty.value) return ''
+  if (!email.value) return 'Vui lòng nhập email'
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.value)) {
+    return 'Địa chỉ email không đúng định dạng'
+  }
+  return ''
+})
+
+const isPasswordDirty = ref(false)
+const pwdStrength = computed(() => {
+  const pwd = password.value
+  if (!pwd) return 0
+  let score = 0
+  if (pwd.length >= 8) score++
+  if (/[A-Z]/.test(pwd)) score++
+  if (/[a-z]/.test(pwd)) score++
+  if (/\d/.test(pwd)) score++
+  return score
+})
+
+const pwdStrengthText = computed(() => {
+  const score = pwdStrength.value
+  if (score === 0) return ''
+  if (score <= 2) return 'Yếu'
+  if (score === 3) return 'Trung bình'
+  return 'Mạnh'
+})
+
+const pwdStrengthColor = computed(() => {
+  const score = pwdStrength.value
+  if (score <= 2) return 'bg-red-500'
+  if (score === 3) return 'bg-amber-500'
+  return 'bg-emerald-500'
+})
+
+const passwordErrors = computed(() => {
+  if (!isPasswordDirty.value) return []
+  const errors = []
+  if (password.value.length < 8) errors.push('Ít nhất 8 ký tự')
+  if (!/[A-Z]/.test(password.value)) errors.push('Ít nhất 1 chữ hoa')
+  if (!/[a-z]/.test(password.value)) errors.push('Ít nhất 1 chữ thường')
+  if (!/\d/.test(password.value)) errors.push('Ít nhất 1 chữ số')
+  return errors
+})
+
 const isPhoneValid = computed(() => {
   if (!phone.value) return true
   return /^0\d{9}$/.test(phone.value)
+})
+
+const isFormInvalid = computed(() => {
+  return (
+    !fullName.value ||
+    !email.value ||
+    !!emailError.value ||
+    (!!phone.value && !isPhoneValid.value) ||
+    !password.value ||
+    pwdStrength.value < 4
+  )
 })
 
 function onPhoneInput(e: Event) {

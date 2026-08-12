@@ -74,17 +74,17 @@ const routes = [
     children: [
       { path: '', redirect: { name: 'AdminDashboard' } },
       { path: 'dashboard', name: 'AdminDashboard', component: AdminDashboard },
-      { path: 'products', name: 'AdminProducts', component: AdminProducts },
-      { path: 'products/create', name: 'AdminProductCreate', component: AdminProductForm },
-      { path: 'products/:id/edit', name: 'AdminProductEdit', component: AdminProductForm },
-      { path: 'orders', name: 'AdminOrders', component: AdminOrders },
-      { path: 'inventory', name: 'AdminInventory', component: AdminInventory },
-      { path: 'combos', name: 'AdminCombos', component: AdminCombos },
-      { path: 'customers', name: 'AdminCustomers', component: AdminCustomers },
-      { path: 'promotions', name: 'AdminPromotions', component: AdminPromotions },
-      { path: 'reports', name: 'AdminReports', component: AdminReports },
-      { path: 'landing-pages', name: 'AdminLandingPages', component: AdminLandingPages },
-      { path: 'banners', name: 'AdminBanners', component: AdminBanners },
+      { path: 'products', name: 'AdminProducts', component: AdminProducts, meta: { permission: 'MANAGE_PRODUCTS' } },
+      { path: 'products/create', name: 'AdminProductCreate', component: AdminProductForm, meta: { permission: 'MANAGE_PRODUCTS' } },
+      { path: 'products/:id/edit', name: 'AdminProductEdit', component: AdminProductForm, meta: { permission: 'MANAGE_PRODUCTS' } },
+      { path: 'orders', name: 'AdminOrders', component: AdminOrders, meta: { permission: 'MANAGE_ORDERS' } },
+      { path: 'inventory', name: 'AdminInventory', component: AdminInventory, meta: { permission: 'MANAGE_INVENTORY' } },
+      { path: 'combos', name: 'AdminCombos', component: AdminCombos, meta: { permission: 'MANAGE_PRODUCTS' } },
+      { path: 'customers', name: 'AdminCustomers', component: AdminCustomers, meta: { permission: 'MANAGE_CUSTOMERS' } },
+      { path: 'promotions', name: 'AdminPromotions', component: AdminPromotions, meta: { permission: 'MANAGE_PROMOTIONS' } },
+      { path: 'reports', name: 'AdminReports', component: AdminReports, meta: { permission: 'VIEW_REPORTS' } },
+      { path: 'landing-pages', name: 'AdminLandingPages', component: AdminLandingPages, meta: { permission: 'MANAGE_LANDING_PAGES' } },
+      { path: 'banners', name: 'AdminBanners', component: AdminBanners, meta: { permission: 'MANAGE_BANNERS' } },
     ]
   },
   // UX-04: Proper 404 page instead of silent redirect
@@ -108,10 +108,22 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
 
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+  if (to.matched.some(record => record.meta.requiresAuth) && !authStore.isAuthenticated) {
     next({ name: 'Login', query: { redirect: to.fullPath } })
-  } else if (to.meta.requiresAdmin && !authStore.isStaff) {
-    next({ name: 'Login' })
+  } else if (to.matched.some(record => record.meta.requiresAdmin)) {
+    if (!authStore.isStaff) {
+      next({ name: 'Login' })
+    } else {
+      const user = authStore.user
+      if (user && user.role === 'STAFF') {
+        const requiredPermission = to.meta.permission as string | undefined
+        if (requiredPermission && !(user.permissions || []).includes(requiredPermission)) {
+          next({ name: 'AdminDashboard' })
+          return
+        }
+      }
+      next()
+    }
   } else if (to.meta.guestOnly && authStore.isAuthenticated) {
     next({ name: 'Home' })
   } else {

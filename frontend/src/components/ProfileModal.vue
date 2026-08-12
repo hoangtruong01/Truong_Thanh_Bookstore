@@ -112,6 +112,20 @@
               </span>
             </div>
           </div>
+
+          <!-- Loyalty Section (Points & Tier) -->
+          <div v-if="form.role === 'CUSTOMER'" class="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-orange-200/50 rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Hạng thành viên</span>
+              <span :class="['px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider text-white', tierClass]">
+                {{ form.loyaltyTier || 'BRONZE' }}
+              </span>
+            </div>
+            <div class="flex justify-between items-end">
+              <span class="text-xs text-slate-600 font-semibold">Điểm tích lũy</span>
+              <span class="text-lg font-black text-orange-600">{{ form.loyaltyPoints || 0 }} <span class="text-[10px] font-bold text-slate-450">điểm</span></span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -162,7 +176,9 @@ const form = ref({
   email: '',
   phone: '',
   avatar: '',
-  role: ''
+  role: '',
+  loyaltyPoints: 0,
+  loyaltyTier: 'BRONZE'
 })
 
 // Compute initials when no avatar is set
@@ -187,6 +203,14 @@ const roleClass = computed(() => {
   return 'bg-emerald-600'
 })
 
+const tierClass = computed(() => {
+  const tier = form.value.loyaltyTier
+  if (tier === 'DIAMOND') return 'bg-cyan-600'
+  if (tier === 'GOLD') return 'bg-amber-500'
+  if (tier === 'SILVER') return 'bg-slate-400'
+  return 'bg-amber-800' // BRONZE
+})
+
 // Sync form with authStore when modal opens
 watch(() => props.isOpen, (newVal) => {
   if (newVal && authStore.user) {
@@ -195,7 +219,9 @@ watch(() => props.isOpen, (newVal) => {
       email: authStore.user.email || '',
       phone: authStore.user.phone || '',
       avatar: authStore.user.avatar || '',
-      role: authStore.user.role || ''
+      role: authStore.user.role || '',
+      loyaltyPoints: authStore.user.loyaltyPoints || 0,
+      loyaltyTier: authStore.user.loyaltyTier || 'BRONZE'
     }
     avatarPreview.value = ''
     avatarBase64.value = ''

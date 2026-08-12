@@ -34,6 +34,7 @@ import {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
+  StaffPermission,
 } from '../common/enums';
 
 @Injectable()
@@ -225,6 +226,17 @@ export class SeedService implements OnModuleInit {
       phone: '0912345678',
       role: UserRole.CUSTOMER,
       status: true,
+    });
+
+    const staffPassword = await bcrypt.hash('Staff@123456', 10);
+    await this.userModel.create({
+      fullName: 'Nhan Vien Truong Thanh',
+      email: 'staff@truongthanh.vn',
+      password: staffPassword,
+      phone: '0907654321',
+      role: UserRole.STAFF,
+      status: true,
+      permissions: [StaffPermission.MANAGE_ORDERS, StaffPermission.VIEW_REPORTS],
     });
 
     this.logger.log('Users seeded');

@@ -1475,6 +1475,9 @@
 
     <!-- Profile Modal -->
     <ProfileModal :isOpen="showProfile" @close="showProfile = false" />
+    
+    <!-- FAQ Chatbot Widget -->
+    <ChatWidget />
   </div>
 </template>
 
@@ -1489,6 +1492,7 @@ import { formatCurrency } from "@/utils/helpers";
 import type { Category } from "@/types";
 import { useToast } from "vue-toastification";
 import ProfileModal from "@/components/ProfileModal.vue";
+import ChatWidget from "@/components/ChatWidget.vue";
 import { notificationService } from "@/services/notification.service";
 
 const authStore = useAuthStore();

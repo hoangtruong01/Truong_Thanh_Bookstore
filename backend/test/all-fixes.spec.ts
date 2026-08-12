@@ -12,6 +12,7 @@ import { OrderSchema } from '../src/modules/orders/schemas/order.schema';
 import { InventorySchema } from '../src/modules/inventory/schemas/inventory.schema';
 import { AddressSchema } from '../src/modules/users/schemas/address.schema';
 import { BadRequestException } from '@nestjs/common';
+import { UsersService } from '../src/modules/users/users.service';
 
 describe('ALL QA FIXES VERIFICATION SUITE', () => {
   let ordersService: OrdersService;
@@ -60,6 +61,11 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     sendStockAlert: jest.fn().mockResolvedValue(true),
   };
 
+  const mockUsersService = {
+    addLoyaltyPoints: jest.fn().mockResolvedValue({}),
+    deductLoyaltyPoints: jest.fn().mockResolvedValue({}),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -72,6 +78,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
         { provide: ConfigService, useValue: mockConfigService },
         { provide: getModelToken(Order.name), useValue: mockOrderModel },
         { provide: EmailService, useValue: mockEmailService },
+        { provide: UsersService, useValue: mockUsersService },
       ],
     }).compile();
 
@@ -172,6 +179,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
     it('generateInvoicePdf should successfully generate a PDF document stream', async () => {
       const dummyOrder = {
+        _id: 'order_123',
         orderCode: 'TT998877',
         customerName: 'Test Customer',
         phone: '0123456789',
@@ -186,6 +194,51 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       const doc = await ordersService.generateInvoicePdf(dummyOrder);
       expect(doc).toBeDefined();
       expect(typeof doc.pipe).toBe('function');
+    });
+  });
+
+  describe('New Feature: Loyalty Point System Check', () => {
+    it('should award 1 point for every 1000 VND spent when order is created for registered user', async () => {
+      mockProductsService.deductStock.mockResolvedValue(undefined);
+      mockProductsService.incrementSold.mockResolvedValue(undefined);
+
+      const createDto: any = {
+        items: [{ product: mockProduct._id, name: mockProduct.name, quantity: 10 }], // 50,000 VND
+        shippingAddress: '123 Nguyễn Huệ, Q1, HCM',
+        phone: '0901234567',
+        paymentMethod: 'COD',
+        customerName: 'Nguyễn Văn A',
+        customerEmail: 'a@example.com',
+      };
+
+      const result = await ordersService.create(createDto, 'user123'); // authenticated user
+      expect(result.total).toBe(80000); // 50k + 30k ship
+      expect(mockUsersService.addLoyaltyPoints).toHaveBeenCalledWith('user123', 80);
+    });
+
+    it('should deduct points when order status transitions to CANCELLED', async () => {
+      // Mock order finding
+      const mockOrder = {
+        _id: 'order123',
+        customer: 'user123',
+        total: 80000,
+        orderStatus: 'PENDING',
+        items: [],
+        timeline: [],
+        save: jest.fn().mockResolvedValue(true),
+      };
+      
+      mockOrderModel.findById = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockOrder),
+      });
+
+      const updateDto: any = {
+        orderStatus: 'CANCELLED',
+        timelineNote: 'Customer cancelled the order',
+      };
+
+      await ordersService.updateStatus('order123', updateDto);
+      expect(mockUsersService.deductLoyaltyPoints).toHaveBeenCalledWith('user123', 80);
     });
   });
 });

@@ -421,18 +421,30 @@ const BannersIcon = {
   template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" /></svg>`
 }
 
-const navItems = computed(() => [
-  { name: 'AdminDashboard', label: locale.value === 'en' ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
-  { name: 'AdminProducts', label: locale.value === 'en' ? 'Products' : 'Sản phẩm', to: '/admin/products', icon: ProductsIcon },
-  { name: 'AdminOrders', label: locale.value === 'en' ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: OrdersIcon },
-  { name: 'AdminInventory', label: locale.value === 'en' ? 'Inventory' : 'Kho hàng', to: '/admin/inventory', icon: InventoryIcon },
-  { name: 'AdminCombos', label: locale.value === 'en' ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon },
-  { name: 'AdminCustomers', label: locale.value === 'en' ? 'Customers' : 'Khách hàng', to: '/admin/customers', icon: CustomersIcon },
-  { name: 'AdminPromotions', label: locale.value === 'en' ? 'Promotions' : 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon },
-  { name: 'AdminBanners', label: locale.value === 'en' ? 'Banners' : 'Banners', to: '/admin/banners', icon: BannersIcon },
-  { name: 'AdminReports', label: locale.value === 'en' ? 'Reports' : 'Báo cáo', to: '/admin/reports', icon: ReportsIcon },
-  { name: 'AdminLandingPages', label: locale.value === 'en' ? 'Quick Pages' : 'Tạo Page Nhanh', to: '/admin/landing-pages', icon: SparklingIcon },
-])
+const navItems = computed(() => {
+  const items = [
+    { name: 'AdminDashboard', label: locale.value === 'en' ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
+    { name: 'AdminProducts', label: locale.value === 'en' ? 'Products' : 'Sản phẩm', to: '/admin/products', icon: ProductsIcon, permission: 'MANAGE_PRODUCTS' },
+    { name: 'AdminOrders', label: locale.value === 'en' ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: OrdersIcon, permission: 'MANAGE_ORDERS' },
+    { name: 'AdminInventory', label: locale.value === 'en' ? 'Inventory' : 'Kho hàng', to: '/admin/inventory', icon: InventoryIcon, permission: 'MANAGE_INVENTORY' },
+    { name: 'AdminCombos', label: locale.value === 'en' ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon, permission: 'MANAGE_PRODUCTS' },
+    { name: 'AdminCustomers', label: locale.value === 'en' ? 'Customers' : 'Khách hàng', to: '/admin/customers', icon: CustomersIcon, permission: 'MANAGE_CUSTOMERS' },
+    { name: 'AdminPromotions', label: locale.value === 'en' ? 'Promotions' : 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon, permission: 'MANAGE_PROMOTIONS' },
+    { name: 'AdminBanners', label: locale.value === 'en' ? 'Banners' : 'Banners', to: '/admin/banners', icon: BannersIcon, permission: 'MANAGE_BANNERS' },
+    { name: 'AdminReports', label: locale.value === 'en' ? 'Reports' : 'Báo cáo', to: '/admin/reports', icon: ReportsIcon, permission: 'VIEW_REPORTS' },
+    { name: 'AdminLandingPages', label: locale.value === 'en' ? 'Quick Pages' : 'Tạo Page Nhanh', to: '/admin/landing-pages', icon: SparklingIcon, permission: 'MANAGE_LANDING_PAGES' },
+  ]
+
+  const user = authStore.user
+  if (!user) return []
+  if (user.role === 'ADMIN') return items
+
+  const userPermissions = user.permissions || []
+  return items.filter(item => {
+    if (!item.permission) return true
+    return userPermissions.includes(item.permission)
+  })
+})
 
 function handleLogout() {
   authStore.logout()

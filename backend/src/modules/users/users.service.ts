@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
-import { UserRole } from '../../common/enums';
+import { UserRole, LoyaltyTier } from '../../common/enums';
 
 @Injectable()
 export class UsersService {
@@ -72,4 +72,43 @@ export class UsersService {
     if (!user) throw new NotFoundException('User not found');
     return user.wishlist || [];
   }
+
+  // ── Loyalty Points System ──
+
+  private calculateTier(points: number): LoyaltyTier {
+    if (points >= 5000) return LoyaltyTier.DIAMOND;
+    if (points >= 2000) return LoyaltyTier.GOLD;
+    if (points >= 500) return LoyaltyTier.SILVER;
+    return LoyaltyTier.BRONZE;
+  }
+
+  async addLoyaltyPoints(userId: string, points: number): Promise<UserDocument | null> {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) return null;
+
+    user.loyaltyPoints = (user.loyaltyPoints || 0) + points;
+    user.loyaltyTier = this.calculateTier(user.loyaltyPoints);
+    await user.save();
+    return user;
+  }
+
+  async deductLoyaltyPoints(userId: string, points: number): Promise<UserDocument | null> {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) return null;
+
+    user.loyaltyPoints = Math.max(0, (user.loyaltyPoints || 0) - points);
+    user.loyaltyTier = this.calculateTier(user.loyaltyPoints);
+    await user.save();
+    return user;
+  }
+
+  async getLoyaltyInfo(userId: string): Promise<{ points: number; tier: string } | null> {
+    const user = await this.userModel.findById(userId).select('loyaltyPoints loyaltyTier').exec();
+    if (!user) return null;
+    return {
+      points: user.loyaltyPoints || 0,
+      tier: user.loyaltyTier || LoyaltyTier.BRONZE,
+    };
+  }
 }
+

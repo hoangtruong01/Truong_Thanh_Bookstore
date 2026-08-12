@@ -6,6 +6,7 @@ import { OrdersController } from './orders.controller';
 import { ProductsModule } from '../products/products.module';
 import { PromotionsModule } from '../promotions/promotions.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     ProductsModule,
     PromotionsModule,
     NotificationsModule,
+    UsersModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

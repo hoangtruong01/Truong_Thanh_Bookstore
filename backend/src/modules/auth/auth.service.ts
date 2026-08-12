@@ -41,6 +41,9 @@ export class AuthService {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        loyaltyPoints: user.loyaltyPoints || 0,
+        loyaltyTier: user.loyaltyTier,
+        permissions: user.permissions || [],
       },
       accessToken: this.jwtService.sign(payload),
     };
@@ -69,6 +72,9 @@ export class AuthService {
         phone: user.phone,
         role: user.role,
         avatar: user.avatar,
+        loyaltyPoints: user.loyaltyPoints || 0,
+        loyaltyTier: user.loyaltyTier,
+        permissions: user.permissions || [],
       },
       accessToken: this.jwtService.sign(payload),
     };

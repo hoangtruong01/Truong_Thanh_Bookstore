@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types, SchemaTypes } from 'mongoose';
-import { UserRole } from '../../../common/enums';
+import { UserRole, LoyaltyTier } from '../../../common/enums';
 
 export type UserDocument = User & Document;
 
@@ -39,8 +39,18 @@ export class User {
   @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: 'Product' }], default: [] })
   wishlist: Types.ObjectId[];
 
+  @Prop({ default: 0 })
+  loyaltyPoints: number;
+
+  @Prop({ type: String, enum: LoyaltyTier, default: LoyaltyTier.BRONZE })
+  loyaltyTier: LoyaltyTier;
+
+  @Prop({ type: [String], default: [] })
+  permissions: string[];
+
   createdAt: Date;
   updatedAt: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+

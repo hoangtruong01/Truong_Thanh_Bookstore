@@ -7,6 +7,9 @@ export interface User {
   avatar?: string
   status: boolean
   wishlist?: string[]
+  loyaltyPoints?: number
+  loyaltyTier?: string
+  permissions?: string[]
   createdAt: string
   updatedAt: string
 }

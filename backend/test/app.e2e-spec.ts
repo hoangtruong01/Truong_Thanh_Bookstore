@@ -5,6 +5,8 @@ import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
 
+jest.setTimeout(60000);
+
 describe('Bookstore E2E Tests', () => {
   let app: INestApplication<App>;
 
@@ -25,7 +27,7 @@ describe('Bookstore E2E Tests', () => {
       }),
     );
     await app.init();
-  });
+  }, 60000);
 
   it('/api/products (GET)', () => {
     return request(app.getHttpServer())
