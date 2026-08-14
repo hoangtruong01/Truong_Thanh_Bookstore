@@ -276,6 +276,17 @@ export class SeedService implements OnModuleInit {
         options: ['Conan', 'Doraemon', 'Trinh thám', 'Anime'],
       },
       {
+        name: 'Văn phòng phẩm',
+        slug: 'van-phong-pham',
+        description: 'Các mặt hàng văn phòng phẩm, giấy in, bút viết, dụng cụ học tập & làm việc.',
+        comboPrice: 0,
+        products: [],
+        status: true,
+        optionsLabel: 'Phân loại VPP',
+        optionsType: 'pills',
+        options: ['Bút - Viết', 'Sổ - Tập - Giấy', 'Bìa - Kẹp hồ sơ', 'Dụng cụ văn phòng'],
+      },
+      {
         name: 'Combo',
         slug: 'combo',
         description: 'Các combo đồ dùng học tập và văn phòng phẩm tiết kiệm.',
@@ -311,7 +322,7 @@ export class SeedService implements OnModuleInit {
     ];
 
     const createdCombos = await this.categoryModel.insertMany(parentCategories);
-    this.logger.log('6 Real parent categories seeded successfully');
+    this.logger.log('7 Real parent categories seeded successfully');
 
     const slugify = (text: string): string => {
       return text
