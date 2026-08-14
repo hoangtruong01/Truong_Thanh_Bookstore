@@ -191,12 +191,12 @@
               v-for="(banner, idx) in bannerGroups.bottom_row.slice(0, 4)"
               :key="banner._id || idx"
               :href="banner.linkUrl || '#'"
-              class="block rounded-xl overflow-hidden group relative"
+              class="block rounded-xl overflow-hidden group relative aspect-[2.5/1] w-full h-full border border-slate-200/40 shadow-xs"
             >
               <img
                 :src="banner.imageUrl"
                 :alt="banner.title"
-                class="w-full h-full object-cover rounded-xl aspect-[2.5/1] transition-transform duration-500 group-hover:scale-105"
+                class="w-full h-full object-cover object-center rounded-xl transition-transform duration-500 group-hover:scale-105"
               />
             </a>
           </template>
@@ -204,9 +204,9 @@
             <div
               v-for="(promo, idx) in defaultBottomPromos"
               :key="idx"
-              class="rounded-xl overflow-hidden relative cursor-pointer group"
+              class="rounded-xl overflow-hidden relative cursor-pointer group aspect-[2.5/1] w-full h-full"
             >
-              <div :class="promo.gradient" class="w-full aspect-[2.5/1] flex items-center justify-between p-4 rounded-xl border border-slate-200/40">
+              <div :class="promo.gradient" class="w-full h-full aspect-[2.5/1] flex items-center justify-between p-4 rounded-xl border border-slate-200/40">
                 <div class="space-y-1 text-left relative z-10">
                   <span class="text-[10px] font-black uppercase tracking-wider" :class="promo.labelColor">{{ promo.label }}</span>
                   <h4 class="text-sm font-black text-slate-900 leading-tight">{{ promo.title }}</h4>
