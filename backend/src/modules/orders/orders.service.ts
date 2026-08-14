@@ -58,7 +58,9 @@ export class OrdersService {
 
   private isTransactionUnsupported(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
-    return /Transaction numbers are only allowed|replica set|mongos/i.test(message);
+    return /Transaction numbers are only allowed|replica set|mongos|retryable writes|retryWrites|standalone/i.test(
+      message,
+    );
   }
 
   private getEnabledPaymentMethods(): PaymentMethod[] {

@@ -49,6 +49,7 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
     it('1.1 Should register a new customer account', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/auth/register')
+        .set('x-client-platform', 'mobile')
         .send(testUser)
         .expect(201);
 
@@ -63,6 +64,7 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
     it('1.2 Should reject duplicate registration with same email', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/auth/register')
+        .set('x-client-platform', 'mobile')
         .send(testUser)
         .expect(409);
 
@@ -73,6 +75,7 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
     it('1.3 Should login successfully with valid credentials', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/auth/login')
+        .set('x-client-platform', 'mobile')
         .send({ email: testUser.email, password: testUser.password })
         .expect(201);
 
@@ -116,6 +119,7 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
       // Verify login with new password
       const loginRes = await request(app.getHttpServer())
         .post('/api/auth/login')
+        .set('x-client-platform', 'mobile')
         .send({ email: testUser.email, password: 'NewPassword@123' })
         .expect(201);
 
