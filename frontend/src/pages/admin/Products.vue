@@ -64,13 +64,23 @@
       <div class="w-full md:w-48">
         <select
           v-model="selectedCategory"
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-600 transition-all"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-600 transition-all font-medium"
           @change="fetchProducts"
         >
           <option value="">Tất cả danh mục</option>
-          <option v-for="cat in categories" :key="cat._id" :value="cat._id">
-            {{ cat.name }}
-          </option>
+          <template v-for="parent in parentCategories" :key="parent._id">
+            <option :value="parent._id" class="font-bold text-slate-900">
+              {{ parent.name }}
+            </option>
+            <option
+              v-for="sub in getSubcategories(parent._id)"
+              :key="sub._id"
+              :value="sub._id"
+              class="text-slate-600"
+            >
+              &nbsp;&nbsp;&nbsp;&nbsp;↳ {{ sub.name }}
+            </option>
+          </template>
         </select>
       </div>
       <div class="w-full md:w-48">
@@ -540,7 +550,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import { productService } from '@/services/product.service'
 import { categoryService } from '@/services/category.service'
@@ -552,6 +562,18 @@ const toast = useToast()
 const products = ref<Product[]>([])
 const categories = ref<Category[]>([])
 const loading = ref(true)
+
+const parentCategories = computed(() => {
+  return categories.value.filter(c => !c.parentId)
+})
+
+function getSubcategories(parentId: string) {
+  return categories.value.filter(c => {
+    if (!c.parentId) return false
+    const pId = typeof c.parentId === 'object' ? (c.parentId as any)._id : c.parentId
+    return pId === parentId
+  })
+}
 
 const searchQuery = ref('')
 const selectedCategory = ref('')

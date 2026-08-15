@@ -54,9 +54,19 @@
               class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 font-medium"
             >
               <option value="">Chọn danh mục</option>
-              <option v-for="cat in categories" :key="cat._id" :value="cat._id">
-                {{ cat.name }}
-              </option>
+              <template v-for="parent in parentCategories" :key="parent._id">
+                <option :value="parent._id" class="font-bold text-slate-900">
+                  {{ parent.name }}
+                </option>
+                <option
+                  v-for="sub in getSubcategories(parent._id)"
+                  :key="sub._id"
+                  :value="sub._id"
+                  class="text-slate-600"
+                >
+                  &nbsp;&nbsp;&nbsp;&nbsp;↳ {{ sub.name }}
+                </option>
+              </template>
             </select>
             <button
               type="button"
@@ -533,6 +543,18 @@ const activeCategoryOptions = computed(() => {
   if (!form.category) return null
   return categories.value.find(c => c._id === form.category) || null
 })
+
+const parentCategories = computed(() => {
+  return categories.value.filter(c => !c.parentId)
+})
+
+function getSubcategories(parentId: string) {
+  return categories.value.filter(c => {
+    if (!c.parentId) return false
+    const pId = typeof c.parentId === 'object' ? (c.parentId as any)._id : c.parentId
+    return pId === parentId
+  })
+}
 const newQuickOptionVal = ref('')
 
 // Quick Combo addition & deletion handling

@@ -62,9 +62,6 @@
               <tr v-for="combo in paginatedCombos" :key="combo._id" class="hover:bg-slate-50/50">
                 <td class="py-4 px-6 whitespace-nowrap">
                   <div class="font-bold text-slate-800">{{ combo.name }}</div>
-                  <div v-if="combo.parentId" class="text-[10px] text-slate-500 font-semibold mt-1">
-                    Thuộc: <span class="font-bold text-slate-700">{{ getParentName(combo.parentId) }}</span>
-                  </div>
                 </td>
                 <td class="py-4 px-6">
                   <div class="text-sm font-bold text-[#dc2626]" v-if="combo.comboPrice">
@@ -146,23 +143,7 @@
             ></textarea>
           </div>
 
-          <div>
-            <label class="text-xs font-bold text-slate-700">Thuộc Combo cha (Nếu có)</label>
-            <select
-              v-model="form.parentId"
-              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-600 font-semibold"
-            >
-              <option :value="null">Không có (Là combo chính)</option>
-              <option
-                v-for="parent in parentCombos"
-                :key="parent._id"
-                :value="parent._id"
-                :disabled="parent._id === currentComboId"
-              >
-                {{ parent.name }}
-              </option>
-            </select>
-          </div>
+
 
           <!-- Category Options Management -->
           <div class="border-t border-slate-100 pt-4 space-y-3">
@@ -438,6 +419,7 @@ const handleComboPriceInput = (event: Event) => {
 const toast = useToast()
 
 const combos = ref<Category[]>([])
+const allCategories = ref<Category[]>([])
 const allProducts = ref<Product[]>([])
 const loading = ref(true)
 const searchQuery = ref('')
@@ -569,7 +551,11 @@ async function fetchCombos() {
   loading.value = true
   try {
     const res = await categoryService.getAllAdmin()
-    combos.value = res.data
+    const all = res.data || []
+    allCategories.value = all
+    
+    // Only display sub-combos (categories that have a parentId)
+    combos.value = all.filter((c: Category) => c.parentId != null)
   } catch (err) {
     toast.error('Lỗi khi lấy danh sách combo')
   } finally {
@@ -640,11 +626,12 @@ function openCreateForm() {
   selectedProductIdToAdd.value = ''
   productSearchText.value = ''
   newOptionInput.value = ''
+  const mainCombo = allCategories.value.find(c => !c.parentId && (c.slug === 'combo' || c.name.toLowerCase() === 'combo'))
   form.value = {
     name: '',
     slug: '',
     description: '',
-    parentId: null,
+    parentId: mainCombo ? mainCombo._id : null,
     products: [],
     comboPrice: 0,
     status: true,
@@ -688,9 +675,10 @@ function openEditForm(combo: Category) {
 
 async function handleSubmit() {
   try {
+    const mainCombo = allCategories.value.find(c => !c.parentId && (c.slug === 'combo' || c.name.toLowerCase() === 'combo'))
     const payload = {
       ...form.value,
-      parentId: form.value.parentId || null,
+      parentId: form.value.parentId || (mainCombo ? mainCombo._id : null),
     }
 
     if (isEditing.value && currentComboId.value) {

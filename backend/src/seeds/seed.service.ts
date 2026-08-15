@@ -62,9 +62,11 @@ export class SeedService implements OnModuleInit {
     const firstCategory = await this.categoryModel.findOne({ name: 'Sách giáo khoa' }).exec() as any;
     const productCount = await this.productModel.countDocuments({}).exec();
     const promotionCount = await this.promotionModel.countDocuments({}).exec();
+    const comboCat = await this.categoryModel.findOne({ name: 'Combo', parentId: null }).exec();
+    const mislinkedCombo = comboCat ? await this.categoryModel.findOne({ parentId: { $ne: comboCat._id, $exists: true } }).exec() : null;
 
-    if (hasUsers === 0 || hasCategories === 0 || !firstCategory || !firstCategory.optionsLabel || productCount !== 120) {
-      this.logger.log(`Triggering seed: users=${hasUsers}, categories=${hasCategories}, products=${productCount}`);
+    if (hasUsers === 0 || hasCategories === 0 || !firstCategory || !firstCategory.optionsLabel || productCount !== 120 || mislinkedCombo) {
+      this.logger.log(`Triggering clean reseed: users=${hasUsers}, categories=${hasCategories}, products=${productCount}`);
       await this.clearDatabase();
       await this.seed();
     } else {
@@ -688,11 +690,12 @@ export class SeedService implements OnModuleInit {
 
       // Create unique subcategory for this combo
       const subCategorySlug = `${slugify(p.name)}-cat`;
+      const comboParentCategory = createdCombos.find(c => c.slug === 'combo') || createdCombos[4];
       const subCat = new this.categoryModel({
         name: p.name,
         slug: subCategorySlug,
         description: `Nhóm sản phẩm liên kết của ${p.name}`,
-        parentId: createdCombos[3]._id,
+        parentId: comboParentCategory._id,
         comboPrice: p.discountPrice || p.price,
         products: selectedSubProducts,
         status: true,
