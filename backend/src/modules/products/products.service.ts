@@ -1,9 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
+import * as ExcelJS from 'exceljs';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { Review, ReviewDocument } from './schemas/review.schema';
 import { StockAlert, StockAlertDocument } from './schemas/stock-alert.schema';
+import { Category, CategoryDocument } from '../categories/schemas/category.schema';
+import { Inventory, InventoryDocument } from '../inventory/schemas/inventory.schema';
 import { EmailService } from '../email/email.service';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -12,7 +20,7 @@ import {
   ProductQueryDto,
 } from './dto/product.dto';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
-import { InventoryStatus } from '../../common/enums';
+import { InventoryStatus, ProductStatus } from '../../common/enums';
 
 function makeDiacriticRegex(str: string): string {
   const escaped = str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -44,6 +52,8 @@ export class ProductsService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Review.name) private reviewModel: Model<ReviewDocument>,
     @InjectModel(StockAlert.name) private stockAlertModel: Model<StockAlertDocument>,
+    @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
+    @InjectModel(Inventory.name) private inventoryModel: Model<InventoryDocument>,
     private emailService: EmailService,
     private configService: ConfigService,
   ) {}
@@ -57,9 +67,24 @@ export class ProductsService {
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
-    // Append short random suffix to prevent duplicate slugs
     const suffix = Math.random().toString(36).substring(2, 6);
     return `${base}-${suffix}`;
+  }
+
+  private extractCellValue(cell: any): string {
+    if (cell === null || cell === undefined) return '';
+    if (cell instanceof Date) return cell.toISOString().slice(0, 10);
+    if (typeof cell === 'object') {
+      if (cell.text !== undefined) return String(cell.text).trim();
+      if (cell.result !== undefined) return String(cell.result).trim();
+      if (cell.richText && Array.isArray(cell.richText)) {
+        return cell.richText.map((r: any) => r.text || '').join('').trim();
+      }
+      if (cell.hyperlink !== undefined) return String(cell.hyperlink).trim();
+      if (cell.error !== undefined) return '';
+      return '';
+    }
+    return String(cell).trim();
   }
 
   async create(dto: CreateProductDto): Promise<ProductDocument> {
@@ -69,7 +94,6 @@ export class ProductsService {
 
     // Automatically create inventory entry
     try {
-      const inventoryModel = this.productModel.db.model('Inventory');
       const currentStock = savedProduct.stock || 0;
       let status = InventoryStatus.IN_STOCK;
       if (currentStock <= 0) {
@@ -78,7 +102,7 @@ export class ProductsService {
         status = InventoryStatus.LOW_STOCK;
       }
 
-      await inventoryModel.create({
+      await this.inventoryModel.create({
         product: savedProduct._id,
         currentStock,
         minStock: 10,
@@ -118,8 +142,7 @@ export class ProductsService {
 
     if (category) {
       try {
-        const categoryModel = this.productModel.db.model('Category');
-        const subCategories = await categoryModel
+        const subCategories = await this.categoryModel
           .find({ parentId: new Types.ObjectId(category) })
           .exec();
         const categoryIds = [
@@ -156,24 +179,24 @@ export class ProductsService {
       filter.rating = { $gte: Number(minRating) };
     }
 
-    if (inStock === true || inStock === 'true') {
-      filter.stock = { $gt: 0 };
+    if (inStock !== undefined && inStock !== '') {
+      const isInStock = inStock === true || inStock === 'true';
+      if (isInStock) {
+        filter.stock = { $gt: 0 };
+      } else {
+        filter.stock = { $lte: 0 };
+      }
     }
 
-    if (query.isFlashSale === true || (query.isFlashSale as any) === 'true') {
-      filter.isFlashSale = true;
-      filter.flashSaleExpiry = { $gt: new Date() };
-    }
     if (q) {
-      // FIX-M04: Limit search query length to prevent ReDoS
+      // FIX-M04: Limit search query length
       const safeQ = q.substring(0, 100);
       const regexPattern = makeDiacriticRegex(safeQ);
       filter.$or = [
         { name: { $regex: regexPattern, $options: 'i' } },
         { description: { $regex: regexPattern, $options: 'i' } },
-        { sku: { $regex: regexPattern, $options: 'i' } },
+        { sku: { $regex: safeQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
         { brand: { $regex: regexPattern, $options: 'i' } },
-        { subOptions: { $regex: regexPattern, $options: 'i' } },
       ];
     }
 
@@ -186,11 +209,8 @@ export class ProductsService {
         case 'price_desc':
           sortObj = { price: -1 };
           break;
-        case 'name_asc':
-          sortObj = { name: 1 };
-          break;
-        case 'name_desc':
-          sortObj = { name: -1 };
+        case 'rating':
+          sortObj = { rating: -1 };
           break;
         case 'best_selling':
           sortObj = { sold: -1 };
@@ -265,7 +285,6 @@ export class ProductsService {
   }
 
   async search(q: string): Promise<ProductDocument[]> {
-    // FIX-M04: Limit search query length
     const safeQ = q.substring(0, 100);
     const regexPattern = makeDiacriticRegex(safeQ);
     return this.productModel
@@ -327,7 +346,6 @@ export class ProductsService {
       .exec();
     if (updated) {
       try {
-        const inventoryModel = this.productModel.db.model('Inventory');
         const minStock = 10;
         let status = InventoryStatus.IN_STOCK;
         if (updated.stock <= 0) {
@@ -335,7 +353,7 @@ export class ProductsService {
         } else if (updated.stock <= minStock) {
           status = InventoryStatus.LOW_STOCK;
         }
-        await inventoryModel
+        await this.inventoryModel
           .findOneAndUpdate(
             { product: id },
             { currentStock: updated.stock, status, lastUpdated: new Date() },
@@ -364,7 +382,6 @@ export class ProductsService {
       .exec();
     if (updated) {
       try {
-        const inventoryModel = this.productModel.db.model('Inventory');
         const minStock = 10;
         let status = InventoryStatus.IN_STOCK;
         if (updated.stock <= 0) {
@@ -372,7 +389,7 @@ export class ProductsService {
         } else if (updated.stock <= minStock) {
           status = InventoryStatus.LOW_STOCK;
         }
-        await inventoryModel
+        await this.inventoryModel
           .findOneAndUpdate(
             { product: id },
             { currentStock: updated.stock, status, lastUpdated: new Date() },
@@ -408,7 +425,6 @@ export class ProductsService {
     }
     // Sync inventory status
     try {
-      const inventoryModel = this.productModel.db.model('Inventory');
       const minStock = 10;
       let status = InventoryStatus.IN_STOCK;
       if (updated.stock <= 0) {
@@ -416,7 +432,7 @@ export class ProductsService {
       } else if (updated.stock <= minStock) {
         status = InventoryStatus.LOW_STOCK;
       }
-      await inventoryModel
+      await this.inventoryModel
         .findOneAndUpdate(
           { product: id },
           { currentStock: updated.stock, status, lastUpdated: new Date() },
@@ -595,5 +611,703 @@ export class ProductsService {
 
     // Clear alerts
     await this.stockAlertModel.deleteMany({ product: new Types.ObjectId(productId) }).exec();
+  }
+
+  /**
+   * 1. Tạo file Excel mẫu (.xlsx) đa sheet chuẩn cho Admin nhập sản phẩm
+   */
+  async generateImportTemplate(): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Trường Thành Bookstore';
+    workbook.lastModifiedBy = 'Trường Thành Bookstore Admin';
+    workbook.created = new Date();
+
+    // ====== SHEET 1: DANH SÁCH SẢN PHẨM (MẪU) ======
+    const sheet = workbook.addWorksheet('DanhSachSanPham', {
+      views: [{ showGridLines: true }],
+    });
+
+    sheet.columns = [
+      { header: 'Tên sản phẩm (*)', key: 'name', width: 36 },
+      { header: 'Mã SKU (*)', key: 'sku', width: 22 },
+      { header: 'Tên danh mục (*)', key: 'category', width: 25 },
+      { header: 'Giá bán (*)', key: 'price', width: 18 },
+      { header: 'Giá khuyến mãi', key: 'discountPrice', width: 18 },
+      { header: 'Số lượng kho', key: 'stock', width: 15 },
+      { header: 'Đơn vị tính', key: 'unit', width: 14 },
+      { header: 'Thương hiệu / Tác giả', key: 'brand', width: 24 },
+      { header: 'Trạng thái (Đang bán / Ngừng bán)', key: 'status', width: 26 },
+      { header: 'Nổi bật (Có / Không)', key: 'isFeatured', width: 20 },
+      { header: 'Link hình ảnh', key: 'images', width: 40 },
+      { header: 'Mô tả sản phẩm', key: 'description', width: 45 },
+    ];
+
+    // Định dạng Header Sheet 1
+    const headerRow = sheet.getRow(1);
+    headerRow.height = 32;
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFDC2626' }, // Màu đỏ Trường Thành Bookstore
+      };
+      cell.font = {
+        name: 'Segoe UI',
+        bold: true,
+        color: { argb: 'FFFFFFFF' },
+        size: 11,
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'medium', color: { argb: 'FF991B1B' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      };
+    });
+
+    // Lấy danh mục đầu tiên thực tế từ database để làm mẫu chuẩn xác
+    const firstCat = await this.categoryModel.findOne({ status: true }).lean();
+    const sampleCategoryName = firstCat ? firstCat.name : 'Văn phòng phẩm';
+
+    // Thêm các dòng mẫu thực tế
+    const sampleRows = [
+      {
+        name: 'Bút bi Thiên Long TL-027 (Mực Xanh)',
+        sku: 'TL-027-BLUE',
+        category: sampleCategoryName,
+        price: 5000,
+        discountPrice: 4500,
+        stock: 200,
+        unit: 'cây',
+        brand: 'Thiên Long',
+        status: 'Đang bán',
+        isFeatured: 'Có',
+        images: 'https://res.cloudinary.com/truongthanh/image/upload/sample_but_tl027.jpg',
+        description: 'Bút bi đầu bấm 0.5mm êm trơn, mực đậm rõ nét, thích hợp học sinh và văn phòng.',
+      },
+      {
+        name: 'Sách Đắc Nhân Tâm (Khổ Lớn - Bìa Mềm)',
+        sku: 'SACH-DNT-01',
+        category: sampleCategoryName,
+        price: 86000,
+        discountPrice: 68000,
+        stock: 50,
+        unit: 'cuốn',
+        brand: 'NXB First News',
+        status: 'Đang bán',
+        isFeatured: 'Có',
+        images: '',
+        description: 'Cuốn sách nghệ thuật ứng xử kinh điển được hàng triệu độc giả yêu thích.',
+      },
+    ];
+
+    sampleRows.forEach((item) => {
+      const row = sheet.addRow(item);
+      row.height = 24;
+      row.getCell('price').numFmt = '#,##0';
+      row.getCell('discountPrice').numFmt = '#,##0';
+      row.getCell('stock').numFmt = '#,##0';
+      row.eachCell((cell) => {
+        cell.alignment = { vertical: 'middle', wrapText: true };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        };
+      });
+    });
+
+    // ====== SHEET 2: DANH MỤC CÓ SẴN TRONG CƠ SỞ DỮ LIỆU ======
+    const catSheet = workbook.addWorksheet('DanhSachDanhMuc', {
+      views: [{ showGridLines: true }],
+    });
+
+    catSheet.columns = [
+      { header: 'STT', key: 'stt', width: 8 },
+      { header: 'Tên danh mục', key: 'name', width: 32 },
+      { header: 'Mã định danh (Slug)', key: 'slug', width: 28 },
+      { header: 'Mô tả danh mục', key: 'description', width: 45 },
+    ];
+
+    const catHeaderRow = catSheet.getRow(1);
+    catHeaderRow.height = 30;
+    catHeaderRow.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF2563EB' }, // Màu xanh dương
+      };
+      cell.font = { name: 'Segoe UI', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    const categories = await this.categoryModel.find().sort({ name: 1 }).lean();
+    categories.forEach((cat, idx) => {
+      const row = catSheet.addRow({
+        stt: idx + 1,
+        name: cat.name,
+        slug: cat.slug || '',
+        description: cat.description || '',
+      });
+      row.height = 22;
+      row.eachCell((cell) => {
+        cell.alignment = { vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        };
+      });
+    });
+
+    // ====== SHEET 3: HƯỚNG DẪN SỬ DỤNG VÀ QUY TẮC NHẬP LIỆU ======
+    const guideSheet = workbook.addWorksheet('HuongDanSuDung', {
+      views: [{ showGridLines: true }],
+    });
+
+    guideSheet.columns = [
+      { header: 'Cột thông tin', key: 'column', width: 28 },
+      { header: 'Bắt buộc', key: 'required', width: 14 },
+      { header: 'Định dạng dữ liệu', key: 'type', width: 22 },
+      { header: 'Quy tắc & Ghi chú quan trọng', key: 'rule', width: 65 },
+    ];
+
+    const guideHeaderRow = guideSheet.getRow(1);
+    guideHeaderRow.height = 30;
+    guideHeaderRow.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF475569' }, // Màu Slate
+      };
+      cell.font = { name: 'Segoe UI', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    const guideRows = [
+      {
+        column: 'Tên sản phẩm (*)',
+        required: 'BẮT BUỘC',
+        type: 'Văn bản (Text)',
+        rule: 'Tên đầy đủ của sản phẩm. Không được để trống.',
+      },
+      {
+        column: 'Mã SKU (*)',
+        required: 'BẮT BUỘC',
+        type: 'Mã duy nhất (Text)',
+        rule: 'QUAN TRỌNG: Mã SKU là định danh duy nhất. Nếu SKU ĐÃ TỒN TẠI trong hệ thống, sản phẩm đó sẽ BỎ QUA / TỪ CHỐI tải lên để tránh ghi đè sai lệch dữ liệu kho.',
+      },
+      {
+        column: 'Tên danh mục (*)',
+        required: 'BẮT BUỘC',
+        type: 'Văn bản (Text)',
+        rule: 'Nên copy chính xác tên danh mục tại Sheet "DanhSachDanhMuc" để tự động liên kết chuẩn xác nhất.',
+      },
+      {
+        column: 'Giá bán (*)',
+        required: 'BẮT BUỘC',
+        type: 'Số nguyên (VNĐ)',
+        rule: 'Giá bán lẻ của sản phẩm (>= 0). Ví dụ: 50000',
+      },
+      {
+        column: 'Giá khuyến mãi',
+        required: 'Tùy chọn',
+        type: 'Số nguyên (VNĐ)',
+        rule: 'Giá sau khi giảm hoặc để 0 nếu không có giảm giá.',
+      },
+      {
+        column: 'Số lượng kho',
+        required: 'Tùy chọn',
+        type: 'Số nguyên >= 0',
+        rule: 'Số lượng tồn kho ban đầu (mặc định 0 nếu để trống). Hệ thống sẽ tự động cập nhật kho.',
+      },
+      {
+        column: 'Đơn vị tính',
+        required: 'Tùy chọn',
+        type: 'Văn bản (Text)',
+        rule: 'Ví dụ: cuốn, cái, cây, hộp, bộ, vỉ... (Mặc định: cái).',
+      },
+      {
+        column: 'Thương hiệu / Tác giả',
+        required: 'Tùy chọn',
+        type: 'Văn bản (Text)',
+        rule: 'Tên thương hiệu, nhà sản xuất hoặc tác giả sách.',
+      },
+      {
+        column: 'Trạng thái',
+        required: 'Tùy chọn',
+        type: 'Đang bán / Ngừng bán',
+        rule: 'Điền "Đang bán" hoặc "Ngừng bán" (Mặc định: Đang bán).',
+      },
+      {
+        column: 'Nổi bật',
+        required: 'Tùy chọn',
+        type: 'Có / Không',
+        rule: 'Điền "Có" nếu muốn ghim sản phẩm nổi bật ở trang chủ (Mặc định: Không).',
+      },
+      {
+        column: 'Link hình ảnh',
+        required: 'Tùy chọn',
+        type: 'Đường dẫn URL',
+        rule: 'Link ảnh trực tuyến (https://...). Nếu có nhiều ảnh, phân cách bằng dấu phẩy (,).',
+      },
+      {
+        column: 'Mô tả sản phẩm',
+        required: 'Tùy chọn',
+        type: 'Văn bản (Text)',
+        rule: 'Mô tả chi tiết, đặc điểm nổi bật hoặc thông số kỹ thuật của sản phẩm.',
+      },
+    ];
+
+    guideRows.forEach((g) => {
+      const row = guideSheet.addRow(g);
+      row.height = 24;
+      row.eachCell((cell) => {
+        cell.alignment = { vertical: 'middle', wrapText: true };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        };
+      });
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  /**
+   * 2. Xuất toàn bộ danh sách sản phẩm hiện có ra file Excel (.xlsx)
+   */
+  async exportToExcel(): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Trường Thành Bookstore';
+    workbook.lastModifiedBy = 'Trường Thành Bookstore Admin';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('DanhSachSanPham', {
+      views: [{ showGridLines: true }],
+    });
+
+    sheet.columns = [
+      { header: 'STT', key: 'stt', width: 8 },
+      { header: 'Mã SKU', key: 'sku', width: 18 },
+      { header: 'Tên sản phẩm', key: 'name', width: 36 },
+      { header: 'Danh mục', key: 'category', width: 24 },
+      { header: 'Giá bán (VNĐ)', key: 'price', width: 16 },
+      { header: 'Giá KM (VNĐ)', key: 'discountPrice', width: 16 },
+      { header: 'Tồn kho', key: 'stock', width: 14 },
+      { header: 'Đã bán', key: 'sold', width: 12 },
+      { header: 'Đơn vị', key: 'unit', width: 12 },
+      { header: 'Thương hiệu', key: 'brand', width: 20 },
+      { header: 'Trạng thái', key: 'status', width: 16 },
+      { header: 'Nổi bật', key: 'isFeatured', width: 14 },
+      { header: 'Link ảnh', key: 'images', width: 36 },
+      { header: 'Ngày tạo', key: 'createdAt', width: 20 },
+    ];
+
+    // Header styling
+    const headerRow = sheet.getRow(1);
+    headerRow.height = 30;
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFDC2626' },
+      };
+      cell.font = { name: 'Segoe UI', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'medium', color: { argb: 'FF991B1B' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      };
+    });
+
+    const products = await this.productModel
+      .find({ isDeleted: false })
+      .populate('category')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    products.forEach((prod: any, idx: number) => {
+      const categoryName =
+        prod.category && typeof prod.category === 'object'
+          ? prod.category.name
+          : 'Chưa phân loại';
+
+      const statusText =
+        prod.status === ProductStatus.ACTIVE || prod.status === 'ACTIVE' || prod.status === 'active'
+          ? 'Đang bán'
+          : 'Ngừng bán';
+
+      const isFeaturedText = prod.isFeatured ? 'Có' : 'Không';
+      const imagesText = Array.isArray(prod.images) ? prod.images.join(', ') : '';
+      const createdDateText = prod.createdAt
+        ? new Date(prod.createdAt).toLocaleString('vi-VN')
+        : '';
+
+      const row = sheet.addRow({
+        stt: idx + 1,
+        sku: prod.sku || '',
+        name: prod.name || '',
+        category: categoryName,
+        price: prod.price || 0,
+        discountPrice: prod.discountPrice || 0,
+        stock: prod.stock || 0,
+        sold: prod.sold || 0,
+        unit: prod.unit || 'cái',
+        brand: prod.brand || '',
+        status: statusText,
+        isFeatured: isFeaturedText,
+        images: imagesText,
+        createdAt: createdDateText,
+      });
+
+      row.height = 22;
+      row.getCell('price').numFmt = '#,##0';
+      row.getCell('discountPrice').numFmt = '#,##0';
+      row.getCell('stock').numFmt = '#,##0';
+      row.getCell('sold').numFmt = '#,##0';
+
+      // Màu nền so le cho dễ nhìn
+      if (idx % 2 === 1) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF8FAFC' },
+          };
+        });
+      }
+
+      row.eachCell((cell) => {
+        cell.alignment = { vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        };
+      });
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  /**
+   * 3. Nhập sản phẩm từ file Excel (.xlsx), kiểm tra trùng lặp SKU & Tên,
+   * từ chối tải lại những sản phẩm đã có và báo cáo thống kê chi tiết.
+   */
+  async importFromExcel(buffer: Buffer) {
+    const workbook = new ExcelJS.Workbook();
+    try {
+      await workbook.xlsx.load(buffer as any);
+    } catch (err) {
+      throw new BadRequestException('Định dạng file Excel không hợp lệ hoặc file bị hỏng.');
+    }
+
+    const sheet =
+      workbook.getWorksheet('DanhSachSanPham') ||
+      workbook.getWorksheet('Sheet1') ||
+      workbook.worksheets[0];
+
+    if (!sheet) {
+      throw new BadRequestException('Không tìm thấy Sheet dữ liệu trong file Excel.');
+    }
+
+    const created: Array<{
+      row: number;
+      sku: string;
+      name: string;
+      category: string;
+      price: number;
+      stock: number;
+    }> = [];
+
+    const skipped: Array<{
+      row: number;
+      sku: string;
+      name: string;
+      reason: string;
+    }> = [];
+
+    const errors: Array<{
+      row: number;
+      sku?: string;
+      name?: string;
+      reason: string;
+    }> = [];
+
+    const seenInFile = new Set<string>();
+
+    // Lấy toàn bộ sản phẩm hiện có trong CSDL (chưa bị xóa mềm) để kiểm tra trùng lặp
+    const existingProducts = await this.productModel
+      .find({ isDeleted: false }, { sku: 1, name: 1, slug: 1 })
+      .lean();
+
+    const existingSkuMap = new Map<string, any>();
+    for (const p of existingProducts) {
+      if (p.sku) {
+        existingSkuMap.set(p.sku.trim().toUpperCase(), p);
+      }
+    }
+
+    // Lấy toàn bộ danh mục hiện có
+    let existingCategories = await this.categoryModel.find().lean();
+
+    // Duyệt qua từng dòng trong Excel (bắt đầu từ dòng 2 vì dòng 1 là Tiêu đề)
+    const rowCount = sheet.rowCount;
+    if (rowCount < 2) {
+      throw new BadRequestException('File Excel không có dòng dữ liệu sản phẩm nào.');
+    }
+
+    for (let r = 2; r <= rowCount; r++) {
+      const row = sheet.getRow(r);
+
+      const name = this.extractCellValue(row.getCell(1).value);
+      const sku = this.extractCellValue(row.getCell(2).value);
+      const categoryName = this.extractCellValue(row.getCell(3).value);
+      const priceRaw = this.extractCellValue(row.getCell(4).value);
+      const discountPriceRaw = this.extractCellValue(row.getCell(5).value);
+      const stockRaw = this.extractCellValue(row.getCell(6).value);
+      const unit = this.extractCellValue(row.getCell(7).value);
+      const brand = this.extractCellValue(row.getCell(8).value);
+      const statusRaw = this.extractCellValue(row.getCell(9).value);
+      const isFeaturedRaw = this.extractCellValue(row.getCell(10).value);
+      const imagesRaw = this.extractCellValue(row.getCell(11).value);
+      const description = this.extractCellValue(row.getCell(12).value);
+
+      // Nếu cả dòng trống hoàn toàn thì bỏ qua
+      if (!name && !sku && !priceRaw && !categoryName) {
+        continue;
+      }
+
+      // 1. Kiểm tra trường bắt buộc
+      if (!name) {
+        errors.push({
+          row: r,
+          sku: sku || undefined,
+          name: undefined,
+          reason: 'Thiếu Tên sản phẩm (Bắt buộc).',
+        });
+        continue;
+      }
+
+      if (!sku) {
+        errors.push({
+          row: r,
+          sku: undefined,
+          name,
+          reason: 'Thiếu Mã SKU sản phẩm (Bắt buộc).',
+        });
+        continue;
+      }
+
+      // Xử lý giá bán
+      const cleanPriceStr = priceRaw.replace(/[^0-9.-]+/g, '');
+      const price = Number(cleanPriceStr);
+      if (isNaN(price) || price < 0) {
+        errors.push({
+          row: r,
+          sku,
+          name,
+          reason: `Giá bán không hợp lệ: "${priceRaw}" (Phải là số >= 0).`,
+        });
+        continue;
+      }
+
+      // 2. KIỂM TRA TRÙNG LẶP SẢN PHẨM (DUPLICATE DETECTION)
+      const normalizedSku = sku.trim().toUpperCase();
+
+      // Kiểm tra xem SKU đã có trong CSDL chưa
+      if (existingSkuMap.has(normalizedSku)) {
+        const existProd = existingSkuMap.get(normalizedSku);
+        skipped.push({
+          row: r,
+          sku: sku.trim(),
+          name: name.trim(),
+          reason: `Mã SKU "${sku.trim()}" đã tồn tại trong kho (Sản phẩm: "${existProd.name || ''}"). Hệ thống từ chối tải lại để tránh trùng lặp.`,
+        });
+        continue;
+      }
+
+      // Kiểm tra xem SKU có bị lặp lại trong chính file Excel tải lên không
+      if (seenInFile.has(normalizedSku)) {
+        skipped.push({
+          row: r,
+          sku: sku.trim(),
+          name: name.trim(),
+          reason: `Mã SKU "${sku.trim()}" bị lặp lại nhiều lần trong file Excel. Bỏ qua dòng này.`,
+        });
+        continue;
+      }
+
+      // Đánh dấu đã thấy SKU
+      seenInFile.add(normalizedSku);
+      existingSkuMap.set(normalizedSku, { sku, name });
+
+      // 3. Khớp danh mục sản phẩm (Category Matching)
+      let categoryId: Types.ObjectId | null = null;
+      let matchedCategoryName = categoryName || 'Văn phòng phẩm';
+
+      if (categoryName) {
+        const normalizedInputCat = categoryName.trim().toLowerCase();
+        let matched = existingCategories.find(
+          (c) =>
+            c.name.trim().toLowerCase() === normalizedInputCat ||
+            (c.slug && c.slug.toLowerCase() === normalizedInputCat) ||
+            String(c._id) === categoryName.trim() ||
+            makeDiacriticRegex(c.name).toLowerCase() === makeDiacriticRegex(categoryName).toLowerCase()
+        );
+
+        if (matched) {
+          categoryId = matched._id as any;
+          matchedCategoryName = matched.name;
+        } else {
+          // Nếu danh mục chưa có trong DB, tạo danh mục mới tự động
+          try {
+            const newCat = new this.categoryModel({
+              name: categoryName.trim(),
+              slug: this.generateSlug(categoryName.trim()),
+              description: 'Danh mục được tạo tự động từ Import Excel',
+              status: true,
+            });
+            const savedCat = await newCat.save();
+            existingCategories.push(savedCat.toObject());
+            categoryId = savedCat._id as any;
+            matchedCategoryName = savedCat.name;
+          } catch {
+            if (existingCategories.length > 0) {
+              categoryId = existingCategories[0]._id as any;
+              matchedCategoryName = existingCategories[0].name;
+            }
+          }
+        }
+      } else if (existingCategories.length > 0) {
+        categoryId = existingCategories[0]._id as any;
+        matchedCategoryName = existingCategories[0].name;
+      }
+
+      // Xử lý các trường phụ
+      const cleanDiscountStr = discountPriceRaw ? discountPriceRaw.replace(/[^0-9.-]+/g, '') : '0';
+      const discountPrice = Math.max(0, Number(cleanDiscountStr) || 0);
+
+      const cleanStockStr = stockRaw ? stockRaw.replace(/[^0-9.-]+/g, '') : '0';
+      const stock = Math.max(0, Math.floor(Number(cleanStockStr) || 0));
+
+      const finalUnit = unit && unit.trim() ? unit.trim() : 'cái';
+      const finalBrand = brand && brand.trim() ? brand.trim() : '';
+
+      const statusLower = (statusRaw || '').toLowerCase();
+      const finalStatus =
+        statusLower.includes('ngừng') ||
+        statusLower.includes('ngung') ||
+        statusLower.includes('dừng') ||
+        statusLower.includes('inactive') ||
+        statusLower === 'false' ||
+        statusRaw === '0'
+          ? ProductStatus.INACTIVE
+          : ProductStatus.ACTIVE;
+
+      const featLower = (isFeaturedRaw || '').toLowerCase();
+      const finalIsFeatured =
+        featLower.includes('có') ||
+        featLower.includes('co') ||
+        featLower === 'true' ||
+        featLower === '1' ||
+        featLower === 'yes' ||
+        featLower === 'x' ||
+        featLower === 'v';
+
+      const imagesList = imagesRaw
+        ? imagesRaw
+            .split(/[\n,;]+/)
+            .map((img) => img.replace(/^["']|["']$/g, '').trim())
+            .filter((img) => img.length > 0)
+        : [];
+
+      // 4. TIẾN HÀNH TẠO MỚI SẢN PHẨM & TỒN KHO
+      try {
+        const slug = this.generateSlug(name.trim());
+        const product = new this.productModel({
+          name: name.trim(),
+          sku: sku.trim(),
+          slug,
+          category: categoryId,
+          brand: finalBrand,
+          price,
+          discountPrice,
+          stock,
+          unit: finalUnit,
+          status: finalStatus,
+          isFeatured: finalIsFeatured,
+          images: imagesList,
+          description: description || '',
+          sold: 0,
+          rating: 5,
+          isDeleted: false,
+        });
+
+        const savedProduct = await product.save();
+
+        // Tự động tạo bản ghi quản lý kho (Inventory)
+        try {
+          let invStatus = InventoryStatus.IN_STOCK;
+          if (stock <= 0) invStatus = InventoryStatus.OUT_OF_STOCK;
+          else if (stock <= 10) invStatus = InventoryStatus.LOW_STOCK;
+
+          await this.inventoryModel.create({
+            product: savedProduct._id,
+            currentStock: stock,
+            minStock: 10,
+            maxStock: 1000,
+            status: invStatus,
+            lastUpdated: new Date(),
+          });
+        } catch (invErr) {
+          this.logger.error('Lỗi khi tự động tạo kho cho sản phẩm import:', invErr);
+        }
+
+        created.push({
+          row: r,
+          sku: sku.trim(),
+          name: name.trim(),
+          category: matchedCategoryName,
+          price,
+          stock,
+        });
+      } catch (saveErr: any) {
+        this.logger.error(`Lỗi lưu sản phẩm tại dòng ${r}:`, saveErr);
+        errors.push({
+          row: r,
+          sku,
+          name,
+          reason: `Lỗi CSDL khi tạo sản phẩm: ${saveErr.message || 'Không xác định'}`,
+        });
+      }
+    }
+
+    return {
+      success: true,
+      message: `Xử lý hoàn tất: Đã thêm mới ${created.length} sản phẩm, Bỏ qua ${skipped.length} sản phẩm đã có, ${errors.length} dòng bị lỗi.`,
+      summary: {
+        totalRows: created.length + skipped.length + errors.length,
+        createdCount: created.length,
+        skippedCount: skipped.length,
+        errorCount: errors.length,
+      },
+      details: {
+        created,
+        skipped,
+        errors,
+      },
+    };
   }
 }

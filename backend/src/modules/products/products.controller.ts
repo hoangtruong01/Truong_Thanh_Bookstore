@@ -10,9 +10,14 @@ import {
   UseGuards,
   Request,
   BadRequestException,
+  Res,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { ProductsService } from './products.service';
 import {
   CreateProductDto,
@@ -33,6 +38,66 @@ export class ProductsController {
   @ApiOperation({ summary: 'Get all products with filters and pagination' })
   findAll(@Query() query: ProductQueryDto) {
     return this.productsService.findAll(query);
+  }
+
+  @Get('export/template')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PRODUCTS)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download Excel import template' })
+  async downloadTemplate(@Res() res: Response) {
+    const buffer = await this.productsService.generateImportTemplate();
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="Mau_nhap_san_pham_TruongThanh.xlsx"',
+    );
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
+  }
+
+  @Get('export/excel')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PRODUCTS)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Export all products to Excel' })
+  async exportExcel(@Res() res: Response) {
+    const buffer = await this.productsService.exportToExcel();
+    const dateStr = new Date().toISOString().slice(0, 10);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="Danh_sach_san_pham_${dateStr}.xlsx"`,
+    );
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
+  }
+
+  @Post('import/excel')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PRODUCTS)
+  @ApiBearerAuth()
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 10 * 1024 * 1024 }, // Tối đa 10MB
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Import products from Excel file' })
+  async importExcel(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Vui lòng chọn file Excel để tải lên');
+    }
+    if (!file.originalname.match(/\.(xlsx|xls)$/i)) {
+      throw new BadRequestException('Chỉ chấp nhận file Excel định dạng .xlsx hoặc .xls');
+    }
+    return this.productsService.importFromExcel(file.buffer);
   }
 
   @Get('featured')
