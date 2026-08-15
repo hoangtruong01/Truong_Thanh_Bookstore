@@ -6,7 +6,14 @@ import '../../core/widgets/shimmer_loading.dart';
 import '../../providers/product_provider.dart';
 
 class ProductListScreen extends StatefulWidget {
-  const ProductListScreen({super.key});
+  final String? initialCategoryId;
+  final String? initialSearchQuery;
+
+  const ProductListScreen({
+    super.key,
+    this.initialCategoryId,
+    this.initialSearchQuery,
+  });
 
   @override
   State<ProductListScreen> createState() => _ProductListScreenState();
@@ -21,6 +28,23 @@ class _ProductListScreenState extends State<ProductListScreen> {
   String? _selectedBrand;
   double? _minRating;
   bool _onlyInStock = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSearchQuery != null && widget.initialSearchQuery!.isNotEmpty) {
+      _searchController.text = widget.initialSearchQuery!;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<ProductProvider>(context, listen: false);
+      if (widget.initialCategoryId != null) {
+        provider.selectCategory(widget.initialCategoryId);
+      }
+      if (widget.initialSearchQuery != null && widget.initialSearchQuery!.isNotEmpty) {
+        provider.setSearchQuery(widget.initialSearchQuery!);
+      }
+    });
+  }
 
   @override
   void dispose() {
