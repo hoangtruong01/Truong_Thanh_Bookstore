@@ -22,6 +22,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentBannerIndex = 0;
   Timer? _bannerTimer;
 
+  // Flash Sale Auto Carousel state
+  final PageController _flashSaleController = PageController();
+  int _currentFlashSaleIndex = 0;
+  Timer? _flashSaleTimer;
+
   // Countdown timer state for Deal Hot
   Timer? _countdownTimer;
   String _hoursStr = "00";
@@ -139,6 +144,22 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
+    _flashSaleTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (_flashSaleController.hasClients && mounted) {
+        final provider = Provider.of<ProductProvider>(context, listen: false);
+        final topDeals = provider.flashSaleProducts.take(6).toList();
+        final pairCount = (topDeals.length / 2).ceil();
+        if (pairCount > 1) {
+          _currentFlashSaleIndex = (_currentFlashSaleIndex + 1) % pairCount;
+          _flashSaleController.animateToPage(
+            _currentFlashSaleIndex,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOutCubic,
+          );
+        }
+      }
+    });
+
     _startCountdownTimer();
   }
 
@@ -167,8 +188,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _bannerTimer?.cancel();
+    _flashSaleTimer?.cancel();
     _countdownTimer?.cancel();
     _bannerController.dispose();
+    _flashSaleController.dispose();
     super.dispose();
   }
 
@@ -778,21 +801,43 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 14),
 
-                        // Products horizontal list with card width 175px
-                        SizedBox(
-                          height: 260,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: productProvider.flashSaleProducts.length,
-                            itemBuilder: (context, index) {
-                              final product = productProvider.flashSaleProducts[index];
-                              return Container(
-                                width: 175,
-                                margin: const EdgeInsets.only(right: 12),
-                                child: ProductGridCard(product: product),
-                              );
-                            },
-                          ),
+                        // Products 2-Card PageView Carousel (Top 6 latest deals, auto-sliding loop)
+                        Builder(
+                          builder: (context) {
+                            // Take top 6 latest deals added by admin
+                            final flashProducts = productProvider.flashSaleProducts.take(6).toList();
+                            final int pairCount = (flashProducts.length / 2).ceil();
+
+                            return SizedBox(
+                              height: 265,
+                              child: PageView.builder(
+                                controller: _flashSaleController,
+                                onPageChanged: (idx) {
+                                  _currentFlashSaleIndex = idx;
+                                },
+                                itemCount: pairCount,
+                                itemBuilder: (context, pageIndex) {
+                                  final firstIndex = pageIndex * 2;
+                                  final secondIndex = firstIndex + 1;
+                                  final hasSecond = secondIndex < flashProducts.length;
+
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        child: ProductGridCard(product: flashProducts[firstIndex]),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: hasSecond
+                                            ? ProductGridCard(product: flashProducts[secondIndex])
+                                            : const SizedBox(),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -958,127 +1003,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              const SizedBox(height: 22),
 
-              // 6. Editorial Inspiration Banner matching Web ("Nâng tầm góc làm việc & học tập")
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.amber.withOpacity(0.15),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                    image: const DecorationImage(
-                      image: AssetImage('assets/inspiration-bg.png'),
-                      fit: BoxFit.cover,
-                      alignment: Alignment.centerRight,
-                    ),
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFFFFFBEB).withOpacity(0.96),
-                          const Color(0xFFFEF3C7).withOpacity(0.88),
-                          Colors.white.withOpacity(0.40),
-                        ],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFB45309).withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFB45309).withOpacity(0.3)),
-                          ),
-                          child: const Text(
-                            '✨ KHÔNG GIAN CẢM HỨNG',
-                            style: TextStyle(
-                              color: Color(0xFFB45309),
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'NÂNG TẦM GÓC LÀM VIỆC & HỌC TẬP',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF78350F),
-                            height: 1.25,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Góc làm việc gọn gàng, dụng cụ chất lượng là chiếc chìa khóa vạn năng khơi dậy động lực sáng tạo mỗi ngày.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF92400E),
-                            height: 1.35,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const ProductListScreen()),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFD97706), Color(0xFFB45309)],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFD97706).withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Text(
-                                  'Tìm cảm hứng sáng tạo',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                                SizedBox(width: 4),
-                                Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 14),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
 
               const SizedBox(height: 22),
 
