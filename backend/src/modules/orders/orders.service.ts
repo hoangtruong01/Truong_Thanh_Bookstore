@@ -338,15 +338,11 @@ export class OrdersService {
 
     if (userId) {
       const points = Math.floor(savedOrder.total / 1000);
-      if (points > 0) {
-        await this.usersService.addLoyaltyPoints(userId, points).catch((error) =>
-          this.logger.error('Failed to add loyalty points', error),
-        );
-      }
+
       this.notificationsService.create({
         userId,
         title: 'Đặt hàng thành công',
-        message: `Đơn hàng #${savedOrder.orderCode} đã được tiếp nhận.`,
+        message: `Đơn hàng #${savedOrder.orderCode} trị giá ${savedOrder.total.toLocaleString('vi-VN')}đ đã được tiếp nhận.`,
         type: 'order',
         meta: {
           orderId: savedOrder._id.toString(),
@@ -355,6 +351,41 @@ export class OrdersService {
       }).catch((error) =>
         this.logger.error('Failed to create order notification', error),
       );
+
+      if (points > 0) {
+        this.usersService.addLoyaltyPoints(userId, points).then((res) => {
+          if (res) {
+            // Loyalty points notification
+            this.notificationsService.create({
+              userId,
+              title: '🪙 Tích điểm thành công',
+              message: `Bạn được cộng +${points.toLocaleString('vi-VN')} điểm từ đơn hàng #${savedOrder.orderCode}. Tổng tích lũy: ${res.user.loyaltyPoints} điểm.`,
+              type: 'loyalty',
+              meta: { points, totalPoints: res.user.loyaltyPoints, orderCode: savedOrder.orderCode },
+            }).catch((err) => this.logger.error('Failed to create loyalty notification', err));
+
+            // Tier upgrade notification
+            if (res.tierUpgraded) {
+              const tierNameMap: any = {
+                BRONZE: 'ĐỒNG',
+                SILVER: 'BẠC',
+                GOLD: 'VÀNG',
+                DIAMOND: 'KIM CƯƠNG',
+              };
+              const tierVN = tierNameMap[res.newTier] || res.newTier;
+              this.notificationsService.create({
+                userId,
+                title: `🏆 Chúc mừng nâng hạng ${tierVN}`,
+                message: `Chúc mừng bạn đã thăng hạng thành viên ${tierVN}! Mở khóa thêm nhiều quyền lợi và ưu đãi độc quyền.`,
+                type: 'tier',
+                meta: { newTier: res.newTier, oldTier: res.oldTier },
+              }).catch((err) => this.logger.error('Failed to create tier notification', err));
+            }
+          }
+        }).catch((error) =>
+          this.logger.error('Failed to add loyalty points', error),
+        );
+      }
     }
 
     this.syncToGoogleSheet(savedOrder).catch((error) =>
@@ -737,7 +768,7 @@ export class OrdersService {
       }
       
       const customerObj = savedOrder.customer as any;
-      const customerEmail = customerObj.email || savedOrder.customerEmail;
+      const customerEmail = customerObj?.email || savedOrder.customerEmail;
 
       let statusText = '';
       switch (savedOrder.orderStatus) {
@@ -762,6 +793,17 @@ export class OrdersService {
           type: 'order',
           meta: { orderId: savedOrder._id.toString(), orderCode: savedOrder.orderCode },
         }).catch((err) => this.logger.error('Failed to create customer notification for status change', err));
+
+        // If completed, trigger review invitation notification
+        if (savedOrder.orderStatus === OrderStatus.COMPLETED) {
+          this.notificationsService.create({
+            userId: customerId,
+            title: `⭐ Đánh giá sản phẩm đơn hàng #${savedOrder.orderCode}`,
+            message: `Đơn hàng #${savedOrder.orderCode} đã hoàn tất! Hãy để lại đánh giá để chia sẻ cảm nhận và nhận thêm ưu đãi nhé.`,
+            type: 'review',
+            meta: { orderId: savedOrder._id.toString(), orderCode: savedOrder.orderCode },
+          }).catch((err) => this.logger.error('Failed to create review invite notification', err));
+        }
 
         // Send email notification (async)
         if (customerEmail) {

@@ -142,14 +142,21 @@
                   :class="{'bg-red-50/5 font-semibold': !readIds.includes(item.id)}"
                 >
                   <!-- Icon indicator -->
-                  <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm" :class="{
-                    'bg-red-50 text-red-600': item.type === 'stock',
-                    'bg-green-50 text-green-600': item.type === 'order',
-                    'bg-blue-50 text-blue-600': item.type === 'customer'
+                  <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-xs" :class="{
+                    'bg-red-100 text-red-600 border border-red-200': item.type === 'out_of_stock',
+                    'bg-amber-50 text-amber-600 border border-amber-100': item.type === 'stock',
+                    'bg-rose-100 text-rose-600 border border-rose-200': item.type === 'high_value_order',
+                    'bg-orange-50 text-orange-600 border border-orange-100': item.type === 'pending_delay',
+                    'bg-emerald-50 text-emerald-600 border border-emerald-100': item.type === 'order',
+                    'bg-blue-50 text-blue-600 border border-blue-100': item.type === 'customer'
                   }">
-                    <span v-if="item.type === 'stock'">⚠️</span>
+                    <span v-if="item.type === 'out_of_stock'">🔴</span>
+                    <span v-else-if="item.type === 'stock'">⚠️</span>
+                    <span v-else-if="item.type === 'high_value_order'">🚨</span>
+                    <span v-else-if="item.type === 'pending_delay'">⏰</span>
                     <span v-else-if="item.type === 'order'">📦</span>
                     <span v-else-if="item.type === 'customer'">👤</span>
+                    <span v-else>🔔</span>
                   </div>
 
                   <!-- Text -->
@@ -325,9 +332,9 @@ function handleNotificationClick(item: any) {
   }
   showNotifications.value = false
   
-  if (item.type === 'order') {
+  if (item.type === 'order' || item.type === 'high_value_order' || item.type === 'pending_delay') {
     router.push('/admin/orders')
-  } else if (item.type === 'stock') {
+  } else if (item.type === 'stock' || item.type === 'out_of_stock') {
     router.push('/admin/inventory')
   } else if (item.type === 'customer') {
     router.push('/admin/customers')

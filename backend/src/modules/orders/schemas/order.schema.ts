@@ -118,5 +118,5 @@ OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ promotionCode: 1 });
 OrderSchema.index(
   { customer: 1, idempotencyKeyHash: 1 },
-  { unique: true, sparse: true },
+  { unique: true, partialFilterExpression: { idempotencyKeyHash: { $type: 'string' } } },
 );

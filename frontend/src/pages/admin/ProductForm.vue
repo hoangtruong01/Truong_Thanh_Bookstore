@@ -548,11 +548,22 @@ const parentCategories = computed(() => {
   return categories.value.filter(c => !c.parentId)
 })
 
+function isComboCategory(cat: any): boolean {
+  if (!cat) return false
+  const name = (cat.name || '').toLowerCase()
+  const slug = (cat.slug || '').toLowerCase()
+  return name === 'combo' || slug === 'combo' || name.startsWith('combo') || slug.startsWith('combo')
+}
+
 function getSubcategories(parentId: string) {
+  const parent = categories.value.find(c => c._id === parentId)
+  if (parent && isComboCategory(parent)) {
+    return []
+  }
   return categories.value.filter(c => {
     if (!c.parentId) return false
     const pId = typeof c.parentId === 'object' ? (c.parentId as any)._id : c.parentId
-    return pId === parentId
+    return pId === parentId && !isComboCategory(c)
   })
 }
 const newQuickOptionVal = ref('')

@@ -24,9 +24,11 @@
       <!-- Chat Header -->
       <div class="bg-[#dc2626] text-white px-5 py-4 flex items-center justify-between shadow-md">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg border border-white/10">
-            🤖
-          </div>
+          <img
+            src="@/assets/logo.jpg"
+            alt="Trường Thành Logo"
+            class="w-9 h-9 rounded-full object-cover border-2 border-white/40 shadow-xs flex-shrink-0 bg-white"
+          />
           <div>
             <h4 class="text-xs font-black tracking-wide uppercase">Trường Thành Bot</h4>
             <div class="flex items-center gap-1.5 mt-0.5">
@@ -54,9 +56,12 @@
           :class="['flex items-start gap-2.5 max-w-[85%]', msg.sender === 'user' ? 'ml-auto flex-row-reverse text-right' : 'text-left']"
         >
           <!-- Bot Avatar -->
-          <div v-if="msg.sender === 'bot'" class="w-7 h-7 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-xs flex-shrink-0">
-            🤖
-          </div>
+          <img
+            v-if="msg.sender === 'bot'"
+            src="@/assets/logo.jpg"
+            alt="Trường Thành Bot"
+            class="w-7 h-7 rounded-full object-cover border border-red-100 flex-shrink-0 shadow-xs bg-white"
+          />
           
           <div class="space-y-1">
             <div

@@ -65,7 +65,7 @@
         <select
           v-model="selectedCategory"
           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-600 transition-all font-medium"
-          @change="fetchProducts"
+          @change="handleCategoryChange"
         >
           <option value="">Tất cả danh mục</option>
           <template v-for="parent in parentCategories" :key="parent._id">
@@ -87,7 +87,7 @@
         <select
           v-model="dealFilter"
           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-600 transition-all"
-          @change="fetchProducts"
+          @change="handleDealFilterChange"
         >
           <option value="">Tất cả sản phẩm</option>
           <option value="discounted">Chỉ Deal Sốc Giờ Vàng</option>
@@ -146,7 +146,7 @@
                     </span>
                   </div>
                   <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
-                    {{ (prod.category && typeof prod.category === 'object') ? prod.category.name : 'Khác' }}
+                    {{ getProductCategoryName(prod) }}
                   </p>
                 </div>
               </td>
@@ -567,12 +567,46 @@ const parentCategories = computed(() => {
   return categories.value.filter(c => !c.parentId)
 })
 
+function isComboCategory(cat: any): boolean {
+  if (!cat) return false
+  const name = (cat.name || '').toLowerCase()
+  const slug = (cat.slug || '').toLowerCase()
+  return name === 'combo' || slug === 'combo' || name.startsWith('combo') || slug.startsWith('combo')
+}
+
 function getSubcategories(parentId: string) {
+  const parent = categories.value.find(c => c._id === parentId)
+  // Don't show individual combo subcategories in the category filter dropdown
+  if (parent && isComboCategory(parent)) {
+    return []
+  }
   return categories.value.filter(c => {
     if (!c.parentId) return false
     const pId = typeof c.parentId === 'object' ? (c.parentId as any)._id : c.parentId
-    return pId === parentId
+    return pId === parentId && !isComboCategory(c)
   })
+}
+
+function getProductCategoryName(prod: any): string {
+  if (!prod.category) return 'Khác'
+  if (typeof prod.category === 'string') return prod.category
+  if (prod.category.parentId && typeof prod.category.parentId === 'object' && prod.category.parentId.name) {
+    return prod.category.parentId.name
+  }
+  if (prod.category.name && prod.category.name.toLowerCase().startsWith('combo')) {
+    return 'Combo'
+  }
+  return prod.category.name || 'Khác'
+}
+
+function handleCategoryChange() {
+  currentPage.value = 1
+  fetchProducts()
+}
+
+function handleDealFilterChange() {
+  currentPage.value = 1
+  fetchProducts()
 }
 
 const searchQuery = ref('')

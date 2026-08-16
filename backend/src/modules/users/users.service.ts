@@ -82,14 +82,20 @@ export class UsersService {
     return LoyaltyTier.BRONZE;
   }
 
-  async addLoyaltyPoints(userId: string, points: number): Promise<UserDocument | null> {
+  async addLoyaltyPoints(
+    userId: string,
+    points: number,
+  ): Promise<{ user: UserDocument; tierUpgraded: boolean; oldTier: LoyaltyTier; newTier: LoyaltyTier } | null> {
     const user = await this.userModel.findById(userId).exec();
     if (!user) return null;
 
+    const oldTier = user.loyaltyTier || LoyaltyTier.BRONZE;
     user.loyaltyPoints = (user.loyaltyPoints || 0) + points;
-    user.loyaltyTier = this.calculateTier(user.loyaltyPoints);
+    const newTier = this.calculateTier(user.loyaltyPoints);
+    const tierUpgraded = newTier !== oldTier;
+    user.loyaltyTier = newTier;
     await user.save();
-    return user;
+    return { user, tierUpgraded, oldTier, newTier };
   }
 
   async deductLoyaltyPoints(userId: string, points: number): Promise<UserDocument | null> {

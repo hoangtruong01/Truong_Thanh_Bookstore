@@ -142,20 +142,21 @@ export class ProductsService {
 
     if (category) {
       try {
-        const subCategories = await this.categoryModel
-          .find({ parentId: new Types.ObjectId(category) })
-          .exec();
-        const categoryIds = [
-          new Types.ObjectId(category),
+        const catObjId = Types.ObjectId.isValid(category)
+          ? new Types.ObjectId(category)
+          : null;
+        const subCategories = catObjId
+          ? await this.categoryModel.find({ parentId: catObjId }).exec()
+          : [];
+        const categoryIds: any[] = [
+          category,
+          ...(catObjId ? [catObjId] : []),
           ...subCategories.map((c) => c._id),
+          ...subCategories.map((c) => c._id.toString()),
         ];
         filter.category = { $in: categoryIds };
       } catch (err) {
-        try {
-          filter.category = new Types.ObjectId(category);
-        } catch {
-          filter.category = category;
-        }
+        filter.category = category;
       }
     }
 
@@ -227,7 +228,10 @@ export class ProductsService {
     const [data, total] = await Promise.all([
       this.productModel
         .find(filter)
-        .populate('category')
+        .populate({
+          path: 'category',
+          populate: { path: 'parentId', select: 'name slug' },
+        })
         .sort(sortObj)
         .skip(skip)
         .limit(limit)

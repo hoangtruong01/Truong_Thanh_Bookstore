@@ -3,6 +3,7 @@ import { OrdersService } from '../orders/orders.service';
 import { ProductsService } from '../products/products.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CustomersService } from '../customers/customers.service';
+import { OrderStatus, PaymentMethod } from '../../common/enums';
 
 @Injectable()
 export class ReportsService {
@@ -79,36 +80,64 @@ export class ReportsService {
   async getNotifications() {
     const [lowStock, recentOrders, recentCustomers] = await Promise.all([
       this.inventoryService.getLowStock(),
-      this.ordersService.getRecent(10),
+      this.ordersService.getRecent(15),
       this.customersService.getRecent(10),
     ]);
 
     const notifications: any[] = [];
+    const now = Date.now();
 
-    // Map low stock products
+    // Map low stock & out of stock products
     lowStock.forEach((item: any) => {
       if (item.product) {
+        const isOutOfStock = item.currentStock <= 0;
         notifications.push({
           id: `stock-${item._id}`,
-          type: 'stock',
-          title: 'Cảnh báo hết hàng',
-          message: `Sản phẩm "${item.product.name}" sắp hết hàng (chỉ còn ${item.currentStock} cái)`,
+          type: isOutOfStock ? 'out_of_stock' : 'stock',
+          title: isOutOfStock ? 'Hết sạch hàng trong kho' : 'Cảnh báo sắp hết hàng',
+          message: isOutOfStock
+            ? `Sản phẩm "${item.product.name}" đã hết hàng (Tồn kho: 0 ${item.product.unit || 'cái'}). Vui lòng nhập hàng bổ sung.`
+            : `Sản phẩm "${item.product.name}" sắp hết hàng (chỉ còn ${item.currentStock} ${item.product.unit || 'cái'}).`,
           createdAt: item.lastUpdated || new Date(),
           meta: { productId: item.product._id },
         });
       }
     });
 
-    // Map recent orders
+    // Map recent orders with smart alerts
     recentOrders.forEach((order: any) => {
-      notifications.push({
-        id: `order-${order._id}`,
-        type: 'order',
-        title: 'Đơn hàng mới',
-        message: `Đơn hàng mới #${order.orderCode} trị giá ${order.total.toLocaleString('vi-VN')}đ được tạo bởi ${order.customerName || 'Khách vãng lai'}`,
-        createdAt: order.createdAt,
-        meta: { orderId: order._id, orderCode: order.orderCode },
-      });
+      const isPending = order.orderStatus === OrderStatus.PENDING;
+      const isHighValueCod = order.paymentMethod === PaymentMethod.COD && order.total >= 1000000 && isPending;
+      const isDelayedPending = isPending && (now - new Date(order.createdAt).getTime()) > 12 * 3600 * 1000;
+
+      if (isHighValueCod) {
+        notifications.push({
+          id: `cod-high-${order._id}`,
+          type: 'high_value_order',
+          title: 'Đơn hàng COD giá trị cao',
+          message: `Đơn hàng #${order.orderCode} (${order.total.toLocaleString('vi-VN')}đ) thanh toán COD cần nhân viên gọi điện xác nhận trước khi giao hàng.`,
+          createdAt: order.createdAt,
+          meta: { orderId: order._id, orderCode: order.orderCode },
+        });
+      } else if (isDelayedPending) {
+        notifications.push({
+          id: `delay-${order._id}`,
+          type: 'pending_delay',
+          title: 'Đơn hàng chờ xử lý quá lâu',
+          message: `Đơn hàng #${order.orderCode} đã tạo hơn 12 giờ nhưng vẫn đang ở trạng thái chờ duyệt.`,
+          createdAt: order.createdAt,
+          meta: { orderId: order._id, orderCode: order.orderCode },
+        });
+      } else {
+        notifications.push({
+          id: `order-${order._id}`,
+          type: 'order',
+          title: 'Đơn hàng mới',
+          message: `Đơn hàng #${order.orderCode} trị giá ${order.total.toLocaleString('vi-VN')}đ được tạo bởi ${order.customerName || 'Khách vãng lai'}.`,
+          createdAt: order.createdAt,
+          meta: { orderId: order._id, orderCode: order.orderCode },
+        });
+      }
     });
 
     // Map recent customers
@@ -117,7 +146,7 @@ export class ReportsService {
         id: `customer-${customer._id}`,
         type: 'customer',
         title: 'Khách hàng mới đăng ký',
-        message: `Khách hàng ${customer.fullName} (${customer.email}) vừa tạo tài khoản`,
+        message: `Thành viên mới ${customer.fullName} (${customer.email}) vừa tạo tài khoản mua sắm.`,
         createdAt: customer.createdAt,
         meta: { customerId: customer._id },
       });

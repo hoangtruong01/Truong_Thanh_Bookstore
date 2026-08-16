@@ -542,13 +542,18 @@
                     :class="{'bg-red-50/5 font-semibold': !customerReadIds.includes(item._id)}"
                   >
                     <!-- Icon -->
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm" :class="{
-                      'bg-red-50 text-red-600': item.type === 'order',
-                      'bg-orange-50 text-orange-600': item.type === 'promotion',
-                      'bg-blue-50 text-blue-600': item.type === 'system'
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-xs" :class="{
+                      'bg-red-50 text-red-600 border border-red-100': item.type === 'order',
+                      'bg-orange-50 text-orange-600 border border-orange-100': item.type === 'promotion',
+                      'bg-amber-50 text-amber-600 border border-amber-100': item.type === 'loyalty' || item.type === 'tier',
+                      'bg-purple-50 text-purple-600 border border-purple-100': item.type === 'review',
+                      'bg-blue-50 text-blue-600 border border-blue-100': item.type === 'system'
                     }">
                       <span v-if="item.type === 'order'">📦</span>
                       <span v-else-if="item.type === 'promotion'">🎁</span>
+                      <span v-else-if="item.type === 'loyalty'">🪙</span>
+                      <span v-else-if="item.type === 'tier'">🏆</span>
+                      <span v-else-if="item.type === 'review'">⭐</span>
                       <span v-else>🔔</span>
                     </div>
 
@@ -1578,8 +1583,12 @@ function handleCustomerNotificationClick(item: any) {
   
   if (item.type === 'order' || item.meta?.orderId) {
     router.push('/my-orders');
+  } else if (item.type === 'loyalty' || item.type === 'tier') {
+    showProfile.value = true;
   } else if (item.type === 'promotion') {
     router.push('/products');
+  } else if (item.type === 'review') {
+    router.push('/my-orders');
   }
 }
 
