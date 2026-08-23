@@ -1583,11 +1583,11 @@ onMounted(() => {
         const cat = parentCategories.value.find((c) => c.slug === slug);
         if (cat) {
           try {
-            const res = await productService.getAll({
+            const res: any = await productService.getAll({
               category: cat._id,
               limit: 10,
             });
-            refVar.value = res.data.data || [];
+            refVar.value = Array.isArray(res.data) ? res.data : (res.data?.data || []);
           } catch (err) {
             console.error(`Error loading products for category ${slug}`, err);
           } finally {

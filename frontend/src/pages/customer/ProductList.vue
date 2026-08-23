@@ -384,9 +384,10 @@ async function fetchProducts() {
       inStock: onlyInStock.value ? true : undefined,
     }
     const res: any = await productService.getAll(params)
-    products.value = res.data.data
-    totalProducts.value = res.data.total || res.data.data.length
-    totalPages.value = res.data.totalPages || 1
+    const items = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+    products.value = items
+    totalProducts.value = res.meta?.total || res.data?.total || items.length
+    totalPages.value = res.meta?.totalPages || res.data?.totalPages || 1
   } catch (err) {
     toast.error('Lỗi khi tải danh sách sản phẩm')
   } finally {

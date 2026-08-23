@@ -85,8 +85,8 @@ onMounted(fetchCustomers)
 async function fetchCustomers() {
   loading.value = true
   try {
-    const res = await customerService.getAll()
-    customers.value = res.data.data || []
+    const res: any = await customerService.getAll()
+    customers.value = Array.isArray(res.data) ? res.data : (res.data?.data || [])
   } catch (err) {
     toast.error('Lỗi khi tải thông tin khách hàng')
   } finally {

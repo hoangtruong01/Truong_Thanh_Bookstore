@@ -46,7 +46,7 @@ backend/src/modules/
 | Mã Task | Tên Task & Mục tiêu | Phase | Độ ưu tiên | Trạng thái |
 | :--- | :--- | :--- | :--- | :--- |
 | **TASK 01** | Chuẩn hóa cấu trúc Backend (Controller/Service/DTO/Module) | Phase 1 | P0 | 🟢 **DONE** |
-| **TASK 02** | Chuẩn hóa API Response (`{ success, message, data, meta }`) | Phase 1 | P0 | ⚪ PENDING |
+| **TASK 02** | Chuẩn hóa API Response (`{ success, message, data, meta }`) | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 03** | Global Error Handling & Error Codes (`{ errorCode }`) | Phase 1 | P0 | ⚪ PENDING |
 | **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields | Phase 1 | P0 | ⚪ PENDING |
 | **TASK 05** | Quản lý biến môi trường `.env` & bảo mật Secret | Phase 1 | P0 | ⚪ PENDING |
@@ -127,6 +127,25 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-23] — Hoàn thành TASK 02: Chuẩn hóa API Response
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Chuẩn hóa toàn bộ định dạng phản hồi API (Success: `{ success, message, data, meta }`, Error: `{ success, message, errorCode, details }`).
+- **Thực hiện**:
+  - Nâng cấp `TransformInterceptor` tự động chuẩn hóa data payload, trích xuất pagination meta (`total`, `page`, `limit`, `totalPages`) và gán timestamp.
+  - Nâng cấp `HttpExceptionFilter` trả về format lỗi chuẩn kèm `errorCode`, `details`, `statusCode`.
+  - Cập nhật các view và service trên Frontend (`ProductList.vue`, `Products.vue`, `ProductDetail.vue`, `Home.vue`, `Orders.vue`, `Customers.vue`, `Combos.vue`) để xử lý format mới nhất quán và an toàn.
+  - Đồng bộ test E2E mobile trong `mobile/test/app_e2e_test.dart`.
+  - Viết unit tests chuyên biệt cho `TransformInterceptor` và `HttpExceptionFilter`.
+- **Kết quả kiểm thử**:
+  - `npm run build` (Backend): PASS.
+  - `npm run test` (Backend): 4 test suites, 14 tests PASS 100%.
+  - `npm run build` (Frontend): PASS.
+  - `flutter test` (Mobile): 6 tests PASS 100%.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 03 — Global Error Handling.
+
+---
 
 ### [2026-08-23] — Hoàn thành TASK 01: Chuẩn hóa cấu trúc Backend
 - **Người cập nhật**: Antigravity AI

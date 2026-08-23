@@ -565,8 +565,8 @@ async function fetchCombos() {
 
 async function fetchProducts() {
   try {
-    const res = await productService.getAll({ page: 1, limit: 1000 })
-    allProducts.value = res.data.data
+    const res: any = await productService.getAll({ page: 1, limit: 1000 })
+    allProducts.value = Array.isArray(res.data) ? res.data : (res.data?.data || [])
   } catch (err) {
     console.error('Lỗi khi tải danh sách sản phẩm', err)
   }

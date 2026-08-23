@@ -648,8 +648,9 @@ async function fetchProducts() {
       category: selectedCategory.value || undefined,
       discounted: dealFilter.value === 'discounted' ? true : undefined,
     })
-    products.value = res.data.data
-    totalPages.value = res.data.totalPages || 1
+    const items = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+    products.value = items
+    totalPages.value = res.meta?.totalPages || res.data?.totalPages || 1
   } catch (err) {
     toast.error('Lỗi khi tải danh sách sản phẩm')
   } finally {

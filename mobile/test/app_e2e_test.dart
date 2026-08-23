@@ -44,7 +44,7 @@ void main() {
 
       // Verify Header Brand Title
       expect(find.text('TRƯỜNG THÀNH'), findsOneWidget);
-      expect(find.text('VĂN PHÒNG PHẨM & DỤNG CỤ HỌC TẬP'), findsOneWidget);
+      expect(find.text('STATIONERY'), findsOneWidget);
 
       // Verify Bottom Navigation Bar items (Active item has text, others have icons)
       expect(find.text('Trang chủ'), findsOneWidget);

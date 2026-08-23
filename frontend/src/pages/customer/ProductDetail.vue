@@ -1257,8 +1257,9 @@ async function loadProduct() {
     productService.getAll({
       category: catId,
       limit: 11
-    }).then(relatedRes => {
-      relatedProducts.value = relatedRes.data.data.filter((p: Product) => p._id !== id)
+    }).then((relatedRes: any) => {
+      const items = Array.isArray(relatedRes.data) ? relatedRes.data : (relatedRes.data?.data || [])
+      relatedProducts.value = items.filter((p: Product) => p._id !== id)
     }).catch(err => {
       console.error('Error fetching related products:', err)
     })
