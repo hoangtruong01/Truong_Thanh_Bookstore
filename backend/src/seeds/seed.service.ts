@@ -65,7 +65,7 @@ export class SeedService implements OnModuleInit {
     const comboCat = await this.categoryModel.findOne({ name: 'Combo', parentId: null }).exec();
     const mislinkedCombo = comboCat ? await this.categoryModel.findOne({ parentId: { $ne: comboCat._id, $exists: true } }).exec() : null;
 
-    if (hasUsers === 0 || hasCategories === 0 || !firstCategory || !firstCategory.optionsLabel || productCount !== 120 || mislinkedCombo) {
+    if (hasUsers === 0 || hasCategories === 0 || !firstCategory || !firstCategory.optionsLabel || productCount === 0 || mislinkedCombo) {
       this.logger.log(`Triggering clean reseed: users=${hasUsers}, categories=${hasCategories}, products=${productCount}`);
       await this.clearDatabase();
       await this.seed();
@@ -212,34 +212,43 @@ export class SeedService implements OnModuleInit {
     const adminPassword = await bcrypt.hash('Admin@123456', 10);
     const customerPassword = await bcrypt.hash('Customer@123456', 10);
 
-    await this.userModel.create({
-      fullName: 'Admin Truong Thanh',
-      email: 'admin@truongthanh.vn',
-      password: adminPassword,
-      phone: '0901234567',
-      role: UserRole.ADMIN,
-      status: true,
-    });
+    const existingAdmin = await this.userModel.findOne({ email: 'admin@truongthanh.vn' }).exec();
+    if (!existingAdmin) {
+      await this.userModel.create({
+        fullName: 'Admin Truong Thanh',
+        email: 'admin@truongthanh.vn',
+        password: adminPassword,
+        phone: '0901234567',
+        role: UserRole.ADMIN,
+        status: true,
+      });
+    }
 
-    await this.userModel.create({
-      fullName: 'Nguyen Van Khach',
-      email: 'customer@truongthanh.vn',
-      password: customerPassword,
-      phone: '0912345678',
-      role: UserRole.CUSTOMER,
-      status: true,
-    });
+    const existingCustomer = await this.userModel.findOne({ email: 'customer@truongthanh.vn' }).exec();
+    if (!existingCustomer) {
+      await this.userModel.create({
+        fullName: 'Nguyen Van Khach',
+        email: 'customer@truongthanh.vn',
+        password: customerPassword,
+        phone: '0912345678',
+        role: UserRole.CUSTOMER,
+        status: true,
+      });
+    }
 
     const staffPassword = await bcrypt.hash('Staff@123456', 10);
-    await this.userModel.create({
-      fullName: 'Nhan Vien Truong Thanh',
-      email: 'staff@truongthanh.vn',
-      password: staffPassword,
-      phone: '0907654321',
-      role: UserRole.STAFF,
-      status: true,
-      permissions: [StaffPermission.MANAGE_ORDERS, StaffPermission.VIEW_REPORTS],
-    });
+    const existingStaff = await this.userModel.findOne({ email: 'staff@truongthanh.vn' }).exec();
+    if (!existingStaff) {
+      await this.userModel.create({
+        fullName: 'Nhan Vien Truong Thanh',
+        email: 'staff@truongthanh.vn',
+        password: staffPassword,
+        phone: '0907654321',
+        role: UserRole.STAFF,
+        status: true,
+        permissions: [StaffPermission.MANAGE_ORDERS, StaffPermission.VIEW_REPORTS],
+      });
+    }
 
     this.logger.log('Users seeded');
 

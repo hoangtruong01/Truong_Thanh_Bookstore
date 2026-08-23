@@ -70,7 +70,7 @@ export class PromotionsService {
     if (!oldPromo) throw new NotFoundException('Promotion not found');
 
     const promo = await this.promotionModel
-      .findByIdAndUpdate(id, dto, { new: true })
+      .findByIdAndUpdate(id, dto, { returnDocument: 'after' })
       .exec();
     if (!promo) throw new NotFoundException('Promotion not found');
 
@@ -167,7 +167,7 @@ export class PromotionsService {
           usedCount: { $lt: promo.usageLimit },
         },
         { $inc: { usedCount: 1 } },
-        { new: true, ...(session ? { session } : {}) },
+        { returnDocument: 'after', ...(session ? { session } : {}) },
       ).exec();
       if (!consumed) {
         throw new BadRequestException('Promotion usage limit reached');

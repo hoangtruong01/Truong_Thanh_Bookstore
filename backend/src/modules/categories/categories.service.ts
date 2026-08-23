@@ -66,7 +66,7 @@ export class CategoriesService {
       dto.slug = this.generateSlug(dto.name);
     }
     const category = await this.categoryModel
-      .findByIdAndUpdate(id, dto, { new: true })
+      .findByIdAndUpdate(id, dto, { returnDocument: 'after' })
       .exec();
     if (!category) throw new NotFoundException('Category not found');
     return category;

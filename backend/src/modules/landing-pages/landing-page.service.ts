@@ -194,7 +194,7 @@ export class LandingPageService {
       );
     }
     const page = await this.landingPageModel
-      .findByIdAndUpdate(id, cleanedDto, { new: true })
+      .findByIdAndUpdate(id, cleanedDto, { returnDocument: 'after' })
       .exec();
     if (!page) {
       throw new NotFoundException('Không tìm thấy trang bán hàng');

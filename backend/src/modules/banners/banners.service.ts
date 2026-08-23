@@ -39,7 +39,7 @@ export class BannersService {
 
   async update(id: string, dto: UpdateBannerDto): Promise<Banner> {
     const banner = await this.bannerModel
-      .findByIdAndUpdate(id, dto, { new: true })
+      .findByIdAndUpdate(id, dto, { returnDocument: 'after' })
       .exec();
     if (!banner) {
       throw new NotFoundException('Banner not found');

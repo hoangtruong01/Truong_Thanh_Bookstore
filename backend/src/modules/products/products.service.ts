@@ -266,7 +266,7 @@ export class ProductsService {
       dto.slug = this.generateSlug(dto.name);
     }
     const product = await this.productModel
-      .findByIdAndUpdate(id, dto, { new: true })
+      .findByIdAndUpdate(id, dto, { returnDocument: 'after' })
       .populate('category')
       .exec();
     if (!product) throw new NotFoundException('Product not found');
@@ -345,7 +345,7 @@ export class ProductsService {
       .findByIdAndUpdate(
         id,
         { $inc: { stock: quantity } },
-        { new: true, ...(session ? { session } : {}) },
+        { returnDocument: 'after', ...(session ? { session } : {}) },
       )
       .exec();
     if (updated) {
@@ -382,7 +382,7 @@ export class ProductsService {
     const oldStock = productBefore?.stock || 0;
 
     const updated = await this.productModel
-      .findByIdAndUpdate(id, { stock: quantity }, { new: true })
+      .findByIdAndUpdate(id, { stock: quantity }, { returnDocument: 'after' })
       .exec();
     if (updated) {
       try {
@@ -419,7 +419,7 @@ export class ProductsService {
       .findOneAndUpdate(
         { _id: id, stock: { $gte: quantity } },
         { $inc: { stock: -quantity } },
-        { new: true, ...(session ? { session } : {}) },
+        { returnDocument: 'after', ...(session ? { session } : {}) },
       )
       .exec();
     if (!updated) {
