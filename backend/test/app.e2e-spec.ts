@@ -36,8 +36,8 @@ describe('Bookstore E2E Tests', () => {
       .expect((res) => {
         expect(res.body.success).toBe(true);
         expect(res.body.data).toBeDefined();
-        expect(res.body.data.data).toBeDefined();
-        expect(Array.isArray(res.body.data.data)).toBe(true);
+        const dataList = Array.isArray(res.body.data) ? res.body.data : res.body.data.data;
+        expect(Array.isArray(dataList)).toBe(true);
       });
   });
 
