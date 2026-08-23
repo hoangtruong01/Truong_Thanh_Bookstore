@@ -19,6 +19,9 @@ import { BannersModule } from './modules/banners/banners.module';
 import { AppController } from './app.controller';
 import { AddressesModule } from './modules/users/addresses.module';
 import { EmailModule } from './modules/email/email.module';
+import { CartModule } from './modules/cart/cart.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
 
 @Module({
   imports: [
@@ -48,8 +51,11 @@ import { EmailModule } from './modules/email/email.module';
     UsersModule,
     ProductsModule,
     CategoriesModule,
+    CartModule,
     OrdersModule,
+    PaymentsModule,
     InventoryModule,
+    ReviewsModule,
     CustomersModule,
     PromotionsModule,
     ReportsModule,

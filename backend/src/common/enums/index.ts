@@ -16,18 +16,27 @@ export enum PaymentMethod {
   COD = 'COD',
   BANK_TRANSFER = 'BANK_TRANSFER',
   EWALLET = 'EWALLET',
+  VNPAY = 'VNPAY',
+  MOMO = 'MOMO',
 }
 
 export enum PaymentStatus {
   UNPAID = 'UNPAID',
+  PENDING = 'PENDING',
   PAID = 'PAID',
+  FAILED = 'FAILED',
   REFUNDED = 'REFUNDED',
+  CANCELLED = 'CANCELLED',
 }
 
 export enum InventoryTransactionType {
   IMPORT = 'IMPORT',
   EXPORT = 'EXPORT',
   ADJUST = 'ADJUST',
+  SALE = 'SALE',
+  RETURN = 'RETURN',
+  ADJUSTMENT = 'ADJUSTMENT',
+  DAMAGE = 'DAMAGE',
 }
 
 export enum DiscountType {

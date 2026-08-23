@@ -84,7 +84,7 @@ Hệ thống **Trường Thành Bookstore** là nền tảng thương mại đi�
 ## 5. LỘ TRÌNH 30 TASKS (ROADMAP)
 
 ### PHASE 1 — FOUNDATION
-- **TASK 01 [P0] — Backend Structure**: Chuẩn hóa toàn bộ cấu trúc module (Auth, Users, Products, Categories, Cart, Orders, Payments, Inventory, Reviews, Promotions), phân tách triệt để Controller chỉ xử lý HTTP, Service chứa Business Logic, DTO và Model/Schema riêng biệt.
+- **TASK 01 [P0] — Backend Structure [DONE]**: Đã chuẩn hóa toàn bộ cấu trúc module: Tạo mới CartModule, ReviewsModule, PaymentsModule độc lập. Bóc tách triệt để Controller chỉ xử lý HTTP, Service chứa Business Logic, DTO và Model/Schema riêng biệt. Unit tests & Build PASS.
 - **TASK 02 [P0] — API Response Standardization**: Chuẩn hóa định dạng phản hồi API (Success: `{ success, message, data, meta }`, Error: `{ success, message, errorCode, details }`), thống nhất HTTP status và pagination.
 - **TASK 03 [P0] — Global Error Handling**: Hoàn thiện Global Exception Filter, gán mã lỗi `errorCode`, che giấu stack trace và credentials ở production, ghi log chi tiết.
 - **TASK 04 [P0] — DTO Validation**: Thiết lập ValidationPipe toàn cục cấm unknown fields, validate chặt chẽ email, phone, password, price, quantity, ObjectId, enum.

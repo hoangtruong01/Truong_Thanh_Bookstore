@@ -59,12 +59,16 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .addTag('auth', 'Authentication endpoints')
+    .addTag('users', 'User profile and address management')
     .addTag('products', 'Product management')
     .addTag('categories', 'Category management')
+    .addTag('cart', 'Shopping cart management')
     .addTag('orders', 'Order management')
+    .addTag('payments', 'Payment processing and gateways')
     .addTag('inventory', 'Inventory management')
-    .addTag('customers', 'Customer management')
-    .addTag('promotions', 'Promotion management')
+    .addTag('reviews', 'Product reviews and ratings')
+    .addTag('promotions', 'Promotion and voucher management')
+    .addTag('notifications', 'Notification management')
     .addTag('reports', 'Reports & analytics')
     .build();
 

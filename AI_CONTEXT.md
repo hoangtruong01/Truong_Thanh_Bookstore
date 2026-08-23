@@ -45,7 +45,7 @@ backend/src/modules/
 
 | Mã Task | Tên Task & Mục tiêu | Phase | Độ ưu tiên | Trạng thái |
 | :--- | :--- | :--- | :--- | :--- |
-| **TASK 01** | Chuẩn hóa cấu trúc Backend (Controller/Service/DTO/Module) | Phase 1 | P0 | 🟡 **IN_PROGRESS** |
+| **TASK 01** | Chuẩn hóa cấu trúc Backend (Controller/Service/DTO/Module) | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 02** | Chuẩn hóa API Response (`{ success, message, data, meta }`) | Phase 1 | P0 | ⚪ PENDING |
 | **TASK 03** | Global Error Handling & Error Codes (`{ errorCode }`) | Phase 1 | P0 | ⚪ PENDING |
 | **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields | Phase 1 | P0 | ⚪ PENDING |
@@ -128,13 +128,29 @@ backend/src/modules/
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
 
-*(Mỗi khi hoàn thành 1 task, AI cập nhật bản ghi vào phần này)*
+### [2026-08-23] — Hoàn thành TASK 01: Chuẩn hóa cấu trúc Backend
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Chuẩn hóa toàn bộ cấu trúc module Backend, controller chỉ xử lý HTTP, business logic nằm trong service, DTO & Model riêng.
+- **Thực hiện**:
+  - Tạo mới `CartModule` (`cart.controller.ts`, `cart.service.ts`, `cart.module.ts`, `dto/cart.dto.ts`, `schemas/cart.schema.ts`, `cart.service.spec.ts`).
+  - Tạo mới `ReviewsModule` (`reviews.controller.ts`, `reviews.service.ts`, `reviews.module.ts`, `dto/review.dto.ts`, `schemas/review.schema.ts`).
+  - Tạo mới `PaymentsModule` (`payments.controller.ts`, `payments.service.ts`, `payments.module.ts`, `dto/payment.dto.ts`, `schemas/payment.schema.ts`).
+  - Mở rộng `common/enums` (`PaymentMethod`, `PaymentStatus`, `InventoryTransactionType`).
+  - Đăng ký `CartModule`, `PaymentsModule`, `ReviewsModule` vào `AppModule`.
+  - Cập nhật Swagger tags trong `main.ts`.
+- **Kết quả kiểm thử**:
+  - `npm run build` (Backend): PASS.
+  - `npm run test` (Backend): 2 test suites, 9 tests PASS 100%.
+  - `npm run build` (Frontend): PASS.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 02 — API Response Standardization.
+
+---
 
 ### [2026-08-23] — Khởi tạo Hồ sơ Dự án & Chuẩn bị Task 01
 - **Người cập nhật**: Antigravity AI
 - **Mục tiêu**: Thiết lập tài liệu `PROJECT_DOCUMENTATION.md` và `AI_CONTEXT.md`.
 - **Trạng thái**: Đã phân tích toàn bộ repository, xác nhận backend/frontend build thành công, xác định lộ trình 30 tasks chi tiết.
-- **Tiếp theo**: Bắt đầu thực thi **TASK 01: Chuẩn hóa cấu trúc Backend**.
 
 ---
 
