@@ -48,7 +48,7 @@ backend/src/modules/
 | **TASK 01** | Chuẩn hóa cấu trúc Backend (Controller/Service/DTO/Module) | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 02** | Chuẩn hóa API Response (`{ success, message, data, meta }`) | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 03** | Global Error Handling & Error Codes (`{ errorCode }`) | Phase 1 | P0 | 🟢 **DONE** |
-| **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields | Phase 1 | P0 | ⚪ PENDING |
+| **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 05** | Quản lý biến môi trường `.env` & bảo mật Secret | Phase 1 | P0 | ⚪ PENDING |
 | **TASK 06** | Authentication toàn diện & băm mật khẩu bcrypt | Phase 2 | P0 | ⚪ PENDING |
 | **TASK 07** | Phân quyền RBAC (Customer/Staff/Admin) & Role Guards | Phase 2 | P0 | ⚪ PENDING |
@@ -127,6 +127,41 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-24] — Hoàn thành TASK 04: Global DTO Validation & Whitelist cấm unknown fields
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Nâng cấp toàn bộ hệ thống DTO và cấu hình ValidationPipe toàn cục cấm unknown fields (`whitelist: true, forbidNonWhitelisted: true`), validate chặt chẽ email, phone VN, password độ phức tạp cao, giá tiền/số lượng, ObjectId MongoDB và Enum.
+- **Thực hiện**:
+  - Tạo mới bộ Custom Validators (`backend/src/common/validators/custom-validators.ts`):
+    - `IsMongoObjectId`: Kiểm tra định dạng 24 ký tự hex MongoDB ObjectId hợp lệ.
+    - `IsPhoneNumberVN`: Kiểm tra số điện thoại Việt Nam chuẩn 10 chữ số (đầu 03, 05, 07, 08, 09 hoặc +84).
+  - Chuẩn hóa và thắt chặt toàn bộ DTOs:
+    - `auth.dto.ts`: Trim email/họ tên, kiểm tra mật khẩu mạnh (chữ hoa, chữ thường, số, >= 8 ký tự), OTP 6 số, SĐT VN.
+    - `address.dto.ts`: Trim chuỗi, kiểm tra SĐT VN cho cả tạo và sửa địa chỉ.
+    - `product.dto.ts`: Kiểm tra Category ObjectId, giá >= 0, tồn kho >= 0, number/boolean casting cho `ProductQueryDto`.
+    - `cart.dto.ts`: `productId` là ObjectId, số lượng nguyên >= 1.
+    - `order.dto.ts`: `OrderItemDto.product` là ObjectId, số lượng nguyên >= 1, SĐT người nhận VN, format idempotencyKey.
+    - `category.dto.ts`: `parentId` và `products` là ObjectId.
+    - `inventory.dto.ts`: `product` là ObjectId, số lượng nguyên, enum `InventoryTransactionType`.
+    - `payment.dto.ts`: `orderId` là ObjectId, `amount` >= 0, enum `PaymentMethod`.
+    - `review.dto.ts`: `rating` nguyên 1-5 sao, độ dài `content`.
+    - `promotion.dto.ts`: Regex format mã `code`, ngày ISO Date, số lượng/giảm giá >= 0.
+    - `banner.dto.ts` & `landing-page.dto.ts`: Thứ tự `sortOrder` nguyên, SĐT VN, LandingPageId ObjectId.
+  - Cấu hình `ValidationPipe` toàn cục:
+    - `whitelist: true`: Tự động loại bỏ các trường không khai báo.
+    - `forbidNonWhitelisted: true`: Báo lỗi ngay khi có trường lạ.
+    - `transform: true`: Tự động chuyển đổi kiểu dữ liệu tương ứng.
+    - `exceptionFactory`: Sinh lỗi validation chi tiết từng field kèm `ErrorCode.ERR_VALIDATION`.
+  - Viết bộ unit tests chuyên biệt `dto-validation.spec.ts` kiểm thử toàn diện các DTOs và custom validators (PASS 100%).
+- **Kết quả kiểm thử**:
+  - `npm run build` (Backend): PASS.
+  - `npm test` (Backend): 6 test suites, 50 tests PASS 100%.
+  - `npm run build` (Frontend): PASS.
+  - `flutter test` (Mobile): 6 tests PASS 100%.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 05 — Environment Configuration & Secrets Management.
+
+---
 
 ### [2026-08-24] — Hoàn thành TASK 03: Global Error Handling & Error Codes
 - **Người cập nhật**: Antigravity AI

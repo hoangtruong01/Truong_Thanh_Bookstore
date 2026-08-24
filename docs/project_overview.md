@@ -19,6 +19,7 @@ backend/
 │   │   ├── dto/                       # DTO dùng chung cho phân trang (PaginationDto)
 │   │   ├── enums/                     # Định nghĩa Enum hệ thống (ErrorCode, UserRole, OrderStatus, DiscountType...)
 │   │   ├── exceptions/                # AppException, BusinessException, ResourceNotFoundException...
+│   │   ├── validators/                # IsMongoObjectId, IsPhoneNumberVN...
 │   │   ├── filters/                   # HttpExceptionFilter chuẩn hóa cấu trúc lỗi API ({ success, errorCode, message... })
 │   │   ├── guards/                    # Guard xác thực quyền (OptionalJwtGuard, RolesGuard, PermissionsGuard)
 │   │   └── interceptors/              # TransformInterceptor bọc kết quả API thành { success, message, data, meta }

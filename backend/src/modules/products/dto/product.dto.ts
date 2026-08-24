@@ -7,15 +7,19 @@ import {
   IsArray,
   IsEnum,
   Min,
+  Max,
+  IsMongoId,
 } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { ProductStatus } from '../../../common/enums';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'Bút bi Thiên Long TL-027' })
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Tên sản phẩm không được để trống' })
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name: string;
 
   @ApiPropertyOptional()
@@ -24,8 +28,9 @@ export class CreateProductDto {
   slug?: string;
 
   @ApiProperty({ example: 'TL-027' })
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Mã SKU không được để trống' })
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   sku: string;
 
   @ApiPropertyOptional()
@@ -33,32 +38,36 @@ export class CreateProductDto {
   @IsString()
   description?: string;
 
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
+  @ApiProperty({ description: 'Category ObjectId', example: '507f1f77bcf86cd799439011' })
+  @IsNotEmpty({ message: 'Danh mục không được để trống' })
+  @IsMongoId({ message: 'Danh mục phải là ObjectId hợp lệ' })
   category: string;
 
   @ApiPropertyOptional({ example: 'Thiên Long' })
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   brand?: string;
 
   @ApiProperty({ example: 5000 })
-  @IsNotEmpty()
-  @IsNumber()
-  @Min(0)
+  @IsNotEmpty({ message: 'Giá sản phẩm không được để trống' })
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Giá sản phẩm phải là số' })
+  @Min(0, { message: 'Giá sản phẩm không được âm' })
   price: number;
 
   @ApiPropertyOptional({ example: 4000 })
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Giá khuyến mãi phải là số' })
+  @Min(0, { message: 'Giá khuyến mãi không được âm' })
   discountPrice?: number;
 
   @ApiPropertyOptional({ example: 100 })
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Số lượng tồn kho phải là số' })
+  @Min(0, { message: 'Tồn kho không được âm' })
   stock?: number;
 
   @ApiPropertyOptional({ example: 'cái' })
@@ -69,6 +78,7 @@ export class CreateProductDto {
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
+  @IsString({ each: true })
   images?: string[];
 
   @ApiPropertyOptional()
@@ -88,7 +98,7 @@ export class CreateProductDto {
 
   @ApiPropertyOptional({ enum: ProductStatus })
   @IsOptional()
-  @IsEnum(ProductStatus)
+  @IsEnum(ProductStatus, { message: 'Trạng thái sản phẩm không hợp lệ' })
   status?: ProductStatus;
 
   @ApiPropertyOptional({ type: [String] })
@@ -102,6 +112,7 @@ export class UpdateProductDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name?: string;
 
   @ApiPropertyOptional()
@@ -112,6 +123,7 @@ export class UpdateProductDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   sku?: string;
 
   @ApiPropertyOptional()
@@ -121,30 +133,34 @@ export class UpdateProductDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
+  @IsMongoId({ message: 'Danh mục phải là ObjectId hợp lệ' })
   category?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   brand?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Giá sản phẩm phải là số' })
+  @Min(0, { message: 'Giá sản phẩm không được âm' })
   price?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Giá khuyến mãi phải là số' })
+  @Min(0, { message: 'Giá khuyến mãi không được âm' })
   discountPrice?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Tồn kho phải là số' })
+  @Min(0, { message: 'Tồn kho không được âm' })
   stock?: number;
 
   @ApiPropertyOptional()
@@ -155,6 +171,7 @@ export class UpdateProductDto {
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
+  @IsString({ each: true })
   images?: string[];
 
   @ApiPropertyOptional()
@@ -174,7 +191,7 @@ export class UpdateProductDto {
 
   @ApiPropertyOptional({ enum: ProductStatus })
   @IsOptional()
-  @IsEnum(ProductStatus)
+  @IsEnum(ProductStatus, { message: 'Trạng thái sản phẩm không hợp lệ' })
   status?: ProductStatus;
 
   @ApiPropertyOptional({ type: [String] })
@@ -197,12 +214,16 @@ export class ProductQueryDto extends PaginationDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
+  @Min(0)
   minPrice?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
+  @Min(0)
   maxPrice?: number;
 
   @ApiPropertyOptional()
@@ -222,19 +243,26 @@ export class ProductQueryDto extends PaginationDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   discounted?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  @Max(5)
   minRating?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => (value === 'true' || value === true ? true : value === 'false' || value === false ? false : value))
   inStock?: boolean | string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isFlashSale?: boolean;
 }

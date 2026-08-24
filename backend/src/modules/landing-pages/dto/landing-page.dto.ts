@@ -5,18 +5,23 @@ import {
   IsString,
   IsArray,
   IsBoolean,
+  Min,
 } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsMongoObjectId, IsPhoneNumberVN } from '../../../common/validators';
 
 export class CreateLandingPageDto {
   @ApiProperty()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Tiêu đề không được để trống' })
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   title: string;
 
   @ApiProperty()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Slug không được để trống' })
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   slug: string;
 
   @ApiPropertyOptional()
@@ -31,17 +36,23 @@ export class CreateLandingPageDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
+  @Min(0)
   countdownMinutes?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
+  @Min(0)
   price?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
+  @Min(0)
   originalPrice?: number;
 
   @ApiPropertyOptional()
@@ -92,22 +103,26 @@ export class CreateLandingPageDto {
 
 export class GenerateLandingPageDto {
   @ApiProperty()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Tiêu đề không được để trống' })
   @IsString()
   title: string;
 
   @ApiProperty()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Giá không được để trống' })
+  @Type(() => Number)
   @IsNumber()
+  @Min(0)
   price: number;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
+  @Min(0)
   originalPrice?: number;
 
   @ApiProperty()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Danh sách ảnh không được để trống' })
   @IsArray()
   images: string[]; // Base64 images
 
@@ -118,28 +133,31 @@ export class GenerateLandingPageDto {
 }
 
 export class SubmitOrderDto {
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
+  @ApiProperty({ description: 'Landing Page ObjectId' })
+  @IsNotEmpty({ message: 'landingPageId không được để trống' })
+  @IsMongoObjectId({ message: 'landingPageId phải là ObjectId hợp lệ' })
   landingPageId: string;
 
   @ApiProperty()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Họ và tên không được để trống' })
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   fullName: string;
 
   @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
+  @IsNotEmpty({ message: 'Số điện thoại không được để trống' })
+  @IsPhoneNumberVN()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   phone: string;
 
   @ApiProperty()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Địa chỉ nhận hàng không được để trống' })
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   address: string;
 
   @ApiProperty()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Gói sản phẩm không được để trống' })
   @IsString()
   packageName: string;
 
