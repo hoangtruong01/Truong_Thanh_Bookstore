@@ -73,3 +73,6 @@ export enum StaffPermission {
   MANAGE_BANNERS = 'MANAGE_BANNERS',
   MANAGE_LANDING_PAGES = 'MANAGE_LANDING_PAGES',
 }
+
+export * from './error-code.enum';
+

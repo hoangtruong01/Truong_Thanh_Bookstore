@@ -47,7 +47,7 @@ backend/src/modules/
 | :--- | :--- | :--- | :--- | :--- |
 | **TASK 01** | Chuẩn hóa cấu trúc Backend (Controller/Service/DTO/Module) | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 02** | Chuẩn hóa API Response (`{ success, message, data, meta }`) | Phase 1 | P0 | 🟢 **DONE** |
-| **TASK 03** | Global Error Handling & Error Codes (`{ errorCode }`) | Phase 1 | P0 | ⚪ PENDING |
+| **TASK 03** | Global Error Handling & Error Codes (`{ errorCode }`) | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields | Phase 1 | P0 | ⚪ PENDING |
 | **TASK 05** | Quản lý biến môi trường `.env` & bảo mật Secret | Phase 1 | P0 | ⚪ PENDING |
 | **TASK 06** | Authentication toàn diện & băm mật khẩu bcrypt | Phase 2 | P0 | ⚪ PENDING |
@@ -127,6 +127,31 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-24] — Hoàn thành TASK 03: Global Error Handling & Error Codes
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Hoàn thiện hệ thống Global Exception Filter, gán mã lỗi `errorCode`, che giấu stack trace và credentials ở production, ghi log chi tiết có phân loại và chống rò rỉ dữ liệu nhạy cảm.
+- **Thực hiện**:
+  - Tạo mới `ErrorCode` Enum (`backend/src/common/enums/error-code.enum.ts`) với đầy đủ các mã lỗi hệ thống và nghiệp vụ (System, Auth, DB, Products, Cart, Orders, Payments, Inventory, Promotions, Reviews).
+  - Tạo mới bộ Custom Domain Exceptions (`backend/src/common/exceptions/app.exception.ts`): `AppException`, `BusinessException`, `ResourceNotFoundException`, `UnauthorizedActionException`, `ForbiddenActionException`, `ValidationException`, `ConflictResourceException`, `InsufficientStockException`.
+  - Nâng cấp `HttpExceptionFilter` (`backend/src/common/filters/http-exception.filter.ts`):
+    - Tự động map exception thành mã lỗi chuẩn (`errorCode`).
+    - Bắt và xử lý chuyên sâu: `HttpException`, `AppException`, Mongoose errors (`CastError` -> `ERR_INVALID_ID`, `ValidationError` -> `ERR_DB_VALIDATION`, Duplicate Key `11000` -> `ERR_DUPLICATE_KEY`), Payload Too Large (`ERR_PAYLOAD_TOO_LARGE`), JWT errors (`JsonWebTokenError` -> `ERR_INVALID_TOKEN`, `TokenExpiredError` -> `ERR_TOKEN_EXPIRED`), JSON SyntaxError.
+    - Che giấu stack trace và internal details ở production (`NODE_ENV === 'production'`).
+    - Tích hợp hàm `sanitizeForLogging` tự động ẩn `password`, `token`, `otp`, `secret`, `authorization`, `creditCard`, `cookie` trước khi ghi log.
+    - Phân loại logging: `logger.warn` cho 4xx client errors, `logger.error` kèm stack và context an toàn cho 5xx server errors.
+    - Chuẩn hóa response trả về có thêm `path` và `timestamp`.
+  - Nâng cấp `ValidationPipe` trong `main.ts` với `exceptionFactory` tạo structured field-level validation errors và mã `ERR_VALIDATION`.
+  - Viết bộ unit tests chuyên biệt toàn diện cho `HttpExceptionFilter` và `AppException` (100% pass).
+- **Kết quả kiểm thử**:
+  - `npm run build` (Backend): PASS.
+  - `npm test` (Backend): 5 test suites, 34 tests PASS 100%.
+  - `npm run build` (Frontend): PASS.
+  - `flutter test` (Mobile): 6 tests PASS 100%.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 04 — Global DTO Validation.
+
+---
 
 ### [2026-08-23] — Hoàn thành TASK 02: Chuẩn hóa API Response
 - **Người cập nhật**: Antigravity AI

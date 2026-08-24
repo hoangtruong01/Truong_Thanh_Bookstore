@@ -7,25 +7,84 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
+import { ErrorCode } from '../enums/error-code.enum';
 
-function getErrorCodeFromStatus(status: number): string {
+const SENSITIVE_KEYS = new Set([
+  'password',
+  'newpassword',
+  'oldpassword',
+  'confirmpassword',
+  'token',
+  'accesstoken',
+  'refreshtoken',
+  'authorization',
+  'cookie',
+  'otp',
+  'resetotp',
+  'secret',
+  'apikey',
+  'creditcard',
+  'cvv',
+  'cardnumber',
+]);
+
+/**
+ * Recursively sanitize an object by masking sensitive keys
+ */
+export function sanitizeForLogging(data: any, depth = 0): any {
+  if (depth > 5 || data === null || data === undefined) {
+    return data;
+  }
+
+  if (typeof data !== 'object') {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizeForLogging(item, depth + 1));
+  }
+
+  const sanitized: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    const lowerKey = key.toLowerCase();
+    if (SENSITIVE_KEYS.has(lowerKey)) {
+      sanitized[key] = '***REDACTED***';
+    } else if (typeof value === 'object' && value !== null) {
+      sanitized[key] = sanitizeForLogging(value, depth + 1);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
+/**
+ * Map standard HTTP status codes to standardized system error codes
+ */
+export function getErrorCodeFromStatus(status: number): ErrorCode {
   switch (status) {
     case HttpStatus.BAD_REQUEST:
-      return 'ERR_BAD_REQUEST';
+      return ErrorCode.ERR_BAD_REQUEST;
     case HttpStatus.UNAUTHORIZED:
-      return 'ERR_UNAUTHORIZED';
+      return ErrorCode.ERR_UNAUTHORIZED;
     case HttpStatus.FORBIDDEN:
-      return 'ERR_FORBIDDEN';
+      return ErrorCode.ERR_FORBIDDEN;
     case HttpStatus.NOT_FOUND:
-      return 'ERR_NOT_FOUND';
+      return ErrorCode.ERR_NOT_FOUND;
     case HttpStatus.CONFLICT:
-      return 'ERR_CONFLICT';
+      return ErrorCode.ERR_CONFLICT;
     case HttpStatus.UNPROCESSABLE_ENTITY:
-      return 'ERR_UNPROCESSABLE_ENTITY';
+      return ErrorCode.ERR_UNPROCESSABLE_ENTITY;
     case HttpStatus.TOO_MANY_REQUESTS:
-      return 'ERR_RATE_LIMIT_EXCEEDED';
+      return ErrorCode.ERR_RATE_LIMIT_EXCEEDED;
+    case HttpStatus.PAYLOAD_TOO_LARGE:
+      return ErrorCode.ERR_PAYLOAD_TOO_LARGE;
+    case HttpStatus.SERVICE_UNAVAILABLE:
+      return ErrorCode.ERR_SERVICE_UNAVAILABLE;
     default:
-      return status >= 500 ? 'ERR_INTERNAL_SERVER_ERROR' : 'ERR_UNKNOWN';
+      return status >= 500
+        ? ErrorCode.ERR_INTERNAL_SERVER_ERROR
+        : ErrorCode.ERR_UNKNOWN;
   }
 }
 
@@ -38,11 +97,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    const isProduction = process.env.NODE_ENV === 'production';
+    const requestPath = request?.url ? request.url.split('?')[0] : '/';
+    const requestMethod = request?.method || 'UNKNOWN';
+
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Đã có lỗi xảy ra từ hệ thống. Vui lòng thử lại sau.';
-    let errorCode = 'ERR_INTERNAL_SERVER_ERROR';
-    let details: any = null;
+    let errorCode: string = ErrorCode.ERR_INTERNAL_SERVER_ERROR;
+    let details: any = {};
 
+    // 1. Handle NestJS HttpException and subclasses (e.g. AppException, BadRequestException)
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       errorCode = getErrorCodeFromStatus(status);
@@ -50,19 +114,53 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const res = exceptionResponse as any;
+      } else if (
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null
+      ) {
+        const res = exceptionResponse as Record<string, any>;
         message = res.message || exception.message || 'Lỗi yêu cầu';
         errorCode = res.errorCode || res.code || errorCode;
-        details = res.details || res.errors || null;
+        details = res.details || res.errors || {};
 
+        // If message is an array from ValidationPipe
         if (Array.isArray(message)) {
           details = message;
           message = 'Dữ liệu yêu cầu không hợp lệ';
-          errorCode = 'ERR_VALIDATION';
+          errorCode = ErrorCode.ERR_VALIDATION;
         }
       }
-    } else if (exception && typeof exception === 'object') {
+    }
+    // 2. Handle JWT errors
+    else if (
+      exception &&
+      typeof exception === 'object' &&
+      (exception as any).name === 'JsonWebTokenError'
+    ) {
+      status = HttpStatus.UNAUTHORIZED;
+      errorCode = ErrorCode.ERR_INVALID_TOKEN;
+      message = 'Mã xác thực không hợp lệ hoặc đã bị chỉnh sửa';
+    } else if (
+      exception &&
+      typeof exception === 'object' &&
+      (exception as any).name === 'TokenExpiredError'
+    ) {
+      status = HttpStatus.UNAUTHORIZED;
+      errorCode = ErrorCode.ERR_TOKEN_EXPIRED;
+      message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại';
+    }
+    // 3. Handle JSON parse error (SyntaxError in request body)
+    else if (
+      exception instanceof SyntaxError &&
+      'status' in exception &&
+      (exception as any).status === 400
+    ) {
+      status = HttpStatus.BAD_REQUEST;
+      errorCode = ErrorCode.ERR_BAD_REQUEST;
+      message = 'Định dạng dữ liệu JSON gửi lên không hợp lệ';
+    }
+    // 4. Handle MongoDB / Mongoose / Database errors
+    else if (exception && typeof exception === 'object') {
       const err = exception as any;
       const errMsg = err.message || '';
 
@@ -72,34 +170,79 @@ export class HttpExceptionFilter implements ExceptionFilter {
         errMsg.includes('OUT_OF_RANGE')
       ) {
         status = HttpStatus.BAD_REQUEST;
-        errorCode = 'ERR_PAYLOAD_TOO_LARGE';
+        errorCode = ErrorCode.ERR_PAYLOAD_TOO_LARGE;
         message =
           'Dung lượng dữ liệu hoặc hình ảnh quá lớn (vượt quá giới hạn của CSDL). Vui lòng giảm kích thước ảnh trước khi tải lên!';
       } else if (err.name === 'ValidationError' && err.errors) {
         status = HttpStatus.BAD_REQUEST;
-        errorCode = 'ERR_DB_VALIDATION';
+        errorCode = ErrorCode.ERR_DB_VALIDATION;
         const msgList = Object.values(err.errors).map((e: any) => e.message);
         message = `Dữ liệu không hợp lệ: ${msgList.join('; ')}`;
         details = msgList;
       } else if (err.code === 11000) {
         status = HttpStatus.CONFLICT;
-        errorCode = 'ERR_DUPLICATE_KEY';
+        errorCode = ErrorCode.ERR_DUPLICATE_KEY;
         message = 'Dữ liệu hoặc đường dẫn đã tồn tại trên hệ thống (trùng lặp)';
+        if (err.keyValue) {
+          details = { duplicateFields: Object.keys(err.keyValue) };
+        }
       } else if (err.name === 'CastError') {
         status = HttpStatus.BAD_REQUEST;
-        errorCode = 'ERR_INVALID_ID';
+        errorCode = ErrorCode.ERR_INVALID_ID;
         message = `Giá trị trường '${err.path}' không đúng định dạng ID hợp lệ`;
       }
     }
 
-    // Log internal server errors securely without leaking in production
-    if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
-      const method = request?.method || 'UNKNOWN';
-      const url = request?.url || 'UNKNOWN';
-      const stack = exception instanceof Error ? exception.stack : JSON.stringify(exception);
-      this.logger.error(`[${method}] ${url} - Status: ${status} - Error: ${stack}`);
+    // 5. Production Security & Masking for 5xx Internal Server Errors
+    if (status >= 500) {
+      if (isProduction) {
+        message = 'Đã có lỗi xảy ra từ hệ thống. Vui lòng thử lại sau.';
+        details = {};
+      } else {
+        const rawErr = exception as any;
+        if (rawErr && typeof rawErr === 'object' && !details.error) {
+          details = {
+            error: rawErr.message || String(exception),
+            stack: rawErr.stack,
+          };
+        }
+      }
     }
 
+    // 6. Structured Logging with Credential Redaction
+    const clientIp =
+      request?.headers?.['x-forwarded-for'] ||
+      request?.socket?.remoteAddress ||
+      'UNKNOWN_IP';
+    const userId = (request as any)?.user?.id || (request as any)?.user?._id || 'ANONYMOUS';
+
+    const logPayload = {
+      timestamp: new Date().toISOString(),
+      method: requestMethod,
+      path: request?.url || requestPath,
+      statusCode: status,
+      errorCode,
+      clientIp,
+      userId,
+      query: sanitizeForLogging(request?.query || {}),
+      body: sanitizeForLogging(request?.body || {}),
+    };
+
+    if (status >= 500) {
+      const stack =
+        exception instanceof Error ? exception.stack : JSON.stringify(exception);
+      this.logger.error(
+        `[${requestMethod}] ${request?.url} | Status: ${status} | Code: ${errorCode} | User: ${userId} | IP: ${clientIp}\n` +
+          `Context: ${JSON.stringify(logPayload)}\n` +
+          `Stack: ${stack}`,
+      );
+    } else {
+      this.logger.warn(
+        `[${requestMethod}] ${request?.url} | Status: ${status} | Code: ${errorCode} | Msg: ${message} | User: ${userId} | IP: ${clientIp}`,
+      );
+    }
+
+    // 7. Send standardized JSON response
     response.status(status).json({
       success: false,
       message,
@@ -107,6 +250,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       details: details || {},
       statusCode: status,
       timestamp: new Date().toISOString(),
+      path: requestPath,
     });
   }
 }
