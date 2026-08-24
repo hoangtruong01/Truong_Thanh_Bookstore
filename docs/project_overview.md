@@ -17,10 +17,11 @@ backend/
 │   ├── common/                        # Chứa các tiện ích dùng chung
 │   │   ├── decorators/                # Decorator tùy chỉnh (ví dụ: @GetUser lấy thông tin user từ JWT)
 │   │   ├── dto/                       # DTO dùng chung cho phân trang (PaginationDto)
-│   │   ├── enums/                     # Định nghĩa Enum hệ thống (UserRole, OrderStatus, DiscountType)
-│   │   ├── filters/                   # HttpExceptionFilter chuẩn hóa cấu trúc lỗi API trả về
-│   │   ├── guards/                    # Guard xác thực quyền (OptionalJwtGuard)
-│   │   └── interceptors/              # TransformInterceptor bọc kết quả API thành { statusCode, message, data }
+│   │   ├── enums/                     # Định nghĩa Enum hệ thống (ErrorCode, UserRole, OrderStatus, DiscountType...)
+│   │   ├── exceptions/                # AppException, BusinessException, ResourceNotFoundException...
+│   │   ├── filters/                   # HttpExceptionFilter chuẩn hóa cấu trúc lỗi API ({ success, errorCode, message... })
+│   │   ├── guards/                    # Guard xác thực quyền (OptionalJwtGuard, RolesGuard, PermissionsGuard)
+│   │   └── interceptors/              # TransformInterceptor bọc kết quả API thành { success, message, data, meta }
 │   ├── modules/                       # Các Module Nghiệp vụ chính
 │   │   ├── auth/                      # Đăng ký, đăng nhập, JWT, mã hóa bcrypt và làm sạch profile
 │   │   ├── categories/                # Quản lý danh mục sản phẩm (hỗ trợ phân cấp Cha - Con)

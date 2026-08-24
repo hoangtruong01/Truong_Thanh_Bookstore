@@ -1,9 +1,10 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { ErrorCode } from './common/enums';
 import { json, urlencoded } from 'express';
 
 async function bootstrap() {
@@ -43,6 +44,28 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transform: true,
       transformOptions: { enableImplicitConversion: true },
+      exceptionFactory: (errors) => {
+        const flatMessages: string[] = [];
+        const formatErrors = (errs: any[]): any[] => {
+          return errs.map((err) => {
+            if (err.constraints) {
+              flatMessages.push(...(Object.values(err.constraints) as string[]));
+            }
+            return {
+              field: err.property,
+              errors: err.constraints ? Object.values(err.constraints) : [],
+              children: err.children && err.children.length > 0 ? formatErrors(err.children) : undefined,
+            };
+          });
+        };
+        const structuredDetails = formatErrors(errors);
+
+        return new BadRequestException({
+          message: flatMessages.length > 0 ? flatMessages : 'Dữ liệu yêu cầu không hợp lệ',
+          errorCode: ErrorCode.ERR_VALIDATION,
+          details: structuredDetails,
+        });
+      },
     }),
   );
 

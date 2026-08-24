@@ -112,8 +112,10 @@ Hệ thống quản lý 4 nhóm người dùng chính:
 - `src/common/`:
   - `decorators/`: Các decorator `@Roles()`, `@Permissions()`, `@Public()`.
   - `guards/`: `JwtAuthGuard`, `RolesGuard`, `PermissionsGuard` bảo vệ API.
-  - `filters/`: `HttpExceptionFilter` chuẩn hóa định dạng lỗi trả về.
+  - `filters/`: `HttpExceptionFilter` chuẩn hóa định dạng lỗi toàn cục (`errorCode`, che giấu sensitive data & stack trace ở production, structured logging).
+  - `exceptions/`: `AppException`, `BusinessException`, `ResourceNotFoundException`, `InsufficientStockException`...
   - `interceptors/`: `TransformInterceptor` chuẩn hóa response định dạng `{ success, message, data, meta }`.
+  - `enums/`: `error-code.enum.ts`, `order-status.enum.ts`, `payment-status.enum.ts`...
 - `src/modules/`: Mỗi thư mục con là một nghiệp vụ độc lập:
   - `auth/`: Đăng ký, đăng nhập, cấp phát JWT, OTP.
   - `users/`: Thông tin cá nhân, sổ địa chỉ (`addresses`), danh sách yêu thích (`wishlist`).

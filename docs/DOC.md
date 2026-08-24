@@ -86,7 +86,7 @@ Hệ thống **Trường Thành Bookstore** là nền tảng thương mại đi�
 ### PHASE 1 — FOUNDATION
 - **TASK 01 [P0] — Backend Structure [DONE]**: Đã chuẩn hóa toàn bộ cấu trúc module: Tạo mới CartModule, ReviewsModule, PaymentsModule độc lập. Bóc tách triệt để Controller chỉ xử lý HTTP, Service chứa Business Logic, DTO và Model/Schema riêng biệt. Unit tests & Build PASS.
 - **TASK 02 [P0] — API Response Standardization [DONE]**: Đã chuẩn hóa toàn bộ định dạng phản hồi API theo chuẩn thống nhất (Success: `{ success, message, data, meta }`, Error: `{ success, message, errorCode, details }`). Đồng bộ TransformInterceptor, HttpExceptionFilter, cập nhật frontend client và unit tests PASS 100%.
-- **TASK 03 [P0] — Global Error Handling**: Hoàn thiện Global Exception Filter, gán mã lỗi `errorCode`, che giấu stack trace và credentials ở production, ghi log chi tiết.
+- **TASK 03 [P0] — Global Error Handling [DONE]**: Đã hoàn thiện toàn diện Global Exception Filter, gán mã lỗi chuẩn hóa `ErrorCode` enum và Custom Exceptions (`AppException`, `BusinessException`...), che giấu stack trace và credentials ở production, tự động làm sạch logging (redact sensitive data), structured logging và unit tests PASS 100%.
 - **TASK 04 [P0] — DTO Validation**: Thiết lập ValidationPipe toàn cục cấm unknown fields, validate chặt chẽ email, phone, password, price, quantity, ObjectId, enum.
 - **TASK 05 [P0] — Environment Configuration**: Tách và kiểm tra toàn bộ biến môi trường qua `.env` và `.env.example`, bảo đảm không hard-code bất kỳ secret nào trong mã nguồn.
 
