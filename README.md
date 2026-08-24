@@ -28,6 +28,7 @@ Truong_Thanh_Bookstore/
 ├── backend/    # RESTful API Service (NestJS + MongoDB + JWT)
 ├── frontend/   # Web Storefront & Admin Dashboard (Vue 3 + TypeScript + Tailwind CSS)
 ├── mobile/     # Native Cross-Platform Mobile App (Flutter + Provider)
+├── docs/       # Tài liệu dự án, đặc tả & AI Context
 └── .github/    # Quy trình CI/CD Automation (GitHub Actions)
 ```
 
