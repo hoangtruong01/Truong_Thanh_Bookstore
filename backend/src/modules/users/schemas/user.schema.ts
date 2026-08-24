@@ -36,6 +36,9 @@ export class User {
   @Prop({ default: 0 })
   resetOtpAttempts?: number;
 
+  @Prop()
+  refreshTokenHash?: string;
+
   @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: 'Product' }], default: [] })
   wishlist: Types.ObjectId[];
 

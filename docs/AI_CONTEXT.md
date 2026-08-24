@@ -50,7 +50,7 @@ backend/src/modules/
 | **TASK 03** | Global Error Handling & Error Codes (`{ errorCode }`) | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 05** | Quản lý biến môi trường `.env` & bảo mật Secret | Phase 1 | P0 | 🟢 **DONE** |
-| **TASK 06** | Authentication toàn diện & băm mật khẩu bcrypt | Phase 2 | P0 | ⚪ PENDING |
+| **TASK 06** | Authentication toàn diện & băm mật khẩu bcrypt | Phase 2 | P0 | 🟢 **DONE** |
 | **TASK 07** | Phân quyền RBAC (Customer/Staff/Admin) & Role Guards | Phase 2 | P0 | ⚪ PENDING |
 | **TASK 08** | Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout | Phase 2 | P0 | ⚪ PENDING |
 | **TASK 09** | Bảo mật API (Helmet, CORS, Rate Limit, Sanitization) | Phase 2 | P1 | ⚪ PENDING |
@@ -127,6 +127,35 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-24] — Hoàn thành TASK 06: Authentication toàn diện & băm mật khẩu bcrypt
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Hoàn thiện và chuẩn hóa toàn bộ hệ thống Xác thực (Authentication) đa nền tảng (Web & Mobile); băm mật khẩu an toàn bằng `bcrypt` (10 salt rounds); triển khai cơ chế Refresh Token & Token Rotation; bảo vệ luồng Quên mật khẩu qua OTP 6 số (SHA-256 hash, rate limit, max 5 attempts, temporary reset token); tuyệt đối không để rò rỉ password hash và mã bí mật trong API response; viết bộ unit tests chuyên biệt đạt 100% độ bao phủ.
+- **Thực hiện**:
+  - Nâng cấp `UserSchema` (`backend/src/modules/users/schemas/user.schema.ts`):
+    - Bổ sung trường `refreshTokenHash` lưu trữ mã băm SHA-256 của Refresh Token nhằm hỗ trợ kiểm soát phiên, thu hồi token và token rotation.
+  - Chuẩn hóa DTOs (`backend/src/modules/auth/dto/auth.dto.ts`):
+    - Tạo mới `RefreshTokenDto`.
+    - Nâng cấp `ResetPasswordDto` hỗ trợ linh hoạt xác thực bằng `resetToken` tạm thời hoặc mã `otp`.
+    - Ràng buộc mật khẩu mạnh (chữ hoa, chữ thường, số, >= 8 ký tự) cho `RegisterDto`, `ChangePasswordDto`, `ResetPasswordDto`.
+  - Nâng cấp toàn diện `AuthService` (`backend/src/modules/auth/auth.service.ts`):
+    - Phương thức sinh cặp token `generateTokens`: Cấp phát `accessToken` (7 ngày) và `refreshToken` (30 ngày), băm SHA-256 lưu DB.
+    - Phương thức `refreshToken`: Xác thực JWT, đối chiếu hash bằng `timingSafeEqual`, xoay vòng token (rotation) an toàn.
+    - Phương thức `logout`: Thu hồi `refreshTokenHash` trong DB và xóa cookie trình duyệt.
+    - Phương thức `verifyOtp`: Kiểm tra OTP băm SHA-256, giới hạn tối đa 5 lần thử sai (hủy OTP nếu quá 5 lần), sinh `resetToken` có thời hạn 15 phút.
+    - Phương thức `resetPassword`: Băm mật khẩu mới bằng `bcrypt` (10 rounds), hủy toàn bộ dữ liệu OTP và vô hiệu hóa phiên cũ (`refreshTokenHash`).
+    - Làm sạch dữ liệu (`sanitizeUser`): Loại bỏ hoàn toàn `password`, `resetOtp`, `resetOtpExpiry`, `resetOtpAttempts`, `refreshTokenHash` khỏi mọi API responses.
+  - Nâng cấp `AuthController` (`backend/src/modules/auth/auth.controller.ts`):
+    - Bổ sung endpoint `POST /api/auth/refresh` hỗ trợ cả Header, Body và HTTP-only Cookie.
+    - Nâng cấp cookie helper `setAuthCookies` tự động cấp cả `access_token` và `refresh_token` an toàn.
+  - Viết bộ unit tests chuyên biệt `auth.service.spec.ts` kiểm thử toàn diện 17/17 test cases (PASS 100%).
+- **Kết quả kiểm thử**:
+  - `npm run build` (Backend): PASS.
+  - `npm test` (Backend): 8 test suites, 80 tests PASS 100%.
+  - `npm run build` (Frontend): PASS.
+  - `flutter test` (Mobile): 6 tests PASS 100%.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 07 — Phân quyền RBAC (Customer/Staff/Admin) & Role Guards.
 
 ### [2026-08-24] — Hoàn thành TASK 05: Quản lý biến môi trường `.env` & bảo mật Secret
 - **Người cập nhật**: Antigravity AI

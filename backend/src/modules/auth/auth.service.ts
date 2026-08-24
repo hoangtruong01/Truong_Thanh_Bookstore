@@ -8,13 +8,16 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomInt, timingSafeEqual } from 'crypto';
 import { UsersService } from '../users/users.service';
-import { RegisterDto, LoginDto, UpdateProfileDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto, ResetPasswordDto } from './dto/auth.dto';
 import { UserRole } from '../../common/enums';
 import { CloudinaryService } from '../users/cloudinary.service';
 import { EmailService } from '../email/email.service';
+import { UserDocument } from '../users/schemas/user.schema';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -22,20 +25,65 @@ export class AuthService {
     private emailService: EmailService,
   ) {}
 
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private isTokenHashValid(storedHash: string, token: string): boolean {
+    try {
+      const expected = Buffer.from(storedHash, 'hex');
+      const actual = Buffer.from(this.hashToken(token), 'hex');
+      return expected.length === actual.length && timingSafeEqual(expected, actual);
+    } catch {
+      return false;
+    }
+  }
+
   private hashOtp(otp: string): string {
     return createHash('sha256').update(otp).digest('hex');
   }
 
   private isOtpHashValid(storedHash: string, otp: string): boolean {
-    const expected = Buffer.from(storedHash, 'hex');
-    const actual = Buffer.from(this.hashOtp(otp), 'hex');
-    return expected.length === actual.length && timingSafeEqual(expected, actual);
+    try {
+      const expected = Buffer.from(storedHash, 'hex');
+      const actual = Buffer.from(this.hashOtp(otp), 'hex');
+      return expected.length === actual.length && timingSafeEqual(expected, actual);
+    } catch {
+      return false;
+    }
+  }
+
+  private sanitizeUser(user: any) {
+    const userObj = user.toObject ? user.toObject() : user;
+    const {
+      password,
+      resetOtp,
+      resetOtpExpiry,
+      resetOtpAttempts,
+      refreshTokenHash,
+      ...safeUser
+    } = userObj;
+    return safeUser;
+  }
+
+  private async generateTokens(user: UserDocument) {
+    const payload = { sub: user._id.toString(), email: user.email, role: user.role };
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(
+      { sub: user._id.toString(), email: user.email, type: 'refresh' },
+      { expiresIn: '30d' },
+    );
+
+    user.refreshTokenHash = this.hashToken(refreshToken);
+    await user.save();
+
+    return { accessToken, refreshToken };
   }
 
   async register(registerDto: RegisterDto) {
     const existingUser = await this.usersService.findByEmail(registerDto.email);
     if (existingUser) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException('Email đã tồn tại trên hệ thống');
     }
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
@@ -43,27 +91,20 @@ export class AuthService {
       ...registerDto,
       password: hashedPassword,
       role: UserRole.CUSTOMER,
+      status: true,
     });
 
-    const payload = { sub: user._id, email: user.email, role: user.role };
+    const tokens = await this.generateTokens(user);
     return {
-      user: {
-        _id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        loyaltyPoints: user.loyaltyPoints || 0,
-        loyaltyTier: user.loyaltyTier,
-        permissions: user.permissions || [],
-      },
-      accessToken: this.jwtService.sign(payload),
+      user: this.sanitizeUser(user),
+      ...tokens,
     };
   }
 
   async login(loginDto: LoginDto) {
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
     }
     if (!user.status) {
       throw new UnauthorizedException('Tài khoản đã bị khóa');
@@ -74,35 +115,65 @@ export class AuthService {
       user.password,
     );
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
     }
 
-    const payload = { sub: user._id, email: user.email, role: user.role };
+    const tokens = await this.generateTokens(user);
     return {
-      user: {
-        _id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        avatar: user.avatar,
-        loyaltyPoints: user.loyaltyPoints || 0,
-        loyaltyTier: user.loyaltyTier,
-        permissions: user.permissions || [],
-      },
-      accessToken: this.jwtService.sign(payload),
+      user: this.sanitizeUser(user),
+      ...tokens,
     };
   }
 
-  // FIX-H07: Exclude password hash from profile response
+  async refreshToken(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token không được cung cấp');
+    }
+
+    let payload: any;
+    try {
+      payload = await this.jwtService.verifyAsync(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn');
+    }
+
+    if (!payload || payload.type !== 'refresh' || !payload.sub) {
+      throw new UnauthorizedException('Refresh token không hợp lệ');
+    }
+
+    const user = await this.usersService.findByIdWithPassword(payload.sub);
+    if (!user || !user.status) {
+      throw new UnauthorizedException('Tài khoản không tồn tại hoặc đã bị khóa');
+    }
+
+    if (!user.refreshTokenHash || !this.isTokenHashValid(user.refreshTokenHash, refreshToken)) {
+      throw new UnauthorizedException('Refresh token đã bị thu hồi hoặc không hợp lệ');
+    }
+
+    const tokens = await this.generateTokens(user);
+    return {
+      user: this.sanitizeUser(user),
+      ...tokens,
+    };
+  }
+
+  async logout(userId?: string) {
+    if (userId) {
+      const user = await this.usersService.findByIdWithPassword(userId);
+      if (user) {
+        user.refreshTokenHash = undefined;
+        await user.save();
+      }
+    }
+    return { success: true, message: 'Đăng xuất thành công' };
+  }
+
   async getProfile(userId: string) {
     const user = await this.usersService.findById(userId);
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException('Người dùng không tồn tại');
     }
-    const userObj = user.toObject ? user.toObject() : user;
-    const { password, ...safeUser } = userObj;
-    return safeUser;
+    return this.sanitizeUser(user);
   }
 
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
@@ -121,31 +192,34 @@ export class AuthService {
 
     const updatedUser = await this.usersService.update(userId, updateData);
     if (!updatedUser) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException('Người dùng không tồn tại');
     }
-    return updatedUser;
+    return this.sanitizeUser(updatedUser);
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
     const user = await this.usersService.findByIdWithPassword(userId);
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException('Người dùng không tồn tại');
     }
 
     const isValid = await bcrypt.compare(currentPassword, user.password);
     if (!isValid) {
-      throw new UnauthorizedException('Mật khẩu hiện tại không đúng');
+      throw new UnauthorizedException('Mật khẩu hiện tại không chính xác');
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await this.usersService.update(userId, { password: hashedPassword });
+    user.password = hashedPassword;
+    user.refreshTokenHash = undefined; // Force re-login on other devices
+    await user.save();
+
     return { success: true, message: 'Đổi mật khẩu thành công' };
   }
 
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      // BUG-19: Do not disclose email existence to prevent user enumeration
+      // Anti-enumeration: Do not disclose email existence
       return {
         success: true,
         message: 'Mã OTP đã được gửi đến email của bạn',
@@ -165,29 +239,25 @@ export class AuthService {
 
     // Send OTP email (async)
     this.emailService.sendOtpEmail(email, otp).catch((err) => {
-      const logger = new Logger(AuthService.name);
-      logger.error(`Failed to send OTP email to ${email}:`, err);
+      this.logger.error(`Failed to send OTP email to ${email}:`, err);
     });
 
-    const response: any = {
+    return {
       success: true,
       message: 'Mã OTP đã được gửi đến email của bạn',
     };
-
-    return response;
   }
 
   async verifyOtp(email: string, otp: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      throw new UnauthorizedException('Email không tồn tại');
+      throw new UnauthorizedException('Email không tồn tại trên hệ thống');
     }
 
     if (!user.resetOtp) {
-      throw new UnauthorizedException('Không tìm thấy mã OTP. Vui lòng yêu cầu lại');
+      throw new UnauthorizedException('Không tìm thấy mã OTP hoặc đã hết hạn. Vui lòng yêu cầu lại');
     }
 
-    // Check if max attempts reached (5 attempts max)
     const currentAttempts = user.resetOtpAttempts || 0;
     if (currentAttempts >= 5) {
       user.resetOtp = undefined;
@@ -219,48 +289,69 @@ export class AuthService {
       throw new UnauthorizedException(`Mã OTP không đúng. Bạn còn ${remaining} lần thử`);
     }
 
-    return { success: true, message: 'Xác thực OTP thành công' };
+    const resetToken = this.jwtService.sign(
+      { sub: user._id.toString(), email: user.email, type: 'RESET_PASSWORD' },
+      { expiresIn: '15m' },
+    );
+
+    return { success: true, message: 'Xác thực OTP thành công', resetToken };
   }
 
-  async resetPassword(email: string, otp: string, newPassword: string) {
+  async resetPassword(dto: ResetPasswordDto) {
+    const { email, otp, resetToken, newPassword } = dto;
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      throw new UnauthorizedException('Email không tồn tại');
+      throw new UnauthorizedException('Email không tồn tại trên hệ thống');
     }
 
-    if (!user.resetOtp) {
-      throw new UnauthorizedException('Mã OTP không hợp lệ hoặc đã hết hạn');
-    }
+    if (resetToken) {
+      let payload: any;
+      try {
+        payload = await this.jwtService.verifyAsync(resetToken);
+      } catch {
+        throw new UnauthorizedException('Mã token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn');
+      }
 
-    const currentAttempts = user.resetOtpAttempts || 0;
-    if (currentAttempts >= 5) {
-      user.resetOtp = undefined;
-      user.resetOtpExpiry = undefined;
-      user.resetOtpAttempts = 0;
-      await user.save();
-      throw new UnauthorizedException('Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới');
-    }
+      if (!payload || payload.type !== 'RESET_PASSWORD' || payload.email !== email.toLowerCase()) {
+        throw new UnauthorizedException('Mã token đặt lại mật khẩu không hợp lệ');
+      }
+    } else if (otp) {
+      if (!user.resetOtp) {
+        throw new UnauthorizedException('Mã OTP không hợp lệ hoặc đã hết hạn');
+      }
 
-    if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
-      user.resetOtp = undefined;
-      user.resetOtpExpiry = undefined;
-      user.resetOtpAttempts = 0;
-      await user.save();
-      throw new UnauthorizedException('Mã OTP đã hết hạn');
-    }
-
-    if (!this.isOtpHashValid(user.resetOtp, otp)) {
-      user.resetOtpAttempts = currentAttempts + 1;
-      if (user.resetOtpAttempts >= 5) {
+      const currentAttempts = user.resetOtpAttempts || 0;
+      if (currentAttempts >= 5) {
         user.resetOtp = undefined;
         user.resetOtpExpiry = undefined;
         user.resetOtpAttempts = 0;
         await user.save();
         throw new UnauthorizedException('Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới');
       }
-      await user.save();
-      const remaining = 5 - user.resetOtpAttempts;
-      throw new UnauthorizedException(`Mã OTP không đúng. Bạn còn ${remaining} lần thử`);
+
+      if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
+        user.resetOtp = undefined;
+        user.resetOtpExpiry = undefined;
+        user.resetOtpAttempts = 0;
+        await user.save();
+        throw new UnauthorizedException('Mã OTP đã hết hạn');
+      }
+
+      if (!this.isOtpHashValid(user.resetOtp, otp)) {
+        user.resetOtpAttempts = currentAttempts + 1;
+        if (user.resetOtpAttempts >= 5) {
+          user.resetOtp = undefined;
+          user.resetOtpExpiry = undefined;
+          user.resetOtpAttempts = 0;
+          await user.save();
+          throw new UnauthorizedException('Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới');
+        }
+        await user.save();
+        const remaining = 5 - user.resetOtpAttempts;
+        throw new UnauthorizedException(`Mã OTP không đúng. Bạn còn ${remaining} lần thử`);
+      }
+    } else {
+      throw new UnauthorizedException('Vui lòng cung cấp mã OTP hoặc resetToken để đặt lại mật khẩu');
     }
 
     // Update password
@@ -269,9 +360,9 @@ export class AuthService {
     user.resetOtp = undefined;
     user.resetOtpExpiry = undefined;
     user.resetOtpAttempts = 0;
+    user.refreshTokenHash = undefined; // Invalidate active sessions
     await user.save();
 
     return { success: true, message: 'Đặt lại mật khẩu thành công' };
   }
 }
-

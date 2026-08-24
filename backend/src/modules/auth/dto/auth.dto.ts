@@ -104,6 +104,13 @@ export class VerifyOtpDto {
   otp: string;
 }
 
+export class RefreshTokenDto {
+  @ApiPropertyOptional({ example: 'eyJhbGciOiJIUzI1NiIsIn...' })
+  @IsOptional()
+  @IsString()
+  refreshToken?: string;
+}
+
 export class ResetPasswordDto {
   @ApiProperty({ example: 'user@example.com' })
   @IsNotEmpty({ message: 'Email không được để trống' })
@@ -111,10 +118,15 @@ export class ResetPasswordDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   email: string;
 
-  @ApiProperty({ example: '123456' })
-  @IsNotEmpty({ message: 'Mã OTP không được để trống' })
+  @ApiPropertyOptional({ example: '123456' })
+  @IsOptional()
   @Matches(/^\d{6}$/, { message: 'Mã OTP phải gồm đúng 6 chữ số' })
-  otp: string;
+  otp?: string;
+
+  @ApiPropertyOptional({ example: 'eyJhbGciOiJIUzI1NiIsIn...' })
+  @IsOptional()
+  @IsString()
+  resetToken?: string;
 
   @ApiProperty({ example: 'NewPassword123' })
   @IsNotEmpty({ message: 'Mật khẩu mới không được để trống' })
