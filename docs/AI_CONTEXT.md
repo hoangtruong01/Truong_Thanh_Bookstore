@@ -49,7 +49,7 @@ backend/src/modules/
 | **TASK 02** | Chuẩn hóa API Response (`{ success, message, data, meta }`) | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 03** | Global Error Handling & Error Codes (`{ errorCode }`) | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields | Phase 1 | P0 | 🟢 **DONE** |
-| **TASK 05** | Quản lý biến môi trường `.env` & bảo mật Secret | Phase 1 | P0 | ⚪ PENDING |
+| **TASK 05** | Quản lý biến môi trường `.env` & bảo mật Secret | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 06** | Authentication toàn diện & băm mật khẩu bcrypt | Phase 2 | P0 | ⚪ PENDING |
 | **TASK 07** | Phân quyền RBAC (Customer/Staff/Admin) & Role Guards | Phase 2 | P0 | ⚪ PENDING |
 | **TASK 08** | Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout | Phase 2 | P0 | ⚪ PENDING |
@@ -127,6 +127,30 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-24] — Hoàn thành TASK 05: Quản lý biến môi trường `.env` & bảo mật Secret
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Xây dựng hệ thống quản lý cấu hình và biến môi trường tập trung, an toàn, được kiểm tra hợp lệ nghiêm ngặt (Strict Schema Validation) ngay khi khởi động ứng dụng; loại bỏ hoàn toàn các secret mặc định bị hardcode trong mã nguồn; chuẩn hóa tài liệu `.env.example` và hỗ trợ đa môi trường (Development, Test, Production) trên cả Backend, Frontend và Mobile.
+- **Thực hiện**:
+  - Tạo mới module xác thực cấu hình môi trường (`backend/src/config/env.validation.ts`):
+    - Định nghĩa class `EnvironmentVariables` với đầy đủ ràng buộc `class-validator` (`@IsEnum`, `@IsString`, `@IsNumber`, `@Min`, `@Max`, `@IsNotEmpty`, `@MinLength`...).
+    - Viết hàm `validateEnv` thực hiện transform kiểu dữ liệu (chuyển string port sang number, boolean), alias mapping (`MONGO_URI` -> `MONGODB_URI`, `JWT_EXPIRATION` -> `JWT_EXPIRES_IN`).
+    - Triển khai nguyên tắc **Fail-Fast**: Dừng khởi động và in log chi tiết từng trường vi phạm nếu thiếu biến bắt buộc (`MONGODB_URI`, `JWT_SECRET`, `PORT`, `FRONTEND_URL`).
+    - Kiểm tra bảo mật nghiêm ngặt ở **Production**: Chặn hoàn toàn các secret mặc định yếu (`secret`, `123456`, `TruongThanhDevDefaultSecretKey2026!`...) và yêu cầu `JWT_SECRET` phải có độ dài tối thiểu >= 32 ký tự.
+  - Tạo module cấu hình phân cấp (`backend/src/config/configuration.ts`) cho NestJS ConfigService.
+  - Tích hợp `validateEnv` vào `ConfigModule.forRoot({ isGlobal: true, load: [configuration], validate: validateEnv })` trong `app.module.ts`.
+  - Loại bỏ triệt để hardcoded fallback secret trong `jwt.strategy.ts` và `auth.module.ts`, sử dụng `configService.getOrThrow('JWT_SECRET')`.
+  - Thay thế toàn bộ truy cập trực tiếp `process.env` rải rác trong `main.ts`, `auth.controller.ts`, `notifications.gateway.ts` bằng `ConfigService` an toàn.
+  - Chuẩn hóa tài liệu mẫu `.env.example` cho cả Backend và Frontend, tạo mới `.env.test` phục vụ kiểm thử.
+  - Nâng cấp `mobile/lib/core/constants/api_constants.dart` hỗ trợ `String.fromEnvironment('API_URL')` cho Flutter dynamic build flavors.
+  - Viết bộ unit tests chuyên biệt `env.validation.spec.ts` kiểm thử 13/13 test cases (PASS 100%).
+- **Kết quả kiểm thử**:
+  - `npm run build` (Backend): PASS.
+  - `npm test` (Backend): 7 test suites, 63 tests PASS 100%.
+  - `npm run build` (Frontend): PASS.
+  - `flutter test` (Mobile): 6 tests PASS 100%.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 06 — Authentication toàn diện & băm mật khẩu bcrypt.
 
 ### [2026-08-24] — Hoàn thành TASK 04: Global DTO Validation & Whitelist cấm unknown fields
 - **Người cập nhật**: Antigravity AI

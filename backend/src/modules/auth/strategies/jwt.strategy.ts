@@ -26,7 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
       ]),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'TruongThanhDevDefaultSecretKey2026!',
+      secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
     });
   }
 

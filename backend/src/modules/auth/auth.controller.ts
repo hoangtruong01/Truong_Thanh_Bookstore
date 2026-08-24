@@ -9,6 +9,7 @@ import {
   Res,
   Headers,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -19,11 +20,14 @@ import { RegisterDto, LoginDto, UpdateProfileDto, ChangePasswordDto, ForgotPassw
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private configService: ConfigService,
+  ) {}
 
   private setAuthCookie(response: Response, token: string) {
-    const isProduction = process.env.NODE_ENV === 'production';
-    const configuredSameSite = process.env.COOKIE_SAME_SITE?.toLowerCase();
+    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+    const configuredSameSite = this.configService.get<string>('COOKIE_SAME_SITE')?.toLowerCase();
     const sameSite = configuredSameSite === 'none'
       ? 'none'
       : configuredSameSite === 'strict'
