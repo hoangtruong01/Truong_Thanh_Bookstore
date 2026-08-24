@@ -109,11 +109,13 @@ Hệ thống quản lý 4 nhóm người dùng chính:
 ### 5.1. Backend (`/backend`) — NestJS TypeScript
 - `src/main.ts`: Khởi động ứng dụng, nạp CORS, Swagger `/api/docs`, Global ValidationPipe và Global Exception Filter.
 - `src/app.module.ts`: Root module kết nối MongoDB, cấu hình biến môi trường `.env` và nạp các module nghiệp vụ.
+- `src/config/`: Quản lý cấu hình & biến môi trường (`env.validation.ts` xác thực schema chặt chẽ, kiểm tra an toàn Production, `configuration.ts` phân cấp).
 - `src/common/`:
   - `decorators/`: Các decorator `@Roles()`, `@Permissions()`, `@Public()`.
   - `guards/`: `JwtAuthGuard`, `RolesGuard`, `PermissionsGuard` bảo vệ API.
   - `filters/`: `HttpExceptionFilter` chuẩn hóa định dạng lỗi toàn cục (`errorCode`, che giấu sensitive data & stack trace ở production, structured logging).
   - `exceptions/`: `AppException`, `BusinessException`, `ResourceNotFoundException`, `InsufficientStockException`...
+  - `validators/`: `IsMongoObjectId`, `IsPhoneNumberVN`...
   - `interceptors/`: `TransformInterceptor` chuẩn hóa response định dạng `{ success, message, data, meta }`.
   - `enums/`: `error-code.enum.ts`, `order-status.enum.ts`, `payment-status.enum.ts`...
 - `src/modules/`: Mỗi thư mục con là một nghiệp vụ độc lập:

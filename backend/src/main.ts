@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -9,6 +10,7 @@ import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
   // Restrict payload limit for image uploads to a safe 10mb
   app.use(json({ limit: '10mb' }));
@@ -18,7 +20,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // CORS — support allowed origins from env and local development
-  const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  const allowedOrigins = (configService.get<string>('FRONTEND_URL') || 'http://localhost:5173')
     .split(',')
     .map(o => o.trim());
   app.enableCors({
@@ -98,10 +100,11 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3000;
+  const port = configService.get<number>('PORT') || 3000;
+  const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
   await app.listen(port, '0.0.0.0');
   const logger = new Logger('Bootstrap');
-  logger.log(`🚀 Server running on http://localhost:${port}`);
+  logger.log(`🚀 Server running on http://localhost:${port} [${nodeEnv.toUpperCase()}]`);
   logger.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);
 }
 bootstrap();

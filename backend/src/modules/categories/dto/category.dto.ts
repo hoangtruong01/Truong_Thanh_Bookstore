@@ -5,13 +5,17 @@ import {
   IsString,
   IsArray,
   IsNumber,
+  Min,
 } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsMongoObjectId } from '../../../common/validators';
 
 export class CreateCategoryDto {
   @ApiProperty({ example: 'Bút - Viết' })
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Tên danh mục không được để trống' })
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name: string;
 
   @ApiPropertyOptional({ example: 'but-viet' })
@@ -29,20 +33,22 @@ export class CreateCategoryDto {
   @IsString()
   image?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Parent Category ObjectId' })
   @IsOptional()
-  @IsString()
+  @IsMongoObjectId({ message: 'parentId phải là ObjectId hợp lệ' })
   parentId?: string;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
+  @IsMongoObjectId({ each: true, message: 'Mỗi sản phẩm trong mảng phải là ObjectId hợp lệ' })
   products?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
+  @Min(0)
   comboPrice?: number;
 
   @ApiPropertyOptional({ default: true })
@@ -71,6 +77,7 @@ export class UpdateCategoryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name?: string;
 
   @ApiPropertyOptional()
@@ -88,20 +95,22 @@ export class UpdateCategoryDto {
   @IsString()
   image?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Parent Category ObjectId' })
   @IsOptional()
-  @IsString()
+  @IsMongoObjectId({ message: 'parentId phải là ObjectId hợp lệ' })
   parentId?: string;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
+  @IsMongoObjectId({ each: true, message: 'Mỗi sản phẩm trong mảng phải là ObjectId hợp lệ' })
   products?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
+  @Min(0)
   comboPrice?: number;
 
   @ApiPropertyOptional()

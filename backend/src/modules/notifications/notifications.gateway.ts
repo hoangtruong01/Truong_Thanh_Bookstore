@@ -9,15 +9,22 @@ import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 
-const configuredOrigins = (
-  process.env.FRONTEND_URL || 'http://localhost:5173'
-)
-  .split(',')
-  .map((origin) => origin.trim());
-
 @WebSocketGateway({
   cors: {
-    origin: configuredOrigins,
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+        .split(',')
+        .map((o) => o.trim());
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+      ) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   },
   namespace: 'notifications',

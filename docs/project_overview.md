@@ -14,11 +14,15 @@ backend/
 │   ├── main.ts                        # Khởi tạo ứng dụng NestJS, thiết lập CORS, Pipes, Filters
 │   ├── app.module.ts                  # Root Module kết nối Mongoose, Config và Throttler (Rate Limit)
 │   ├── app.controller.ts              # Controller cho các tác vụ hệ thống (như check health)
+│   ├── config/                        # Quản lý & xác thực biến môi trường (.env)
+│   │   ├── env.validation.ts          # Schema validation chặt chẽ cho .env & kiểm tra an toàn Production
+│   │   └── configuration.ts           # Factory cấu hình phân cấp cho ConfigService
 │   ├── common/                        # Chứa các tiện ích dùng chung
 │   │   ├── decorators/                # Decorator tùy chỉnh (ví dụ: @GetUser lấy thông tin user từ JWT)
 │   │   ├── dto/                       # DTO dùng chung cho phân trang (PaginationDto)
 │   │   ├── enums/                     # Định nghĩa Enum hệ thống (ErrorCode, UserRole, OrderStatus, DiscountType...)
 │   │   ├── exceptions/                # AppException, BusinessException, ResourceNotFoundException...
+│   │   ├── validators/                # IsMongoObjectId, IsPhoneNumberVN...
 │   │   ├── filters/                   # HttpExceptionFilter chuẩn hóa cấu trúc lỗi API ({ success, errorCode, message... })
 │   │   ├── guards/                    # Guard xác thực quyền (OptionalJwtGuard, RolesGuard, PermissionsGuard)
 │   │   └── interceptors/              # TransformInterceptor bọc kết quả API thành { success, message, data, meta }

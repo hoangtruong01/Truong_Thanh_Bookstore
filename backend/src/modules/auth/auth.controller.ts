@@ -8,34 +8,59 @@ import {
   Request,
   Res,
   Headers,
+  Req,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
+import { Response, Request as ExpressRequest } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, UpdateProfileDto, ChangePasswordDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto/auth.dto';
+import {
+  RegisterDto,
+  LoginDto,
+  UpdateProfileDto,
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  VerifyOtpDto,
+  ResetPasswordDto,
+  RefreshTokenDto,
+} from './dto/auth.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private configService: ConfigService,
+  ) {}
 
-  private setAuthCookie(response: Response, token: string) {
-    const isProduction = process.env.NODE_ENV === 'production';
-    const configuredSameSite = process.env.COOKIE_SAME_SITE?.toLowerCase();
+  private setAuthCookies(response: Response, accessToken: string, refreshToken?: string) {
+    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+    const configuredSameSite = this.configService.get<string>('COOKIE_SAME_SITE')?.toLowerCase();
     const sameSite = configuredSameSite === 'none'
       ? 'none'
       : configuredSameSite === 'strict'
         ? 'strict'
         : 'lax';
-    response.cookie('access_token', token, {
+
+    response.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: isProduction || sameSite === 'none',
       sameSite,
       path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
+
+    if (refreshToken) {
+      response.cookie('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: isProduction || sameSite === 'none',
+        sameSite,
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+    }
   }
 
   private finishBrowserOrMobileAuth(
@@ -43,7 +68,7 @@ export class AuthController {
     response: Response,
     clientPlatform?: string,
   ) {
-    this.setAuthCookie(response, result.accessToken);
+    this.setAuthCookies(response, result.accessToken, result.refreshToken);
     if (clientPlatform?.toLowerCase() === 'mobile') return result;
     const { accessToken: _accessToken, ...browserSafeResult } = result;
     return browserSafeResult;
@@ -73,11 +98,40 @@ export class AuthController {
     return this.finishBrowserOrMobileAuth(result, response, clientPlatform);
   }
 
+  @Post('refresh')
+  @ApiOperation({ summary: 'Refresh access and refresh token pair' })
+  async refreshToken(
+    @Body() dto: RefreshTokenDto,
+    @Req() req: ExpressRequest,
+    @Headers('x-client-platform') clientPlatform: string | undefined,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    let token = dto?.refreshToken;
+    if (!token && req.headers.cookie) {
+      const cookie = req.headers.cookie
+        .split(';')
+        .map((part) => part.trim())
+        .find((part) => part.startsWith('refresh_token='));
+      if (cookie) {
+        token = decodeURIComponent(cookie.substring('refresh_token='.length));
+      }
+    }
+
+    const result = await this.authService.refreshToken(token || '');
+    return this.finishBrowserOrMobileAuth(result, response, clientPlatform);
+  }
+
   @Post('logout')
-  @ApiOperation({ summary: 'Clear the browser authentication session' })
-  logout(@Res({ passthrough: true }) response: Response) {
+  @ApiOperation({ summary: 'Clear the authentication session' })
+  async logout(
+    @Req() req: any,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const userId = req.user?._id;
+    await this.authService.logout(userId);
     response.clearCookie('access_token', { path: '/' });
-    return { success: true };
+    response.clearCookie('refresh_token', { path: '/' });
+    return { success: true, message: 'Đăng xuất thành công' };
   }
 
   @Get('me')
@@ -120,9 +174,8 @@ export class AuthController {
 
   @Post('reset-password')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Reset password with OTP' })
+  @ApiOperation({ summary: 'Reset password with OTP or resetToken' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto.email, dto.otp, dto.newPassword);
+    return this.authService.resetPassword(dto);
   }
 }
-

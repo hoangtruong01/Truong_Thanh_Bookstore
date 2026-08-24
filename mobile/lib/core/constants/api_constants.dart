@@ -1,10 +1,13 @@
 import 'package:flutter/foundation.dart';
 
 class ApiConstants {
-  // Dynamic base URL for local development and production fallback
+  // Dynamic base URL supporting --dart-define=API_URL=https://... during build,
+  // with fallback to local development platform defaults
   static String get baseUrl {
-    // If you want to force production URL, uncomment below:
-    // return 'https://truong-thanh-backend.onrender.com/api';
+    const customApiUrl = String.fromEnvironment('API_URL', defaultValue: '');
+    if (customApiUrl.isNotEmpty) {
+      return customApiUrl;
+    }
     
     if (kIsWeb) return 'http://localhost:3000/api';
     return defaultTargetPlatform == TargetPlatform.android

@@ -48,9 +48,9 @@ backend/src/modules/
 | **TASK 01** | Chuẩn hóa cấu trúc Backend (Controller/Service/DTO/Module) | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 02** | Chuẩn hóa API Response (`{ success, message, data, meta }`) | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 03** | Global Error Handling & Error Codes (`{ errorCode }`) | Phase 1 | P0 | 🟢 **DONE** |
-| **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields | Phase 1 | P0 | ⚪ PENDING |
-| **TASK 05** | Quản lý biến môi trường `.env` & bảo mật Secret | Phase 1 | P0 | ⚪ PENDING |
-| **TASK 06** | Authentication toàn diện & băm mật khẩu bcrypt | Phase 2 | P0 | ⚪ PENDING |
+| **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields | Phase 1 | P0 | 🟢 **DONE** |
+| **TASK 05** | Quản lý biến môi trường `.env` & bảo mật Secret | Phase 1 | P0 | 🟢 **DONE** |
+| **TASK 06** | Authentication toàn diện & băm mật khẩu bcrypt | Phase 2 | P0 | 🟢 **DONE** |
 | **TASK 07** | Phân quyền RBAC (Customer/Staff/Admin) & Role Guards | Phase 2 | P0 | ⚪ PENDING |
 | **TASK 08** | Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout | Phase 2 | P0 | ⚪ PENDING |
 | **TASK 09** | Bảo mật API (Helmet, CORS, Rate Limit, Sanitization) | Phase 2 | P1 | ⚪ PENDING |
@@ -127,6 +127,94 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-24] — Hoàn thành TASK 06: Authentication toàn diện & băm mật khẩu bcrypt
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Hoàn thiện và chuẩn hóa toàn bộ hệ thống Xác thực (Authentication) đa nền tảng (Web & Mobile); băm mật khẩu an toàn bằng `bcrypt` (10 salt rounds); triển khai cơ chế Refresh Token & Token Rotation; bảo vệ luồng Quên mật khẩu qua OTP 6 số (SHA-256 hash, rate limit, max 5 attempts, temporary reset token); tuyệt đối không để rò rỉ password hash và mã bí mật trong API response; viết bộ unit tests chuyên biệt đạt 100% độ bao phủ.
+- **Thực hiện**:
+  - Nâng cấp `UserSchema` (`backend/src/modules/users/schemas/user.schema.ts`):
+    - Bổ sung trường `refreshTokenHash` lưu trữ mã băm SHA-256 của Refresh Token nhằm hỗ trợ kiểm soát phiên, thu hồi token và token rotation.
+  - Chuẩn hóa DTOs (`backend/src/modules/auth/dto/auth.dto.ts`):
+    - Tạo mới `RefreshTokenDto`.
+    - Nâng cấp `ResetPasswordDto` hỗ trợ linh hoạt xác thực bằng `resetToken` tạm thời hoặc mã `otp`.
+    - Ràng buộc mật khẩu mạnh (chữ hoa, chữ thường, số, >= 8 ký tự) cho `RegisterDto`, `ChangePasswordDto`, `ResetPasswordDto`.
+  - Nâng cấp toàn diện `AuthService` (`backend/src/modules/auth/auth.service.ts`):
+    - Phương thức sinh cặp token `generateTokens`: Cấp phát `accessToken` (7 ngày) và `refreshToken` (30 ngày), băm SHA-256 lưu DB.
+    - Phương thức `refreshToken`: Xác thực JWT, đối chiếu hash bằng `timingSafeEqual`, xoay vòng token (rotation) an toàn.
+    - Phương thức `logout`: Thu hồi `refreshTokenHash` trong DB và xóa cookie trình duyệt.
+    - Phương thức `verifyOtp`: Kiểm tra OTP băm SHA-256, giới hạn tối đa 5 lần thử sai (hủy OTP nếu quá 5 lần), sinh `resetToken` có thời hạn 15 phút.
+    - Phương thức `resetPassword`: Băm mật khẩu mới bằng `bcrypt` (10 rounds), hủy toàn bộ dữ liệu OTP và vô hiệu hóa phiên cũ (`refreshTokenHash`).
+    - Làm sạch dữ liệu (`sanitizeUser`): Loại bỏ hoàn toàn `password`, `resetOtp`, `resetOtpExpiry`, `resetOtpAttempts`, `refreshTokenHash` khỏi mọi API responses.
+  - Nâng cấp `AuthController` (`backend/src/modules/auth/auth.controller.ts`):
+    - Bổ sung endpoint `POST /api/auth/refresh` hỗ trợ cả Header, Body và HTTP-only Cookie.
+    - Nâng cấp cookie helper `setAuthCookies` tự động cấp cả `access_token` và `refresh_token` an toàn.
+  - Viết bộ unit tests chuyên biệt `auth.service.spec.ts` kiểm thử toàn diện 17/17 test cases (PASS 100%).
+- **Kết quả kiểm thử**:
+  - `npm run build` (Backend): PASS.
+  - `npm test` (Backend): 8 test suites, 80 tests PASS 100%.
+  - `npm run build` (Frontend): PASS.
+  - `flutter test` (Mobile): 6 tests PASS 100%.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 07 — Phân quyền RBAC (Customer/Staff/Admin) & Role Guards.
+
+### [2026-08-24] — Hoàn thành TASK 05: Quản lý biến môi trường `.env` & bảo mật Secret
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Xây dựng hệ thống quản lý cấu hình và biến môi trường tập trung, an toàn, được kiểm tra hợp lệ nghiêm ngặt (Strict Schema Validation) ngay khi khởi động ứng dụng; loại bỏ hoàn toàn các secret mặc định bị hardcode trong mã nguồn; chuẩn hóa tài liệu `.env.example` và hỗ trợ đa môi trường (Development, Test, Production) trên cả Backend, Frontend và Mobile.
+- **Thực hiện**:
+  - Tạo mới module xác thực cấu hình môi trường (`backend/src/config/env.validation.ts`):
+    - Định nghĩa class `EnvironmentVariables` với đầy đủ ràng buộc `class-validator` (`@IsEnum`, `@IsString`, `@IsNumber`, `@Min`, `@Max`, `@IsNotEmpty`, `@MinLength`...).
+    - Viết hàm `validateEnv` thực hiện transform kiểu dữ liệu (chuyển string port sang number, boolean), alias mapping (`MONGO_URI` -> `MONGODB_URI`, `JWT_EXPIRATION` -> `JWT_EXPIRES_IN`).
+    - Triển khai nguyên tắc **Fail-Fast**: Dừng khởi động và in log chi tiết từng trường vi phạm nếu thiếu biến bắt buộc (`MONGODB_URI`, `JWT_SECRET`, `PORT`, `FRONTEND_URL`).
+    - Kiểm tra bảo mật nghiêm ngặt ở **Production**: Chặn hoàn toàn các secret mặc định yếu (`secret`, `123456`, `TruongThanhDevDefaultSecretKey2026!`...) và yêu cầu `JWT_SECRET` phải có độ dài tối thiểu >= 32 ký tự.
+  - Tạo module cấu hình phân cấp (`backend/src/config/configuration.ts`) cho NestJS ConfigService.
+  - Tích hợp `validateEnv` vào `ConfigModule.forRoot({ isGlobal: true, load: [configuration], validate: validateEnv })` trong `app.module.ts`.
+  - Loại bỏ triệt để hardcoded fallback secret trong `jwt.strategy.ts` và `auth.module.ts`, sử dụng `configService.getOrThrow('JWT_SECRET')`.
+  - Thay thế toàn bộ truy cập trực tiếp `process.env` rải rác trong `main.ts`, `auth.controller.ts`, `notifications.gateway.ts` bằng `ConfigService` an toàn.
+  - Chuẩn hóa tài liệu mẫu `.env.example` cho cả Backend và Frontend, tạo mới `.env.test` phục vụ kiểm thử.
+  - Nâng cấp `mobile/lib/core/constants/api_constants.dart` hỗ trợ `String.fromEnvironment('API_URL')` cho Flutter dynamic build flavors.
+  - Viết bộ unit tests chuyên biệt `env.validation.spec.ts` kiểm thử 13/13 test cases (PASS 100%).
+- **Kết quả kiểm thử**:
+  - `npm run build` (Backend): PASS.
+  - `npm test` (Backend): 7 test suites, 63 tests PASS 100%.
+  - `npm run build` (Frontend): PASS.
+  - `flutter test` (Mobile): 6 tests PASS 100%.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 06 — Authentication toàn diện & băm mật khẩu bcrypt.
+
+### [2026-08-24] — Hoàn thành TASK 04: Global DTO Validation & Whitelist cấm unknown fields
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Nâng cấp toàn bộ hệ thống DTO và cấu hình ValidationPipe toàn cục cấm unknown fields (`whitelist: true, forbidNonWhitelisted: true`), validate chặt chẽ email, phone VN, password độ phức tạp cao, giá tiền/số lượng, ObjectId MongoDB và Enum.
+- **Thực hiện**:
+  - Tạo mới bộ Custom Validators (`backend/src/common/validators/custom-validators.ts`):
+    - `IsMongoObjectId`: Kiểm tra định dạng 24 ký tự hex MongoDB ObjectId hợp lệ.
+    - `IsPhoneNumberVN`: Kiểm tra số điện thoại Việt Nam chuẩn 10 chữ số (đầu 03, 05, 07, 08, 09 hoặc +84).
+  - Chuẩn hóa và thắt chặt toàn bộ DTOs:
+    - `auth.dto.ts`: Trim email/họ tên, kiểm tra mật khẩu mạnh (chữ hoa, chữ thường, số, >= 8 ký tự), OTP 6 số, SĐT VN.
+    - `address.dto.ts`: Trim chuỗi, kiểm tra SĐT VN cho cả tạo và sửa địa chỉ.
+    - `product.dto.ts`: Kiểm tra Category ObjectId, giá >= 0, tồn kho >= 0, number/boolean casting cho `ProductQueryDto`.
+    - `cart.dto.ts`: `productId` là ObjectId, số lượng nguyên >= 1.
+    - `order.dto.ts`: `OrderItemDto.product` là ObjectId, số lượng nguyên >= 1, SĐT người nhận VN, format idempotencyKey.
+    - `category.dto.ts`: `parentId` và `products` là ObjectId.
+    - `inventory.dto.ts`: `product` là ObjectId, số lượng nguyên, enum `InventoryTransactionType`.
+    - `payment.dto.ts`: `orderId` là ObjectId, `amount` >= 0, enum `PaymentMethod`.
+    - `review.dto.ts`: `rating` nguyên 1-5 sao, độ dài `content`.
+    - `promotion.dto.ts`: Regex format mã `code`, ngày ISO Date, số lượng/giảm giá >= 0.
+    - `banner.dto.ts` & `landing-page.dto.ts`: Thứ tự `sortOrder` nguyên, SĐT VN, LandingPageId ObjectId.
+  - Cấu hình `ValidationPipe` toàn cục:
+    - `whitelist: true`: Tự động loại bỏ các trường không khai báo.
+    - `forbidNonWhitelisted: true`: Báo lỗi ngay khi có trường lạ.
+    - `transform: true`: Tự động chuyển đổi kiểu dữ liệu tương ứng.
+    - `exceptionFactory`: Sinh lỗi validation chi tiết từng field kèm `ErrorCode.ERR_VALIDATION`.
+  - Viết bộ unit tests chuyên biệt `dto-validation.spec.ts` kiểm thử toàn diện các DTOs và custom validators (PASS 100%).
+- **Kết quả kiểm thử**:
+  - `npm run build` (Backend): PASS.
+  - `npm test` (Backend): 6 test suites, 50 tests PASS 100%.
+  - `npm run build` (Frontend): PASS.
+  - `flutter test` (Mobile): 6 tests PASS 100%.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 05 — Environment Configuration & Secrets Management.
+
+---
 
 ### [2026-08-24] — Hoàn thành TASK 03: Global Error Handling & Error Codes
 - **Người cập nhật**: Antigravity AI
