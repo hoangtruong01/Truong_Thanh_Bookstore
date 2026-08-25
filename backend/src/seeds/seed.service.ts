@@ -209,8 +209,21 @@ export class SeedService implements OnModuleInit {
   }
 
   async seed() {
+    const superAdminPassword = await bcrypt.hash('SuperAdmin@123456', 10);
     const adminPassword = await bcrypt.hash('Admin@123456', 10);
     const customerPassword = await bcrypt.hash('Customer@123456', 10);
+
+    const existingSuperAdmin = await this.userModel.findOne({ email: 'superadmin@truongthanh.vn' }).exec();
+    if (!existingSuperAdmin) {
+      await this.userModel.create({
+        fullName: 'Super Admin Truong Thanh',
+        email: 'superadmin@truongthanh.vn',
+        password: superAdminPassword,
+        phone: '0909999999',
+        role: UserRole.SUPER_ADMIN,
+        status: true,
+      });
+    }
 
     const existingAdmin = await this.userModel.findOne({ email: 'admin@truongthanh.vn' }).exec();
     if (!existingAdmin) {

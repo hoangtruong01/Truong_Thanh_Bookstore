@@ -24,7 +24,7 @@ import {
 } from './dto/order.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
-import { StaffPermission } from '../../common/enums';
+import { StaffPermission, UserRole } from '../../common/enums';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -72,12 +72,13 @@ export class OrdersController {
       _id: req.user._id.toString(),
     });
     
-    // BUG-03: Verify ownership of the invoice before rendering the PDF
+    // Verify ownership of the invoice before rendering the PDF
     if (
       order.customer &&
       order.customer._id.toString() !== req.user._id.toString() &&
-      req.user.role !== 'ADMIN' &&
-      req.user.role !== 'STAFF'
+      req.user.role !== UserRole.SUPER_ADMIN &&
+      req.user.role !== UserRole.ADMIN &&
+      req.user.role !== UserRole.STAFF
     ) {
       throw new ForbiddenException('Bạn không có quyền tải hóa đơn này');
     }
@@ -138,7 +139,7 @@ export class OrdersController {
     return this.ordersService.updateStatus(id, dto);
   }
 
-  // FIX-C01: Cancel with ownership check — pass userId so service can verify
+  // Cancel with ownership check — pass userId so service can verify
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
@@ -158,5 +159,4 @@ export class OrdersController {
   ) {
     return this.ordersService.cancelGuest(id, accessToken);
   }
-
 }

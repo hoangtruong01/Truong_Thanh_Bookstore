@@ -17,6 +17,11 @@ class UserModel {
     required this.status,
   });
 
+  bool get isSuperAdmin => role == 'SUPER_ADMIN';
+  bool get isAdmin => role == 'ADMIN' || role == 'SUPER_ADMIN';
+  bool get isStaff => role == 'STAFF' || role == 'ADMIN' || role == 'SUPER_ADMIN';
+  bool get isCustomer => role == 'CUSTOMER';
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['_id'] ?? '',

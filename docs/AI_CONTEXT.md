@@ -51,7 +51,7 @@ backend/src/modules/
 | **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 05** | Quản lý biến môi trường `.env` & bảo mật Secret | Phase 1 | P0 | 🟢 **DONE** |
 | **TASK 06** | Authentication toàn diện & băm mật khẩu bcrypt | Phase 2 | P0 | 🟢 **DONE** |
-| **TASK 07** | Phân quyền RBAC (Customer/Staff/Admin) & Role Guards | Phase 2 | P0 | ⚪ PENDING |
+| **TASK 07** | Phân quyền RBAC (Customer/Staff/Admin/SuperAdmin) & Role Guards | Phase 2 | P0 | 🟢 **DONE** |
 | **TASK 08** | Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout | Phase 2 | P0 | ⚪ PENDING |
 | **TASK 09** | Bảo mật API (Helmet, CORS, Rate Limit, Sanitization) | Phase 2 | P1 | ⚪ PENDING |
 | **TASK 10** | Quản lý sản phẩm Admin & Excel Import/Export | Phase 3 | P1 | ⚪ PENDING |
@@ -128,7 +128,47 @@ backend/src/modules/
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
 
-### [2026-08-24] — Hoàn thành TASK 06: Authentication toàn diện & băm mật khẩu bcrypt
+### [2026-08-25] — Hoàn thành TASK 07: Phân quyền RBAC (Customer/Staff/Admin/SuperAdmin) & Role Guards
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Thiết lập phân quyền đa cấp toàn diện (Role-Based Access Control) cho 4 vai trò (`SUPER_ADMIN`, `ADMIN`, `STAFF`, `CUSTOMER`) theo mô hình phân cấp (Hierarchy); bảo vệ tài khoản bị khóa (`status === false`); xây dựng các bộ Guard & Decorator nâng cao (`RolesGuard`, `PermissionsGuard`, `@Roles()`, `@Permissions()`, `@CurrentUser()`); hoàn thiện module quản trị người dùng & phân quyền; đồng bộ hóa Frontend (Pinia store, route guards, AdminLayout) và Mobile Flutter; viết 100% unit tests bảo phủ toàn bộ luồng.
+- **Thực hiện**:
+  - **Cốt lõi Backend & Enums**:
+    - `backend/src/common/enums/index.ts`: Bổ sung `SUPER_ADMIN = 'SUPER_ADMIN'` vào enum `UserRole`.
+    - `backend/src/seeds/seed.service.ts`: Khởi tạo tài khoản `superadmin@truongthanh.vn` (`SuperAdmin@123456`) với vai trò `UserRole.SUPER_ADMIN`.
+  - **Guards & Decorators**:
+    - `backend/src/common/decorators/roles.decorator.ts`: Hỗ trợ gán nhiều vai trò `(UserRole | string)[]`.
+    - `backend/src/common/decorators/permissions.decorator.ts`: Hỗ trợ gán danh sách quyền `(StaffPermission | string)[]`.
+    - `backend/src/common/decorators/current-user.decorator.ts`: Tạo mới `@CurrentUser()` / `@GetUser()` parameter decorator.
+    - `backend/src/common/guards/roles.guard.ts`: Triển khai Role Hierarchy: `SUPER_ADMIN` có toàn quyền, `ADMIN` thỏa mãn yêu cầu `ADMIN` và `STAFF`. Ném `UnauthorizedException` khi chưa đăng nhập và `ForbiddenException` khi tài khoản bị khóa (`!user.status`).
+    - `backend/src/common/guards/permissions.guard.ts`: Tự động cho phép `SUPER_ADMIN` và `ADMIN` thực hiện mọi thao tác, kiểm tra quyền cụ thể của `STAFF`, chặn tài khoản bị khóa và từ chối `CUSTOMER`.
+  - **Module Quản trị Người dùng & Phân quyền (RBAC)**:
+    - `backend/src/modules/users/dto/user.dto.ts`: Tạo mới các DTOs validate chặt chẽ: `CreateStaffUserDto`, `UpdateUserRoleDto`, `UpdateUserPermissionsDto`, `UpdateUserStatusDto`, `UserQueryDto`.
+    - `backend/src/modules/users/users.service.ts`: Xây dựng đầy đủ các nghiệp vụ RBAC:
+      - `findAllUsers`: Lấy danh sách người dùng phân trang, lọc theo vai trò (`role`), trạng thái (`status`), tìm kiếm từ khóa.
+      - `createStaffOrAdmin`: Tạo tài khoản Staff hoặc Admin (băm mật khẩu `bcrypt`, chỉ `SUPER_ADMIN` mới được tạo Admin/SuperAdmin).
+      - `updateRole`: Cập nhật vai trò có kiểm tra phân cấp bảo vệ SuperAdmin và ngăn chặn tự đổi vai trò của bản thân.
+      - `updatePermissions`: Cập nhật danh sách quyền cho tài khoản `STAFF`.
+      - `updateStatus`: Khóa/mở khóa tài khoản (ngăn tự khóa tài khoản của chính mình và bảo vệ tài khoản SuperAdmin).
+      - `deleteUser`: Xóa tài khoản có phân cấp (ngăn tự xóa bản thân, cấm xóa SuperAdmin, cấm Admin xóa Admin).
+    - `backend/src/modules/users/users.controller.ts`: Mở các endpoints quản trị RESTful (`GET /users`, `GET /users/:id`, `POST /users`, `PATCH /users/:id/role`, `PATCH /users/:id/permissions`, `PATCH /users/:id/status`, `DELETE /users/:id`), bảo vệ bằng `@Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)`.
+  - **Chuẩn hóa Role & Permission trên toàn bộ Controllers**:
+    - Đồng bộ `PromotionsController`, `BannersController`, `CategoriesController`, `LandingPageController`, `ProductsController`, `OrdersController`, `ReviewsController`, `InventoryController`, `CustomersController`, `ReportsController` sử dụng `PermissionsGuard` và `StaffPermission` tương ứng, đồng thời hỗ trợ `SUPER_ADMIN` trong các luồng kiểm tra quyền sở hữu đơn hàng/hóa đơn.
+  - **Đồng bộ Frontend & Mobile**:
+    - `frontend/src/types/index.ts`: Cập nhật kiểu `User.role` thành `'SUPER_ADMIN' | 'ADMIN' | 'STAFF' | 'CUSTOMER'`.
+    - `frontend/src/stores/auth.ts`: Thêm getter `isSuperAdmin`, cập nhật `isAdmin` và `isStaff`.
+    - `frontend/src/router/index.ts`: Cho phép `SUPER_ADMIN` truy cập không giới hạn mọi route admin.
+    - `frontend/src/layouts/AdminLayout.vue`: Hiển thị trọn vẹn danh mục quản trị cho `SUPER_ADMIN`.
+    - `mobile/lib/models/user_model.dart`: Bổ sung các getters `isSuperAdmin`, `isAdmin`, `isStaff`, `isCustomer`.
+  - **Kiểm thử tự động (Unit Testing)**:
+    - Tạo `backend/src/common/guards/rbac.guard.spec.ts` bao phủ 100% kịch bản của `RolesGuard` và `PermissionsGuard`.
+    - Tạo `backend/src/modules/users/users.service.spec.ts` kiểm thử toàn diện toàn bộ nghiệp vụ RBAC.
+- **Kết quả kiểm thử**:
+  - `npm test` (Backend): **10/10 test suites passed, 113/113 tests PASS 100%**.
+  - `npm run build` (Backend): **PASS 100%**.
+  - `npm run build` (Frontend): **PASS 100%**.
+  - `flutter test` (Mobile): **6/6 tests PASS 100%**.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 08 — Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout.
 - **Người cập nhật**: Antigravity AI
 - **Mục tiêu**: Hoàn thiện và chuẩn hóa toàn bộ hệ thống Xác thực (Authentication) đa nền tảng (Web & Mobile); băm mật khẩu an toàn bằng `bcrypt` (10 salt rounds); triển khai cơ chế Refresh Token & Token Rotation; bảo vệ luồng Quên mật khẩu qua OTP 6 số (SHA-256 hash, rate limit, max 5 attempts, temporary reset token); tuyệt đối không để rò rỉ password hash và mã bí mật trong API response; viết bộ unit tests chuyên biệt đạt 100% độ bao phủ.
 - **Thực hiện**:

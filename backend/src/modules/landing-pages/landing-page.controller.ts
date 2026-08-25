@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   UseGuards,
-  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -17,8 +16,9 @@ import {
   GenerateLandingPageDto,
   SubmitOrderDto,
 } from './dto/landing-page.dto';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { StaffPermission } from '../../common/enums';
 
 @ApiTags('landing-pages')
 @Controller('landing-pages')
@@ -26,8 +26,8 @@ export class LandingPageController {
   constructor(private readonly landingPageService: LandingPageService) {}
 
   @Get()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN', 'STAFF')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_LANDING_PAGES)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Lấy tất cả landing pages' })
   findAll() {
@@ -42,8 +42,8 @@ export class LandingPageController {
   }
 
   @Get(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN', 'STAFF')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_LANDING_PAGES)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Lấy thông tin chi tiết một landing page' })
   findOne(@Param('id') id: string) {
@@ -51,8 +51,8 @@ export class LandingPageController {
   }
 
   @Post()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_LANDING_PAGES)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Tạo một landing page thủ công' })
   create(@Body() dto: CreateLandingPageDto) {
@@ -60,8 +60,8 @@ export class LandingPageController {
   }
 
   @Put(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_LANDING_PAGES)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cập nhật landing page' })
   update(@Param('id') id: string, @Body() dto: CreateLandingPageDto) {
@@ -69,8 +69,8 @@ export class LandingPageController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_LANDING_PAGES)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Xóa landing page' })
   remove(@Param('id') id: string) {
@@ -85,8 +85,8 @@ export class LandingPageController {
   }
 
   @Post('generate')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN', 'STAFF')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_LANDING_PAGES)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Tạo giao diện landing page bằng AI (Gemini)' })
   generate(@Body() dto: GenerateLandingPageDto) {
