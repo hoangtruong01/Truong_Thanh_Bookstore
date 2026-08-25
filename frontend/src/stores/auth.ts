@@ -106,6 +106,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function refreshSession() {
+    try {
+      const res = await authService.refreshToken()
+      if (res.data?.user) {
+        user.value = res.data.user
+        localStorage.setItem('user', JSON.stringify(user.value))
+      }
+      return res.data
+    } catch (e) {
+      clearSession()
+      throw e
+    }
+  }
+
   return {
     user,
     loading,
@@ -117,6 +131,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     fetchProfile,
     updateProfile,
+    refreshSession,
     logout,
     clearSession,
     toggleWishlist

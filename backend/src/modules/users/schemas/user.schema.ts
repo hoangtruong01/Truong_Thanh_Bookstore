@@ -39,6 +39,9 @@ export class User {
   @Prop()
   refreshTokenHash?: string;
 
+  @Prop({ default: 0 })
+  tokenVersion: number;
+
   @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: 'Product' }], default: [] })
   wishlist: Types.ObjectId[];
 

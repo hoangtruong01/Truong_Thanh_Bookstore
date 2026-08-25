@@ -13,7 +13,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Response, Request as ExpressRequest } from 'express';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import {
@@ -34,6 +34,36 @@ export class AuthController {
     private authService: AuthService,
     private configService: ConfigService,
   ) {}
+
+  private extractAccessToken(req: ExpressRequest, authHeader?: string): string | undefined {
+    if (authHeader?.startsWith('Bearer ')) {
+      return authHeader.substring(7);
+    }
+    if (req.headers.cookie) {
+      const cookie = req.headers.cookie
+        .split(';')
+        .map((part) => part.trim())
+        .find((part) => part.startsWith('access_token='));
+      if (cookie) {
+        return decodeURIComponent(cookie.substring('access_token='.length));
+      }
+    }
+    return undefined;
+  }
+
+  private extractRefreshToken(req: ExpressRequest, bodyRefreshToken?: string): string | undefined {
+    if (bodyRefreshToken) return bodyRefreshToken;
+    if (req.headers.cookie) {
+      const cookie = req.headers.cookie
+        .split(';')
+        .map((part) => part.trim())
+        .find((part) => part.startsWith('refresh_token='));
+      if (cookie) {
+        return decodeURIComponent(cookie.substring('refresh_token='.length));
+      }
+    }
+    return undefined;
+  }
 
   private setAuthCookies(response: Response, accessToken: string, refreshToken?: string) {
     const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
@@ -77,6 +107,7 @@ export class AuthController {
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({ status: 201, description: 'User registered successfully' })
   async register(
     @Body() registerDto: RegisterDto,
     @Headers('x-client-platform') clientPlatform: string | undefined,
@@ -89,6 +120,7 @@ export class AuthController {
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Login with email and password' })
+  @ApiResponse({ status: 200, description: 'User logged in successfully' })
   async login(
     @Body() loginDto: LoginDto,
     @Headers('x-client-platform') clientPlatform: string | undefined,
@@ -99,36 +131,36 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @ApiOperation({ summary: 'Refresh access and refresh token pair' })
+  @ApiOperation({ summary: 'Refresh access and refresh token pair (Token Rotation)' })
+  @ApiResponse({ status: 200, description: 'Tokens rotated successfully' })
   async refreshToken(
     @Body() dto: RefreshTokenDto,
     @Req() req: ExpressRequest,
+    @Headers('authorization') authHeader: string | undefined,
     @Headers('x-client-platform') clientPlatform: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
-    let token = dto?.refreshToken;
-    if (!token && req.headers.cookie) {
-      const cookie = req.headers.cookie
-        .split(';')
-        .map((part) => part.trim())
-        .find((part) => part.startsWith('refresh_token='));
-      if (cookie) {
-        token = decodeURIComponent(cookie.substring('refresh_token='.length));
-      }
-    }
+    const token = this.extractRefreshToken(req, dto?.refreshToken);
+    const rawAccessToken = this.extractAccessToken(req, authHeader);
 
-    const result = await this.authService.refreshToken(token || '');
+    const result = await this.authService.refreshToken(token || '', rawAccessToken);
     return this.finishBrowserOrMobileAuth(result, response, clientPlatform);
   }
 
   @Post('logout')
-  @ApiOperation({ summary: 'Clear the authentication session' })
+  @ApiOperation({ summary: 'Clear the authentication session and revoke tokens' })
+  @ApiResponse({ status: 200, description: 'Session cleared and tokens revoked' })
   async logout(
     @Req() req: any,
+    @Body() dto: RefreshTokenDto,
+    @Headers('authorization') authHeader: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const userId = req.user?._id;
-    await this.authService.logout(userId);
+    const rawAccessToken = this.extractAccessToken(req, authHeader);
+    const rawRefreshToken = this.extractRefreshToken(req, dto?.refreshToken);
+    const userId = req.user?._id?.toString();
+
+    await this.authService.logout(userId, rawAccessToken, rawRefreshToken);
     response.clearCookie('access_token', { path: '/' });
     response.clearCookie('refresh_token', { path: '/' });
     return { success: true, message: 'Đăng xuất thành công' };
@@ -153,9 +185,19 @@ export class AuthController {
   @Put('change-password')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Change current user password' })
-  async changePassword(@Request() req: any, @Body() dto: ChangePasswordDto) {
-    return this.authService.changePassword(req.user._id, dto.currentPassword, dto.newPassword);
+  @ApiOperation({ summary: 'Change current user password and revoke other sessions' })
+  async changePassword(
+    @Request() req: any,
+    @Body() dto: ChangePasswordDto,
+    @Headers('authorization') authHeader: string | undefined,
+  ) {
+    const rawAccessToken = this.extractAccessToken(req, authHeader);
+    return this.authService.changePassword(
+      req.user._id,
+      dto.currentPassword,
+      dto.newPassword,
+      rawAccessToken,
+    );
   }
 
   @Post('forgot-password')

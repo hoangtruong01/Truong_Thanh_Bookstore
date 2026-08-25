@@ -18,6 +18,8 @@ class ApiConstants {
   // Auth Endpoints
   static String get login => '$baseUrl/auth/login';
   static String get register => '$baseUrl/auth/register';
+  static String get refreshToken => '$baseUrl/auth/refresh';
+  static String get logout => '$baseUrl/auth/logout';
   static String get profile => '$baseUrl/auth/me';
   static String get updateProfile => '$baseUrl/auth/profile';
   static String get changePassword => '$baseUrl/auth/change-password';
