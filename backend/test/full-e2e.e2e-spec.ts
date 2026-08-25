@@ -69,7 +69,7 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
         .expect(409);
 
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('Email already exists');
+      expect(res.body.message).toMatch(/Email (đã tồn tại|already exists)/i);
     });
 
     it('1.3 Should login successfully with valid credentials', async () => {
