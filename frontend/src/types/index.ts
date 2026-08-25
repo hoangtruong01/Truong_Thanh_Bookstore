@@ -3,7 +3,7 @@ export interface User {
   fullName: string
   email: string
   phone?: string
-  role: 'ADMIN' | 'STAFF' | 'CUSTOMER'
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'STAFF' | 'CUSTOMER'
   avatar?: string
   status: boolean
   wishlist?: string[]

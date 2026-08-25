@@ -92,7 +92,7 @@ Hệ thống **Trường Thành Bookstore** là nền tảng thương mại đi�
 
 ### PHASE 2 — SECURITY
 - **TASK 06 [P0] — Authentication [DONE]**: Đã hoàn thiện toàn diện luồng Auth (Register, Login, Logout, Refresh Token, Forgot/Reset password qua OTP SHA-256 + resetToken), băm mật khẩu bcrypt 10 rounds, làm sạch dữ liệu không rò rỉ password hash, unit tests & builds PASS 100%.
-- **TASK 07 [P0] — RBAC (Role-Based Access Control)**: Thiết lập phân quyền chuẩn hóa 4 vai trò (`CUSTOMER`, `STAFF`, `ADMIN`, `SUPER_ADMIN`), Role Guard, Permission Guard, bảo vệ triệt để các routes quản trị.
+- **TASK 07 [P0] — RBAC (Role-Based Access Control) [DONE]**: Đã thiết lập phân quyền chuẩn hóa 4 vai trò (`CUSTOMER`, `STAFF`, `ADMIN`, `SUPER_ADMIN`), Role Hierarchy, Account Status Lock Guard, Permissions Guard cho 8 loại quyền Staff, bộ API quản trị người dùng CRUD/Role/Permissions/Status có bảo vệ phân cấp, đồng bộ hóa Frontend (Pinia, Vue Router, AdminLayout) và Mobile Flutter, 100% unit tests PASS.
 - **TASK 08 [P0] — JWT Security**: Triển khai cơ chế Access Token & Refresh Token, token rotation, thu hồi token khi đăng xuất (blacklist/token revocation), xử lý invalid token an toàn.
 - **TASK 09 [P1] — API Security**: Bổ sung Helmet security headers, CORS chặt chẽ theo whitelist, Rate limiting (Throttler) chuyên sâu cho login/register/payment/admin, input sanitization chống XSS/NoSQL Injection.
 

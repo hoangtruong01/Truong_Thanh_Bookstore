@@ -18,6 +18,7 @@ import {
   PaymentMethod,
   PaymentStatus,
   StaffPermission,
+  UserRole,
 } from '../../common/enums';
 import { ConfigService } from '@nestjs/config';
 import { PromotionsService } from '../promotions/promotions.service';
@@ -409,146 +410,6 @@ export class OrdersService {
     return guestAccessToken ? { ...result, guestAccessToken } : result;
   }
 
-  /** @deprecated Kept temporarily for safe comparison during migration. */
-  private async createLegacy(dto: CreateOrderDto, userId?: string): Promise<OrderDocument> {
-    // FIX-C03: Fetch real prices from DB instead of trusting frontend
-    const verifiedItems = [];
-    for (const item of dto.items) {
-      const product = await this.productsService.findById(item.product);
-      if (!product) {
-        throw new BadRequestException(`Sản phẩm "${item.name}" không tồn tại`);
-      }
-      // FIX-C04: Check stock availability before creating order
-      if (product.stock < item.quantity) {
-        throw new BadRequestException(
-          `Sản phẩm "${product.name}" chỉ còn ${product.stock} sản phẩm trong kho`,
-        );
-      }
-      // Use DB price, not frontend price
-      const realPrice = product.discountPrice > 0 ? product.discountPrice : product.price;
-      verifiedItems.push({
-        product: item.product,
-        name: product.name,
-        price: realPrice,
-        quantity: item.quantity,
-        image: product.images?.[0] || item.image || '',
-      });
-    }
-
-    const subtotal = verifiedItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
-
-    // FIX-H03: Always compute shipping fee server-side (matching frontend 299K threshold)
-    const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-
-    let discount = 0;
-    if (dto.promotionCode) {
-      const promoResult = await this.promotionsService.apply(
-        {
-          code: dto.promotionCode,
-          orderTotal: subtotal,
-        },
-        userId, // Pass userId for duplicate check
-        true, // Increment usage count
-        dto.customerEmail,
-        dto.phone,
-      );
-      discount = promoResult.discount;
-    }
-
-    const total = Math.max(0, subtotal + shippingFee - discount);
-
-    // FIX-1.3: Deduct stock BEFORE saving order to prevent zombie orders
-    // If any deductStock fails, no order is created (atomic behavior)
-    const deductedItems: { product: string; quantity: number }[] = [];
-    try {
-      for (const item of verifiedItems) {
-        await this.productsService.deductStock(item.product, item.quantity);
-        deductedItems.push({ product: item.product, quantity: item.quantity });
-        await this.productsService.incrementSold(item.product, item.quantity);
-      }
-    } catch (err) {
-      // Rollback: restore stock for items that were already deducted
-      for (const deducted of deductedItems) {
-        await this.productsService.updateStock(deducted.product, deducted.quantity);
-        await this.productsService.incrementSold(deducted.product, -deducted.quantity);
-      }
-      throw err; // Re-throw so the client gets the error
-    }
-
-    const order = new this.orderModel({
-      orderCode: this.generateOrderCode(),
-      customer: userId || null,
-      items: verifiedItems,
-      shippingAddress: dto.shippingAddress,
-      phone: dto.phone,
-      note: dto.note,
-      paymentMethod: dto.paymentMethod,
-      customerName: dto.customerName,
-      customerEmail: dto.customerEmail,
-      subtotal,
-      shippingFee,
-      discount,
-      total,
-      promotionCode: dto.promotionCode ? dto.promotionCode.toUpperCase() : undefined,
-      timeline: [
-        {
-          status: OrderStatus.PENDING,
-          note: 'Đơn hàng được tạo thành công, chờ xác nhận.',
-          createdAt: new Date(),
-        },
-      ],
-    });
-
-    const savedOrder = await order.save();
-
-    // Award loyalty points
-    if (userId) {
-      const points = Math.floor(savedOrder.total / 1000);
-      if (points > 0) {
-        await this.usersService.addLoyaltyPoints(userId, points).catch((err) =>
-          this.logger.error(`Failed to add loyalty points for user ${userId}:`, err)
-        );
-      }
-    }
-
-    // Sync to Google Sheet (async)
-    this.syncToGoogleSheet(savedOrder).catch((err) => this.logger.error('Sheet sync failed', err));
-
-    if (userId) {
-      this.notificationsService.create({
-        userId,
-        title: 'Đặt hàng thành công',
-        message: `Đơn hàng #${savedOrder.orderCode} trị giá ${savedOrder.total.toLocaleString('vi-VN')}đ đã được tiếp nhận và đang chờ xử lý.`,
-        type: 'order',
-        meta: { orderId: savedOrder._id.toString(), orderCode: savedOrder.orderCode },
-      }).catch((err) => this.logger.error('Failed to create customer notification', err));
-    }
-
-    // Send confirmation email (async)
-    let emailRecipient = savedOrder.customerEmail;
-    if (!emailRecipient && userId) {
-      try {
-        const user = await this.orderModel.db.model('User').findById(userId).exec();
-        if (user) {
-          emailRecipient = user.email;
-        }
-      } catch (err) {
-        this.logger.error('Failed to fetch user email for confirmation:', err);
-      }
-    }
-
-    if (emailRecipient) {
-      this.emailService.sendOrderConfirmationEmail(emailRecipient, savedOrder).catch((err) => {
-        this.logger.error(`Failed to send order confirmation email to ${emailRecipient}:`, err);
-      });
-    }
-
-    return savedOrder;
-  }
-
   async findAll(query: OrderQueryDto): Promise<PaginatedResult<OrderDocument>> {
     const { page = 1, limit = 10, status, search } = query;
     const filter: any = {};
@@ -587,6 +448,10 @@ export class OrdersService {
 
     if (
       userId &&
+      userRole !== UserRole.SUPER_ADMIN &&
+      userRole !== UserRole.ADMIN &&
+      userRole !== UserRole.STAFF &&
+      userRole !== 'SUPER_ADMIN' &&
       userRole !== 'ADMIN' &&
       userRole !== 'STAFF' &&
       order.customer &&
@@ -603,9 +468,9 @@ export class OrdersService {
     actor: { _id: string; role: string; permissions?: string[] },
   ): Promise<OrderDocument> {
     const order = await this.findById(id);
-    if (actor.role === 'ADMIN') return order;
+    if (actor.role === UserRole.SUPER_ADMIN || actor.role === 'SUPER_ADMIN' || actor.role === UserRole.ADMIN || actor.role === 'ADMIN') return order;
     if (
-      actor.role === 'STAFF' &&
+      (actor.role === UserRole.STAFF || actor.role === 'STAFF') &&
       actor.permissions?.includes(StaffPermission.MANAGE_ORDERS)
     ) {
       return order;
@@ -613,7 +478,7 @@ export class OrdersService {
     const customerId = order.customer
       ? ((order.customer as any)._id || order.customer).toString()
       : undefined;
-    if (actor.role !== 'CUSTOMER' || customerId !== actor._id.toString()) {
+    if ((actor.role !== UserRole.CUSTOMER && actor.role !== 'CUSTOMER') || customerId !== actor._id.toString()) {
       throw new ForbiddenException('Bạn không có quyền xem thông tin đơn hàng này');
     }
     return order;
@@ -739,7 +604,7 @@ export class OrdersService {
           await this.usersService.deductLoyaltyPoints(
             order.customer.toString(),
             points,
-          ).catch((err) =>
+          ).catch((err: any) =>
             this.logger.error(`Failed to deduct loyalty points for user ${order.customer}:`, err)
           );
         }
@@ -842,12 +707,16 @@ export class OrdersService {
     const order = await this.orderModel.findById(id).exec();
     if (!order) throw new NotFoundException('Order not found');
 
-    const isAdmin = actor.role === 'ADMIN';
+    const isAdmin =
+      actor.role === UserRole.SUPER_ADMIN ||
+      actor.role === 'SUPER_ADMIN' ||
+      actor.role === UserRole.ADMIN ||
+      actor.role === 'ADMIN';
     const isAuthorizedStaff =
-      actor.role === 'STAFF' &&
+      (actor.role === UserRole.STAFF || actor.role === 'STAFF') &&
       actor.permissions?.includes(StaffPermission.MANAGE_ORDERS);
     const isOwner =
-      actor.role === 'CUSTOMER' &&
+      (actor.role === UserRole.CUSTOMER || actor.role === 'CUSTOMER') &&
       !!order.customer &&
       order.customer.toString() === actor._id.toString();
     if (!isAdmin && !isAuthorizedStaff && !isOwner) {

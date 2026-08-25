@@ -12,8 +12,9 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { StaffPermission } from '../../common/enums';
 
 @ApiTags('categories')
 @Controller('categories')
@@ -27,8 +28,8 @@ export class CategoriesController {
   }
 
   @Get('admin')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN', 'STAFF')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PRODUCTS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all categories (admin)' })
   findAllAdmin() {
@@ -54,8 +55,8 @@ export class CategoriesController {
   }
 
   @Post()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PRODUCTS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a category' })
   create(@Body() dto: CreateCategoryDto) {
@@ -63,8 +64,8 @@ export class CategoriesController {
   }
 
   @Patch(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PRODUCTS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a category' })
   update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
@@ -72,8 +73,8 @@ export class CategoriesController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PRODUCTS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a category' })
   delete(@Param('id') id: string) {

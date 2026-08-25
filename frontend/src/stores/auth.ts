@@ -21,8 +21,9 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
 
   const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => user.value?.role === 'ADMIN')
-  const isStaff = computed(() => user.value?.role === 'STAFF' || user.value?.role === 'ADMIN')
+  const isSuperAdmin = computed(() => user.value?.role === 'SUPER_ADMIN')
+  const isAdmin = computed(() => user.value?.role === 'ADMIN' || user.value?.role === 'SUPER_ADMIN')
+  const isStaff = computed(() => user.value?.role === 'STAFF' || user.value?.role === 'ADMIN' || user.value?.role === 'SUPER_ADMIN')
 
   async function login(email: string, password: string) {
     loading.value = true
@@ -109,6 +110,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     loading,
     isAuthenticated,
+    isSuperAdmin,
     isAdmin,
     isStaff,
     login,

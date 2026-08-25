@@ -444,7 +444,7 @@ const navItems = computed(() => {
 
   const user = authStore.user
   if (!user) return []
-  if (user.role === 'ADMIN') return items
+  if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') return items
 
   const userPermissions = user.permissions || []
   return items.filter(item => {

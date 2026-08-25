@@ -13,9 +13,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PromotionsService } from './promotions.service';
 import { CreatePromotionDto, ApplyPromotionDto } from './dto/promotion.dto';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt.guard';
+import { StaffPermission } from '../../common/enums';
 
 @ApiTags('promotions')
 @Controller('promotions')
@@ -37,8 +38,8 @@ export class PromotionsController {
   }
 
   @Get()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PROMOTIONS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all promotions' })
   findAll() {
@@ -46,8 +47,8 @@ export class PromotionsController {
   }
 
   @Get(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PROMOTIONS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get promotion by ID' })
   findById(@Param('id') id: string) {
@@ -55,8 +56,8 @@ export class PromotionsController {
   }
 
   @Post()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PROMOTIONS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a promotion' })
   create(@Body() dto: CreatePromotionDto) {
@@ -64,8 +65,8 @@ export class PromotionsController {
   }
 
   @Patch(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PROMOTIONS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a promotion' })
   update(@Param('id') id: string, @Body() dto: Partial<CreatePromotionDto>) {
@@ -73,8 +74,8 @@ export class PromotionsController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_PROMOTIONS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a promotion' })
   delete(@Param('id') id: string) {
