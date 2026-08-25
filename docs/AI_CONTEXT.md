@@ -1,19 +1,20 @@
 # 🤖 AI CONTEXT & CONTINUOUS UPDATE REGISTRY (`AI_CONTEXT.md`)
-*(Hồ sơ ngữ cảnh hệ thống — AI đọc file này để nắm bắt toàn bộ dự án trong 5 giây và cập nhật sau mỗi task)*
+
+_(Hồ sơ ngữ cảnh hệ thống — AI đọc file này để nắm bắt toàn bộ dự án trong 5 giây và cập nhật sau mỗi task)_
 
 ---
 
 ## ⚡ 1. FAST PROJECT SNAPSHOT
 
-| Hạng mục | Giá trị | Ghi chú |
-| :--- | :--- | :--- |
-| **Tên dự án** | Trường Thành Bookstore | Thương mại điện tử sách & văn phòng phẩm |
-| **Backend** | NestJS v11 (TypeScript, Node.js) | Port: `3000`, Prefix: `/api`, Docs: `/api/docs` |
-| **Database** | MongoDB + Mongoose 9 | MongoDB URI trong `.env` |
-| **Frontend** | Vue 3 (Composition API) + Vite 8 + Tailwind 4 | Port: `5173`, State: Pinia, Route: Vue Router |
-| **Mobile** | Flutter SDK (^3.11) + Dart | State: Provider, Đa nền tảng Android/iOS |
-| **Realtime** | WebSocket Socket.IO | Namespace: `/notifications` |
-| **Storage & Mail**| Cloudinary + Nodemailer SMTP | Ảnh & Email giao dịch |
+| Hạng mục           | Giá trị                                       | Ghi chú                                         |
+| :----------------- | :-------------------------------------------- | :---------------------------------------------- |
+| **Tên dự án**      | Trường Thành Bookstore                        | Thương mại điện tử sách & văn phòng phẩm        |
+| **Backend**        | NestJS v11 (TypeScript, Node.js)              | Port: `3000`, Prefix: `/api`, Docs: `/api/docs` |
+| **Database**       | MongoDB + Mongoose 9                          | MongoDB URI trong `.env`                        |
+| **Frontend**       | Vue 3 (Composition API) + Vite 8 + Tailwind 4 | Port: `5173`, State: Pinia, Route: Vue Router   |
+| **Mobile**         | Flutter SDK (^3.11) + Dart                    | State: Provider, Đa nền tảng Android/iOS        |
+| **Realtime**       | WebSocket Socket.IO                           | Namespace: `/notifications`                     |
+| **Storage & Mail** | Cloudinary + Nodemailer SMTP                  | Ảnh & Email giao dịch                           |
 
 ---
 
@@ -43,38 +44,38 @@ backend/src/modules/
 
 ## 📋 3. BẢNG TIẾN ĐỘ 30 TASKS (ROADMAP STATUS MATRIX)
 
-| Mã Task | Tên Task & Mục tiêu | Phase | Độ ưu tiên | Trạng thái |
-| :--- | :--- | :--- | :--- | :--- |
-| **TASK 01** | Chuẩn hóa cấu trúc Backend (Controller/Service/DTO/Module) | Phase 1 | P0 | 🟢 **DONE** |
-| **TASK 02** | Chuẩn hóa API Response (`{ success, message, data, meta }`) | Phase 1 | P0 | 🟢 **DONE** |
-| **TASK 03** | Global Error Handling & Error Codes (`{ errorCode }`) | Phase 1 | P0 | 🟢 **DONE** |
-| **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields | Phase 1 | P0 | 🟢 **DONE** |
-| **TASK 05** | Quản lý biến môi trường `.env` & bảo mật Secret | Phase 1 | P0 | 🟢 **DONE** |
-| **TASK 06** | Authentication toàn diện & băm mật khẩu bcrypt | Phase 2 | P0 | 🟢 **DONE** |
-| **TASK 07** | Phân quyền RBAC (Customer/Staff/Admin/SuperAdmin) & Role Guards | Phase 2 | P0 | 🟢 **DONE** |
-| **TASK 08** | Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout | Phase 2 | P0 | ⚪ PENDING |
-| **TASK 09** | Bảo mật API (Helmet, CORS, Rate Limit, Sanitization) | Phase 2 | P1 | ⚪ PENDING |
-| **TASK 10** | Quản lý sản phẩm Admin & Excel Import/Export | Phase 3 | P1 | ⚪ PENDING |
-| **TASK 11** | Quản lý danh mục, Slug & Cây danh mục đa cấp | Phase 3 | P1 | ⚪ PENDING |
-| **TASK 12** | Tìm kiếm Full-text & Lọc đa tiêu chí phân trang | Phase 3 | P1 | ⚪ PENDING |
-| **TASK 13** | Chi tiết sản phẩm, Gallery, Thông số & Đánh giá | Phase 3 | P1 | ⚪ PENDING |
-| **TASK 14** | Module Giỏ hàng Backend & Kiểm kho thời gian thực | Phase 4 | P0 | ⚪ PENDING |
-| **TASK 15** | Luồng Checkout an toàn & Kiểm tra nguyên tử | Phase 4 | P0 | ⚪ PENDING |
-| **TASK 16** | Quản lý Sổ địa chỉ giao hàng người dùng | Phase 4 | P1 | ⚪ PENDING |
-| **TASK 17** | Quản lý Đơn hàng, Vòng đời trạng thái & Hóa đơn PDF | Phase 4 | P0 | ⚪ PENDING |
-| **TASK 18** | Kiến trúc Thanh toán Provider Abstraction (VNPay, MoMo, COD) | Phase 5 | P0 | ⚪ PENDING |
-| **TASK 19** | Hệ thống Mã khuyến mãi (Voucher) | Phase 5 | P1 | ⚪ PENDING |
-| **TASK 20** | Quản lý Tồn kho & 5 loại Inventory Transaction | Phase 5 | P0 | ⚪ PENDING |
-| **TASK 21** | Đánh giá & Xếp hạng sản phẩm (Verified Purchase) | Phase 5 | P1 | ⚪ PENDING |
-| **TASK 22** | Danh sách Yêu thích (Wishlist) | Phase 5 | P2 | ⚪ PENDING |
-| **TASK 23** | Hệ thống Thông báo WebSocket Real-time & DB | Phase 5 | P1 | ⚪ PENDING |
-| **TASK 24** | Bảng điều khiển Quản trị (Admin Analytics Dashboard) | Phase 6 | P1 | ⚪ PENDING |
-| **TASK 25** | Tối ưu trải nghiệm Quản trị (Admin UX/Feedback States) | Phase 6 | P1 | ⚪ PENDING |
-| **TASK 26** | Đồng bộ & Tích hợp API ứng dụng Mobile Flutter | Phase 6 | P0 | ⚪ PENDING |
-| **TASK 27** | Nâng cấp trải nghiệm Mobile (UX/Offline/Shimmer) | Phase 6 | P1 | ⚪ PENDING |
-| **TASK 28** | Kiểm thử tự động (Unit Tests & E2E Test Flow) | Phase 7 | P0 | ⚪ PENDING |
-| **TASK 29** | Thiết lập Quy trình CI/CD Pipeline | Phase 7 | P1 | ⚪ PENDING |
-| **TASK 30** | Production Readiness, Swagger OpenAPI & Docker | Phase 7 | P0 | ⚪ PENDING |
+| Mã Task     | Tên Task & Mục tiêu                                             | Phase   | Độ ưu tiên | Trạng thái  |
+| :---------- | :-------------------------------------------------------------- | :------ | :--------- | :---------- |
+| **TASK 01** | Chuẩn hóa cấu trúc Backend (Controller/Service/DTO/Module)      | Phase 1 | P0         | 🟢 **DONE** |
+| **TASK 02** | Chuẩn hóa API Response (`{ success, message, data, meta }`)     | Phase 1 | P0         | 🟢 **DONE** |
+| **TASK 03** | Global Error Handling & Error Codes (`{ errorCode }`)           | Phase 1 | P0         | 🟢 **DONE** |
+| **TASK 04** | Global DTO Validation & Whitelist cấm unknown fields            | Phase 1 | P0         | 🟢 **DONE** |
+| **TASK 05** | Quản lý biến môi trường `.env` & bảo mật Secret                 | Phase 1 | P0         | 🟢 **DONE** |
+| **TASK 06** | Authentication toàn diện & băm mật khẩu bcrypt                  | Phase 2 | P0         | 🟢 **DONE** |
+| **TASK 07** | Phân quyền RBAC (Customer/Staff/Admin/SuperAdmin) & Role Guards | Phase 2 | P0         | 🟢 **DONE** |
+| **TASK 08** | Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout           | Phase 2 | P0         | 🟢 **DONE** |
+| **TASK 09** | Bảo mật API (Helmet, CORS, Rate Limit, Sanitization)            | Phase 2 | P1         | ⚪ PENDING  |
+| **TASK 10** | Quản lý sản phẩm Admin & Excel Import/Export                    | Phase 3 | P1         | ⚪ PENDING  |
+| **TASK 11** | Quản lý danh mục, Slug & Cây danh mục đa cấp                    | Phase 3 | P1         | ⚪ PENDING  |
+| **TASK 12** | Tìm kiếm Full-text & Lọc đa tiêu chí phân trang                 | Phase 3 | P1         | ⚪ PENDING  |
+| **TASK 13** | Chi tiết sản phẩm, Gallery, Thông số & Đánh giá                 | Phase 3 | P1         | ⚪ PENDING  |
+| **TASK 14** | Module Giỏ hàng Backend & Kiểm kho thời gian thực               | Phase 4 | P0         | ⚪ PENDING  |
+| **TASK 15** | Luồng Checkout an toàn & Kiểm tra nguyên tử                     | Phase 4 | P0         | ⚪ PENDING  |
+| **TASK 16** | Quản lý Sổ địa chỉ giao hàng người dùng                         | Phase 4 | P1         | ⚪ PENDING  |
+| **TASK 17** | Quản lý Đơn hàng, Vòng đời trạng thái & Hóa đơn PDF             | Phase 4 | P0         | ⚪ PENDING  |
+| **TASK 18** | Kiến trúc Thanh toán Provider Abstraction (VNPay, MoMo, COD)    | Phase 5 | P0         | ⚪ PENDING  |
+| **TASK 19** | Hệ thống Mã khuyến mãi (Voucher)                                | Phase 5 | P1         | ⚪ PENDING  |
+| **TASK 20** | Quản lý Tồn kho & 5 loại Inventory Transaction                  | Phase 5 | P0         | ⚪ PENDING  |
+| **TASK 21** | Đánh giá & Xếp hạng sản phẩm (Verified Purchase)                | Phase 5 | P1         | ⚪ PENDING  |
+| **TASK 22** | Danh sách Yêu thích (Wishlist)                                  | Phase 5 | P2         | ⚪ PENDING  |
+| **TASK 23** | Hệ thống Thông báo WebSocket Real-time & DB                     | Phase 5 | P1         | ⚪ PENDING  |
+| **TASK 24** | Bảng điều khiển Quản trị (Admin Analytics Dashboard)            | Phase 6 | P1         | ⚪ PENDING  |
+| **TASK 25** | Tối ưu trải nghiệm Quản trị (Admin UX/Feedback States)          | Phase 6 | P1         | ⚪ PENDING  |
+| **TASK 26** | Đồng bộ & Tích hợp API ứng dụng Mobile Flutter                  | Phase 6 | P0         | ⚪ PENDING  |
+| **TASK 27** | Nâng cấp trải nghiệm Mobile (UX/Offline/Shimmer)                | Phase 6 | P1         | ⚪ PENDING  |
+| **TASK 28** | Kiểm thử tự động (Unit Tests & E2E Test Flow)                   | Phase 7 | P0         | ⚪ PENDING  |
+| **TASK 29** | Thiết lập Quy trình CI/CD Pipeline                              | Phase 7 | P1         | ⚪ PENDING  |
+| **TASK 30** | Production Readiness, Swagger OpenAPI & Docker                  | Phase 7 | P0         | ⚪ PENDING  |
 
 ---
 
@@ -100,6 +101,7 @@ backend/src/modules/
 ## 📡 5. CHUẨN ĐỊNH DẠNG API (API CONTRACTS)
 
 ### Phản hồi Thành công (Success Response):
+
 ```json
 {
   "success": true,
@@ -115,6 +117,7 @@ backend/src/modules/
 ```
 
 ### Phản hồi Lỗi (Error Response):
+
 ```json
 {
   "success": false,
@@ -128,7 +131,54 @@ backend/src/modules/
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
 
+### [2026-08-25] — Hoàn thành TASK 08: Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Chuẩn hóa và hoàn thiện toàn diện kiến trúc bảo mật Token JWT, cơ chế xoay vòng Refresh Token (Token Rotation), phát hiện xâm phạm/tái sử dụng token cũ (Token Reuse Detection), quản lý danh sách đen và thu hồi token tức thì khi Logout (`TokenBlacklistService`), cơ chế vô hiệu hóa toàn bộ phiên trên mọi thiết bị khi đổi mật khẩu (`tokenVersion`), và đồng bộ hóa tầng Client (Frontend Vue 3 Silent Auto-Refresh Queue & Flutter Mobile Token Persistence); viết 100% unit tests đạt chuẩn.
+- **Thực hiện**:
+  - **Mã lỗi & Exception Handling**:
+    - `backend/src/common/enums/error-code.enum.ts`: Bổ sung các mã lỗi bảo mật JWT: `ERR_TOKEN_REVOKED`, `ERR_REFRESH_TOKEN_EXPIRED`, `ERR_REFRESH_TOKEN_REUSE`.
+    - `backend/src/common/filters/http-exception.filter.ts`: Bổ sung bắt và xử lý `NotBeforeError` ('Mã xác thực chưa có hiệu lực sử dụng') và map các lỗi token chuyên biệt.
+  - **Cơ sở dữ liệu & User Schema**:
+    - `backend/src/modules/users/schemas/user.schema.ts`: Bổ sung trường `@Prop({ default: 0 }) tokenVersion: number;` để kiểm soát phiên đăng nhập toàn hệ thống.
+  - **Dịch vụ Thu hồi Token (Token Blacklist & Revocation Service)**:
+    - Tạo mới `backend/src/modules/auth/token-blacklist.service.ts`:
+      - Quản lý danh sách đen theo mã định danh duy nhất `jti` và băm SHA-256 của chuỗi token.
+      - Cơ chế tự động dọn dẹp (TTL Garbage Collection) định kỳ mỗi 10 phút và dọn dẹp khi ứng dụng shutdown (`OnModuleDestroy`).
+      - Cung cấp các phương thức kiểm tra siêu nhanh: `isJtiBlacklisted()`, `isTokenBlacklisted()`, `blacklistJti()`, `blacklistToken()`.
+  - **Nâng cấp JwtStrategy**:
+    - `backend/src/modules/auth/strategies/jwt.strategy.ts`:
+      - Kiểm tra `jti` và raw token trong `TokenBlacklistService` ➔ ném `ERR_TOKEN_REVOKED` nếu token đã bị thu hồi do đăng xuất.
+      - Kiểm tra `tokenVersion` trong payload so với DB ➔ ném `ERR_TOKEN_REVOKED` nếu phiên bị vô hiệu hóa do đổi mật khẩu.
+      - Kiểm tra tài khoản bị khóa (`!user.status`).
+  - **Nâng cấp AuthService**:
+    - `backend/src/modules/auth/auth.service.ts`:
+      - `generateTokens`: Cấp `accessToken` và `refreshToken` đều có `jti` ngẫu nhiên (UUID) và `tokenVersion`.
+      - `refreshToken`: Xác thực chữ ký và loại token, kiểm tra `tokenVersion`, triển khai **Token Reuse Detection** (nếu Refresh Token gửi lên không khớp với mã hash trong DB ➔ lập tức hủy toàn bộ phiên của người dùng bằng cách tăng `tokenVersion`, xóa hash và ghi log cảnh báo bảo mật nghiêm trọng). Cấp cặp token mới và đưa access token cũ vào Blacklist.
+      - `logout`: Trích xuất token từ Header/Cookie/Body, đưa Access Token vào Blacklist (kèm TTL) và xóa `refreshTokenHash` trong DB.
+      - `changePassword` & `resetPassword`: Tăng `tokenVersion` và xóa `refreshTokenHash` để vô hiệu hóa toàn bộ token trên mọi thiết bị của người dùng, đưa token hiện tại vào Blacklist.
+  - **Nâng cấp AuthController & Module**:
+    - `backend/src/modules/auth/auth.controller.ts`: Nâng cấp trích xuất token an toàn từ Headers, Cookies và Body cho các endpoints `refresh`, `logout`, `change-password`.
+    - `backend/src/modules/auth/auth.module.ts`: Đăng ký và export `TokenBlacklistService`.
+  - **Đồng bộ Frontend Vue 3**:
+    - `frontend/src/utils/api.ts`: Triển khai **Silent Token Refresh Queue** trong Axios interceptor. Khi gặp lỗi 401, tự động gọi ngầm `/api/auth/refresh`, lưu giữ hàng đợi và retry lại tất cả request đang chờ; chỉ điều hướng về Login khi Refresh Token thực sự hết hạn hoặc bị hủy.
+    - `frontend/src/services/auth.service.ts`: Bổ sung phương thức `refreshToken()`, `changePassword()`.
+    - `frontend/src/stores/auth.ts`: Bổ sung action `refreshSession()`.
+  - **Đồng bộ Mobile Flutter**:
+    - `mobile/lib/core/constants/api_constants.dart`: Bổ sung `refreshToken` và `logout` endpoints.
+    - `mobile/lib/providers/auth_provider.dart`: Lưu trữ an toàn `refreshToken` vào `SharedPreferences`, bổ sung hàm `refreshAuthToken()` tự động làm mới phiên, nâng cấp hàm `logout()` gửi yêu cầu thu hồi token lên máy chủ.
+  - **Kiểm thử tự động (Unit Testing)**:
+    - Tạo `backend/src/modules/auth/token-blacklist.service.spec.ts` kiểm thử toàn diện 100% chức năng Blacklist.
+    - Nâng cấp `backend/src/modules/auth/auth.service.spec.ts` kiểm thử toàn diện Token Rotation, Token Reuse Detection, Session Revocation, TokenVersion Mismatch và Blacklist.
+- **Kết quả kiểm thử**:
+  - `npm test` (Backend): **11/11 test suites passed, 122/122 tests PASS 100%**.
+  - `npm run build` (Backend): **PASS 100%**.
+  - `npm run build` (Frontend): **PASS 100%**.
+  - `flutter test` (Mobile): **6/6 tests PASS 100%**.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 09 — Bảo mật API (Helmet, CORS, Rate Limit, Sanitization).
+
 ### [2026-08-25] — Hoàn thành TASK 07: Phân quyền RBAC (Customer/Staff/Admin/SuperAdmin) & Role Guards
+
 - **Người cập nhật**: Antigravity AI
 - **Mục tiêu**: Thiết lập phân quyền đa cấp toàn diện (Role-Based Access Control) cho 4 vai trò (`SUPER_ADMIN`, `ADMIN`, `STAFF`, `CUSTOMER`) theo mô hình phân cấp (Hierarchy); bảo vệ tài khoản bị khóa (`status === false`); xây dựng các bộ Guard & Decorator nâng cao (`RolesGuard`, `PermissionsGuard`, `@Roles()`, `@Permissions()`, `@CurrentUser()`); hoàn thiện module quản trị người dùng & phân quyền; đồng bộ hóa Frontend (Pinia store, route guards, AdminLayout) và Mobile Flutter; viết 100% unit tests bảo phủ toàn bộ luồng.
 - **Thực hiện**:
@@ -198,6 +248,7 @@ backend/src/modules/
 - **Tiếp theo**: TASK 07 — Phân quyền RBAC (Customer/Staff/Admin) & Role Guards.
 
 ### [2026-08-24] — Hoàn thành TASK 05: Quản lý biến môi trường `.env` & bảo mật Secret
+
 - **Người cập nhật**: Antigravity AI
 - **Mục tiêu**: Xây dựng hệ thống quản lý cấu hình và biến môi trường tập trung, an toàn, được kiểm tra hợp lệ nghiêm ngặt (Strict Schema Validation) ngay khi khởi động ứng dụng; loại bỏ hoàn toàn các secret mặc định bị hardcode trong mã nguồn; chuẩn hóa tài liệu `.env.example` và hỗ trợ đa môi trường (Development, Test, Production) trên cả Backend, Frontend và Mobile.
 - **Thực hiện**:
@@ -222,6 +273,7 @@ backend/src/modules/
 - **Tiếp theo**: TASK 06 — Authentication toàn diện & băm mật khẩu bcrypt.
 
 ### [2026-08-24] — Hoàn thành TASK 04: Global DTO Validation & Whitelist cấm unknown fields
+
 - **Người cập nhật**: Antigravity AI
 - **Mục tiêu**: Nâng cấp toàn bộ hệ thống DTO và cấu hình ValidationPipe toàn cục cấm unknown fields (`whitelist: true, forbidNonWhitelisted: true`), validate chặt chẽ email, phone VN, password độ phức tạp cao, giá tiền/số lượng, ObjectId MongoDB và Enum.
 - **Thực hiện**:
@@ -257,6 +309,7 @@ backend/src/modules/
 ---
 
 ### [2026-08-24] — Hoàn thành TASK 03: Global Error Handling & Error Codes
+
 - **Người cập nhật**: Antigravity AI
 - **Mục tiêu**: Hoàn thiện hệ thống Global Exception Filter, gán mã lỗi `errorCode`, che giấu stack trace và credentials ở production, ghi log chi tiết có phân loại và chống rò rỉ dữ liệu nhạy cảm.
 - **Thực hiện**:
@@ -282,6 +335,7 @@ backend/src/modules/
 ---
 
 ### [2026-08-23] — Hoàn thành TASK 02: Chuẩn hóa API Response
+
 - **Người cập nhật**: Antigravity AI
 - **Mục tiêu**: Chuẩn hóa toàn bộ định dạng phản hồi API (Success: `{ success, message, data, meta }`, Error: `{ success, message, errorCode, details }`).
 - **Thực hiện**:
@@ -301,6 +355,7 @@ backend/src/modules/
 ---
 
 ### [2026-08-23] — Hoàn thành TASK 01: Chuẩn hóa cấu trúc Backend
+
 - **Người cập nhật**: Antigravity AI
 - **Mục tiêu**: Chuẩn hóa toàn bộ cấu trúc module Backend, controller chỉ xử lý HTTP, business logic nằm trong service, DTO & Model riêng.
 - **Thực hiện**:
@@ -320,10 +375,11 @@ backend/src/modules/
 ---
 
 ### [2026-08-23] — Khởi tạo Hồ sơ Dự án & Chuẩn bị Task 01
+
 - **Người cập nhật**: Antigravity AI
 - **Mục tiêu**: Thiết lập tài liệu `PROJECT_DOCUMENTATION.md` và `AI_CONTEXT.md`.
 - **Trạng thái**: Đã phân tích toàn bộ repository, xác nhận backend/frontend build thành công, xác định lộ trình 30 tasks chi tiết.
 
 ---
 
-*(Ghi chú cho AI tiếp theo: Khi nhận lệnh mới, hãy đọc file này trước tiên để biết ngay ngữ cảnh và trạng thái hiện tại của dự án).*
+_(Ghi chú cho AI tiếp theo: Khi nhận lệnh mới, hãy đọc file này trước tiên để biết ngay ngữ cảnh và trạng thái hiện tại của dự án)._

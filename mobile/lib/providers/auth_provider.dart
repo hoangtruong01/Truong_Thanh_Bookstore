@@ -8,10 +8,12 @@ import '../models/user_model.dart';
 class AuthProvider with ChangeNotifier {
   UserModel? _user;
   String? _token;
+  String? _refreshToken;
   bool _isLoading = false;
 
   UserModel? get user => _user;
   String? get token => _token;
+  String? get refreshToken => _refreshToken;
   bool get isAuthenticated => _token != null && _token!.isNotEmpty;
   bool get isLoading => _isLoading;
 
@@ -22,6 +24,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> _loadStoredSession() async {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('token');
+    _refreshToken = prefs.getString('refreshToken');
     final userJsonStr = prefs.getString('user');
 
     if (userJsonStr != null) {
@@ -39,7 +42,10 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await http.post(
         Uri.parse(ApiConstants.login),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-platform': 'mobile',
+        },
         body: jsonEncode({'email': email, 'password': password}),
       );
 
@@ -47,10 +53,12 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = body['data'];
         _token = data['accessToken'];
+        _refreshToken = data['refreshToken'];
         _user = UserModel.fromJson(data['user']);
 
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', _token!);
+        if (_token != null) await prefs.setString('token', _token!);
+        if (_refreshToken != null) await prefs.setString('refreshToken', _refreshToken!);
         await prefs.setString('user', jsonEncode(_user!.toJson()));
 
         _isLoading = false;
@@ -73,7 +81,10 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await http.post(
         Uri.parse(ApiConstants.register),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-platform': 'mobile',
+        },
         body: jsonEncode({
           'fullName': fullName,
           'email': email,
@@ -86,10 +97,12 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = body['data'];
         _token = data['accessToken'];
+        _refreshToken = data['refreshToken'];
         _user = UserModel.fromJson(data['user']);
 
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', _token!);
+        if (_token != null) await prefs.setString('token', _token!);
+        if (_refreshToken != null) await prefs.setString('refreshToken', _refreshToken!);
         await prefs.setString('user', jsonEncode(_user!.toJson()));
 
         _isLoading = false;
@@ -102,6 +115,46 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       rethrow;
+    }
+  }
+
+  Future<bool> refreshAuthToken() async {
+    if (_refreshToken == null || _refreshToken!.isEmpty) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.refreshToken),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-platform': 'mobile',
+          if (_token != null) 'Authorization': 'Bearer $_token',
+        },
+        body: jsonEncode({'refreshToken': _refreshToken}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final body = jsonDecode(response.body);
+        final data = body['data'];
+        _token = data['accessToken'];
+        _refreshToken = data['refreshToken'];
+        if (data['user'] != null) {
+          _user = UserModel.fromJson(data['user']);
+        }
+
+        final prefs = await SharedPreferences.getInstance();
+        if (_token != null) await prefs.setString('token', _token!);
+        if (_refreshToken != null) await prefs.setString('refreshToken', _refreshToken!);
+        if (_user != null) await prefs.setString('user', jsonEncode(_user!.toJson()));
+
+        notifyListeners();
+        return true;
+      } else {
+        await logout();
+        return false;
+      }
+    } catch (_) {
+      await logout();
+      return false;
     }
   }
 
@@ -137,10 +190,27 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
+    if (_token != null && _token!.isNotEmpty) {
+      try {
+        await http.post(
+          Uri.parse(ApiConstants.logout),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_token',
+          },
+          body: jsonEncode({
+            if (_refreshToken != null) 'refreshToken': _refreshToken,
+          }),
+        );
+      } catch (_) {}
+    }
+
     _user = null;
     _token = null;
+    _refreshToken = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
+    await prefs.remove('refreshToken');
     await prefs.remove('user');
     notifyListeners();
   }

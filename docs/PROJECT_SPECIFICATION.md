@@ -156,6 +156,12 @@ Khi tạo đơn hàng, hệ thống tuân thủ quy tắc trừ kho nghiêm ng�
 - Gói thư viện sử dụng: `pdfkit`.
 - **Xử lý Font chữ Tiếng Việt:** Hệ thống tự động kiểm tra sự tồn tại của tệp font Arial hệ thống trên Windows (`C:\Windows\Fonts\Arial.ttf`). Nếu có, sẽ dùng font Arial để hiển thị tiếng Việt hoàn hảo; nếu không (chạy trên Linux/Docker), hệ thống sẽ tự động fallback về font mặc định `Helvetica` để tránh crash server.
 
+#### F. Cơ chế Bảo mật JWT, Xoay vòng Refresh Token & Thu hồi Token khi Logout
+1. **Mã định danh JTI & TokenVersion:** Mỗi Access Token và Refresh Token khi phát hành đều được cấp một mã `jti` duy nhất (UUID) và gắn kèm `tokenVersion` của người dùng.
+2. **Token Rotation (Xoay vòng Token):** Khi gọi `/api/auth/refresh`, server cấp phát cặp token mới, đồng thời hủy mã băm cũ trong DB và đưa Access Token trước đó vào Blacklist.
+3. **Phát hiện tái sử dụng Refresh Token (Reuse Detection):** Nếu mã Refresh Token cũ được gửi lên, server phát hiện dấu hiệu đánh cắp tài khoản ➔ tăng `tokenVersion`, xóa sạch mã hash phiên và từ chối truy cập.
+4. **Token Blacklist Service:** Khi Logout, Access Token được đưa vào danh sách đen `TokenBlacklistService` kèm thời gian hết hạn (TTL) để ngăn chặn phát lại token (replay attack). `JwtStrategy` kiểm tra blacklist và `tokenVersion` trên mỗi request được bảo vệ.
+
 ---
 
 ## III. ĐẶC TẢ FRONTEND WEB (VUE 3)

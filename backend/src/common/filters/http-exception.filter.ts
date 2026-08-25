@@ -148,6 +148,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
       status = HttpStatus.UNAUTHORIZED;
       errorCode = ErrorCode.ERR_TOKEN_EXPIRED;
       message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại';
+    } else if (
+      exception &&
+      typeof exception === 'object' &&
+      (exception as any).name === 'NotBeforeError'
+    ) {
+      status = HttpStatus.UNAUTHORIZED;
+      errorCode = ErrorCode.ERR_INVALID_TOKEN;
+      message = 'Mã xác thực chưa có hiệu lực sử dụng';
     }
     // 3. Handle JSON parse error (SyntaxError in request body)
     else if (

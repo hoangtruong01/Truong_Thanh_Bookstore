@@ -102,6 +102,22 @@ Hệ thống quản lý 4 nhóm người dùng chính:
 3. Người dùng nhập mã OTP để xác minh và nhận mã Token cấp phép đặt lại mật khẩu mới.
 4. Mật khẩu mới được mã hóa an toàn bằng thuật toán **bcrypt (Salt rounds = 10)** trước khi lưu vào CSDL.
 
+### 4.4. Kiến trúc Bảo mật JWT & Quản lý Phiên (Token Lifecycle & Security)
+1. **Access Token & Refresh Token**:
+   - Access Token ngắn hạn chứa `jti` (UUID định danh duy nhất) và `tokenVersion`.
+   - Refresh Token dài hạn được băm mã SHA-256 lưu trong CSDL (`refreshTokenHash`).
+2. **Cơ chế Xoay vòng Token (Token Rotation)**:
+   - Mỗi lần gọi làm mới phiên (`POST /api/auth/refresh`), hệ thống cấp phát cặp Token mới hoàn toàn và hủy mã băm cũ.
+3. **Phát hiện Xâm phạm & Tái sử dụng (Token Reuse Detection)**:
+   - Nếu Refresh Token cũ (đã được xoay vòng trước đó) bị gửi lại lên server (dấu hiệu rò rỉ token), hệ thống lập tức vô hiệu hóa toàn bộ phiên của tài khoản đó (`tokenVersion++`, xóa `refreshTokenHash`) và ghi log cảnh báo bảo mật.
+4. **Thu hồi Token khi Đăng xuất (Token Blacklist)**:
+   - Khi Logout, Access Token được đưa vào danh sách đen (`TokenBlacklistService`) kèm cơ chế tự động giải phóng bộ nhớ (TTL Cleanup), đồng thời xóa sạch phiên trong DB và Cookie.
+5. **Vô hiệu hóa phiên toàn diện khi Đổi mật khẩu (`tokenVersion`)**:
+   - Thay đổi hoặc đặt lại mật khẩu sẽ tự động tăng `tokenVersion`, làm vô hiệu hóa tức thì toàn bộ token cũ đang tồn tại trên mọi thiết bị.
+6. **Client-side Silent Auto-Refresh**:
+   - Frontend Vue 3 tích hợp hàng đợi Axios Interceptor tự động làm mới token ngầm khi gặp lỗi 401 mà không làm gián đoạn trải nghiệm người dùng.
+   - Mobile Flutter lưu trữ `refreshToken` an toàn và gọi API thu hồi token khi đăng xuất.
+
 ---
 
 ## 📂 5. HƯỚNG DẪN CẤU TRÚC MÃ NGUỒN DÀNH CHO DEVELOPER / INTERN

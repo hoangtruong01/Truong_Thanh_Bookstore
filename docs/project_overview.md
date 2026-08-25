@@ -27,7 +27,7 @@ backend/
 │   │   ├── guards/                    # Guard xác thực quyền (OptionalJwtGuard, RolesGuard, PermissionsGuard)
 │   │   └── interceptors/              # TransformInterceptor bọc kết quả API thành { success, message, data, meta }
 │   ├── modules/                       # Các Module Nghiệp vụ chính
-│   │   ├── auth/                      # Đăng ký, đăng nhập, JWT, mã hóa bcrypt và làm sạch profile
+│   │   ├── auth/                      # Đăng ký, đăng nhập, JWT, Token Rotation, Blacklist thu hồi token, mã hóa bcrypt
 │   │   ├── categories/                # Quản lý danh mục sản phẩm (hỗ trợ phân cấp Cha - Con)
 │   │   ├── customers/                 # Quản lý thông tin khách hàng (phần Admin hiển thị)
 │   │   ├── inventory/                 # Quản lý nhập/xuất/điều chỉnh kho, ghi log giao dịch

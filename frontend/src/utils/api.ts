@@ -1,8 +1,11 @@
 import axios from 'axios'
+import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import router from '@/router'
 
+const baseURL = import.meta.env.VITE_API_URL || '/api'
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL,
   timeout: 15000,
   withCredentials: true,
   headers: {
@@ -10,10 +13,37 @@ const api = axios.create({
   },
 })
 
+// Attach Bearer token if stored in localStorage (optional fallback for non-cookie auth)
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = localStorage.getItem('token')
+  if (token && config.headers && !config.headers.Authorization) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Variables for Silent Token Refresh queue
+let isRefreshing = false
+let failedQueue: Array<{
+  resolve: (value?: any) => void
+  reject: (reason?: any) => void
+}> = []
+
+const processQueue = (error: any = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve()
+    }
+  })
+  failedQueue = []
+}
+
 // Response interceptor for API calls
 api.interceptors.response.use(
-  (response) => response.data?.data !== undefined ? response.data : response,
-  (error) => {
+  (response) => (response.data?.data !== undefined ? response.data : response),
+  async (error: AxiosError) => {
     // Handle network errors or server offline
     if (!error.response) {
       if (error.code === 'ECONNABORTED') {
@@ -26,16 +56,75 @@ api.interceptors.response.use(
       })
     }
 
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.dispatchEvent(new CustomEvent('auth-session-expired'))
-      // BUG-04: Use Vue Router instead of window.location to avoid state loss and flash
-      const currentPath = window.location.pathname
-      if (currentPath !== '/login' && currentPath !== '/register') {
-        router.push({ name: 'Login', query: { redirect: currentPath } })
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+    const url = originalRequest?.url || ''
+
+    // 401 Unauthorized handling
+    if (error.response.status === 401) {
+      const isAuthEndpoint =
+        url.includes('/auth/login') ||
+        url.includes('/auth/register') ||
+        url.includes('/auth/refresh') ||
+        url.includes('/auth/forgot-password') ||
+        url.includes('/auth/reset-password')
+
+      if (isAuthEndpoint) {
+        if (url.includes('/auth/refresh')) {
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          window.dispatchEvent(new CustomEvent('auth-session-expired'))
+          const currentPath = window.location.pathname
+          if (currentPath !== '/login' && currentPath !== '/register') {
+            router.push({ name: 'Login', query: { redirect: currentPath } })
+          }
+        }
+        return Promise.reject(error.response?.data || error)
+      }
+
+      if (!originalRequest._retry) {
+        originalRequest._retry = true
+
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject })
+          })
+            .then(() => api(originalRequest))
+            .catch((err) => Promise.reject(err))
+        }
+
+        isRefreshing = true
+
+        try {
+          // Call refresh token endpoint with credentials (cookie)
+          const refreshRes = await axios.post(
+            `${baseURL}/auth/refresh`,
+            {},
+            { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+          )
+
+          if (refreshRes.data?.data?.accessToken) {
+            localStorage.setItem('token', refreshRes.data.data.accessToken)
+          }
+
+          processQueue(null)
+          return api(originalRequest)
+        } catch (refreshErr) {
+          processQueue(refreshErr)
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          window.dispatchEvent(new CustomEvent('auth-session-expired'))
+
+          const currentPath = window.location.pathname
+          if (currentPath !== '/login' && currentPath !== '/register') {
+            router.push({ name: 'Login', query: { redirect: currentPath } })
+          }
+          return Promise.reject(error.response?.data || refreshErr)
+        } finally {
+          isRefreshing = false
+        }
       }
     }
+
     return Promise.reject(error.response?.data || error)
   }
 )
