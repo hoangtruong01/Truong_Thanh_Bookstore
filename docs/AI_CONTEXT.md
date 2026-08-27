@@ -55,7 +55,7 @@ backend/src/modules/
 | **TASK 07** | Phân quyền RBAC (Customer/Staff/Admin/SuperAdmin) & Role Guards | Phase 2 | P0         | 🟢 **DONE** |
 | **TASK 08** | Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout           | Phase 2 | P0         | 🟢 **DONE** |
 | **TASK 09** | Bảo mật API (Helmet, CORS, Rate Limit, Sanitization)            | Phase 2 | P1         | 🟢 **DONE** |
-| **TASK 10** | Quản lý sản phẩm Admin & Excel Import/Export                    | Phase 3 | P1         | ⚪ PENDING  |
+| **TASK 10** | Quản lý sản phẩm Admin & Excel Import/Export                    | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 11** | Quản lý danh mục, Slug & Cây danh mục đa cấp                    | Phase 3 | P1         | ⚪ PENDING  |
 | **TASK 12** | Tìm kiếm Full-text & Lọc đa tiêu chí phân trang                 | Phase 3 | P1         | ⚪ PENDING  |
 | **TASK 13** | Chi tiết sản phẩm, Gallery, Thông số & Đánh giá                 | Phase 3 | P1         | ⚪ PENDING  |
@@ -130,6 +130,43 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-27] — Hoàn thành TASK 10: Quản lý sản phẩm Admin & Excel Import/Export
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Hoàn thiện và chuẩn hóa toàn bộ phân hệ Quản lý sản phẩm Admin và xử lý file Excel (Xuất Excel, Nhập Excel hàng loạt, Tải mẫu Excel chuẩn đa sheet). Đảm bảo tự động đồng bộ tồn kho sang `InventoryModule`, xác thực dữ liệu chặt chẽ (SKU, Giá, Danh mục, Trạng thái), gắn Rate Limiting chuyên sâu cho các thao tác upload/export nặng, và xây dựng 100% unit test coverage cho `ProductsService`.
+- **Thực hiện**:
+  - **Quản trị Sản phẩm Toàn diện (Admin Product Management)**:
+    - `backend/src/modules/products/products.service.ts`:
+      - `create`: Tạo sản phẩm mới, tự động sinh slug ngẫu nhiên chống trùng lặp, tự động tạo bản ghi tồn kho tương ứng trong `inventories` collection với trạng thái (`IN_STOCK`, `LOW_STOCK`, `OUT_OF_STOCK`).
+      - `update`: Cập nhật chi tiết sản phẩm và đồng bộ số lượng tồn kho tự động.
+      - `softDelete`: Đánh dấu `isDeleted: true` an toàn mà không làm mất dữ liệu lịch sử đơn hàng.
+      - `findAll`: Hỗ trợ lọc đa tiêu chí (danh mục phân cấp cha/con, thương hiệu, khoảng giá, số sao, chỉ còn hàng, deal khuyến mãi), phân trang chuẩn `PaginatedResult` và sắp xếp đa dạng.
+  - **Tính năng Excel Nâng cao (ExcelJS Engine)**:
+    - `generateImportTemplate`: Tạo file mẫu Excel `.xlsx` 2 sheet chuyên nghiệp (Sheet 1: Form nhập liệu có định dạng Segoe UI, màu thương hiệu đỏ Trường Thành, định dạng số tiền `#,,##0`; Sheet 2: Danh sách danh mục thực tế tra cứu kèm hướng dẫn chi tiết).
+    - `exportToExcel`: Xuất toàn bộ danh sách sản phẩm ra file `.xlsx` đầy đủ 14 cột nghiệp vụ, phân trang màu so le cho hàng chẵn/lẻ, định dạng tiền tệ và tự động căn chỉnh độ rộng cột.
+    - `importFromExcel`: Nhập sản phẩm hàng loạt từ buffer file Excel:
+      - Kiểm tra tính toàn vẹn của file (chặn file rỗng, file hỏng, sai cấu trúc).
+      - Xác thực các trường bắt buộc (Tên, SKU, Danh mục, Giá bán >= 0).
+      - Đối chiếu SKU chống trùng lặp trong file và trong DB; tự động liên kết hoặc tạo danh mục nếu chưa có.
+      - Tự động tạo bản ghi kho `Inventory` cho từng sản phẩm nhập thành công.
+      - Trả về báo cáo thống kê chi tiết (`totalRows`, `createdCount`, `updatedCount`, `skippedCount`, `errorCount`, `details`).
+  - **Bảo mật & Rate Limiting (Controller Layer)**:
+    - `backend/src/modules/products/products.controller.ts`:
+      - Phân quyền nghiêm ngặt `@Permissions(StaffPermission.MANAGE_PRODUCTS)` cho các endpoints quản trị.
+      - Gắn `@Throttle(...)` cho `downloadTemplate` (10/60s), `exportExcel` (10/60s), `importExcel` (5/60s), `create` (20/60s), `update` (20/60s), `delete` (20/60s).
+      - Ràng buộc giới hạn file upload tối đa 10MB và chỉ chấp nhận `.xlsx`/`.xls`.
+  - **Đồng bộ Frontend Quản trị**:
+    - `frontend/src/pages/admin/Products.vue`: Giao diện Admin quản trị danh sách sản phẩm, tích hợp Modal kéo thả file Excel, hiển thị kết quả phân tích theo tab (Thành công, Bỏ qua, Lỗi), nút tải file mẫu và xuất Excel trực tiếp.
+  - **Kiểm thử tự động (Unit Testing)**:
+    - Tạo mới `backend/src/modules/products/products.service.spec.ts` kiểm thử toàn diện 100% các kịch bản: Product CRUD, Validation, Template Generation, Excel Export, Excel Import lỗi và Excel Import thành công.
+- **Kết quả kiểm thử**:
+  - `npm test` (Backend): **13/13 test suites passed, 150/150 tests PASS 100%**.
+  - `npx jest test/all-fixes.spec.ts` (Backend QA): **11/11 tests PASS 100%**.
+  - `npm run build` (Backend): **PASS 100%**.
+  - `npm run build` (Frontend): **PASS 100%**.
+  - `flutter test` (Mobile): **6/6 tests PASS 100%**.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 11 — Quản lý danh mục, Slug & Cây danh mục đa cấp.
 
 ### [2026-08-27] — Hoàn thành TASK 09: Bảo mật API (Helmet, CORS, Rate Limit, Sanitization)
 - **Người cập nhật**: Antigravity AI
