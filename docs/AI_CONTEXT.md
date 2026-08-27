@@ -54,7 +54,7 @@ backend/src/modules/
 | **TASK 06** | Authentication toàn diện & băm mật khẩu bcrypt                  | Phase 2 | P0         | 🟢 **DONE** |
 | **TASK 07** | Phân quyền RBAC (Customer/Staff/Admin/SuperAdmin) & Role Guards | Phase 2 | P0         | 🟢 **DONE** |
 | **TASK 08** | Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout           | Phase 2 | P0         | 🟢 **DONE** |
-| **TASK 09** | Bảo mật API (Helmet, CORS, Rate Limit, Sanitization)            | Phase 2 | P1         | ⚪ PENDING  |
+| **TASK 09** | Bảo mật API (Helmet, CORS, Rate Limit, Sanitization)            | Phase 2 | P1         | 🟢 **DONE** |
 | **TASK 10** | Quản lý sản phẩm Admin & Excel Import/Export                    | Phase 3 | P1         | ⚪ PENDING  |
 | **TASK 11** | Quản lý danh mục, Slug & Cây danh mục đa cấp                    | Phase 3 | P1         | ⚪ PENDING  |
 | **TASK 12** | Tìm kiếm Full-text & Lọc đa tiêu chí phân trang                 | Phase 3 | P1         | ⚪ PENDING  |
@@ -130,6 +130,46 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-27] — Hoàn thành TASK 09: Bảo mật API (Helmet, CORS, Rate Limit, Sanitization)
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Thiết lập và hoàn thiện toàn diện tầng phòng thủ bảo mật API cho hệ thống Trường Thành Bookstore, bao gồm: HTTP Security Headers với Helmet (CSP tương thích Swagger UI & Cloudinary, HSTS, X-Frame-Options...), cấu hình CORS Whitelist nghiêm ngặt có preflight cache, chính sách Rate Limiting (Throttler) chuyên sâu cho các endpoints nhạy cảm (Auth, Orders, Payments, Promotions, Reviews, Admin actions), bộ tiện ích và Middleware làm sạch đầu vào (Sanitization) ngăn chặn NoSQL Injection, Prototype Pollution và Stored XSS mà vẫn bảo toàn tính toàn vẹn của mật khẩu và chuỗi tiếng Việt; viết 100% unit tests bảo vệ toàn diện.
+- **Thực hiện**:
+  - **Tầng Tiện ích Bảo mật & Làm sạch Dữ liệu (Security Sanitizer Layer)**:
+    - Tạo mới `backend/src/common/security/security.sanitizer.ts`:
+      - `isForbiddenKey()`: Phát hiện các MongoDB Query Operators bắt đầu bằng `$` (`$gt`, `$ne`, `$where`, `$regex`, `$expr`...), các khóa dot notation injection (`user.role`), và các khóa Prototype Pollution (`__proto__`, `prototype`, `constructor`).
+      - `sanitizeXss()`: Làm sạch các thẻ mã độc hại (`<script>`, `<iframe>`, `<object>`, `<embed>`, `<applet>`), pseudo-protocols `javascript:`, data URIs nguy hiểm và inline event handlers (`onerror=`, `onload=`, `onclick=`). Bảo toàn hoàn toàn chuỗi tiếng Việt có dấu và URL hợp lệ.
+      - `sanitizePayload()`: Đệ quy làm sạch object, mảng và chuỗi; hỗ trợ danh sách `skipFields` (như `password`, `token`, `otp`, `signature`) để không biến dạng ký tự đặc biệt của mật khẩu trước khi băm bcrypt.
+  - **Middleware Bảo mật Toàn cục (Security Sanitizer Middleware)**:
+    - Tạo mới `backend/src/common/middleware/security-sanitizer.middleware.ts`:
+      - Tự động chặn và làm sạch toàn bộ `req.body`, `req.query`, `req.params` trước khi đi vào Controllers/Pipes.
+    - Đăng ký middleware trong `AppModule.configure(consumer)` áp dụng cho mọi routes (`forRoutes('*')`).
+  - **Cấu hình Helmet & Ẩn Header Nhạy cảm**:
+    - Cài đặt thư viện `helmet` vào backend dependencies.
+    - Trong `backend/src/main.ts`: Cấu hình Helmet với Content Security Policy (CSP) linh hoạt, cho phép tài nguyên của Swagger UI (`/api/docs`), font Google, và ảnh Cloudinary (`res.cloudinary.com`) hoạt động trơn tru; ẩn header `X-Powered-By`.
+  - **Thắt chặt Chính sách CORS**:
+    - Cấu hình CORS Whitelist phân tích chuỗi `FRONTEND_URL` (hỗ trợ nhiều domain phân tách bởi dấu phẩy), hỗ trợ mobile apps (`!origin`), các phương thức `['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS']`, headers tùy chỉnh (`x-client-platform`, `authorization`, `content-type`...), `credentials: true` và preflight cache `maxAge: 86400` (24h).
+  - **Chính sách Giới hạn Tần suất (Rate Limiting / Throttler)**:
+    - Cấu hình toàn cục trong `AppModule`: 100 requests / phút.
+    - Gắn `@Throttle(...)` cho các endpoints nhạy cảm:
+      - `AuthController`: `register` (5/60s), `login` (5/60s), `forgotPassword` (3/60s), `verifyOtp` (5/60s), `resetPassword` (5/60s), `refreshToken` (10/60s), `logout` (10/60s), `changePassword` (5/60s).
+      - `OrdersController`: `create` và `createAuthenticated` (10/60s - chống spam đơn hàng và giữ hàng ảo).
+      - `PaymentsController`: `create` (10/60s) và `handleCallback` (20/60s).
+      - `PromotionsController`: `apply` (15/60s - chống brute-force mã giảm giá).
+      - `ReviewsController`: `create` và `update` (10/60s - chống spam đánh giá).
+      - `UsersController`: `createStaff`, `updateRole`, `updateStatus` (10/60s).
+  - **Chuẩn hóa Thông điệp Lỗi Rate Limit**:
+    - `backend/src/common/filters/http-exception.filter.ts`: Tự động map HTTP 429 (`HttpStatus.TOO_MANY_REQUESTS`) thành mã lỗi `ErrorCode.ERR_RATE_LIMIT_EXCEEDED` và thông điệp tiếng Việt thân thiện: `"Bạn đã gửi quá nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau ít phút!"`.
+  - **Kiểm thử tự động (Unit Testing)**:
+    - Tạo `backend/src/common/security/security.sanitizer.spec.ts` kiểm thử toàn diện 100% các kịch bản: NoSQL injection, prototype pollution, XSS tags & event handlers, password preservation, middleware execution và rate limit exception response format.
+- **Kết quả kiểm thử**:
+  - `npm test` (Backend): **12/12 test suites passed, 140/140 tests PASS 100%**.
+  - `npx jest test/all-fixes.spec.ts` (Backend QA): **11/11 tests PASS 100%**.
+  - `npm run build` (Backend): **PASS 100%**.
+  - `npm run build` (Frontend): **PASS 100%**.
+  - `flutter test` (Mobile): **6/6 tests PASS 100%**.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 10 — Quản lý sản phẩm Admin & Excel Import/Export.
 
 ### [2026-08-25] — Hoàn thành TASK 08: Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout
 - **Người cập nhật**: Antigravity AI

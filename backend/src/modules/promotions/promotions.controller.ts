@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { PromotionsService } from './promotions.service';
 import { CreatePromotionDto, ApplyPromotionDto } from './dto/promotion.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -25,6 +26,7 @@ export class PromotionsController {
 
   @Post('apply')
   @UseGuards(OptionalJwtAuthGuard)
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
   @ApiOperation({ summary: 'Apply a promotion code' })
   apply(@Body() dto: ApplyPromotionDto, @Request() req: any) {
     const userId = req.user ? req.user._id : undefined;

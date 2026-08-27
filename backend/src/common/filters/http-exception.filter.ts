@@ -130,6 +130,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
           errorCode = ErrorCode.ERR_VALIDATION;
         }
       }
+
+      // Friendly message for Rate Limiting / ThrottlerException
+      if (status === HttpStatus.TOO_MANY_REQUESTS) {
+        errorCode = ErrorCode.ERR_RATE_LIMIT_EXCEEDED;
+        message = 'Bạn đã gửi quá nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau ít phút!';
+      }
     }
     // 2. Handle JWT errors
     else if (

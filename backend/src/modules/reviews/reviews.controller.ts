@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto, UpdateReviewDto, ModerateReviewDto } from './dto/review.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -31,6 +32,7 @@ export class ReviewsController {
 
   @Post('product/:productId')
   @UseGuards(AuthGuard('jwt'))
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Đăng đánh giá cho một sản phẩm' })
   create(
@@ -48,6 +50,7 @@ export class ReviewsController {
 
   @Patch(':id/product/:productId')
   @UseGuards(AuthGuard('jwt'))
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cập nhật đánh giá' })
   update(
