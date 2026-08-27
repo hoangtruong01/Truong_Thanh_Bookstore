@@ -131,6 +131,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Refresh access and refresh token pair (Token Rotation)' })
   @ApiResponse({ status: 200, description: 'Tokens rotated successfully' })
   async refreshToken(
@@ -148,6 +149,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Clear the authentication session and revoke tokens' })
   @ApiResponse({ status: 200, description: 'Session cleared and tokens revoked' })
   async logout(
@@ -184,6 +186,7 @@ export class AuthController {
 
   @Put('change-password')
   @UseGuards(AuthGuard('jwt'))
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Change current user password and revoke other sessions' })
   async changePassword(

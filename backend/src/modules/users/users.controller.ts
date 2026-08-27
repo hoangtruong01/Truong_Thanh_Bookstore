@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { UsersService } from './users.service';
 import {
   CreateStaffUserDto,
@@ -44,6 +45,7 @@ export class UsersController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Tạo tài khoản nhân viên hoặc quản trị viên (Admin/SuperAdmin)' })
   async createStaff(@Body() dto: CreateStaffUserDto, @Request() req: any) {
     return this.usersService.createStaffOrAdmin(dto, req.user.role);
@@ -60,6 +62,7 @@ export class UsersController {
   @Patch(':id/role')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Cập nhật vai trò người dùng (SuperAdmin/Admin)' })
   async updateRole(
     @Param('id') id: string,
@@ -84,6 +87,7 @@ export class UsersController {
   @Patch(':id/status')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Khóa hoặc mở khóa tài khoản người dùng (Admin/SuperAdmin)' })
   async updateStatus(
     @Param('id') id: string,

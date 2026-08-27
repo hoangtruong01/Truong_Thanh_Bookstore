@@ -1,4 +1,4 @@
-import { Module, Logger } from '@nestjs/common';
+import { Module, Logger, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import configuration from './config/configuration';
@@ -24,6 +24,7 @@ import { EmailModule } from './modules/email/email.module';
 import { CartModule } from './modules/cart/cart.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
+import { SecuritySanitizerMiddleware } from './common/middleware/security-sanitizer.middleware';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
       inject: [ConfigService],
     }),
     ThrottlerModule.forRoot([{
+      name: 'default',
       ttl: 60000,
       limit: 100, // 100 requests per minute
     }]),
@@ -81,4 +83,9 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(SecuritySanitizerMiddleware).forRoutes('*');
+  }
+}
+

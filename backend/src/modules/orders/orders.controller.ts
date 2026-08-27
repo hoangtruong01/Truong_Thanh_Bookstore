@@ -16,6 +16,7 @@ import {
 import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { OrdersService } from './orders.service';
 import {
   CreateOrderDto,
@@ -32,6 +33,7 @@ export class OrdersController {
   constructor(private ordersService: OrdersService) {}
 
   @Post()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Create an order (guest)' })
   create(@Body() dto: CreateOrderDto) {
     return this.ordersService.create(dto);
@@ -39,6 +41,7 @@ export class OrdersController {
 
   @Post('authenticated')
   @UseGuards(AuthGuard('jwt'))
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create an order (authenticated)' })
   createAuthenticated(@Body() dto: CreateOrderDto, @Request() req: any) {

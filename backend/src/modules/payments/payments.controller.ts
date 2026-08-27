@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto, PaymentCallbackDto, PaymentQueryDto } from './dto/payment.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -23,6 +24,7 @@ export class PaymentsController {
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Khởi tạo phiên thanh toán cho đơn hàng' })
   create(@Body() dto: CreatePaymentDto, @Request() req: any) {
@@ -38,6 +40,7 @@ export class PaymentsController {
   }
 
   @Post('callback')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({ summary: 'Webhook callback từ cổng thanh toán đối tác' })
   handleCallback(@Body() dto: PaymentCallbackDto) {
     return this.paymentsService.handleCallback(dto);
