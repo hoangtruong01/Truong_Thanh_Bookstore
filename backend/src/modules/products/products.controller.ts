@@ -17,6 +17,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
 import { ProductsService } from './products.service';
 import {
@@ -43,6 +44,7 @@ export class ProductsController {
   @Get('export/template')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(StaffPermission.MANAGE_PRODUCTS)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Download Excel import template' })
   async downloadTemplate(@Res() res: Response) {
@@ -62,6 +64,7 @@ export class ProductsController {
   @Get('export/excel')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(StaffPermission.MANAGE_PRODUCTS)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Export all products to Excel' })
   async exportExcel(@Res() res: Response) {
@@ -82,6 +85,7 @@ export class ProductsController {
   @Post('import/excel')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(StaffPermission.MANAGE_PRODUCTS)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiBearerAuth()
   @UseInterceptors(
     FileInterceptor('file', {
@@ -139,6 +143,7 @@ export class ProductsController {
   @Post()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(StaffPermission.MANAGE_PRODUCTS)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a product' })
   create(@Body() dto: CreateProductDto) {
@@ -148,6 +153,7 @@ export class ProductsController {
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(StaffPermission.MANAGE_PRODUCTS)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a product' })
   update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
@@ -157,6 +163,7 @@ export class ProductsController {
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(StaffPermission.MANAGE_PRODUCTS)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Soft delete a product' })
   delete(@Param('id') id: string) {
