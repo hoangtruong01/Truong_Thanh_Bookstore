@@ -56,7 +56,7 @@ backend/src/modules/
 | **TASK 08** | Bảo mật JWT, Refresh Token & Thu hồi Token khi Logout           | Phase 2 | P0         | 🟢 **DONE** |
 | **TASK 09** | Bảo mật API (Helmet, CORS, Rate Limit, Sanitization)            | Phase 2 | P1         | 🟢 **DONE** |
 | **TASK 10** | Quản lý sản phẩm Admin & Excel Import/Export                    | Phase 3 | P1         | 🟢 **DONE** |
-| **TASK 11** | Quản lý danh mục, Slug & Cây danh mục đa cấp                    | Phase 3 | P1         | ⚪ PENDING  |
+| **TASK 11** | Quản lý danh mục, Slug & Cây danh mục đa cấp                    | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 12** | Tìm kiếm Full-text & Lọc đa tiêu chí phân trang                 | Phase 3 | P1         | ⚪ PENDING  |
 | **TASK 13** | Chi tiết sản phẩm, Gallery, Thông số & Đánh giá                 | Phase 3 | P1         | ⚪ PENDING  |
 | **TASK 14** | Module Giỏ hàng Backend & Kiểm kho thời gian thực               | Phase 4 | P0         | ⚪ PENDING  |
@@ -130,6 +130,38 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-27] — Hoàn thành TASK 11: Quản lý danh mục, Slug & Cây danh mục đa cấp
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Hoàn thiện toàn diện phân hệ Quản lý Danh mục (Categories), triển khai thuật toán Cây danh mục đa cấp đệ quy lồng nhau (`Category Tree`), bộ sinh Slug tiếng Việt tự động kèm cơ chế chống trùng lặp trong CSDL, cơ chế bảo vệ toàn vẹn phân cấp ngăn chặn vòng lặp cha-con (Circular Parent Reference), cơ chế xóa an toàn tự động chuyển con về cha cấp trên (tránh mồ côi dữ liệu), gắn Rate Limiting và xây dựng 100% unit tests coverage cho `CategoriesService`.
+- **Thực hiện**:
+  - **Schema & DTO Enhancements**:
+    - `backend/src/modules/categories/schemas/category.schema.ts`: Bổ sung trường `sortOrder: number` (mặc định 0), đánh compound indexes `{ parentId: 1, status: 1, sortOrder: 1 }`, `{ slug: 1 }` (unique) và `{ status: 1, sortOrder: 1 }`.
+    - `backend/src/modules/categories/dto/category.dto.ts`: Bổ sung `sortOrder?: number` cho `CreateCategoryDto` và `UpdateCategoryDto`.
+  - **Dịch vụ Quản lý Danh mục Chuyên sâu (CategoriesService)**:
+    - `generateUniqueSlug`: Sinh slug tiếng Việt chuẩn (chuyển đổi `đ`/`Đ` -> `d`, loại bỏ dấu thanh, ký tự đặc biệt) và tự động đối chiếu trong CSDL để gắn hậu tố đếm (`-1`, `-2`, ...) đảm bảo tính duy nhất tuyệt đối.
+    - `getCategoryTree(includeInactive)`: Xây dựng cây danh mục đa cấp đa tầng (Cha -> Con -> Cháu) đệ quy, tự động tổng hợp số lượng sản phẩm (`productCount`) của từng danh mục.
+    - `checkCircularReference(categoryId, targetParentId)`: Thuật toán duyệt ngược cây ngăn chặn triệt để tình trạng một danh mục tự nhận chính nó làm cha, hoặc chọn một danh mục con/cháu trong nhánh của mình làm cha.
+    - `update`: Hỗ trợ đổi tên tự sinh lại slug, kiểm tra vòng lặp phân cấp khi đổi `parentId`.
+    - `delete`: Xóa danh mục an toàn, tự động re-parent các danh mục con trực thuộc về `parentId` của danh mục cha bị xóa (hoặc `null`) để bảo toàn dữ liệu.
+    - `findBySlug`: Tìm kiếm danh mục theo slug kèm thông tin cha và sản phẩm liên kết.
+    - `toggleStatus`: Kích hoạt/Vô hiệu hóa nhanh trạng thái hoạt động của danh mục.
+  - **Bảo mật & Rate Limiting (CategoriesController)**:
+    - Bổ sung endpoint `GET /categories/tree` (lấy cây danh mục phân cấp) và `GET /categories/slug/:slug` (tìm theo slug).
+    - Phân quyền `@Permissions(StaffPermission.MANAGE_PRODUCTS)` cho các thao tác quản trị.
+    - Gắn `@Throttle(...)` (20 req/60s) cho các thao tác `create`, `update`, `toggleStatus`, `delete`.
+  - **Đồng bộ Frontend**:
+    - `frontend/src/services/category.service.ts`: Bổ sung các phương thức `getTree()`, `getBySlug(slug)`, `toggleStatus(id)`.
+  - **Kiểm thử tự động (Unit Testing)**:
+    - Tạo mới `backend/src/modules/categories/categories.service.spec.ts` kiểm thử toàn diện: Sinh slug & xử lý va chạm, Xây dựng cây danh mục 3 tầng kèm `productCount`, Ngăn chặn Circular Reference (A -> B -> A), CRUD, Xóa an toàn và Toggle Status.
+- **Kết quả kiểm thử**:
+  - `npm test` (Backend): **14/14 test suites passed, 163/163 tests PASS 100%**.
+  - `npx jest test/all-fixes.spec.ts` (Backend QA): **11/11 tests PASS 100%**.
+  - `npm run build` (Backend): **PASS 100%**.
+  - `npm run build` (Frontend): **PASS 100%**.
+  - `flutter test` (Mobile): **6/6 tests PASS 100%**.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 12 — Tìm kiếm Full-text & Lọc đa tiêu chí phân trang.
 
 ### [2026-08-27] — Hoàn thành TASK 10: Quản lý sản phẩm Admin & Excel Import/Export
 - **Người cập nhật**: Antigravity AI

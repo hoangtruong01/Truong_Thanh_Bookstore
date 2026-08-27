@@ -71,6 +71,13 @@ export class CreateCategoryDto {
   @IsArray()
   @IsString({ each: true })
   options?: string[];
+
+  @ApiPropertyOptional({ example: 0, description: 'Thứ tự hiển thị' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  sortOrder?: number;
 }
 
 export class UpdateCategoryDto {
@@ -133,4 +140,11 @@ export class UpdateCategoryDto {
   @IsArray()
   @IsString({ each: true })
   options?: string[];
+
+  @ApiPropertyOptional({ example: 0, description: 'Thứ tự hiển thị' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  sortOrder?: number;
 }
