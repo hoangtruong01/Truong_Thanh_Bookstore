@@ -38,8 +38,16 @@ export class Category {
   @Prop({ type: [String], default: [] })
   options: string[];
 
+  @Prop({ default: 0 })
+  sortOrder: number;
+
   createdAt: Date;
   updatedAt: Date;
 }
 
 export const CategorySchema = SchemaFactory.createForClass(Category);
+
+// Indexes for category tree & hierarchy performance
+CategorySchema.index({ slug: 1 }, { unique: true });
+CategorySchema.index({ parentId: 1, status: 1, sortOrder: 1 });
+CategorySchema.index({ status: 1, sortOrder: 1 });

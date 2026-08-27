@@ -97,7 +97,7 @@ Hệ thống **Trường Thành Bookstore** là nền tảng thương mại đi�
 - **TASK 09 [P1] — API Security [DONE]**: Đã bổ sung Helmet HTTP security headers (tương thích Swagger UI & Cloudinary), CORS chặt chẽ theo whitelist hỗ trợ preflight caching, Rate limiting (Throttler) chuyên sâu cho login/register/order/payment/admin, bộ tiện ích và Middleware làm sạch input toàn cục chống XSS/NoSQL Injection/Prototype Pollution, chuẩn hóa thông điệp lỗi tiếng Việt 429 (`ERR_RATE_LIMIT_EXCEEDED`), 100% unit tests PASS.
 
 - **TASK 10 [P1] — Product Management [DONE]**: Hoàn thiện toàn diện tính năng quản trị sản phẩm Admin (CRUD, ẩn/hiện, upload ảnh, SKU, giá bán, giá khuyến mãi, tồn kho, tự động đồng bộ sang Inventory) và bộ công cụ Excel nâng cao (Xuất Excel 14 cột, Nhập Excel hàng loạt có xác thực trùng lặp/báo cáo chi tiết, Tải file mẫu chuẩn đa sheet), 100% unit tests PASS.
-- **TASK 11 [P1] — Category & Attributes**: Quản lý danh mục đa cấp, sinh Slug tự động, cây danh mục (Category Tree), liên kết sản phẩm - danh mục.
+- **TASK 11 [P1] — Category & Attributes [DONE]**: Nâng cấp toàn diện phân hệ quản lý danh mục đa cấp, sinh Slug tiếng Việt tự động chống trùng lặp, xây dựng Cây danh mục (Category Tree) đệ quy gom nhóm Cha -> Con -> Cháu kèm `productCount`, chống Circular Reference và xóa an toàn bảo toàn liên kết, 100% unit tests PASS.
 - **TASK 12 [P1] — Search & Filter**: Nâng cấp bộ tìm kiếm Full-text (tên sách, SKU, ISBN, tác giả, NXB) kết hợp bộ lọc (danh mục, khoảng giá, số sao, tồn kho, khuyến mãi) và sắp xếp kèm phân trang chuẩn.
 - **TASK 13 [P1] — Product Detail**: API chi tiết sản phẩm toàn diện (Gallery ảnh, giá & chiết khấu, thông số kỹ thuật, đánh giá, sản phẩm tương tự/liên quan).
 
