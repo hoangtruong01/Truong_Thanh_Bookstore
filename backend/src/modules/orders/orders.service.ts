@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, ForbiddenException, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model } from 'mongoose';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
@@ -10,6 +10,7 @@ import {
   CreateOrderDto,
   UpdateOrderStatusDto,
   OrderQueryDto,
+  CheckoutPreviewDto,
 } from './dto/order.dto';
 import { ProductsService } from '../products/products.service';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
@@ -25,6 +26,7 @@ import { PromotionsService } from '../promotions/promotions.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
 import { UsersService } from '../users/users.service';
+import { CartService } from '../cart/cart.service';
 
 // FIX-C03: Shipping fee threshold (must match frontend)
 const FREE_SHIPPING_THRESHOLD = 299000;
@@ -42,7 +44,9 @@ export class OrdersService {
     private notificationsService: NotificationsService,
     private emailService: EmailService,
     private usersService: UsersService,
+    @Optional() private cartService?: CartService,
   ) {}
+
 
   private generateOrderCode(): string {
     const now = new Date();
@@ -152,9 +156,112 @@ export class OrdersService {
     }
   }
 
+  async checkoutPreview(dto: CheckoutPreviewDto, userId?: string) {
+    const warnings: string[] = [];
+    const verifiedItems: Array<{
+      product: string;
+      name: string;
+      price: number;
+      originalPrice: number;
+      quantity: number;
+      stock: number;
+      image: string;
+      subtotal: number;
+    }> = [];
+
+    for (const item of dto.items) {
+      const product = await this.productsService.findById(item.product);
+      if (
+        !product ||
+        (product as any).isDeleted === true ||
+        ((product as any).status && (product as any).status !== 'ACTIVE')
+      ) {
+        warnings.push(`Sản phẩm "${item.name || item.product}" hiện không khả dụng.`);
+        continue;
+      }
+
+
+      const availableStock = (product as any).stock ?? 0;
+      let effectiveQty = item.quantity;
+      if (availableStock < item.quantity) {
+        if (availableStock <= 0) {
+          warnings.push(`Sản phẩm "${product.name}" đã hết hàng.`);
+          continue;
+        } else {
+          effectiveQty = availableStock;
+          warnings.push(
+            `Sản phẩm "${product.name}" chỉ còn ${availableStock} trong kho. Đã tự động điều chỉnh số lượng.`,
+          );
+        }
+      }
+
+      const effectivePrice =
+        (product as any).discountPrice > 0 ? (product as any).discountPrice : (product as any).price;
+
+      if (item.price && item.price !== effectivePrice) {
+        warnings.push(`Giá sản phẩm "${product.name}" đã thay đổi.`);
+      }
+
+      verifiedItems.push({
+        product: product._id.toString(),
+        name: product.name,
+        price: effectivePrice,
+        originalPrice: (product as any).price,
+        quantity: effectiveQty,
+        stock: availableStock,
+        image: (product as any).images?.[0] || item.image || '',
+        subtotal: effectivePrice * effectiveQty,
+      });
+    }
+
+    const subtotal = verifiedItems.reduce((sum, i) => sum + i.subtotal, 0);
+    const isEligibleForFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
+    const shippingFee = subtotal === 0 ? 0 : (isEligibleForFreeShipping ? 0 : SHIPPING_FEE);
+    const amountNeededForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
+
+    let discount = 0;
+    let appliedPromotion: any = null;
+    if (dto.promotionCode && subtotal > 0) {
+      try {
+        const promoResult = await this.promotionsService.apply(
+          { code: dto.promotionCode, orderTotal: subtotal },
+          userId,
+          false,
+          dto.customerEmail,
+          dto.phone,
+        );
+        discount = promoResult.discount || 0;
+        appliedPromotion = {
+          code: dto.promotionCode.toUpperCase(),
+          discount,
+        };
+      } catch (err: any) {
+        warnings.push(err.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện.');
+      }
+    }
+
+    const total = Math.max(0, subtotal + shippingFee - discount);
+
+    return {
+      items: verifiedItems,
+      itemCount: verifiedItems.reduce((sum, i) => sum + i.quantity, 0),
+      subtotal,
+      shippingFee,
+      freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+      isEligibleForFreeShipping,
+      amountNeededForFreeShipping,
+      discount,
+      appliedPromotion,
+      total,
+      warnings,
+      isValidForCheckout: verifiedItems.length > 0 && warnings.length === 0,
+    };
+  }
+
   async create(dto: CreateOrderDto, userId?: string): Promise<any> {
     return this.createAtomic(dto, userId);
   }
+
 
   private async createAtomic(dto: CreateOrderDto, userId?: string): Promise<any> {
     const paymentMethod = dto.paymentMethod || PaymentMethod.COD;
@@ -338,6 +445,12 @@ export class OrdersService {
     }
 
     if (userId) {
+      if (this.cartService) {
+        await this.cartService.clearCart(userId).catch((err) =>
+          this.logger.error('Failed to clear cart after order creation', err),
+        );
+      }
+
       const points = Math.floor(savedOrder.total / 1000);
 
       this.notificationsService.create({
@@ -352,6 +465,7 @@ export class OrdersService {
       }).catch((error) =>
         this.logger.error('Failed to create order notification', error),
       );
+
 
       if (points > 0) {
         this.usersService.addLoyaltyPoints(userId, points).then((res) => {

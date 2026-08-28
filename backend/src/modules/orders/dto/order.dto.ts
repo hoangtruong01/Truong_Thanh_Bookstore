@@ -143,3 +143,42 @@ export class OrderQueryDto extends PaginationDto {
   @IsString()
   search?: string;
 }
+
+export class CheckoutPreviewDto {
+  @ApiProperty({ type: [OrderItemDto] })
+  @IsArray({ message: 'items phải là một danh sách sản phẩm' })
+  @ArrayMinSize(1, { message: 'Đơn hàng phải có ít nhất 1 sản phẩm' })
+  @ValidateNested({ each: true })
+  @Type(() => OrderItemDto)
+  items: OrderItemDto[];
+
+  @ApiPropertyOptional({ example: '123 Nguyễn Trãi, Q.5, TP.HCM' })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  shippingAddress?: string;
+
+  @ApiPropertyOptional({ example: '0901234567' })
+  @IsOptional()
+  @IsPhoneNumberVN()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  phone?: string;
+
+  @ApiPropertyOptional({ enum: PaymentMethod, default: PaymentMethod.COD })
+  @IsOptional()
+  @IsEnum(PaymentMethod, { message: 'Phương thức thanh toán không hợp lệ' })
+  paymentMethod?: PaymentMethod;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
+  promotionCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  customerEmail?: string;
+}
+

@@ -22,8 +22,11 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     price: 5000,
     discountPrice: 0,
     stock: 10,
+    status: 'ACTIVE',
+    isDeleted: false,
     images: ['https://example.com/pen.jpg'],
   };
+
 
   const mockOrderModel = function (dto: any) {
     this.data = dto;
@@ -162,4 +165,68 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       expect(indexes.length).toBeGreaterThan(0);
     });
   });
+
+  describe('Task 15: Safe Checkout Flow & Checkout Preview', () => {
+    it('should preview checkout calculations correctly with shipping fee for subtotal < 299k', async () => {
+      mockProductsService.findById.mockResolvedValueOnce(mockProduct);
+
+      const previewDto: any = {
+        items: [{ product: mockProduct._id, name: mockProduct.name, quantity: 2, price: 5000 }],
+      };
+
+      const result = await ordersService.checkoutPreview(previewDto);
+      expect(result.subtotal).toBe(10000);
+      expect(result.shippingFee).toBe(30000);
+      expect(result.isEligibleForFreeShipping).toBe(false);
+      expect(result.amountNeededForFreeShipping).toBe(289000);
+      expect(result.total).toBe(40000);
+      expect(result.isValidForCheckout).toBe(true);
+    });
+
+    it('should grant free shipping when subtotal >= 299k in checkout preview', async () => {
+      const expensiveProduct = { ...mockProduct, price: 350000, stock: 5 };
+      mockProductsService.findById.mockResolvedValueOnce(expensiveProduct);
+
+      const previewDto: any = {
+        items: [{ product: expensiveProduct._id, name: expensiveProduct.name, quantity: 1, price: 350000 }],
+      };
+
+      const result = await ordersService.checkoutPreview(previewDto);
+      expect(result.subtotal).toBe(350000);
+      expect(result.shippingFee).toBe(0);
+      expect(result.isEligibleForFreeShipping).toBe(true);
+      expect(result.amountNeededForFreeShipping).toBe(0);
+      expect(result.total).toBe(350000);
+    });
+
+    it('should detect out-of-stock or capped items in checkout preview', async () => {
+      const lowStockProduct = { ...mockProduct, stock: 2 };
+      mockProductsService.findById.mockResolvedValueOnce(lowStockProduct);
+
+      const previewDto: any = {
+        items: [{ product: lowStockProduct._id, name: lowStockProduct.name, quantity: 5, price: 5000 }],
+      };
+
+      const result = await ordersService.checkoutPreview(previewDto);
+      expect(result.warnings.length).toBeGreaterThan(0);
+      expect(result.items[0].quantity).toBe(2); // Auto-capped
+      expect(result.subtotal).toBe(10000);
+    });
+
+    it('should apply valid voucher and deduct discount in checkout preview', async () => {
+      mockProductsService.findById.mockResolvedValueOnce({ ...mockProduct, price: 100000, stock: 10 });
+      mockPromotionsService.apply.mockResolvedValueOnce({ discount: 20000 });
+
+      const previewDto: any = {
+        items: [{ product: mockProduct._id, name: mockProduct.name, quantity: 1, price: 100000 }],
+        promotionCode: 'SALE20K',
+      };
+
+      const result = await ordersService.checkoutPreview(previewDto);
+      expect(result.discount).toBe(20000);
+      expect(result.appliedPromotion?.code).toBe('SALE20K');
+      expect(result.total).toBe(100000 + 30000 - 20000);
+    });
+  });
 });
+

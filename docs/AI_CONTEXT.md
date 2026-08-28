@@ -60,7 +60,7 @@ backend/src/modules/
 | **TASK 12** | Tìm kiếm Full-text & Lọc đa tiêu chí phân trang                 | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 13** | Chi tiết sản phẩm, Gallery, Thông số & Đánh giá                 | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 14** | Module Giỏ hàng Backend & Kiểm kho thời gian thực               | Phase 4 | P0         | 🟢 **DONE** |
-| **TASK 15** | Luồng Checkout an toàn & Kiểm tra nguyên tử                     | Phase 4 | P0         | ⚪ PENDING  |
+| **TASK 15** | Luồng Checkout an toàn & Kiểm tra nguyên tử                     | Phase 4 | P0         | 🟢 **DONE** |
 | **TASK 16** | Quản lý Sổ địa chỉ giao hàng người dùng                         | Phase 4 | P1         | ⚪ PENDING  |
 | **TASK 17** | Quản lý Đơn hàng, Vòng đời trạng thái & Hóa đơn PDF             | Phase 4 | P0         | ⚪ PENDING  |
 | **TASK 18** | Kiến trúc Thanh toán Provider Abstraction (VNPay, MoMo, COD)    | Phase 5 | P0         | ⚪ PENDING  |
@@ -130,6 +130,32 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-28] — Hoàn thành TASK 15: Luồng Checkout an toàn & Kiểm tra nguyên tử
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Chuẩn hóa và bảo vệ toàn diện luồng Đặt hàng & Thanh toán (Safe Checkout Journey) của Trường Thành Bookstore trên cả 3 nền tảng Backend NestJS, Frontend Web Vue 3 và Mobile App Flutter: Quy trình đa bước an toàn (`Cart -> Address -> Shipping -> Promotion -> Payment -> Confirm -> Order`), endpoint xem trước và kiểm tra nguyên tử `POST /orders/checkout-preview`, trừ kho nguyên tử với rollback bù trừ, chống duplicate order bằng `idempotencyKey`, tự động làm sạch giỏ hàng trên backend (`CartService.clearCart`) khi đặt hàng thành công và bảo vệ 100% unit tests.
+- **Thực hiện**:
+  - **Backend NestJS**:
+    - `backend/src/modules/orders/dto/order.dto.ts`: Bổ sung `CheckoutPreviewDto` hỗ trợ tính toán trước chi phí và kiểm tra tính toàn vẹn của giỏ hàng, địa chỉ, voucher.
+    - `backend/src/modules/orders/orders.module.ts`: Import `CartModule` vào `OrdersModule`.
+    - `backend/src/modules/orders/orders.service.ts`:
+      - `checkoutPreview`: Xác thực dữ liệu sản phẩm thời gian thực (tồn tại, không bị xóa, active), tự động điều chỉnh/cảnh báo nếu vượt tồn kho, xác thực voucher, tính toán chuẩn xác `subtotal`, `shippingFee` (ngưỡng Freeship 299K), `discount`, `total`, `isEligibleForFreeShipping`, `amountNeededForFreeShipping`, `warnings`, `isValidForCheckout`.
+      - `createAtomic`: Bảo toàn cơ chế `idempotencyKey`, trừ kho nguyên tử có rollback, tích hợp `CartService.clearCart(userId)` làm sạch giỏ hàng ngay khi đơn hàng được tạo thành công.
+    - `backend/src/modules/orders/orders.controller.ts`: Bổ sung `POST /orders/checkout-preview` có Throttle bảo vệ.
+    - `backend/src/modules/orders/orders.service.spec.ts`: Bổ sung 4 unit tests bao phủ `checkoutPreview`, tính toán Freeship 299K, điều chỉnh tồn kho và áp mã voucher.
+  - **Frontend Web Vue 3**:
+    - `frontend/src/services/order.service.ts`: Bổ sung API client `checkoutPreview`.
+    - `frontend/src/pages/customer/Checkout.vue`: Tích hợp `checkoutPreview` tự động trước khi gửi đơn hàng, validate thông tin nhận hàng/SĐT chuẩn VN, tạo và quản lý mã chống trùng lặp `idempotencyKey` trong `sessionStorage`, xóa giỏ hàng local sau khi đặt hàng thành công.
+  - **Mobile App Flutter**:
+    - `mobile/lib/screens/checkout/checkout_screen.dart`: Đồng bộ kiểm tra thông tin giao hàng, áp dụng voucher và làm sạch giỏ hàng khi đặt hàng thành công.
+- **Kết quả kiểm thử**:
+  - `npm test` (Backend): **14/14 test suites passed, 194/194 tests PASS 100%**.
+  - `npx jest test/all-fixes.spec.ts` (Backend QA): **11/11 tests PASS 100%**.
+  - `npm run build` (Backend): **PASS 100% (0 lỗi)**.
+  - `npm run build` (Frontend): **PASS 100% (0 lỗi)**.
+  - `flutter test` (Mobile): **6/6 tests PASS 100%**.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 16 — Quản lý Sổ địa chỉ giao hàng người dùng.
 
 ### [2026-08-28] — Hoàn thành TASK 14: Module Giỏ hàng Backend & Kiểm kho thời gian thực
 - **Người cập nhật**: Antigravity AI

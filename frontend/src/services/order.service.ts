@@ -1,6 +1,7 @@
 import api from '@/utils/api'
 
 export const orderService = {
+  checkoutPreview: (data: any) => api.post('/orders/checkout-preview', data),
   create: (data: any) => api.post('/orders', data),
   createAuthenticated: (data: any) => api.post('/orders/authenticated', data),
   getAll: (params?: any) => api.get('/orders', { params }),
