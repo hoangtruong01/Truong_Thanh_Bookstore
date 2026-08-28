@@ -57,7 +57,7 @@ backend/src/modules/
 | **TASK 09** | Bảo mật API (Helmet, CORS, Rate Limit, Sanitization)            | Phase 2 | P1         | 🟢 **DONE** |
 | **TASK 10** | Quản lý sản phẩm Admin & Excel Import/Export                    | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 11** | Quản lý danh mục, Slug & Cây danh mục đa cấp                    | Phase 3 | P1         | 🟢 **DONE** |
-| **TASK 12** | Tìm kiếm Full-text & Lọc đa tiêu chí phân trang                 | Phase 3 | P1         | ⚪ PENDING  |
+| **TASK 12** | Tìm kiếm Full-text & Lọc đa tiêu chí phân trang                 | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 13** | Chi tiết sản phẩm, Gallery, Thông số & Đánh giá                 | Phase 3 | P1         | ⚪ PENDING  |
 | **TASK 14** | Module Giỏ hàng Backend & Kiểm kho thời gian thực               | Phase 4 | P0         | ⚪ PENDING  |
 | **TASK 15** | Luồng Checkout an toàn & Kiểm tra nguyên tử                     | Phase 4 | P0         | ⚪ PENDING  |
@@ -98,7 +98,7 @@ backend/src/modules/
 
 ---
 
-## 📡 5. CHUẨN ĐỊNH DẠNG API (API CONTRACTS)
+## 📡 5. CHUẨN ĐỊNG DẠNG API (API CONTRACTS)
 
 ### Phản hồi Thành công (Success Response):
 
@@ -130,6 +130,40 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-28] — Hoàn thành TASK 12: Tìm kiếm Full-text & Lọc đa tiêu chí phân trang
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Nâng cấp toàn diện bộ máy tìm kiếm & khám phá sản phẩm (Discovery Engine) của Trường Thành Bookstore thành hệ thống thông minh, tốc độ cao và an toàn: Tìm kiếm Full-text & Diacritic-insensitive Tiếng Việt không phân biệt dấu/hoa thường (Tên, SKU, ISBN, Tác giả, NXB, Thương hiệu, Mô tả), chống tấn công ReDoS, API gợi ý tìm kiếm tức thì Autocomplete Suggestions (`GET /products/suggestions`), bộ lọc đa diện lồng nhau (Cây danh mục đệ quy cha-con, Khoảng giá, Sao, Tồn kho, Khuyến mãi, Flash Sale, Đa thương hiệu/Tác giả/NXB), bộ sắp xếp 8 chế độ, phân trang chuẩn hóa và đồng bộ 100% lên Frontend Web Vue 3 và Mobile App Flutter.
+- **Thực hiện**:
+  - **Schema & Indexes (ProductSchema)**:
+    - Bổ sung các trường siêu dữ liệu sách: `author?: string`, `publisher?: string`, `isbn?: string`, `publicationYear?: number`.
+    - Thiết lập MongoDB Full-text Index: `{ name: 'text', description: 'text', author: 'text', publisher: 'text', sku: 'text', isbn: 'text', brand: 'text' }`.
+    - Thiết lập Compound Indexes kết hợp cho các tiêu chí lọc: `{ category: 1, isDeleted: 1, status: 1 }`, `{ price: 1, isDeleted: 1 }`, `{ discountPrice: 1, isDeleted: 1 }`, `{ sold: -1, isDeleted: 1 }`, `{ rating: -1, isDeleted: 1 }`, `{ author: 1, isDeleted: 1 }`, `{ publisher: 1, isDeleted: 1 }`, `{ brand: 1, isDeleted: 1 }`, `{ sku: 1, isDeleted: 1 }`, `{ isbn: 1, isDeleted: 1 }`.
+  - **DTO Enhancements (ProductQueryDto & Create/Update DTOs)**:
+    - `CreateProductDto` & `UpdateProductDto`: Hỗ trợ `author`, `publisher`, `isbn`, `publicationYear`.
+    - `ProductQueryDto`: Mở rộng hỗ trợ `author`, `publisher`, `isbn`, `subOption`, `sortBy` / `sort`, `minPrice`, `maxPrice`, `minRating`, `inStock`, `discounted`, `isFlashSale`.
+  - **Dịch vụ Tìm kiếm & Lọc Chuyên sâu (ProductsService)**:
+    - `makeDiacriticRegex`: Tối ưu hàm chuyển đổi ký tự tiếng Việt không dấu thành biểu thức chính quy (Regex) toàn diện hỗ trợ mọi nguyên âm/phụ âm và bảo vệ ký tự đặc biệt.
+    - `findAll`: Lọc đa tiêu chí kết hợp, lọc đệ quy theo cây danh mục cha/con, lọc đa thương hiệu/tác giả/NXB phân tách dấu phẩy, lọc khoảng giá thực tế, sắp xếp 8 chế độ (`newest`, `price_asc`, `price_desc`, `best_selling`, `rating`, `name_asc`, `name_desc`, `discount_desc`), giới hạn an toàn 100 ký tự chống ReDoS.
+    - `getSuggestions(q, limit)`: API autocomplete hiệu năng cao trả về mảng từ khóa (`keywords`), danh mục khớp (`categories`) và top 4-6 sản phẩm xem nhanh (`products`) kèm ảnh, giá và nhãn giảm giá.
+    - `search`: Hỗ trợ tìm kiếm theo SKU, ISBN, Tác giả, NXB, Thương hiệu, Tên và Mô tả.
+  - **Controller & Endpoints (ProductsController)**:
+    - Bổ sung endpoint `GET /products/suggestions` tài liệu Swagger đầy đủ.
+  - **Đồng bộ Frontend Web (Vue 3)**:
+    - `frontend/src/services/product.service.ts`: Bổ sung API `getSuggestions(q, limit)`.
+    - `frontend/src/layouts/CustomerLayout.vue`: Tích hợp Live Autocomplete Suggestions dropdown (Debounced 250ms), hiển thị danh mục liên quan và top sản phẩm xem nhanh kèm giá.
+    - `frontend/src/pages/customer/ProductList.vue`: Nâng cấp giao diện Sidebar lọc đa tiêu chí (Cây danh mục, Lọc giá nhanh kèm presets, Tác giả, NXB, Thương hiệu, Đánh giá sao, Tồn kho, Khuyến mãi), thanh Toolbar sắp xếp 8 chế độ, thanh Tags bộ lọc đang chọn kèm nút "Xóa tất cả", phân trang số chuẩn hóa.
+  - **Đồng bộ Mobile App (Flutter)**:
+    - `mobile/lib/models/product_model.dart`: Thêm parsing `author`, `publisher`, `isbn`.
+    - `mobile/lib/providers/product_provider.dart`: Cập nhật `fetchProducts` gửi đầy đủ `author`, `publisher`, `sort`, bổ sung `setSortBy`.
+  - **Kiểm thử tự động (Unit Testing)**:
+    - Bổ sung test suite trong `backend/src/modules/products/products.service.spec.ts` kiểm thử toàn diện: Tìm kiếm tiếng Việt có/không dấu, SKU/ISBN/Tác giả/NXB, Lọc đa tiêu chí, Cây danh mục đệ quy, 8 kiểu sắp xếp, API Autocomplete Suggestions, ReDoS sanitize.
+- **Kết quả kiểm thử**:
+  - `npm test` (Backend): **14/14 test suites passed, 173/173 tests PASS 100%**.
+  - `npx jest test/all-fixes.spec.ts` (Backend QA): **11/11 tests PASS 100%**.
+  - `npm run build` (Backend): **PASS 100%**.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 13 — Chi tiết sản phẩm, Gallery, Thông số & Đánh giá.
 
 ### [2026-08-27] — Hoàn thành TASK 11: Quản lý danh mục, Slug & Cây danh mục đa cấp
 - **Người cập nhật**: Antigravity AI

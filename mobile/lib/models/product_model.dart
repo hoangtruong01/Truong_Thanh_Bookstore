@@ -4,6 +4,10 @@ class ProductModel {
   final String slug;
   final String sku;
   final String? description;
+  final String? brand;
+  final String? author;
+  final String? publisher;
+  final String? isbn;
   final num price;
   final num discountPrice;
   final int stock;
@@ -18,6 +22,10 @@ class ProductModel {
     required this.slug,
     required this.sku,
     this.description,
+    this.brand,
+    this.author,
+    this.publisher,
+    this.isbn,
     required this.price,
     required this.discountPrice,
     required this.stock,
@@ -41,6 +49,10 @@ class ProductModel {
       slug: json['slug'] ?? '',
       sku: json['sku'] ?? '',
       description: json['description'],
+      brand: json['brand'],
+      author: json['author'],
+      publisher: json['publisher'],
+      isbn: json['isbn'],
       price: json['price'] ?? 0,
       discountPrice: json['discountPrice'] ?? 0,
       stock: json['stock'] ?? 0,
@@ -58,6 +70,10 @@ class ProductModel {
       'slug': slug,
       'sku': sku,
       'description': description,
+      'brand': brand,
+      'author': author,
+      'publisher': publisher,
+      'isbn': isbn,
       'price': price,
       'discountPrice': discountPrice,
       'stock': stock,

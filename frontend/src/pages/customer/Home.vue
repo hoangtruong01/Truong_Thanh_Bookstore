@@ -1640,10 +1640,10 @@ onMounted(() => {
 
   productService
     .getNew(10)
-    .then((newRes) => {
+    .then((newRes: any) => {
       newProducts.value = newRes.data;
     })
-    .catch((err) => {
+    .catch((err: any) => {
       console.error("Error loading new products", err);
     })
     .finally(() => {

@@ -134,6 +134,15 @@ export class ProductsController {
     return this.productsService.search(q || '');
   }
 
+  @Get('suggestions')
+  @ApiOperation({ summary: 'Get search autocomplete suggestions (keywords, categories, products)' })
+  getSuggestions(
+    @Query('q') q?: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.productsService.getSuggestions(q || '', limit ? Number(limit) : 6);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get product by ID' })
   findById(@Param('id') id: string) {
