@@ -8,6 +8,7 @@ class ProductModel {
   final String? author;
   final String? publisher;
   final String? isbn;
+  final int? publicationYear;
   final num price;
   final num discountPrice;
   final int stock;
@@ -26,6 +27,7 @@ class ProductModel {
     this.author,
     this.publisher,
     this.isbn,
+    this.publicationYear,
     required this.price,
     required this.discountPrice,
     required this.stock,
@@ -53,6 +55,7 @@ class ProductModel {
       author: json['author'],
       publisher: json['publisher'],
       isbn: json['isbn'],
+      publicationYear: json['publicationYear'] != null ? int.tryParse(json['publicationYear'].toString()) : null,
       price: json['price'] ?? 0,
       discountPrice: json['discountPrice'] ?? 0,
       stock: json['stock'] ?? 0,
@@ -74,6 +77,7 @@ class ProductModel {
       'author': author,
       'publisher': publisher,
       'isbn': isbn,
+      'publicationYear': publicationYear,
       'price': price,
       'discountPrice': discountPrice,
       'stock': stock,

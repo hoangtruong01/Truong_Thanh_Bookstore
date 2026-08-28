@@ -299,12 +299,21 @@ export class ProductsService {
   }
 
   async findById(id: string): Promise<ProductDocument> {
-    const product = await this.productModel
-      .findById(id)
-      .populate('category')
-      .exec();
-    if (!product || product.isDeleted)
-      throw new NotFoundException('Product not found');
+    let product: ProductDocument | null = null;
+    if (Types.ObjectId.isValid(id)) {
+      product = await this.productModel
+        .findById(id)
+        .populate('category')
+        .exec();
+    } else {
+      product = await this.productModel
+        .findOne({ slug: id, isDeleted: false })
+        .populate('category')
+        .exec();
+    }
+    if (!product || product.isDeleted) {
+      throw new NotFoundException('Sản phẩm không tồn tại hoặc đã bị xóa');
+    }
     return product;
   }
 
@@ -313,8 +322,77 @@ export class ProductsService {
       .findOne({ slug, isDeleted: false })
       .populate('category')
       .exec();
-    if (!product) throw new NotFoundException('Product not found');
+    if (!product) {
+      throw new NotFoundException('Sản phẩm không tồn tại hoặc đã bị xóa');
+    }
     return product;
+  }
+
+  async getRelated(id: string, limit = 8): Promise<ProductDocument[]> {
+    let currentProduct: ProductDocument | null = null;
+    if (Types.ObjectId.isValid(id)) {
+      currentProduct = await this.productModel.findById(id).exec();
+    }
+    if (!currentProduct) {
+      currentProduct = await this.productModel.findOne({ slug: id }).exec();
+    }
+    if (!currentProduct) {
+      return [];
+    }
+
+    const conditions: any[] = [];
+    if (currentProduct.category) {
+      const catId =
+        typeof currentProduct.category === 'object' && (currentProduct.category as any)._id
+          ? (currentProduct.category as any)._id
+          : currentProduct.category;
+      conditions.push({ category: catId });
+    }
+    if (currentProduct.author && currentProduct.author.trim()) {
+      conditions.push({ author: currentProduct.author });
+    }
+    if (currentProduct.publisher && currentProduct.publisher.trim()) {
+      conditions.push({ publisher: currentProduct.publisher });
+    }
+    if (
+      currentProduct.brand &&
+      currentProduct.brand.trim() &&
+      currentProduct.brand !== 'Khác' &&
+      currentProduct.brand !== 'Chưa rõ'
+    ) {
+      conditions.push({ brand: currentProduct.brand });
+    }
+
+    const query: any = {
+      _id: { $ne: currentProduct._id },
+      isDeleted: false,
+    };
+
+    if (conditions.length > 0) {
+      query.$or = conditions;
+    }
+
+    let related = await this.productModel
+      .find(query)
+      .populate('category')
+      .sort({ rating: -1, sold: -1, createdAt: -1 })
+      .limit(limit)
+      .exec();
+
+    // Fallback if no matching related items found
+    if (related.length === 0) {
+      related = await this.productModel
+        .find({
+          _id: { $ne: currentProduct._id },
+          isDeleted: false,
+        })
+        .populate('category')
+        .sort({ rating: -1, sold: -1, createdAt: -1 })
+        .limit(limit)
+        .exec();
+    }
+
+    return related;
   }
 
   async update(id: string, dto: UpdateProductDto): Promise<ProductDocument> {

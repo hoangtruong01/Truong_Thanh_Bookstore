@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { Types } from 'mongoose';
 import * as ExcelJS from 'exceljs';
 import { ProductsService } from './products.service';
 import { Product } from './schemas/product.schema';
@@ -11,6 +12,35 @@ import { Inventory } from '../inventory/schemas/inventory.schema';
 import { EmailService } from '../email/email.service';
 import { ConfigService } from '@nestjs/config';
 import { ProductStatus } from '../../common/enums';
+
+const createMockQuery = (result: any = null) => {
+  const query: any = {
+    populate: jest.fn().mockImplementation(() => query),
+    sort: jest.fn().mockImplementation(() => query),
+    select: jest.fn().mockImplementation(() => query),
+    skip: jest.fn().mockImplementation(() => query),
+    limit: jest.fn().mockImplementation(() => query),
+    lean: jest.fn().mockImplementation(() => {
+      const leanQuery: any = {
+        exec: jest.fn().mockResolvedValue(result),
+        populate: jest.fn().mockImplementation(() => leanQuery),
+        sort: jest.fn().mockImplementation(() => leanQuery),
+        select: jest.fn().mockImplementation(() => leanQuery),
+        skip: jest.fn().mockImplementation(() => leanQuery),
+        limit: jest.fn().mockImplementation(() => leanQuery),
+        then: (onResolve: any, onReject: any) =>
+          Promise.resolve(result).then(onResolve, onReject),
+        catch: (onReject: any) => Promise.resolve(result).catch(onReject),
+      };
+      return leanQuery;
+    }),
+    exec: jest.fn().mockResolvedValue(result),
+    then: (onResolve: any, onReject: any) =>
+      Promise.resolve(result).then(onResolve, onReject),
+    catch: (onReject: any) => Promise.resolve(result).catch(onReject),
+  };
+  return query;
+};
 
 describe('ProductsService (TASK 10: Product Management & Excel)', () => {
   let service: ProductsService;
@@ -56,61 +86,15 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       }),
     }));
 
-    const createMockQuery = (result: any = [mockProduct]) => {
-      const query: any = {
-        populate: jest.fn().mockImplementation(() => query),
-        sort: jest.fn().mockImplementation(() => query),
-        select: jest.fn().mockImplementation(() => query),
-        skip: jest.fn().mockImplementation(() => query),
-        limit: jest.fn().mockImplementation(() => query),
-        lean: jest.fn().mockImplementation(() => {
-          const leanQuery: any = {
-            exec: jest.fn().mockResolvedValue(result),
-            populate: jest.fn().mockImplementation(() => leanQuery),
-            sort: jest.fn().mockImplementation(() => leanQuery),
-            select: jest.fn().mockImplementation(() => leanQuery),
-            skip: jest.fn().mockImplementation(() => leanQuery),
-            limit: jest.fn().mockImplementation(() => leanQuery),
-            then: (onResolve: any, onReject: any) =>
-              Promise.resolve(result).then(onResolve, onReject),
-            catch: (onReject: any) => Promise.resolve(result).catch(onReject),
-          };
-          return leanQuery;
-        }),
-        exec: jest.fn().mockResolvedValue(result),
-        then: (onResolve: any, onReject: any) =>
-          Promise.resolve(result).then(onResolve, onReject),
-        catch: (onReject: any) => Promise.resolve(result).catch(onReject),
-      };
-      return query;
-    };
-
     mockProductModel.find = jest.fn().mockImplementation(() => createMockQuery([mockProduct]));
-
-    mockProductModel.findOne = jest.fn().mockReturnValue({
-      exec: jest.fn().mockResolvedValue(mockProduct),
-      lean: jest.fn().mockResolvedValue(mockProduct),
-    });
-
-    mockProductModel.findById = jest.fn().mockReturnValue({
-      populate: jest.fn().mockReturnValue({
-        exec: jest.fn().mockResolvedValue(mockProduct),
-      }),
-      exec: jest.fn().mockResolvedValue(mockProduct),
-    });
-
-    mockProductModel.findByIdAndUpdate = jest.fn().mockReturnValue({
-      populate: jest.fn().mockReturnValue({
-        exec: jest.fn().mockResolvedValue({
-          ...mockProduct,
-          name: 'Bút bi Thiên Long Cập Nhật',
-        }),
-      }),
-      exec: jest.fn().mockResolvedValue({
+    mockProductModel.findOne = jest.fn().mockImplementation(() => createMockQuery(mockProduct));
+    mockProductModel.findById = jest.fn().mockImplementation(() => createMockQuery(mockProduct));
+    mockProductModel.findByIdAndUpdate = jest.fn().mockImplementation(() =>
+      createMockQuery({
         ...mockProduct,
         name: 'Bút bi Thiên Long Cập Nhật',
       }),
-    });
+    );
 
     mockProductModel.countDocuments = jest.fn().mockReturnValue({
       exec: jest.fn().mockResolvedValue(1),
@@ -194,13 +178,9 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
     });
 
     it('should throw NotFoundException when product is not found by id', async () => {
-      mockProductModel.findById.mockReturnValueOnce({
-        populate: jest.fn().mockReturnValue({
-          exec: jest.fn().mockResolvedValue(null),
-        }),
-      });
+      mockProductModel.findById.mockReturnValueOnce(createMockQuery(null));
 
-      await expect(service.findById('non-existent-id')).rejects.toThrow(
+      await expect(service.findById('507f1f77bcf86cd799439099')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -429,6 +409,81 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       const maliciousInput = 'a'.repeat(300) + '.*+?^${}()|[]\\';
       const result = await service.findAll({ q: maliciousInput });
       expect(result).toBeDefined();
+    });
+  });
+
+  describe('4. TASK 13: Product Detail, SEO Slug & Related Products', () => {
+    it('should find product detail by valid ID', async () => {
+      mockProductModel.findById.mockReturnValueOnce(createMockQuery(mockProduct));
+      const res = await service.findById(mockProduct._id.toString());
+      expect(res).toBeDefined();
+      expect(res.name).toBe(mockProduct.name);
+    });
+
+    it('should fallback to finding by slug when ID is not found or is a slug string', async () => {
+      mockProductModel.findById.mockReturnValueOnce(createMockQuery(null));
+      mockProductModel.findOne.mockReturnValueOnce(createMockQuery(mockProduct));
+      const res = await service.findById('but-bi-thien-long');
+      expect(res).toBeDefined();
+      expect(res.slug).toBe(mockProduct.slug);
+    });
+
+    it('should throw NotFoundException when product is not found by ID or slug', async () => {
+      mockProductModel.findById.mockReturnValueOnce(createMockQuery(null));
+      mockProductModel.findOne.mockReturnValueOnce(createMockQuery(null));
+      await expect(service.findById('non-existent-product')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should find product detail by SEO slug', async () => {
+      mockProductModel.findOne.mockReturnValueOnce(createMockQuery(mockProduct));
+      const res = await service.findBySlug('but-bi-thien-long');
+      expect(res).toBeDefined();
+      expect(res.slug).toBe(mockProduct.slug);
+    });
+
+    it('should throw NotFoundException when slug does not exist', async () => {
+      mockProductModel.findOne.mockReturnValueOnce(createMockQuery(null));
+      await expect(service.findBySlug('unknown-slug')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return related products matching category, author or brand', async () => {
+      mockProductModel.findById.mockReturnValueOnce(
+        createMockQuery({
+          ...mockProduct,
+          author: 'Nguyễn Nhật Ánh',
+          publisher: 'NXB Trẻ',
+          brand: 'Thiên Long',
+        }),
+      );
+
+      const relatedList = [
+        {
+          _id: new Types.ObjectId(),
+          name: 'Sách Tôi Thấy Hoa Vàng Trên Cỏ Xanh',
+          author: 'Nguyễn Nhật Ánh',
+          category: mockProduct.category,
+        },
+        {
+          _id: new Types.ObjectId(),
+          name: 'Sách Mắt Biếc',
+          author: 'Nguyễn Nhật Ánh',
+          category: mockProduct.category,
+        },
+      ];
+
+      mockProductModel.find.mockReturnValueOnce(createMockQuery(relatedList));
+
+      const res = await service.getRelated(mockProduct._id.toString(), 8);
+      expect(res).toBeDefined();
+      expect(Array.isArray(res)).toBe(true);
+      expect(res.length).toBe(2);
+    });
+
+    it('should return empty array if product to find related items for is not found', async () => {
+      mockProductModel.findById.mockReturnValueOnce(createMockQuery(null));
+      mockProductModel.findOne.mockReturnValueOnce(createMockQuery(null));
+      const res = await service.getRelated('unknown-id', 8);
+      expect(res).toEqual([]);
     });
   });
 });

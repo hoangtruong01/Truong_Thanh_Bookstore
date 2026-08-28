@@ -3,6 +3,8 @@ import api from '@/utils/api'
 export const productService = {
   getAll: (params?: any) => api.get('/products', { params }),
   getById: (id: string) => api.get(`/products/${id}`),
+  getBySlug: (slug: string) => api.get(`/products/slug/${slug}`),
+  getRelated: (id: string, limit = 8) => api.get(`/products/${id}/related`, { params: { limit } }),
   getFeatured: () => api.get('/products/featured'),
   getNew: (limit = 10) => api.get('/products', { params: { limit, sort: 'newest' } }),
   getBestSelling: (limit = 10) => api.get('/products/best-selling', { params: { limit } }),

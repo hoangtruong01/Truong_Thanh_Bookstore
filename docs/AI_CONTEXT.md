@@ -58,7 +58,7 @@ backend/src/modules/
 | **TASK 10** | Quản lý sản phẩm Admin & Excel Import/Export                    | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 11** | Quản lý danh mục, Slug & Cây danh mục đa cấp                    | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 12** | Tìm kiếm Full-text & Lọc đa tiêu chí phân trang                 | Phase 3 | P1         | 🟢 **DONE** |
-| **TASK 13** | Chi tiết sản phẩm, Gallery, Thông số & Đánh giá                 | Phase 3 | P1         | ⚪ PENDING  |
+| **TASK 13** | Chi tiết sản phẩm, Gallery, Thông số & Đánh giá                 | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 14** | Module Giỏ hàng Backend & Kiểm kho thời gian thực               | Phase 4 | P0         | ⚪ PENDING  |
 | **TASK 15** | Luồng Checkout an toàn & Kiểm tra nguyên tử                     | Phase 4 | P0         | ⚪ PENDING  |
 | **TASK 16** | Quản lý Sổ địa chỉ giao hàng người dùng                         | Phase 4 | P1         | ⚪ PENDING  |
@@ -130,6 +130,40 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-28] — Hoàn thành TASK 13: Chi tiết sản phẩm, Gallery, Thông số & Đánh giá
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Nâng cấp toàn diện phân hệ Chi tiết sản phẩm (Product Detail View & APIs) của Trường Thành Bookstore thành một trải nghiệm thương mại điện tử chuyên sâu, chuẩn SEO, hỗ trợ đầy đủ thông số sách & văn phòng phẩm, thư viện ảnh tương tác cao với Lightbox Zoom, hệ thống phân bổ đánh giá 5 sao kèm bộ lọc sao & huy hiệu Đã mua hàng, thuật toán gợi ý sản phẩm liên quan thông minh và đồng bộ 100% trên cả Backend NestJS, Frontend Web Vue 3 và Mobile Flutter.
+- **Thực hiện**:
+  - **Backend NestJS**:
+    - `backend/src/modules/products/products.service.ts`:
+      - Nâng cấp `findById(id)`: Tự động phân biệt và hỗ trợ tìm kiếm bằng MongoDB ObjectId hoặc SEO Slug, tự động populate danh mục liên kết và loại trừ sản phẩm bị xóa (`isDeleted: false`).
+      - Thêm mới `findBySlug(slug)`: Tra cứu sản phẩm bằng đường dẫn thân thiện SEO.
+      - Thêm mới `getRelated(id, limit)`: Thuật toán gợi ý thông minh ưu tiên sản phẩm cùng danh mục, cùng tác giả, nhà xuất bản hoặc thương hiệu; tự động loại trừ sản phẩm hiện tại (`_id: { $ne: currentId }`), sắp xếp theo rating và số lượng bán; hỗ trợ fallback mượt mà khi không đủ số lượng.
+    - `backend/src/modules/products/products.controller.ts`:
+      - Thêm route `GET /products/slug/:slug` (Swagger documented).
+      - Thêm route `GET /products/:id/related` (Swagger documented).
+    - `backend/src/modules/products/products.service.spec.ts`:
+      - Bổ sung test suite chi tiết kiểm thử `findById`, `findBySlug`, `getRelated` và các kịch bản fallback.
+  - **Frontend Web Vue 3**:
+    - `frontend/src/services/product.service.ts`: Bổ sung `getBySlug` và `getRelated`.
+    - `frontend/src/types/index.ts`: Cập nhật `Product` interface hỗ trợ `author`, `publisher`, `publicationYear`, `isbn`.
+    - `frontend/src/pages/customer/ProductDetail.vue`:
+      - **Thông số kỹ thuật đa năng**: Hiển thị linh hoạt tác giả, nhà xuất bản, năm xuất bản, ISBN, thương hiệu, mã SKU, danh mục, đơn vị tính, tình trạng kho, xuất xứ, nhà phân phối.
+      - **Thư viện ảnh Gallery & Lightbox**: Hỗ trợ nhấp xem ảnh phóng to Modal Lightbox toàn màn hình, chuyển ảnh Prev/Next, phím tắt bàn phím (ESC, Mũi tên trái/phải), thanh thumbnails trượt.
+      - **Hệ thống đánh giá đa chiều**: Bảng phân bổ 5 mức sao (1★ - 5★) kèm thanh tiến trình phần trăm, bộ lọc đánh giá theo số sao (Tất cả, 5 sao, 4 sao, 3 sao, 2 sao, 1 sao), huy hiệu *✓ Đã mua hàng*, form gửi & chỉnh sửa đánh giá trực tiếp.
+      - **Sản phẩm liên quan & Gợi ý**: Kết nối API `getRelated` hiển thị danh sách sản phẩm cùng loại.
+  - **Mobile App Flutter**:
+    - `mobile/lib/models/product_model.dart`: Bổ sung trường `publicationYear` vào model (constructor, fromJson, toJson).
+    - `mobile/lib/screens/product/product_detail_screen.dart`: Cập nhật bảng thông số sản phẩm hiển thị đầy đủ thông tin sách (Tác giả, NXB, Năm XB, ISBN, Thương hiệu, SKU, Tình trạng).
+- **Kết quả kiểm thử**:
+  - `npm test` (Backend): **14/14 test suites passed, 180/180 tests PASS 100%**.
+  - `npx jest test/all-fixes.spec.ts` (Backend QA): **11/11 tests PASS 100%**.
+  - `npm run build` (Backend): **PASS 100% (0 lỗi)**.
+  - `npm run build` (Frontend): **PASS 100% (0 lỗi)**.
+  - `flutter test` (Mobile): **6/6 tests PASS 100%**.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 14 — Module Giỏ hàng Backend & Kiểm kho thời gian thực.
 
 ### [2026-08-28] — Hoàn thành TASK 12: Tìm kiếm Full-text & Lọc đa tiêu chí phân trang
 - **Người cập nhật**: Antigravity AI

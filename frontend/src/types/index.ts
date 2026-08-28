@@ -27,6 +27,10 @@ export interface Product {
   description?: string
   category: Category | string
   brand?: string
+  author?: string
+  publisher?: string
+  publicationYear?: number
+  isbn?: string
   price: number
   discountPrice: number
   stock: number
