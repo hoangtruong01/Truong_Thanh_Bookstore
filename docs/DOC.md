@@ -103,7 +103,7 @@ Hệ thống **Trường Thành Bookstore** là nền tảng thương mại đi�
 
 ### PHASE 4 — SHOPPING
 - **TASK 14 [P0] — Cart [DONE]**: Xây dựng module Cart hoàn chỉnh trên backend (thêm, sửa số lượng, xóa, làm trống), kiểm tra tồn kho và làm sạch dữ liệu thời gian thực, tính subtotal, ngưỡng miễn phí vận chuyển 299.000đ, áp dụng/hủy mã giảm giá voucher (`POST /cart/voucher`, `DELETE /cart/voucher`), đồng bộ giỏ hàng offline khi đăng nhập (`POST /cart/sync`), endpoint xác thực trước checkout (`GET /cart/validate`). Đồng bộ Frontend Web Vue 3 và Mobile App Flutter. 190 unit tests PASS 100%.
-- **TASK 15 [P0] — Checkout**: Luồng checkout an toàn đa bước (Cart -> Address -> Shipping -> Promotion -> Payment -> Confirm -> Order) với validation nguyên tử trước khi tạo đơn.
+- **TASK 15 [P0] — Checkout [DONE]**: Luồng checkout an toàn đa bước (Cart -> Address -> Shipping -> Promotion -> Payment -> Confirm -> Order) với endpoint xác thực nguyên tử `POST /orders/checkout-preview`, trừ kho nguyên tử với rollback bù trừ, chống duplicate order bằng `idempotencyKey`, tự động làm sạch giỏ hàng trên backend (`CartService.clearCart`) khi đặt hàng thành công. Đồng bộ Frontend Web Vue 3 và Mobile Flutter. 194 unit tests PASS 100%.
 - **TASK 16 [P1] — Address**: Quản lý sổ địa chỉ người dùng (thêm, sửa, xóa, đặt mặc định) với đầy đủ thông tin: tên, SĐT, tỉnh/thành, quận/huyện, phường/xã, địa chỉ chi tiết.
 - **TASK 17 [P0] — Order**: Quản lý vòng đời đơn hàng qua các trạng thái: `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPING`, `DELIVERED`, `CANCELLED`, `RETURNED`. Cấm chuyển đổi trạng thái bất hợp lệ, kiểm tra quyền sở hữu đơn.
 

@@ -378,6 +378,7 @@ async function handleApplyCoupon() {
   }
 }
 
+
 async function applySuggestedCoupon(code: string) {
   const success = await cartStore.applyCoupon(code)
   if (success) {
@@ -408,37 +409,14 @@ async function placeOrder() {
     toast.warning('Vui lòng điền đầy đủ thông tin giao hàng')
     return
   }
-
-  if (!isPhoneValid.value) {
-    toast.warning('Số điện thoại không hợp lệ. Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0.')
-    return
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(shippingInfo.email)) {
-    toast.warning('Địa chỉ email không đúng định dạng.')
-    return
-  }
-
   submitting.value = true
   try {
-    // Validate stock with backend before placing order
-    for (const item of checkoutItems.value) {
-      const prodRes = await productService.getById(item.product._id)
-      const latestProd = prodRes.data
-      if (latestProd.stock < item.quantity) {
-        toast.error(`Sản phẩm "${item.product.name}" hiện chỉ còn ${latestProd.stock} sản phẩm trong kho.`)
-        submitting.value = false
-        return
-      }
-    }
-
     const items = checkoutItems.value.map(item => ({
       product: item.product._id,
       name: item.product.name,
       price: getEffectivePrice(item.product.price, item.product.discountPrice),
       quantity: item.quantity,
-      image: item.product.images[0] || '',
+      image: item.product.images?.[0] || '',
     }))
 
     const orderData: any = {
@@ -453,6 +431,17 @@ async function placeOrder() {
       idempotencyKey: checkoutIdempotencyKey,
     }
 
+    // Pre-checkout safe validation
+    const previewRes = await orderService.checkoutPreview(orderData)
+    const previewData = previewRes.data?.data || previewRes.data
+    if (previewData && previewData.warnings && previewData.warnings.length > 0) {
+      toast.warning(previewData.warnings.join(' | '))
+      if (!previewData.isValidForCheckout) {
+        submitting.value = false
+        return
+      }
+    }
+
     let response: any
     if (authStore.isAuthenticated) {
       response = await orderService.createAuthenticated(orderData)
@@ -460,14 +449,15 @@ async function placeOrder() {
       response = await orderService.create(orderData)
     }
 
-    orderCode.value = response.data.orderCode
-    createdOrderId.value = response.data._id
-    if (!authStore.isAuthenticated && response.data.guestAccessToken) {
-      localStorage.setItem(
-        `guest-order-token:${response.data._id}`,
-        response.data.guestAccessToken,
-      )
+    orderCode.value = response.data.data?.orderCode || response.data.orderCode
+    const orderId = response.data.data?._id || response.data._id
+    createdOrderId.value = orderId
+
+    const guestToken = response.data.data?.guestAccessToken || response.data.guestAccessToken
+    if (!authStore.isAuthenticated && guestToken) {
+      localStorage.setItem(`guest-order-token:${orderId}`, guestToken)
     }
+
     sessionStorage.removeItem('checkout-idempotency-key')
     orderSuccess.value = true
     cartStore.clearCheckedOutItems()

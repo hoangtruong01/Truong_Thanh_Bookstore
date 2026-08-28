@@ -7,6 +7,7 @@ import { ProductsModule } from '../products/products.module';
 import { PromotionsModule } from '../promotions/promotions.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
+import { CartModule } from '../cart/cart.module';
 
 @Module({
   imports: [
@@ -15,9 +16,11 @@ import { UsersModule } from '../users/users.module';
     PromotionsModule,
     NotificationsModule,
     UsersModule,
+    CartModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],
   exports: [OrdersService, MongooseModule],
 })
 export class OrdersModule {}
+

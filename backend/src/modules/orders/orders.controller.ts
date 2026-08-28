@@ -22,6 +22,7 @@ import {
   CreateOrderDto,
   UpdateOrderStatusDto,
   OrderQueryDto,
+  CheckoutPreviewDto,
 } from './dto/order.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -31,6 +32,14 @@ import { StaffPermission, UserRole } from '../../common/enums';
 @Controller('orders')
 export class OrdersController {
   constructor(private ordersService: OrdersService) {}
+
+  @Post('checkout-preview')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @ApiOperation({ summary: 'Preview checkout calculations, validate inventory, freeship and voucher' })
+  checkoutPreview(@Body() dto: CheckoutPreviewDto, @Request() req: any) {
+    const userId = req.user?._id;
+    return this.ordersService.checkoutPreview(dto, userId);
+  }
 
   @Post()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -47,6 +56,7 @@ export class OrdersController {
   createAuthenticated(@Body() dto: CreateOrderDto, @Request() req: any) {
     return this.ordersService.create(dto, req.user._id);
   }
+
 
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
