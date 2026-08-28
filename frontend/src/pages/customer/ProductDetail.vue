@@ -25,12 +25,13 @@
       <div class="bg-white border border-slate-200 rounded-3xl p-8 grid grid-cols-1 md:grid-cols-2 gap-12 shadow-xs">
         <!-- Gallery -->
         <div class="space-y-4">
-          <div class="aspect-square bg-slate-50/70 rounded-2xl overflow-hidden border border-slate-100 relative flex items-center justify-center">
+          <div class="aspect-square bg-slate-50/70 rounded-2xl overflow-hidden border border-slate-100 relative flex items-center justify-center group">
             <!-- Sliding Track -->
             <div 
               v-if="product && product.images && product.images.length > 0"
-              class="flex w-full h-full transition-transform duration-500 ease-in-out"
+              class="flex w-full h-full transition-transform duration-500 ease-in-out cursor-zoom-in"
               :style="{ transform: `translateX(-${Math.max(0, product.images.indexOf(selectedImage)) * 100}%)` }"
+              @click="openLightbox(Math.max(0, product.images.indexOf(selectedImage)))"
             >
               <div 
                 v-for="(img, idx) in product.images" 
@@ -49,7 +50,7 @@
                   v-if="!brokenImages[img]"
                   :src="img" 
                   @error="handleImageError(img)"
-                  class="w-full h-full object-contain p-4 relative z-10 filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.06)]" 
+                  class="w-full h-full object-contain p-4 relative z-10 filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.06)] group-hover:scale-105 transition-transform duration-300" 
                 />
                 <div v-else :class="`w-full h-full ${getProductPlaceholder(product ? product.name : '').gradient} flex items-center justify-center`">
                   <svg v-if="getProductPlaceholder(product ? product.name : '').icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-white/90">
@@ -425,31 +426,55 @@
 
       <!-- Product Specifications Block -->
       <div class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xs space-y-6">
-        <h2 class="text-lg font-extrabold text-slate-900 border-b border-slate-100 pb-4">Thông tin sản phẩm</h2>
+        <h2 class="text-lg font-extrabold text-slate-900 border-b border-slate-100 pb-4 flex items-center gap-2">
+          <span>📋</span> Thông tin chi tiết & Thông số kỹ thuật
+        </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 text-sm">
-          <div class="flex py-2 border-b border-slate-100/70">
-            <span class="w-1/3 text-slate-400 font-medium">Thương hiệu</span>
-            <span class="w-2/3 text-slate-800 font-semibold">{{ product.brand || 'Chưa rõ' }}</span>
+          <div v-if="product.author" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Tác giả</span>
+            <span class="w-2/3 text-slate-800 font-bold text-red-600">{{ product.author }}</span>
           </div>
-          <div class="flex py-2 border-b border-slate-100/70">
+          <div v-if="product.publisher" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Nhà xuất bản</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.publisher }}</span>
+          </div>
+          <div v-if="product.publicationYear" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Năm xuất bản</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.publicationYear }}</span>
+          </div>
+          <div v-if="product.isbn" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Mã ISBN</span>
+            <span class="w-2/3 text-slate-800 font-mono font-semibold">{{ product.isbn }}</span>
+          </div>
+          <div class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Thương hiệu</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.brand || 'Khác' }}</span>
+          </div>
+          <div class="flex py-2.5 border-b border-slate-100/70">
             <span class="w-1/3 text-slate-400 font-medium">Mã SKU</span>
             <span class="w-2/3 text-slate-800 font-mono font-semibold">{{ product.sku }}</span>
           </div>
-          <div class="flex py-2 border-b border-slate-100/70">
+          <div class="flex py-2.5 border-b border-slate-100/70">
             <span class="w-1/3 text-slate-400 font-medium">Danh mục</span>
-            <span class="w-2/3 text-slate-800 font-semibold">{{ typeof product.category === 'object' ? product.category.name : 'Văn phòng phẩm' }}</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ typeof product.category === 'object' && product.category ? product.category.name : 'Văn phòng phẩm' }}</span>
           </div>
-          <div class="flex py-2 border-b border-slate-100/70">
-            <span class="w-1/3 text-slate-400 font-medium">Tình trạng</span>
-            <span class="w-2/3 text-slate-800 font-semibold">{{ product.stock > 0 ? 'Còn hàng' : 'Hết hàng' }}</span>
+          <div class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Đơn vị tính</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.unit || 'Quyển/Cái' }}</span>
           </div>
-          <div class="flex py-2 border-b border-slate-100/70">
+          <div class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Tình trạng kho</span>
+            <span :class="[product.stock > 0 ? 'text-green-600 font-bold' : 'text-red-500 font-bold']" class="w-2/3">
+              {{ product.stock > 0 ? `Còn hàng (${product.stock} ${product.unit || 'cái'})` : 'Tạm hết hàng' }}
+            </span>
+          </div>
+          <div class="flex py-2.5 border-b border-slate-100/70">
             <span class="w-1/3 text-slate-400 font-medium">Xuất xứ</span>
             <span class="w-2/3 text-slate-800 font-semibold">Việt Nam</span>
           </div>
-          <div class="flex py-2 border-b border-slate-100/70">
-            <span class="w-1/3 text-slate-400 font-medium">Nhà cung cấp</span>
-            <span class="w-2/3 text-slate-800 font-semibold">Trường Thanh Bookstore</span>
+          <div class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Nhà phân phối</span>
+            <span class="w-2/3 text-slate-800 font-semibold">Trường Thành Bookstore</span>
           </div>
         </div>
       </div>
@@ -457,20 +482,25 @@
       <!-- Reviews & Ratings Section -->
       <div class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xs space-y-8">
         <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-          <h2 class="text-lg font-extrabold text-slate-900">Đánh giá sản phẩm</h2>
+          <div>
+            <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+              <span>⭐</span> Đánh giá & Nhận xét từ khách hàng
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5 font-medium">Đánh giá trung thực từ người mua hàng thực tế</p>
+          </div>
           <button 
             v-if="authStore.isAuthenticated"
             @click="showReviewForm = !showReviewForm" 
-            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-sm transition-colors cursor-pointer focus:outline-none"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-95"
           >
-            {{ showReviewForm ? 'Hủy đánh giá' : 'Viết đánh giá' }}
+            {{ showReviewForm ? 'Đóng form' : '+ Viết đánh giá' }}
           </button>
         </div>
 
         <!-- Rating Stats -->
-        <div class="rating-stats-panel grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-          <div class="md:col-span-4 text-center space-y-2 border-r border-slate-100 py-4">
-            <div class="text-5xl font-black text-slate-800">{{ averageRating }}</div>
+        <div class="rating-stats-panel grid grid-cols-1 md:grid-cols-12 gap-8 items-center bg-slate-50/70 p-6 rounded-2xl border border-slate-100">
+          <div class="md:col-span-4 text-center space-y-2 md:border-r border-slate-200/80 py-2">
+            <div class="text-5xl font-black text-slate-800">{{ averageRating }} <span class="text-2xl text-slate-400 font-medium">/ 5</span></div>
             <div class="flex justify-center gap-1">
               <svg 
                 v-for="star in 5" 
@@ -484,7 +514,7 @@
                 <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
               </svg>
             </div>
-            <p class="text-xs text-slate-400 font-medium">Dựa trên {{ reviews.length }} đánh giá</p>
+            <p class="text-xs text-slate-500 font-bold">Dựa trên {{ reviews.length }} lượt đánh giá</p>
           </div>
 
           <div class="md:col-span-8 space-y-2">
@@ -493,26 +523,51 @@
               :key="ratingVal"
               class="flex items-center gap-3 text-xs"
             >
-              <span class="w-12 text-right text-slate-500 font-bold">{{ ratingVal }} sao</span>
-              <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+              <span class="w-12 text-right text-slate-600 font-bold flex items-center justify-end gap-1">
+                {{ ratingVal }} <span class="text-yellow-500">★</span>
+              </span>
+              <div class="flex-1 h-2.5 bg-slate-200/80 rounded-full overflow-hidden">
                 <div 
                   class="h-full bg-yellow-500 rounded-full transition-all duration-500"
                   :style="{ width: `${ratingStats[ratingVal].percent}%` }"
                 ></div>
               </div>
-              <span class="w-12 text-slate-400">{{ ratingStats[ratingVal].count }}</span>
+              <span class="w-16 text-slate-500 font-semibold">{{ ratingStats[ratingVal].count }} ({{ Math.round(ratingStats[ratingVal].percent) }}%)</span>
             </div>
           </div>
         </div>
 
+        <!-- Star Filter Tabs -->
+        <div class="flex flex-wrap items-center gap-2 pt-2 border-b border-slate-100 pb-4">
+          <span class="text-xs font-bold text-slate-500 mr-2">Lọc theo số sao:</span>
+          <button
+            @click="selectedRatingFilter = null"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            :class="[selectedRatingFilter === null ? 'bg-slate-800 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
+          >
+            Tất cả ({{ reviews.length }})
+          </button>
+          <button
+            v-for="star in [5, 4, 3, 2, 1]"
+            :key="star"
+            @click="selectedRatingFilter = star"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+            :class="[selectedRatingFilter === star ? 'bg-yellow-500 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
+          >
+            <span>{{ star }}</span>
+            <span>★</span>
+            <span class="text-[10px] opacity-80">({{ ratingStats[star].count }})</span>
+          </button>
+        </div>
+
         <!-- Write Review Form -->
-        <div v-if="showReviewForm && authStore.isAuthenticated" class="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-4 animate-in fade-in slide-in-from-top-4 duration-200">
-          <h3 class="text-sm font-extrabold text-slate-800">Đánh giá của bạn</h3>
+        <div v-if="showReviewForm && authStore.isAuthenticated" class="bg-slate-50 rounded-2xl p-6 border border-slate-200/80 space-y-4 animate-in fade-in slide-in-from-top-4 duration-200">
+          <h3 class="text-sm font-extrabold text-slate-800">Đánh giá của bạn về sản phẩm này</h3>
           
           <!-- Rating Star Selector -->
           <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-500 font-medium">Chọn số sao:</span>
-            <div class="flex gap-1">
+            <span class="text-xs text-slate-500 font-medium">Chọn mức đánh giá:</span>
+            <div class="flex gap-1.5">
               <button 
                 v-for="star in 5" 
                 :key="star"
@@ -524,33 +579,36 @@
                   xmlns="http://www.w3.org/2000/svg" 
                   viewBox="0 0 24 24" 
                   fill="currentColor" 
-                  class="w-6 h-6"
+                  class="w-7 h-7"
                   :class="star <= newReviewRating ? 'text-yellow-500' : 'text-slate-300'"
                 >
                   <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
                 </svg>
               </button>
             </div>
+            <span class="text-xs font-bold text-yellow-600 ml-2">
+              {{ newReviewRating === 5 ? 'Tuyệt vời' : newReviewRating === 4 ? 'Hài lòng' : newReviewRating === 3 ? 'Bình thường' : newReviewRating === 2 ? 'Không hài lòng' : 'Rất tệ' }}
+            </span>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-1">
-              <label class="text-xs font-bold text-slate-700">Tên của bạn *</label>
+              <label class="text-xs font-bold text-slate-700">Tên hiển thị *</label>
               <input 
                 v-model="newReviewName" 
                 type="text" 
-                placeholder="Nhập tên của bạn"
+                placeholder="Nhập họ và tên hiển thị..."
                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 bg-white text-sm"
               />
             </div>
           </div>
 
           <div class="space-y-1">
-            <label class="text-xs font-bold text-slate-700">Nội dung đánh giá *</label>
+            <label class="text-xs font-bold text-slate-700">Nội dung nhận xét chi tiết *</label>
             <textarea 
               v-model="newReviewContent" 
               rows="3"
-              placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm..."
+              placeholder="Chia sẻ cảm nhận, chất lượng đóng gói và độ hoàn thiện của sản phẩm..."
               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 bg-white text-sm"
             ></textarea>
           </div>
@@ -559,14 +617,14 @@
             <button 
               type="button"
               @click="showReviewForm = false"
-              class="px-5 py-2 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
+              class="px-5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"
             >
               Hủy
             </button>
             <button 
               type="button"
               @click="submitReview"
-              class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded-xl text-sm transition-colors cursor-pointer"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-2 rounded-xl text-xs transition-colors cursor-pointer shadow-xs active:scale-95"
             >
               Gửi đánh giá
             </button>
@@ -574,9 +632,9 @@
         </div>
 
         <!-- Prompt to Login -->
-        <div v-if="!authStore.isAuthenticated" class="bg-slate-50 border border-slate-100/60 rounded-2xl p-6 text-center space-y-3">
-          <p class="text-sm font-medium text-slate-500">Quý khách vui lòng đăng nhập tài khoản để gửi đánh giá và nhận xét sản phẩm.</p>
-          <router-link to="/login" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors cursor-pointer">
+        <div v-if="!authStore.isAuthenticated" class="bg-slate-50 border border-slate-200/80 rounded-2xl p-6 text-center space-y-3">
+          <p class="text-sm font-medium text-slate-600">Quý khách vui lòng đăng nhập tài khoản để gửi đánh giá và nhận xét sản phẩm.</p>
+          <router-link to="/login" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer">
             Đăng nhập ngay
           </router-link>
         </div>
@@ -584,7 +642,7 @@
         <!-- Reviews List -->
         <div class="space-y-6 divide-y divide-slate-100">
           <div 
-            v-for="(rev, idx) in reviews" 
+            v-for="(rev, idx) in displayedReviews" 
             :key="rev._id || rev.id || idx"
             class="pt-6 first:pt-0 space-y-3"
           >
@@ -592,51 +650,58 @@
             <div v-if="editingReviewId !== (rev._id || rev.id)" class="space-y-2">
               <div class="flex items-start justify-between">
                 <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-sm">
+                  <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-slate-200 to-slate-100 flex items-center justify-center font-black text-slate-700 text-sm border border-slate-200">
                     {{ rev.name ? rev.name.charAt(0).toUpperCase() : 'U' }}
                   </div>
                   <div>
-                    <h4 class="text-sm font-extrabold text-slate-800">{{ rev.name || 'Người dùng' }}</h4>
-                    <div class="flex gap-0.5 mt-0.5">
-                      <svg 
-                        v-for="star in 5" 
-                        :key="star"
-                        xmlns="http://www.w3.org/2000/svg" 
-                        viewBox="0 0 24 24" 
-                        fill="currentColor" 
-                        class="w-3.5 h-3.5"
-                        :class="star <= rev.rating ? 'text-yellow-500' : 'text-slate-200'"
-                      >
-                        <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
-                      </svg>
+                    <div class="flex items-center gap-2">
+                      <h4 class="text-sm font-extrabold text-slate-800">{{ rev.name || 'Khách hàng' }}</h4>
+                      <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-green-700 bg-green-50 border border-green-200/60 px-2 py-0.5 rounded-full">
+                        <span>✓</span> Đã mua hàng
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                      <div class="flex gap-0.5">
+                        <svg 
+                          v-for="star in 5" 
+                          :key="star"
+                          xmlns="http://www.w3.org/2000/svg" 
+                          viewBox="0 0 24 24" 
+                          fill="currentColor" 
+                          class="w-3.5 h-3.5"
+                          :class="star <= rev.rating ? 'text-yellow-500' : 'text-slate-200'"
+                        >
+                          <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
+                        </svg>
+                      </div>
+                      <span class="text-[11px] text-slate-400">• {{ formatDate(rev.createdAt) }}</span>
                     </div>
                   </div>
                 </div>
                 <div class="flex items-center gap-3">
-                  <span class="text-xs text-slate-400">{{ formatDate(rev.createdAt) }}</span>
                   <div v-if="canModifyReview(rev)" class="flex items-center gap-1.5">
                     <button 
                       @click="startEditReview(rev)"
-                      class="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100/80 px-2 py-1 rounded-md cursor-pointer focus:outline-none"
+                      class="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg cursor-pointer focus:outline-none"
                     >
                       Sửa
                     </button>
                     <button 
                       @click="deleteReview(rev._id || rev.id)"
-                      class="text-xs font-bold text-red-600 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100/80 px-2 py-1 rounded-md cursor-pointer focus:outline-none"
+                      class="text-xs font-bold text-red-600 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg cursor-pointer focus:outline-none"
                     >
                       Xóa
                     </button>
                   </div>
                 </div>
               </div>
-              <p class="text-sm text-slate-600 leading-relaxed pl-11">
+              <p class="text-sm text-slate-700 leading-relaxed pl-12">
                 {{ rev.content }}
               </p>
             </div>
 
             <!-- Edit Mode Inline -->
-            <div v-else class="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 space-y-4 pl-11">
+            <div v-else class="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 space-y-4 pl-12">
               <div class="flex items-center justify-between">
                 <h4 class="text-sm font-extrabold text-slate-800">Chỉnh sửa đánh giá</h4>
                 <!-- Star Rating Selector -->
@@ -663,7 +728,7 @@
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="space-y-1">
-                  <label class="text-xs font-bold text-slate-700">Tên của bạn</label>
+                  <label class="text-xs font-bold text-slate-700">Tên hiển thị</label>
                   <input 
                     v-model="editReviewName" 
                     type="text" 
@@ -701,23 +766,29 @@
               </div>
             </div>
           </div>
-          <div v-if="reviews.length === 0" class="text-center py-6 text-slate-400 text-sm">
-            Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên đánh giá!
+          <div v-if="displayedReviews.length === 0" class="text-center py-8 text-slate-400 text-sm">
+            <span v-if="selectedRatingFilter">Không có đánh giá nào cho mức {{ selectedRatingFilter }} sao.</span>
+            <span v-else>Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên đánh giá!</span>
           </div>
         </div>
       </div>
 
-      <!-- Recommended Products styled like Fahasa "Gợi ý cho bạn" -->
+      <!-- Recommended / Related Products -->
       <section v-if="relatedProducts.length > 0" class="overflow-hidden border border-emerald-200/60 rounded-3xl shadow-xs">
         <!-- Header Banner -->
-        <div class="bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 px-8 py-5 flex items-center justify-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-white animate-pulse">
-            <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
-          </svg>
-          <h2 class="text-lg font-black text-white uppercase tracking-wider text-center">Gợi ý cho bạn</h2>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-white animate-pulse">
-            <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
-          </svg>
+        <div class="bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 px-8 py-5 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-white animate-pulse">
+              <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
+            </svg>
+            <h2 class="text-lg font-black text-white uppercase tracking-wider">Sản phẩm liên quan & Gợi ý cho bạn</h2>
+          </div>
+          <router-link 
+            :to="product.category ? `/products?category=${typeof product.category === 'object' ? product.category._id : product.category}` : '/products'" 
+            class="text-xs font-bold text-white/90 hover:text-white underline hover:no-underline"
+          >
+            Xem tất cả →
+          </router-link>
         </div>
 
         <!-- Content Grid -->
@@ -790,6 +861,74 @@
             Đóng
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Image Lightbox Modal -->
+    <div 
+      v-if="isLightboxOpen && product && product.images && product.images.length > 0"
+      class="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md transition-all select-none"
+      @click.self="closeLightbox"
+    >
+      <!-- Top controls bar -->
+      <div class="w-full max-w-5xl flex items-center justify-between text-white pb-3 px-2">
+        <div class="text-xs font-bold text-slate-300">
+          Ảnh {{ activeLightboxIndex + 1 }} / {{ product.images.length }} • {{ product.name }}
+        </div>
+        <button 
+          @click="closeLightbox"
+          class="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+          title="Đóng (ESC)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Main Display -->
+      <div class="relative w-full max-w-4xl max-h-[75vh] flex items-center justify-center">
+        <!-- Prev Button -->
+        <button 
+          v-if="product.images.length > 1"
+          @click="prevLightboxImage"
+          class="absolute left-2 z-10 w-12 h-12 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+        </button>
+
+        <!-- Current Zoomed Image -->
+        <img 
+          :src="product.images[activeLightboxIndex]" 
+          :alt="product.name" 
+          class="max-h-[72vh] max-w-full object-contain rounded-2xl shadow-2xl transition-all duration-300"
+        />
+
+        <!-- Next Button -->
+        <button 
+          v-if="product.images.length > 1"
+          @click="nextLightboxImage"
+          class="absolute right-2 z-10 w-12 h-12 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Bottom Thumbnails Strip -->
+      <div v-if="product.images.length > 1" class="flex gap-2.5 mt-4 overflow-x-auto max-w-xl py-2 px-4 bg-white/5 rounded-2xl backdrop-blur-xs border border-white/10">
+        <button
+          v-for="(thumb, tIdx) in product.images"
+          :key="tIdx"
+          @click="activeLightboxIndex = tIdx"
+          class="w-14 h-14 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white/10 cursor-pointer"
+          :class="[activeLightboxIndex === tIdx ? 'border-red-500 scale-105 shadow-md' : 'border-transparent opacity-60 hover:opacity-100']"
+        >
+          <img :src="thumb" class="w-full h-full object-contain p-1" />
+        </button>
       </div>
     </div>
   </div>
@@ -1174,6 +1313,53 @@ const ratingStats = computed(() => {
   }
 })
 
+const selectedRatingFilter = ref<number | null>(null)
+const displayedReviews = computed(() => {
+  if (selectedRatingFilter.value === null) return reviews.value
+  return reviews.value.filter(r => Math.round(r.rating) === selectedRatingFilter.value)
+})
+
+// Lightbox state and methods
+const isLightboxOpen = ref(false)
+const activeLightboxIndex = ref(0)
+
+function openLightbox(idx = 0) {
+  if (!product.value?.images || product.value.images.length === 0) return
+  activeLightboxIndex.value = Math.max(0, Math.min(idx, product.value.images.length - 1))
+  isLightboxOpen.value = true
+  stopAutoplay()
+}
+
+function closeLightbox() {
+  isLightboxOpen.value = false
+  startAutoplay()
+}
+
+function nextLightboxImage() {
+  if (!product.value?.images || product.value.images.length === 0) return
+  activeLightboxIndex.value = (activeLightboxIndex.value + 1) % product.value.images.length
+}
+
+function prevLightboxImage() {
+  if (!product.value?.images || product.value.images.length === 0) return
+  activeLightboxIndex.value = (activeLightboxIndex.value - 1 + product.value.images.length) % product.value.images.length
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  if (!isLightboxOpen.value) return
+  if (e.key === 'Escape') closeLightbox()
+  else if (e.key === 'ArrowRight') nextLightboxImage()
+  else if (e.key === 'ArrowLeft') prevLightboxImage()
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
+
 async function submitReview() {
   if (!authStore.isAuthenticated) {
     toast.error('Vui lòng đăng nhập để đánh giá sản phẩm')
@@ -1210,30 +1396,8 @@ async function loadProduct() {
     const id = route.params.id as string
     const res = await productService.getById(id)
     product.value = res.data
-    selectedImage.value = res.data.images[0] || ''
+    selectedImage.value = res.data.images?.[0] || ''
     quantity.value = 1
-
-    /*
-    useSeoMeta({
-      title: res.data.name,
-      description: res.data.description || `Mua ${res.data.name} chính hãng tại Trường Thành Stationery. Giá tốt, giao hàng nhanh.`,
-      ogImage: res.data.images?.[0] || '',
-      ogType: 'product',
-    })
-
-    // Inject Product JSON-LD structured data
-    useProductSchema({
-      name: res.data.name,
-      description: res.data.description,
-      image: res.data.images?.[0],
-      sku: res.data.sku,
-      brand: res.data.brand,
-      price: res.data.price,
-      discountPrice: res.data.discountPrice,
-      stock: res.data.stock,
-      rating: res.data.rating,
-    })
-    */
     
     // Load reviews
     loadReviews()
@@ -1244,7 +1408,7 @@ async function loadProduct() {
     startAutoplay()
 
     // Fetch category detail asynchronously to check for combo/bundle info
-    const catId = typeof res.data.category === 'object' ? res.data.category._id : res.data.category
+    const catId = typeof res.data.category === 'object' && res.data.category ? res.data.category._id : res.data.category
     if (catId) {
       categoryService.getById(catId).then(catRes => {
         categoryDetail.value = catRes.data
@@ -1253,15 +1417,16 @@ async function loadProduct() {
       })
     }
     
-    // Fetch related products asynchronously in the background
-    productService.getAll({
-      category: catId,
-      limit: 11
-    }).then((relatedRes: any) => {
+    // Fetch related products using dedicated getRelated API with fallback
+    productService.getRelated(res.data._id, 10).then((relatedRes: any) => {
       const items = Array.isArray(relatedRes.data) ? relatedRes.data : (relatedRes.data?.data || [])
-      relatedProducts.value = items.filter((p: Product) => p._id !== id)
+      relatedProducts.value = items.filter((p: Product) => p._id !== res.data._id)
     }).catch(err => {
-      console.error('Error fetching related products:', err)
+      console.warn('Fallback fetching related products via getAll:', err)
+      productService.getAll({ category: catId, limit: 11 }).then((fallbackRes: any) => {
+        const items = Array.isArray(fallbackRes.data) ? fallbackRes.data : (fallbackRes.data?.data || [])
+        relatedProducts.value = items.filter((p: Product) => p._id !== res.data._id)
+      })
     })
   } catch (err) {
     toast.error('Lỗi khi tải chi tiết sản phẩm')

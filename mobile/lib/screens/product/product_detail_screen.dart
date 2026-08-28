@@ -385,13 +385,29 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('THÔNG TIN SẢN PHẨM', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                  const Text('THÔNG TIN SẢN PHẨM & THÔNG SỐ', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                   const SizedBox(height: 12),
+                  if (product.author != null && product.author!.isNotEmpty) ...[
+                    _SpecRow(label: 'Tác giả', value: product.author!),
+                    const Divider(height: 16),
+                  ],
+                  if (product.publisher != null && product.publisher!.isNotEmpty) ...[
+                    _SpecRow(label: 'Nhà xuất bản', value: product.publisher!),
+                    const Divider(height: 16),
+                  ],
+                  if (product.publicationYear != null) ...[
+                    _SpecRow(label: 'Năm xuất bản', value: product.publicationYear.toString()),
+                    const Divider(height: 16),
+                  ],
+                  if (product.isbn != null && product.isbn!.isNotEmpty) ...[
+                    _SpecRow(label: 'Mã ISBN', value: product.isbn!),
+                    const Divider(height: 16),
+                  ],
+                  _SpecRow(label: 'Thương hiệu', value: product.brand != null && product.brand!.isNotEmpty ? product.brand! : 'Trường Thành Official'),
+                  const Divider(height: 16),
                   _SpecRow(label: 'Mã SKU', value: product.sku.isNotEmpty ? product.sku : 'TT-BOOKSTORE'),
                   const Divider(height: 16),
-                  _SpecRow(label: 'Thương hiệu', value: 'Trường Thành Official'),
-                  const Divider(height: 16),
-                  _SpecRow(label: 'Tình trạng', value: product.stock > 0 ? 'Mới 100%' : 'Hết hàng'),
+                  _SpecRow(label: 'Tình trạng', value: product.stock > 0 ? 'Còn hàng (${product.stock})' : 'Tạm hết hàng'),
                   const SizedBox(height: 16),
                   const Text('MÔ TẢ SẢN PHẨM', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                   const SizedBox(height: 8),

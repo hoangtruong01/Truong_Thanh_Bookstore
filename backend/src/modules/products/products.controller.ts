@@ -143,8 +143,23 @@ export class ProductsController {
     return this.productsService.getSuggestions(q || '', limit ? Number(limit) : 6);
   }
 
+  @Get('slug/:slug')
+  @ApiOperation({ summary: 'Get product detail by SEO slug' })
+  findBySlug(@Param('slug') slug: string) {
+    return this.productsService.findBySlug(slug);
+  }
+
+  @Get(':id/related')
+  @ApiOperation({ summary: 'Get related / similar products' })
+  getRelated(
+    @Param('id') id: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.productsService.getRelated(id, limit ? Number(limit) : 8);
+  }
+
   @Get(':id')
-  @ApiOperation({ summary: 'Get product by ID' })
+  @ApiOperation({ summary: 'Get product by ID or Slug' })
   findById(@Param('id') id: string) {
     return this.productsService.findById(id);
   }
