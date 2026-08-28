@@ -23,31 +23,22 @@ Truong_Thanh_Bookstore/
 │   │   │   ├── interceptors/             # TransformInterceptor...
 │   │   │   └── enums/                    # error-code.enum.ts, order-status.enum.ts, payment-status.enum.ts...
 │   │   ├── modules/                      # Các mô đun nghiệp vụ chính
-│   │   │   ├── auth/                     # Mô đun Xác thực người dùng
-│   │   │   │   ├── auth.controller.ts    # API Đăng nhập, Đăng ký, Quên mật khẩu, Xác nhận OTP
-│   │   │   │   ├── auth.service.ts       # Logic sinh mã OTP, băm bcrypt mật khẩu, cấp Token JWT
-│   │   │   │   └── dto/auth.dto.ts       # Định nghĩa đầu vào (LoginDto, RegisterDto, OTP Dtos)
-│   │   │   ├── users/                    # Mô đun người dùng & Địa chỉ
-│   │   │   │   ├── addresses.controller.ts  # REST API quản lý Sổ địa chỉ (Address book CRUD)
-│   │   │   │   ├── addresses.service.ts     # Logic đặt địa chỉ mặc định, đếm số lượng địa chỉ
-│   │   │   │   └── schemas/                 # address.schema.ts, user.schema.ts
-│   │   │   ├── products/                 # Mô đun quản lý Sản phẩm & Tìm kiếm
-│   │   │   │   ├── products.service.ts   # Tìm kiếm nâng cao (lọc theo khoảng giá, số sao, brand, tồn kho)
-│   │   │   │   └── dto/product.dto.ts    # ProductQueryDto mở rộng (minPrice, maxPrice, brand, minRating, inStock)
-│   │   │   ├── orders/                   # Mô đun đơn hàng
-│   │   │   │   ├── orders.controller.ts  # API Đặt hàng, Hủy đơn, Xuất hóa đơn PDF (:id/invoice)
-│   │   │   │   ├── orders.service.ts     # Xử lý Trừ tồn kho & Rollback nguyên tử, xuất PDF bằng pdfkit
-│   │   │   │   └── schemas/order.schema.ts  # Cấu trúc OrderItem, Order và OrderTimelineItem
-│   │   │   ├── notifications/            # Mô đun thông báo WebSocket Real-time
-│   │   │   │   ├── notifications.gateway.ts # WebSocket Gateway namespace '/notifications' quản lý kết nối
-│   │   │   │   └── notifications.service.ts # Đẩy thông báo tức thời qua Socket & Lưu DB
+│   │   │   ├── auth/                     # Mô đun Xác thực người dùng (JWT, Refresh Token, Blacklist, OTP)
+│   │   │   ├── users/                    # Mô đun người dùng & Sổ địa chỉ (Address book CRUD)
+│   │   │   ├── categories/               # Mô đun Danh mục đa cấp & Cây danh mục (Category Tree)
+│   │   │   ├── products/                 # Mô đun Sản phẩm, Tìm kiếm Full-text, Gợi ý, Excel Import/Export
+│   │   │   ├── cart/                     # Mô đun Giỏ hàng, Kiểm kho thời gian thực, Freeship 299K, Voucher
+│   │   │   ├── orders/                   # Mô đun Đơn hàng, Trừ kho nguyên tử, Hóa đơn PDF
+│   │   │   ├── promotions/               # Mô đun Khuyến mãi (Voucher theo % / tiền mặt, đơn tối thiểu)
+│   │   │   ├── inventory/                # Mô đun Tồn kho & Giao dịch biến động kho
+│   │   │   ├── reviews/                  # Mô đun Đánh giá & Xếp hạng sản phẩm (Verified Purchase)
+│   │   │   ├── payments/                 # Mô đun Thanh toán (COD, Chuyển khoản, VNPay, MoMo)
+│   │   │   ├── notifications/            # Mô đun thông báo WebSocket Real-time & DB
 │   │   │   └── reports/                  # Mô đun báo cáo thống kê dành cho Admin
-│   │   │       ├── reports.controller.ts # API /reports/dashboard/advanced
-│   │   │       └── reports.service.ts    # Tổng hợp dữ liệu AOV, Voucher, Phân bố đơn hàng
-│   │   ├── main.ts                       # Khởi chạy NestJS App, cấu hình CORS, ValidationPipe
-│   │   └── app.module.ts                 # Mô đun gốc liên kết MongooseModule và SocketGateway
+│   │   ├── main.ts                       # Khởi chạy NestJS App, Helmet, CORS, Sanitizer, Throttler
+│   │   └── app.module.ts                 # Mô đun gốc liên kết MongooseModule và ThrottlerModule
 │   └── test/                             # Thư mục kiểm thử tự động
-│       └── all-fixes.spec.ts             # File test Jest xác thực 9 test cases nghiệp vụ lõi
+│       └── all-fixes.spec.ts             # File test Jest xác thực các test cases nghiệp vụ lõi
 │
 ├── frontend/                             # Vue 3 Web Store & Dashboard Admin
 │   ├── src/

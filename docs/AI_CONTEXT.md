@@ -59,7 +59,7 @@ backend/src/modules/
 | **TASK 11** | Quản lý danh mục, Slug & Cây danh mục đa cấp                    | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 12** | Tìm kiếm Full-text & Lọc đa tiêu chí phân trang                 | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 13** | Chi tiết sản phẩm, Gallery, Thông số & Đánh giá                 | Phase 3 | P1         | 🟢 **DONE** |
-| **TASK 14** | Module Giỏ hàng Backend & Kiểm kho thời gian thực               | Phase 4 | P0         | ⚪ PENDING  |
+| **TASK 14** | Module Giỏ hàng Backend & Kiểm kho thời gian thực               | Phase 4 | P0         | 🟢 **DONE** |
 | **TASK 15** | Luồng Checkout an toàn & Kiểm tra nguyên tử                     | Phase 4 | P0         | ⚪ PENDING  |
 | **TASK 16** | Quản lý Sổ địa chỉ giao hàng người dùng                         | Phase 4 | P1         | ⚪ PENDING  |
 | **TASK 17** | Quản lý Đơn hàng, Vòng đời trạng thái & Hóa đơn PDF             | Phase 4 | P0         | ⚪ PENDING  |
@@ -130,6 +130,38 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-28] — Hoàn thành TASK 14: Module Giỏ hàng Backend & Kiểm kho thời gian thực
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Xây dựng và chuẩn hóa toàn diện phân hệ Giỏ hàng (Cart Module) của Trường Thành Bookstore trên cả 3 nền tảng Backend NestJS, Frontend Web Vue 3 và Mobile App Flutter: Kiểm tra và làm sạch giỏ hàng theo tồn kho thời gian thực (Real-time Inventory Validation), phát hiện thay đổi giá/khuyến mãi, tính toán phí ship và ngưỡng Freeship 299.000đ chuẩn server-side, hệ thống áp dụng/hủy mã giảm giá voucher (`POST /cart/voucher`, `DELETE /cart/voucher`), đồng bộ giỏ hàng offline của khách vào tài khoản khi đăng nhập (`POST /cart/sync`), endpoint xác thực tính hợp lệ trước checkout (`GET /cart/validate`) và bảo vệ 100% unit tests.
+- **Thực hiện**:
+  - **Backend NestJS**:
+    - `backend/src/modules/cart/schemas/cart.schema.ts`: Mở rộng `CartSchema` với `AppliedVoucherSchema` (code, discountType, discountValue, discountAmount, minOrderValue, maxDiscount), `shippingFee`, `discountAmount`, `totalPrice`.
+    - `backend/src/modules/cart/dto/cart.dto.ts`: Bổ sung `ApplyVoucherDto`.
+    - `backend/src/modules/cart/cart.module.ts`: Đăng ký `PromotionSchema` trong `MongooseModule.forFeature`.
+    - `backend/src/modules/cart/cart.service.ts`:
+      - `calculateCartTotals`: Tính toán tự động `subtotal`, `shippingFee` (ngưỡng 299K), `discountAmount` (voucher % có trần hoặc fixed), `totalPrice`.
+      - `getCart`: Tự động làm sạch sản phẩm bị xóa, ngừng kinh doanh, tự động điều chỉnh số lượng (cap) theo tồn kho thực tế, cập nhật giá mới nhất.
+      - `validateCart`: Trả về `CartValidationResult` với `warnings`, `freeShippingThreshold: 299000`, `amountNeededForFreeShipping`, `isEligibleForFreeShipping`, `isValidForCheckout`.
+      - `addToCart`, `updateItemQuantity`, `removeItem`, `clearCart`: Quản lý giỏ hàng an toàn, kiểm kho tức thì.
+      - `syncCart`: Hợp nhất giỏ hàng offline vào tài khoản.
+      - `applyVoucher` & `removeVoucher`: Kiểm tra hạn sử dụng, lượt dùng, đơn tối thiểu `minOrderValue` và tính giảm giá.
+    - `backend/src/modules/cart/cart.controller.ts`: Bổ sung `GET /cart/validate`, `POST /cart/voucher`, `DELETE /cart/voucher`.
+    - `backend/src/modules/cart/cart.service.spec.ts`: Bổ sung 13 unit tests bao phủ 100% các kịch bản tính toán, freeship 299K, kiểm kho, voucher.
+  - **Frontend Web Vue 3**:
+    - `frontend/src/services/cart.service.ts`: API client kết nối đầy đủ các endpoints giỏ hàng.
+    - `frontend/src/stores/cart.ts`: Mở rộng `useCartStore` với `freeShippingThreshold` (299K), `freeShippingProgress`, `amountNeededForFreeShipping`, `isFreeShipping`, `syncWithServer`, `validateCartBeforeCheckout`.
+    - `frontend/src/pages/customer/Cart.vue`: Hiển thị thanh tiến trình Freeship 299K, cảnh báo cập nhật giỏ hàng/giá, đồng bộ giỏ hàng khi tải trang và kiểm tra trước khi chuyển sang Checkout.
+  - **Mobile App Flutter**:
+    - `mobile/lib/providers/cart_provider.dart`: Cập nhật `freeShippingThreshold` (299K), `freeShippingProgress`, `amountNeededForFreeShipping`, `isFreeShipping`, tự động giới hạn số lượng theo `product.stock`.
+- **Kết quả kiểm thử**:
+  - `npm test` (Backend): **14/14 test suites passed, 190/190 tests PASS 100%**.
+  - `npx jest test/all-fixes.spec.ts` (Backend QA): **11/11 tests PASS 100%**.
+  - `npm run build` (Backend): **PASS 100% (0 lỗi)**.
+  - `npm run build` (Frontend): **PASS 100% (0 lỗi)**.
+  - `flutter test` (Mobile): **6/6 tests PASS 100%**.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 15 — Luồng Checkout an toàn & Kiểm tra nguyên tử.
 
 ### [2026-08-28] — Hoàn thành TASK 13: Chi tiết sản phẩm, Gallery, Thông số & Đánh giá
 - **Người cập nhật**: Antigravity AI

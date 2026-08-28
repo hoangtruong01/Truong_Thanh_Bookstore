@@ -28,6 +28,32 @@ export class CartItem {
 
 export const CartItemSchema = SchemaFactory.createForClass(CartItem);
 
+@Schema({ _id: false })
+export class AppliedVoucher {
+  @Prop({ required: true, uppercase: true })
+  code: string;
+
+  @Prop({ required: true })
+  name: string;
+
+  @Prop({ required: true })
+  discountType: string;
+
+  @Prop({ required: true })
+  discountValue: number;
+
+  @Prop({ default: 0 })
+  discountAmount: number;
+
+  @Prop({ default: 0 })
+  minOrderValue: number;
+
+  @Prop({ default: 0 })
+  maxDiscount?: number;
+}
+
+export const AppliedVoucherSchema = SchemaFactory.createForClass(AppliedVoucher);
+
 @Schema({ timestamps: true })
 export class Cart {
   @Prop({ type: Types.ObjectId, ref: User.name, required: true, unique: true, index: true })
@@ -38,6 +64,18 @@ export class Cart {
 
   @Prop({ default: 0, min: 0 })
   subtotal: number;
+
+  @Prop({ default: 0, min: 0 })
+  shippingFee: number;
+
+  @Prop({ default: 0, min: 0 })
+  discountAmount: number;
+
+  @Prop({ type: AppliedVoucherSchema, default: null })
+  appliedVoucher?: AppliedVoucher;
+
+  @Prop({ default: 0, min: 0 })
+  totalPrice: number;
 }
 
 export const CartSchema = SchemaFactory.createForClass(Cart);
