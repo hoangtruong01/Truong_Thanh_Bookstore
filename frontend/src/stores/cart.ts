@@ -2,6 +2,10 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { CartItem, Product, Promotion } from '@/types'
 import { promotionService } from '@/services/promotion.service'
+import { cartService } from '@/services/cart.service'
+
+export const FREE_SHIPPING_THRESHOLD = 299000
+export const DEFAULT_SHIPPING_FEE = 30000
 
 export const useCartStore = defineStore('cart', () => {
   const items = ref<CartItem[]>(
@@ -13,11 +17,11 @@ export const useCartStore = defineStore('cart', () => {
   const appliedPromotion = ref<Promotion | null>(null)
   const discountAmount = ref(0)
   const promoError = ref('')
+  const warnings = ref<string[]>([])
 
   const subtotal = computed(() => {
     return items.value.reduce((sum: number, item: CartItem) => {
       if (item.selected === false) return sum
-      // FIX-M03: Use explicit check — discountPrice=0 means no discount
       const price = (item.product.discountPrice != null && item.product.discountPrice > 0)
         ? item.product.discountPrice
         : item.product.price
@@ -25,9 +29,22 @@ export const useCartStore = defineStore('cart', () => {
     }, 0)
   })
 
+  const isFreeShipping = computed(() => {
+    return subtotal.value >= FREE_SHIPPING_THRESHOLD
+  })
+
+  const amountNeededForFreeShipping = computed(() => {
+    return Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal.value)
+  })
+
+  const freeShippingProgress = computed(() => {
+    if (subtotal.value <= 0) return 0
+    return Math.min(100, Math.round((subtotal.value / FREE_SHIPPING_THRESHOLD) * 100))
+  })
+
   const shippingFee = computed(() => {
     if (subtotal.value === 0) return 0
-    return subtotal.value >= 299000 ? 0 : 30000
+    return subtotal.value >= FREE_SHIPPING_THRESHOLD ? 0 : DEFAULT_SHIPPING_FEE
   })
 
   const total = computed(() => {
@@ -114,6 +131,7 @@ export const useCartStore = defineStore('cart', () => {
     appliedPromotion.value = null
     discountAmount.value = 0
     promoError.value = ''
+    warnings.value = []
     localStorage.removeItem('cart')
   }
 
@@ -123,8 +141,48 @@ export const useCartStore = defineStore('cart', () => {
     recalculateDiscount()
   }
 
+  async function syncWithServer(isAuthenticated: boolean) {
+    if (!isAuthenticated) return
+    try {
+      const syncPayload = items.value.map(i => ({
+        productId: i.product._id,
+        quantity: i.quantity,
+      }))
+      if (syncPayload.length > 0) {
+        await cartService.syncCart(syncPayload)
+      }
+      const res = await cartService.getCart()
+      if (res.data?.items && Array.isArray(res.data.items)) {
+        items.value = res.data.items.map((ci: any) => ({
+          product: ci.product,
+          quantity: ci.quantity,
+          selected: true,
+        }))
+        saveCart()
+        recalculateDiscount()
+      }
+    } catch (err) {
+      console.warn('Sync cart with server failed:', err)
+    }
+  }
+
+  async function validateCartBeforeCheckout(isAuthenticated: boolean) {
+    warnings.value = []
+    if (isAuthenticated) {
+      try {
+        const res = await cartService.validateCart()
+        if (res.data?.warnings?.length > 0) {
+          warnings.value = res.data.warnings
+        }
+        return res.data
+      } catch (err) {
+        console.warn('Validate cart error:', err)
+      }
+    }
+    return { isValidForCheckout: items.value.length > 0 }
+  }
+
   function saveCart() {
-    // FIX-M06: Save only minimal fields to prevent localStorage quota issues
     const minimal = items.value.map((item: CartItem) => ({
       product: {
         _id: item.product._id,
@@ -179,10 +237,15 @@ export const useCartStore = defineStore('cart', () => {
     appliedPromotion,
     discountAmount,
     promoError,
+    warnings,
     subtotal,
     shippingFee,
     total,
     itemsCount,
+    isFreeShipping,
+    amountNeededForFreeShipping,
+    freeShippingProgress,
+    freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
     addToCart,
     updateQuantity,
     removeFromCart,
@@ -191,6 +254,9 @@ export const useCartStore = defineStore('cart', () => {
     applyCoupon,
     removeCoupon,
     clearCart,
-    clearCheckedOutItems
+    clearCheckedOutItems,
+    syncWithServer,
+    validateCartBeforeCheckout,
   }
 })
+

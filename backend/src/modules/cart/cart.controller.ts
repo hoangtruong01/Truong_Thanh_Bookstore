@@ -12,7 +12,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CartService } from './cart.service';
-import { AddToCartDto, UpdateCartItemDto, SyncCartDto } from './dto/cart.dto';
+import { AddToCartDto, UpdateCartItemDto, SyncCartDto, ApplyVoucherDto } from './dto/cart.dto';
 
 @ApiTags('cart')
 @Controller('cart')
@@ -22,9 +22,15 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lấy giỏ hàng của người dùng hiện tại' })
+  @ApiOperation({ summary: 'Lấy giỏ hàng của người dùng hiện tại (kiểm kho thời gian thực)' })
   getCart(@Request() req: any) {
     return this.cartService.getCart(req.user._id);
+  }
+
+  @Get('validate')
+  @ApiOperation({ summary: 'Kiểm tra tính hợp lệ và tồn kho của giỏ hàng trước khi checkout' })
+  validateCart(@Request() req: any) {
+    return this.cartService.validateCart(req.user._id);
   }
 
   @Post('items')
@@ -60,4 +66,17 @@ export class CartController {
   syncCart(@Request() req: any, @Body() dto: SyncCartDto) {
     return this.cartService.syncCart(req.user._id, dto);
   }
+
+  @Post('voucher')
+  @ApiOperation({ summary: 'Áp dụng mã giảm giá voucher vào giỏ hàng' })
+  applyVoucher(@Request() req: any, @Body() dto: ApplyVoucherDto) {
+    return this.cartService.applyVoucher(req.user._id, dto);
+  }
+
+  @Delete('voucher')
+  @ApiOperation({ summary: 'Hủy mã giảm giá voucher khỏi giỏ hàng' })
+  removeVoucher(@Request() req: any) {
+    return this.cartService.removeVoucher(req.user._id);
+  }
 }
+

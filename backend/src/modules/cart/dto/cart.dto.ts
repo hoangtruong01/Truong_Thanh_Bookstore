@@ -44,3 +44,10 @@ export class SyncCartDto {
   @Type(() => CartSyncItemDto)
   items: CartSyncItemDto[];
 }
+
+export class ApplyVoucherDto {
+  @ApiProperty({ description: 'Mã giảm giá', example: 'CHAOBANMOI' })
+  @IsNotEmpty({ message: 'Mã voucher không được để trống' })
+  code: string;
+}
+

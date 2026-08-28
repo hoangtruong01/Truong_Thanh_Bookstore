@@ -17,15 +17,26 @@ class CartProvider with ChangeNotifier {
   List<PromotionModel> get activePromotions => _activePromotions;
   String? get promoError => _promoError;
 
+  static const num freeShippingThreshold = 299000;
+  static const num defaultShippingFee = 30000;
+
   int get totalItemCount => _items.fold(0, (sum, i) => sum + i.quantity);
 
   num get subtotal => _items
       .where((i) => i.selected)
       .fold(0, (sum, i) => sum + (i.product.effectivePrice * i.quantity));
 
+  bool get isFreeShipping => subtotal >= freeShippingThreshold;
+
+  num get amountNeededForFreeShipping =>
+      (freeShippingThreshold - subtotal > 0) ? (freeShippingThreshold - subtotal) : 0;
+
+  double get freeShippingProgress =>
+      (subtotal <= 0) ? 0.0 : (subtotal / freeShippingThreshold).clamp(0.0, 1.0).toDouble();
+
   num get shippingFee {
     if (subtotal == 0) return 0;
-    return (subtotal >= 299000) ? 0 : 30000;
+    return (subtotal >= freeShippingThreshold) ? 0 : defaultShippingFee;
   }
 
   num get discountAmount {
@@ -49,11 +60,14 @@ class CartProvider with ChangeNotifier {
   }
 
   void addToCart(ProductModel product, {int quantity = 1}) {
+    if (product.stock <= 0) return;
     final index = _items.indexWhere((i) => i.product.id == product.id);
     if (index >= 0) {
-      _items[index].quantity += quantity;
+      final newQty = _items[index].quantity + quantity;
+      _items[index].quantity = (newQty > product.stock) ? product.stock : newQty;
     } else {
-      _items.add(CartItemModel(product: product, quantity: quantity));
+      final validQty = (quantity > product.stock) ? product.stock : quantity;
+      _items.add(CartItemModel(product: product, quantity: validQty));
     }
     notifyListeners();
   }
