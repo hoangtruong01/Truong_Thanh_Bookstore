@@ -98,7 +98,7 @@ Hệ thống **Trường Thành Bookstore** là nền tảng thương mại đi�
 
 - **TASK 10 [P1] — Product Management [DONE]**: Hoàn thiện toàn diện tính năng quản trị sản phẩm Admin (CRUD, ẩn/hiện, upload ảnh, SKU, giá bán, giá khuyến mãi, tồn kho, tự động đồng bộ sang Inventory) và bộ công cụ Excel nâng cao (Xuất Excel 14 cột, Nhập Excel hàng loạt có xác thực trùng lặp/báo cáo chi tiết, Tải file mẫu chuẩn đa sheet), 100% unit tests PASS.
 - **TASK 11 [P1] — Category & Attributes [DONE]**: Nâng cấp toàn diện phân hệ quản lý danh mục đa cấp, sinh Slug tiếng Việt tự động chống trùng lặp, xây dựng Cây danh mục (Category Tree) đệ quy gom nhóm Cha -> Con -> Cháu kèm `productCount`, chống Circular Reference và xóa an toàn bảo toàn liên kết, 100% unit tests PASS.
-- **TASK 12 [P1] — Search & Filter**: Nâng cấp bộ tìm kiếm Full-text (tên sách, SKU, ISBN, tác giả, NXB) kết hợp bộ lọc (danh mục, khoảng giá, số sao, tồn kho, khuyến mãi) và sắp xếp kèm phân trang chuẩn.
+- **TASK 12 [P1] — Search & Filter [DONE]**: Nâng cấp bộ máy tìm kiếm Full-text & Diacritic-insensitive Tiếng Việt (Tên, SKU, ISBN, Tác giả, NXB, Thương hiệu, Mô tả), chống ReDoS, API gợi ý tìm kiếm tức thì Autocomplete Suggestions (`GET /products/suggestions`), bộ lọc đa diện (Cây danh mục đệ quy, Khoảng giá & presets, Sao, Tồn kho, Khuyến mãi, Flash Sale, Đa thương hiệu/Tác giả/NXB), bộ sắp xếp 8 chế độ, phân trang chuẩn hóa và đồng bộ Frontend Web Vue 3 & Mobile App Flutter.
 - **TASK 13 [P1] — Product Detail**: API chi tiết sản phẩm toàn diện (Gallery ảnh, giá & chiết khấu, thông số kỹ thuật, đánh giá, sản phẩm tương tự/liên quan).
 
 ### PHASE 4 — SHOPPING

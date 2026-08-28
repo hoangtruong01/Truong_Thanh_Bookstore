@@ -24,6 +24,18 @@ export class Product {
   @Prop()
   brand: string;
 
+  @Prop()
+  author: string;
+
+  @Prop()
+  publisher: string;
+
+  @Prop()
+  isbn: string;
+
+  @Prop()
+  publicationYear: number;
+
   @Prop({ type: [String], default: [] })
   subOptions: string[];
 
@@ -69,11 +81,25 @@ export class Product {
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
 
-// FIX-2.4: Indexes for search and filter performance
-ProductSchema.index({ name: 'text', description: 'text' });
-ProductSchema.index({ category: 1, isDeleted: 1 });
-ProductSchema.index({ price: 1 });
-ProductSchema.index({ sold: -1 });
+// FIX-2.4 & TASK 12: Indexes for search, multi-criteria filter, and sort performance
+ProductSchema.index({
+  name: 'text',
+  description: 'text',
+  author: 'text',
+  publisher: 'text',
+  sku: 'text',
+  isbn: 'text',
+  brand: 'text',
+});
+ProductSchema.index({ category: 1, isDeleted: 1, status: 1 });
+ProductSchema.index({ price: 1, isDeleted: 1 });
+ProductSchema.index({ discountPrice: 1, isDeleted: 1 });
+ProductSchema.index({ sold: -1, isDeleted: 1 });
+ProductSchema.index({ rating: -1, isDeleted: 1 });
 ProductSchema.index({ isDeleted: 1, createdAt: -1 });
 ProductSchema.index({ isFeatured: 1, isDeleted: 1 });
-ProductSchema.index({ discountPrice: 1 });
+ProductSchema.index({ author: 1, isDeleted: 1 });
+ProductSchema.index({ publisher: 1, isDeleted: 1 });
+ProductSchema.index({ brand: 1, isDeleted: 1 });
+ProductSchema.index({ sku: 1, isDeleted: 1 });
+ProductSchema.index({ isbn: 1, isDeleted: 1 });

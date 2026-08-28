@@ -378,7 +378,28 @@
 
                 <!-- Suggestions Section (Active Search Query) -->
                 <div v-else>
-                  <div v-if="suggestions.length > 0" class="mb-5">
+                  <!-- Matching Categories Section -->
+                  <div v-if="suggestedCategories.length > 0" class="mb-4">
+                    <div
+                      class="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5"
+                    >
+                      <span>📂</span> Danh mục liên quan
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <router-link
+                        v-for="cat in suggestedCategories"
+                        :key="cat._id"
+                        :to="`/products?category=${cat._id}`"
+                        @mousedown="showDropdown = false"
+                        class="bg-red-50 hover:bg-red-100 text-[#dc2626] font-bold text-xs px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-red-200/60"
+                      >
+                        {{ cat.name }}
+                      </router-link>
+                    </div>
+                  </div>
+
+                  <!-- Suggestions Section (Active Search Query) -->
+                  <div v-if="(suggestedKeywords.length > 0 ? suggestedKeywords : suggestions).length > 0" class="mb-5">
                     <div
                       class="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"
                     >
@@ -400,7 +421,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                       <div
-                        v-for="tag in suggestions"
+                        v-for="tag in (suggestedKeywords.length > 0 ? suggestedKeywords : suggestions)"
                         :key="tag"
                         @mousedown="selectSuggestion(tag)"
                         class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs px-3.5 py-2 rounded-xl transition-colors cursor-pointer select-none"
@@ -1782,6 +1803,9 @@ const suggestions = computed(() => {
   return filtered.slice(0, 8);
 });
 
+const suggestedCategories = ref<any[]>([]);
+const suggestedKeywords = ref<string[]>([]);
+
 function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   let timeout: any = null;
   return (...args: Parameters<T>) => {
@@ -1796,22 +1820,34 @@ const performAutocomplete = debounce(async (query: string) => {
   const trimmed = query.trim();
   if (!trimmed) {
     searchResults.value = [];
+    suggestedCategories.value = [];
+    suggestedKeywords.value = [];
     return;
   }
   loadingSearch.value = true;
   try {
-    const res = await productService.search(trimmed);
-    searchResults.value = res.data.slice(0, 6);
+    const res: any = await productService.getSuggestions(trimmed, 6);
+    const data = res.data?.data || res.data || {};
+    searchResults.value = data.products || [];
+    suggestedCategories.value = data.categories || [];
+    suggestedKeywords.value = data.keywords || [];
   } catch (err) {
-    // silent fail
+    try {
+      const fallbackRes: any = await productService.search(trimmed);
+      searchResults.value = (fallbackRes.data?.data || fallbackRes.data || []).slice(0, 6);
+    } catch {
+      // silent fail
+    }
   } finally {
     loadingSearch.value = false;
   }
-}, 300);
+}, 250);
 
 watch(searchQuery, (newVal) => {
   if (!newVal.trim()) {
     searchResults.value = [];
+    suggestedCategories.value = [];
+    suggestedKeywords.value = [];
     return;
   }
   performAutocomplete(newVal);

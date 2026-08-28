@@ -49,6 +49,30 @@ export class CreateProductDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   brand?: string;
 
+  @ApiPropertyOptional({ example: 'Nguyễn Nhật Ánh' })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  author?: string;
+
+  @ApiPropertyOptional({ example: 'NXB Trẻ' })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  publisher?: string;
+
+  @ApiPropertyOptional({ example: '9786045890123' })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  isbn?: string;
+
+  @ApiPropertyOptional({ example: 2024 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Năm xuất bản phải là số' })
+  publicationYear?: number;
+
   @ApiProperty({ example: 5000 })
   @IsNotEmpty({ message: 'Giá sản phẩm không được để trống' })
   @Type(() => Number)
@@ -144,6 +168,30 @@ export class UpdateProductDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  author?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  publisher?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  isbn?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Năm xuất bản phải là số' })
+  publicationYear?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({}, { message: 'Giá sản phẩm phải là số' })
   @Min(0, { message: 'Giá sản phẩm không được âm' })
@@ -202,52 +250,79 @@ export class UpdateProductDto {
 }
 
 export class ProductQueryDto extends PaginationDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Category ID (Parent or Child)' })
   @IsOptional()
   @IsString()
   category?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Brand filter or comma-separated list of brands' })
   @IsOptional()
   @IsString()
   brand?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Author filter or comma-separated list of authors' })
+  @IsOptional()
+  @IsString()
+  author?: string;
+
+  @ApiPropertyOptional({ description: 'Publisher filter or comma-separated list of publishers' })
+  @IsOptional()
+  @IsString()
+  publisher?: string;
+
+  @ApiPropertyOptional({ description: 'ISBN filter' })
+  @IsOptional()
+  @IsString()
+  isbn?: string;
+
+  @ApiPropertyOptional({ description: 'Sub-option filter (e.g. Grade, Subject)' })
+  @IsOptional()
+  @IsString()
+  subOption?: string;
+
+  @ApiPropertyOptional({ description: 'Minimum price' })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   minPrice?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Maximum price' })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   maxPrice?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Product status' })
   @IsOptional()
   @IsString()
   status?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Sorting: newest, price_asc, price_desc, best_selling, rating, name_asc, name_desc, discount_desc',
+  })
   @IsOptional()
   @IsString()
   sort?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Alias for sort parameter' })
+  @IsOptional()
+  @IsString()
+  sortBy?: string;
+
+  @ApiPropertyOptional({ description: 'Search term for name, description, SKU, ISBN, author, publisher, brand' })
   @IsOptional()
   @IsString()
   q?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Filter discounted products only' })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   discounted?: boolean;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Minimum rating (1-5)' })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
@@ -255,12 +330,18 @@ export class ProductQueryDto extends PaginationDto {
   @Max(5)
   minRating?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Filter in-stock status (true / false)' })
   @IsOptional()
-  @Transform(({ value }) => (value === 'true' || value === true ? true : value === 'false' || value === false ? false : value))
+  @Transform(({ value }) =>
+    value === 'true' || value === true
+      ? true
+      : value === 'false' || value === false
+        ? false
+        : value,
+  )
   inStock?: boolean | string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Filter active flash sale products' })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()

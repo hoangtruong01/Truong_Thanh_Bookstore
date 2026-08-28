@@ -23,6 +23,7 @@ import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
 import { InventoryStatus, ProductStatus } from '../../common/enums';
 
 function makeDiacriticRegex(str: string): string {
+  if (!str) return '';
   const escaped = str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const diacriticsMap: { [key: string]: string } = {
     a: '[aàáảãạăằắẳẵặâầấẩẫậ]',
@@ -125,19 +126,31 @@ export class ProductsService {
       limit = 10,
       category,
       brand,
+      author,
+      publisher,
+      isbn,
+      subOption,
       minPrice,
       maxPrice,
       status,
       sort,
+      sortBy,
       q,
       discounted,
       minRating,
       inStock,
+      isFlashSale,
     } = query;
     const filter: any = { isDeleted: false };
 
+    if (status) filter.status = status;
+
     if (discounted === true || (discounted as any) === 'true') {
       filter.discountPrice = { $gt: 0 };
+    }
+
+    if (isFlashSale === true || (isFlashSale as any) === 'true') {
+      filter.isFlashSale = true;
     }
 
     if (category) {
@@ -168,12 +181,43 @@ export class ProductsService {
       }
     }
 
-    if (status) filter.status = status;
+    if (author) {
+      if (typeof author === 'string' && author.includes(',')) {
+        const authors = author.split(',').map((a) => a.trim());
+        filter.author = { $in: authors };
+      } else {
+        const authorRegex = makeDiacriticRegex(author.trim().substring(0, 100));
+        filter.author = { $regex: authorRegex, $options: 'i' };
+      }
+    }
 
-    if (minPrice || maxPrice) {
+    if (publisher) {
+      if (typeof publisher === 'string' && publisher.includes(',')) {
+        const publishers = publisher.split(',').map((p) => p.trim());
+        filter.publisher = { $in: publishers };
+      } else {
+        const pubRegex = makeDiacriticRegex(publisher.trim().substring(0, 100));
+        filter.publisher = { $regex: pubRegex, $options: 'i' };
+      }
+    }
+
+    if (isbn) {
+      const safeIsbn = isbn.trim().substring(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.isbn = { $regex: safeIsbn, $options: 'i' };
+    }
+
+    if (subOption) {
+      filter.subOptions = { $in: [subOption] };
+    }
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
       filter.price = {};
-      if (minPrice) filter.price.$gte = Number(minPrice);
-      if (maxPrice) filter.price.$lte = Number(maxPrice);
+      if (minPrice !== undefined && minPrice !== null && !isNaN(Number(minPrice))) {
+        filter.price.$gte = Number(minPrice);
+      }
+      if (maxPrice !== undefined && maxPrice !== null && !isNaN(Number(maxPrice))) {
+        filter.price.$lte = Number(maxPrice);
+      }
     }
 
     if (minRating) {
@@ -189,39 +233,51 @@ export class ProductsService {
       }
     }
 
-    if (q) {
-      // FIX-M04: Limit search query length
-      const safeQ = q.substring(0, 100);
+    if (q && q.trim()) {
+      // ReDoS Prevention: Limit search query length to 100 characters
+      const safeQ = q.trim().substring(0, 100);
       const regexPattern = makeDiacriticRegex(safeQ);
+      const rawEscaped = safeQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
       filter.$or = [
         { name: { $regex: regexPattern, $options: 'i' } },
         { description: { $regex: regexPattern, $options: 'i' } },
-        { sku: { $regex: safeQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+        { sku: { $regex: rawEscaped, $options: 'i' } },
+        { isbn: { $regex: rawEscaped, $options: 'i' } },
+        { author: { $regex: regexPattern, $options: 'i' } },
+        { publisher: { $regex: regexPattern, $options: 'i' } },
         { brand: { $regex: regexPattern, $options: 'i' } },
       ];
     }
 
+    const sortChoice = sort || sortBy || 'newest';
     let sortObj: any = { createdAt: -1 };
-    if (sort) {
-      switch (sort) {
-        case 'price_asc':
-          sortObj = { price: 1 };
-          break;
-        case 'price_desc':
-          sortObj = { price: -1 };
-          break;
-        case 'rating':
-          sortObj = { rating: -1 };
-          break;
-        case 'best_selling':
-          sortObj = { sold: -1 };
-          break;
-        case 'newest':
-          sortObj = { createdAt: -1 };
-          break;
-        default:
-          sortObj = { createdAt: -1 };
-      }
+    switch (sortChoice) {
+      case 'price_asc':
+        sortObj = { price: 1 };
+        break;
+      case 'price_desc':
+        sortObj = { price: -1 };
+        break;
+      case 'rating':
+        sortObj = { rating: -1 };
+        break;
+      case 'best_selling':
+        sortObj = { sold: -1 };
+        break;
+      case 'name_asc':
+        sortObj = { name: 1 };
+        break;
+      case 'name_desc':
+        sortObj = { name: -1 };
+        break;
+      case 'discount_desc':
+        sortObj = { discountPrice: -1, price: -1 };
+        break;
+      case 'newest':
+      default:
+        sortObj = { createdAt: -1 };
+        break;
     }
 
     const skip = (page - 1) * limit;
@@ -289,19 +345,88 @@ export class ProductsService {
   }
 
   async search(q: string): Promise<ProductDocument[]> {
-    const safeQ = q.substring(0, 100);
+    if (!q || !q.trim()) return [];
+    const safeQ = q.trim().substring(0, 100);
     const regexPattern = makeDiacriticRegex(safeQ);
+    const rawEscaped = safeQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
     return this.productModel
       .find({
         isDeleted: false,
         $or: [
           { name: { $regex: regexPattern, $options: 'i' } },
           { description: { $regex: regexPattern, $options: 'i' } },
+          { sku: { $regex: rawEscaped, $options: 'i' } },
+          { isbn: { $regex: rawEscaped, $options: 'i' } },
+          { author: { $regex: regexPattern, $options: 'i' } },
+          { publisher: { $regex: regexPattern, $options: 'i' } },
+          { brand: { $regex: regexPattern, $options: 'i' } },
         ],
       })
       .populate('category')
       .limit(20)
       .exec();
+  }
+
+  async getSuggestions(
+    q: string,
+    limit = 6,
+  ): Promise<{
+    keywords: string[];
+    categories: any[];
+    products: ProductDocument[];
+  }> {
+    if (!q || !q.trim()) {
+      return { keywords: [], categories: [], products: [] };
+    }
+
+    const safeQ = q.trim().substring(0, 100);
+    const regexPattern = makeDiacriticRegex(safeQ);
+    const rawEscaped = safeQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    const [matchedCategories, matchedProducts] = await Promise.all([
+      this.categoryModel
+        .find({
+          name: { $regex: regexPattern, $options: 'i' },
+          status: true,
+        })
+        .select('_id name slug')
+        .limit(4)
+        .exec(),
+      this.productModel
+        .find({
+          isDeleted: false,
+          $or: [
+            { name: { $regex: regexPattern, $options: 'i' } },
+            { sku: { $regex: rawEscaped, $options: 'i' } },
+            { isbn: { $regex: rawEscaped, $options: 'i' } },
+            { author: { $regex: regexPattern, $options: 'i' } },
+            { brand: { $regex: regexPattern, $options: 'i' } },
+          ],
+        })
+        .populate('category', 'name slug')
+        .limit(limit)
+        .exec(),
+    ]);
+
+    // Extract keyword recommendations
+    const keywordSet = new Set<string>();
+    for (const p of matchedProducts) {
+      if (p.name) keywordSet.add(p.name);
+      if (p.author) keywordSet.add(p.author);
+      if (p.brand) keywordSet.add(p.brand);
+    }
+    for (const c of matchedCategories) {
+      if (c.name) keywordSet.add(c.name);
+    }
+
+    const keywords = Array.from(keywordSet).slice(0, 6);
+
+    return {
+      keywords,
+      categories: matchedCategories,
+      products: matchedProducts,
+    };
   }
 
   async getBestSelling(limit = 10): Promise<ProductDocument[]> {

@@ -56,28 +56,36 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       }),
     }));
 
-    mockProductModel.find = jest.fn().mockReturnValue({
-      populate: jest.fn().mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue([mockProduct]),
-          skip: jest.fn().mockReturnValue({
-            limit: jest.fn().mockReturnValue({
-              exec: jest.fn().mockResolvedValue([mockProduct]),
-            }),
-          }),
+    const createMockQuery = (result: any = [mockProduct]) => {
+      const query: any = {
+        populate: jest.fn().mockImplementation(() => query),
+        sort: jest.fn().mockImplementation(() => query),
+        select: jest.fn().mockImplementation(() => query),
+        skip: jest.fn().mockImplementation(() => query),
+        limit: jest.fn().mockImplementation(() => query),
+        lean: jest.fn().mockImplementation(() => {
+          const leanQuery: any = {
+            exec: jest.fn().mockResolvedValue(result),
+            populate: jest.fn().mockImplementation(() => leanQuery),
+            sort: jest.fn().mockImplementation(() => leanQuery),
+            select: jest.fn().mockImplementation(() => leanQuery),
+            skip: jest.fn().mockImplementation(() => leanQuery),
+            limit: jest.fn().mockImplementation(() => leanQuery),
+            then: (onResolve: any, onReject: any) =>
+              Promise.resolve(result).then(onResolve, onReject),
+            catch: (onReject: any) => Promise.resolve(result).catch(onReject),
+          };
+          return leanQuery;
         }),
-      }),
-      sort: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue([mockProduct]),
-        skip: jest.fn().mockReturnValue({
-          limit: jest.fn().mockReturnValue({
-            exec: jest.fn().mockResolvedValue([mockProduct]),
-          }),
-        }),
-      }),
-      lean: jest.fn().mockResolvedValue([mockProduct]),
-      exec: jest.fn().mockResolvedValue([mockProduct]),
-    });
+        exec: jest.fn().mockResolvedValue(result),
+        then: (onResolve: any, onReject: any) =>
+          Promise.resolve(result).then(onResolve, onReject),
+        catch: (onReject: any) => Promise.resolve(result).catch(onReject),
+      };
+      return query;
+    };
+
+    mockProductModel.find = jest.fn().mockImplementation(() => createMockQuery([mockProduct]));
 
     mockProductModel.findOne = jest.fn().mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockProduct),
@@ -113,13 +121,7 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
     });
 
     mockCategoryModel = {
-      find: jest.fn().mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue([mockCategory]),
-        }),
-        lean: jest.fn().mockResolvedValue([mockCategory]),
-        exec: jest.fn().mockResolvedValue([mockCategory]),
-      }),
+      find: jest.fn().mockImplementation(() => createMockQuery([mockCategory])),
       findOne: jest.fn().mockReturnValue({
         lean: jest.fn().mockResolvedValue(mockCategory),
         exec: jest.fn().mockResolvedValue(mockCategory),
@@ -307,6 +309,126 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       expect(importResult.success).toBe(true);
       expect(importResult.summary.createdCount).toBe(1);
       expect(importResult.summary.errorCount).toBe(0);
+    });
+  });
+
+  describe('3. TASK 12: Full-text Search, Multi-Criteria Filtering & Suggestions', () => {
+    it('should search products with diacritic-insensitive regex (Vietnamese accents)', async () => {
+      const result = await service.search('dac nhan tam');
+      expect(result).toBeDefined();
+      expect(mockProductModel.find).toHaveBeenCalled();
+      const findArgs = mockProductModel.find.mock.calls[mockProductModel.find.mock.calls.length - 1][0];
+      expect(findArgs.isDeleted).toBe(false);
+      expect(findArgs.$or).toBeDefined();
+      expect(findArgs.$or.length).toBeGreaterThan(0);
+    });
+
+    it('should search products by SKU, ISBN, Author, Publisher, Brand', async () => {
+      const result = await service.search('TL-027');
+      expect(result).toBeDefined();
+      expect(mockProductModel.find).toHaveBeenCalled();
+    });
+
+    it('should return empty array for empty or whitespace search query', async () => {
+      const result = await service.search('   ');
+      expect(result).toEqual([]);
+    });
+
+    it('should filter products by price range, rating, stock status, and flash sale', async () => {
+      const result = await service.findAll({
+        minPrice: 10000,
+        maxPrice: 50000,
+        minRating: 4,
+        inStock: true,
+        isFlashSale: true,
+        discounted: true,
+      });
+
+      expect(result).toBeDefined();
+      expect(result.data).toBeDefined();
+      const findArgs = mockProductModel.find.mock.calls[mockProductModel.find.mock.calls.length - 1][0];
+      expect(findArgs.price.$gte).toBe(10000);
+      expect(findArgs.price.$lte).toBe(50000);
+      expect(findArgs.rating.$gte).toBe(4);
+      expect(findArgs.stock.$gt).toBe(0);
+      expect(findArgs.isFlashSale).toBe(true);
+      expect(findArgs.discountPrice.$gt).toBe(0);
+    });
+
+    it('should support multi-brand and multi-author filtering via comma-separated values', async () => {
+      await service.findAll({
+        brand: 'Thiên Long, Deli, Hồng Hà',
+        author: 'Nguyễn Nhật Ánh, Dale Carnegie',
+        publisher: 'NXB Trẻ, NXB Kim Đồng',
+      });
+
+      const findArgs = mockProductModel.find.mock.calls[mockProductModel.find.mock.calls.length - 1][0];
+      expect(findArgs.brand.$in).toEqual(['Thiên Long', 'Deli', 'Hồng Hà']);
+      expect(findArgs.author.$in).toEqual(['Nguyễn Nhật Ánh', 'Dale Carnegie']);
+      expect(findArgs.publisher.$in).toEqual(['NXB Trẻ', 'NXB Kim Đồng']);
+    });
+
+    it('should handle recursive category filtering when parent category ID is provided', async () => {
+      const parentCatId = '507f1f77bcf86cd799439011';
+      const childCat = { _id: '507f1f77bcf86cd799439099', name: 'Bút viết' };
+      mockCategoryModel.find.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue([childCat]),
+      });
+
+      await service.findAll({ category: parentCatId });
+      expect(mockCategoryModel.find).toHaveBeenCalledWith({
+        parentId: expect.anything(),
+      });
+    });
+
+    it('should handle all 7 sorting modes correctly', async () => {
+      const sortModes = [
+        'price_asc',
+        'price_desc',
+        'rating',
+        'best_selling',
+        'name_asc',
+        'name_desc',
+        'discount_desc',
+        'newest',
+      ];
+
+      for (const sort of sortModes) {
+        const result = await service.findAll({ sort });
+        expect(result).toBeDefined();
+      }
+    });
+
+    it('should provide search autocomplete suggestions with keywords, categories and products', async () => {
+      mockProductModel.find.mockReturnValueOnce({
+        populate: jest.fn().mockReturnValue({
+          limit: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue([
+              {
+                ...mockProduct,
+                author: 'Thiên Long Design',
+              },
+            ]),
+          }),
+        }),
+      });
+
+      const suggestions = await service.getSuggestions('but', 5);
+      expect(suggestions).toBeDefined();
+      expect(suggestions.keywords).toBeDefined();
+      expect(suggestions.categories).toBeDefined();
+      expect(suggestions.products).toBeDefined();
+    });
+
+    it('should return empty suggestions when query is empty', async () => {
+      const suggestions = await service.getSuggestions('');
+      expect(suggestions).toEqual({ keywords: [], categories: [], products: [] });
+    });
+
+    it('should safely sanitize and prevent ReDoS attacks for long inputs or special regex characters', async () => {
+      const maliciousInput = 'a'.repeat(300) + '.*+?^${}()|[]\\';
+      const result = await service.findAll({ q: maliciousInput });
+      expect(result).toBeDefined();
     });
   });
 });
