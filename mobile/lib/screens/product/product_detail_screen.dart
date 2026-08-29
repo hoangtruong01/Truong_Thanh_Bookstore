@@ -219,7 +219,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             child: Image.network(
                               product.images[index],
                               fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Icon(
+                              errorBuilder: (context, error, stackTrace) => const Icon(
                                 Icons.menu_book_rounded,
                                 size: 80,
                                 color: Colors.grey,
@@ -445,7 +445,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _mockReviews.length,
-                    separatorBuilder: (_, __) => const Divider(height: 20),
+                    separatorBuilder: (context, index) => const Divider(height: 20),
                     itemBuilder: (context, index) {
                       final rev = _mockReviews[index];
                       return Column(

@@ -192,12 +192,13 @@ class OrderDetailScreen extends StatelessWidget {
                           ],
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
             ],
+
 
             // Order Items Box
             Container(
@@ -216,8 +217,9 @@ class OrderDetailScreen extends StatelessWidget {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: order.items.length,
-                    separatorBuilder: (_, __) => const Divider(height: 16),
+                    separatorBuilder: (context, index) => const Divider(height: 16),
                     itemBuilder: (context, index) {
+
                       final item = order.items[index];
                       return Row(
                         children: [

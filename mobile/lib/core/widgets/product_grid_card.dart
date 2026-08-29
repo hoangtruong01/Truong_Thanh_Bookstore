@@ -65,8 +65,9 @@ class ProductGridCard extends StatelessWidget {
                                 height: double.infinity,
                                 borderRadius: 0,
                               ),
-                              errorWidget: (_, __, ___) => const Icon(Icons.menu_book_rounded, size: 48, color: Color(0xFFCBD5E1)),
+                              errorWidget: (context, url, error) => const Icon(Icons.menu_book_rounded, size: 48, color: Color(0xFFCBD5E1)),
                             )
+
                           : const Icon(Icons.menu_book_rounded, size: 48, color: Color(0xFFCBD5E1)),
                     ),
                   ),
