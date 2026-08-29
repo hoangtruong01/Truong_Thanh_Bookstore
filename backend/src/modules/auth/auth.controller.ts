@@ -68,7 +68,7 @@ export class AuthController {
   private setAuthCookies(response: Response, accessToken: string, refreshToken?: string) {
     const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
     const configuredSameSite = this.configService.get<string>('COOKIE_SAME_SITE')?.toLowerCase();
-    const sameSite = configuredSameSite === 'none'
+    const sameSite = configuredSameSite === 'none' || (isProduction && !configuredSameSite)
       ? 'none'
       : configuredSameSite === 'strict'
         ? 'strict'
@@ -96,13 +96,13 @@ export class AuthController {
   private finishBrowserOrMobileAuth(
     result: any,
     response: Response,
-    clientPlatform?: string,
+    _clientPlatform?: string,
   ) {
     this.setAuthCookies(response, result.accessToken, result.refreshToken);
-    if (clientPlatform?.toLowerCase() === 'mobile') return result;
-    const { accessToken: _accessToken, ...browserSafeResult } = result;
-    return browserSafeResult;
+    // Return full result (user, accessToken, refreshToken) for hybrid cookie + bearer token auth across cross-origin deployments
+    return result;
   }
+
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60000 } })

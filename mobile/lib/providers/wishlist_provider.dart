@@ -5,9 +5,10 @@ import '../models/product_model.dart';
 
 class WishlistProvider with ChangeNotifier {
   final List<ProductModel> _wishlistItems = [];
-  Set<String> _wishlistIds = {};
+  final Set<String> _wishlistIds = {};
 
   List<ProductModel> get wishlistItems => List.unmodifiable(_wishlistItems);
+
   int get itemCount => _wishlistItems.length;
 
   WishlistProvider() {

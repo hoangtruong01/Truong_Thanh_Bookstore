@@ -27,7 +27,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String _paymentMethod = 'COD';
   List<dynamic> _addresses = [];
   String? _selectedAddressId;
-  bool _isLoadingAddresses = false;
 
   @override
   void initState() {
@@ -55,7 +54,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!auth.isAuthenticated || auth.token == null) return;
 
-    setState(() => _isLoadingAddresses = true);
     try {
       final res = await http.get(
         Uri.parse(ApiConstants.addresses),
@@ -64,6 +62,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'Authorization': 'Bearer ${auth.token}',
         },
       );
+
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -82,8 +81,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
     } catch (_) {
       // Optional address loading failure fallback
-    } finally {
-      if (mounted) setState(() => _isLoadingAddresses = false);
     }
   }
 

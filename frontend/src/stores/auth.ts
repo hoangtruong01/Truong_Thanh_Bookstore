@@ -29,10 +29,16 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const res = await authService.login(email, password)
-      user.value = res.data.user
-      localStorage.removeItem('token')
+      const data = res.data?.data || res.data
+      user.value = data.user
+      if (data.accessToken) {
+        localStorage.setItem('token', data.accessToken)
+      }
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken)
+      }
       localStorage.setItem('user', JSON.stringify(user.value))
-      return res.data
+      return data
     } finally {
       loading.value = false
     }
@@ -42,10 +48,16 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const res = await authService.register(data)
-      user.value = res.data.user
-      localStorage.removeItem('token')
+      const responseData = res.data?.data || res.data
+      user.value = responseData.user
+      if (responseData.accessToken) {
+        localStorage.setItem('token', responseData.accessToken)
+      }
+      if (responseData.refreshToken) {
+        localStorage.setItem('refreshToken', responseData.refreshToken)
+      }
       localStorage.setItem('user', JSON.stringify(user.value))
-      return res.data
+      return responseData
     } finally {
       loading.value = false
     }
@@ -78,17 +90,20 @@ export const useAuthStore = defineStore('auth', () => {
   function clearSession() {
     user.value = null
     localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
     localStorage.removeItem('user')
   }
 
   async function logout() {
     try {
-      await authService.logout()
+      const refreshToken = localStorage.getItem('refreshToken') || undefined
+      await authService.logout(refreshToken)
     } finally {
       clearSession()
     }
     router.push({ name: 'Login' })
   }
+
 
   async function toggleWishlist(productId: string) {
     if (!isAuthenticated.value) return false;

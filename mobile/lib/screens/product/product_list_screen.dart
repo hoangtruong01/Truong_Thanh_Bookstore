@@ -363,8 +363,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       mainAxisSpacing: 12,
                     ),
                     itemCount: 6,
-                    itemBuilder: (_, __) => const ProductCardSkeleton(),
+                    itemBuilder: (context, index) => const ProductCardSkeleton(),
                   )
+
                 : productProvider.products.isEmpty
                     ? const Center(
                         child: Text(
