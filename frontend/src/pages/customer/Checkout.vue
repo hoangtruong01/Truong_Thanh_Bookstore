@@ -280,9 +280,10 @@ import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { orderService } from '@/services/order.service'
 import { productService } from '@/services/product.service'
+import { addressService } from '@/services/address.service'
 import { formatCurrency, getEffectivePrice } from '@/utils/helpers'
 import { promotionService } from '@/services/promotion.service'
-import type { Promotion } from '@/types'
+import type { Promotion, Address } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 
 useSeoMeta({
@@ -312,15 +313,13 @@ const shippingInfo = reactive({
   note: '',
 })
 
-import api from '@/utils/api'
-const addresses = ref<any[]>([])
+const addresses = ref<Address[]>([])
 const selectedAddressId = ref('')
 
 async function fetchUserAddresses() {
   if (!authStore.isAuthenticated) return
   try {
-    const res = await api.get('/addresses')
-    addresses.value = res.data.data || res.data
+    addresses.value = await addressService.getAll()
     const def = addresses.value.find(a => a.isDefault)
     if (def) {
       selectedAddressId.value = def._id
@@ -331,7 +330,7 @@ async function fetchUserAddresses() {
   }
 }
 
-function applyAddress(addr: any) {
+function applyAddress(addr: Address) {
   shippingInfo.fullName = addr.recipientName
   shippingInfo.phone = addr.phone
   shippingInfo.address = `${addr.detail}, ${addr.ward}, ${addr.district}, ${addr.province}`
@@ -377,7 +376,6 @@ async function handleApplyCoupon() {
     toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
   }
 }
-
 
 async function applySuggestedCoupon(code: string) {
   const success = await cartStore.applyCoupon(code)

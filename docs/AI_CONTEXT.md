@@ -61,7 +61,7 @@ backend/src/modules/
 | **TASK 13** | Chi tiết sản phẩm, Gallery, Thông số & Đánh giá                 | Phase 3 | P1         | 🟢 **DONE** |
 | **TASK 14** | Module Giỏ hàng Backend & Kiểm kho thời gian thực               | Phase 4 | P0         | 🟢 **DONE** |
 | **TASK 15** | Luồng Checkout an toàn & Kiểm tra nguyên tử                     | Phase 4 | P0         | 🟢 **DONE** |
-| **TASK 16** | Quản lý Sổ địa chỉ giao hàng người dùng                         | Phase 4 | P1         | ⚪ PENDING  |
+| **TASK 16** | Quản lý Sổ địa chỉ giao hàng người dùng                         | Phase 4 | P1         | 🟢 **DONE** |
 | **TASK 17** | Quản lý Đơn hàng, Vòng đời trạng thái & Hóa đơn PDF             | Phase 4 | P0         | ⚪ PENDING  |
 | **TASK 18** | Kiến trúc Thanh toán Provider Abstraction (VNPay, MoMo, COD)    | Phase 5 | P0         | ⚪ PENDING  |
 | **TASK 19** | Hệ thống Mã khuyến mãi (Voucher)                                | Phase 5 | P1         | ⚪ PENDING  |
@@ -95,6 +95,10 @@ backend/src/modules/
 4. **Quy tắc Vòng đời Đơn hàng (Order Status Flow)**:
    - Các trạng thái: `PENDING` -> `CONFIRMED` -> `PROCESSING` -> `SHIPPING` -> `DELIVERED`.
    - Hủy đơn (`CANCELLED`) phải kích hoạt hoàn lại tồn kho đúng số lượng.
+5. **Quy tắc Sổ địa chỉ & Địa chỉ mặc định (Address Invariants)**:
+   - Khi người dùng tạo địa chỉ đầu tiên, địa chỉ này tự động được gán `isDefault: true`.
+   - Khi đặt hoặc cập nhật một địa chỉ thành `isDefault: true`, toàn bộ địa chỉ khác của người dùng tự động được cập nhật `isDefault: false`.
+   - Khi xóa mềm (soft delete) một địa chỉ đang là mặc định, hệ thống tự động thăng cấp địa chỉ hợp lệ gần nhất thành mặc định mới, đảm bảo khách hàng luôn có 1 địa chỉ chính để thanh toán thuận tiện.
 
 ---
 
@@ -131,7 +135,40 @@ backend/src/modules/
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
 
+### [2026-08-29] — Hoàn thành TASK 16: Quản lý Sổ địa chỉ giao hàng người dùng
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Nâng cấp toàn diện phân hệ Sổ địa chỉ nhận hàng (Address Book Management) của Trường Thành Bookstore trên cả 3 nền tảng Backend NestJS, Frontend Web Vue 3 và Mobile App Flutter: Đảm bảo tính bất biến của địa chỉ mặc định (Default Address Invariant), compound indexing `{ user: 1, isDefault: 1, isDeleted: 1 }`, endpoint chuyên biệt `GET /addresses/default`, tự động chuyển đổi địa chỉ mặc định khi xóa/tạo/cập nhật, xác thực số điện thoại 10 số chuẩn VN, đồng bộ dịch vụ `addressService` trên Web Vue 3 & Mobile Flutter và bảo vệ 100% unit tests.
+- **Thực hiện**:
+  - **Backend NestJS**:
+    - `backend/src/modules/users/schemas/address.schema.ts`: Bổ sung Compound Index tối ưu `{ user: 1, isDefault: 1, isDeleted: 1 }`.
+    - `backend/src/modules/users/addresses.service.ts`:
+      - `create`: Tự động gán `isDefault: true` nếu là địa chỉ đầu tiên, un-default các địa chỉ khác nếu tạo với `isDefault: true`.
+      - `update`: Đảm bảo un-default an toàn các địa chỉ khác khi đổi sang mặc định.
+      - `softDelete`: Khi xóa địa chỉ đang là mặc định, tự động truy vấn địa chỉ hợp lệ kế tiếp (`{ user, isDeleted: false }`) và thăng cấp thành `isDefault: true`.
+      - `getDefault`: Truy vấn nhanh địa chỉ mặc định phục vụ luồng checkout.
+      - `setDefault`: Chuyển đổi địa chỉ mặc định tức thì.
+    - `backend/src/modules/users/addresses.controller.ts`: Sử dụng `@CurrentUser('_id')`, bổ sung rate-limiting `@Throttle`, tài liệu hóa Swagger và khai báo `GET /addresses/default` trước `:id` chống lỗi routing.
+    - `backend/src/modules/users/addresses.service.spec.ts`: Tạo 13 unit tests bao phủ 100% kịch bản CRUD, default address invariant, auto-promotion và soft delete.
+  - **Frontend Web Vue 3**:
+    - `frontend/src/types/index.ts`: Bổ sung `Address`, `CreateAddressPayload`, `UpdateAddressPayload`.
+    - `frontend/src/services/address.service.ts`: Xây dựng đầy đủ `getAll`, `getById`, `getDefault`, `create`, `update`, `delete`, `setDefault`.
+    - `frontend/src/pages/customer/Addresses.vue`: Giao diện hiện đại tông đỏ thương hiệu (`#dc2626`), preset nhãn địa chỉ nhanh (Nhà riêng, Văn phòng...), kiểm tra SĐT 10 số VN, hiệu ứng thẻ địa chỉ mặc định, modal/card tương tác mượt mà và SEO Meta tags.
+    - `frontend/src/pages/customer/Checkout.vue`: Tích hợp `addressService`, tải nhanh danh sách sổ địa chỉ và tự động điền địa chỉ mặc định khi vào trang thanh toán.
+  - **Mobile App Flutter**:
+    - `mobile/lib/screens/profile/address_book_screen.dart`: Giao diện sổ địa chỉ với nhãn mặc định, form tạo/sửa đầy đủ trường và validation SĐT.
+    - `mobile/lib/screens/checkout/checkout_screen.dart`: Tích hợp tự động tải sổ địa chỉ người dùng và dropdown chọn nhanh địa chỉ giao hàng.
+- **Kết quả kiểm thử**:
+  - `npm test` (Backend): **15/15 test suites passed, 207/207 tests PASS 100%**.
+  - `npm run build` (Backend): **PASS 100% (0 lỗi)**.
+  - `npm run build` (Frontend): **PASS 100% (0 lỗi)**.
+  - `flutter test` (Mobile): **6/6 tests PASS 100%**.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 17 — Quản lý Đơn hàng, Vòng đời trạng thái & Hóa đơn PDF.
+
+---
+
 ### [2026-08-28] — Hoàn thành TASK 15: Luồng Checkout an toàn & Kiểm tra nguyên tử
+
 - **Người cập nhật**: Antigravity AI
 - **Mục tiêu**: Chuẩn hóa và bảo vệ toàn diện luồng Đặt hàng & Thanh toán (Safe Checkout Journey) của Trường Thành Bookstore trên cả 3 nền tảng Backend NestJS, Frontend Web Vue 3 và Mobile App Flutter: Quy trình đa bước an toàn (`Cart -> Address -> Shipping -> Promotion -> Payment -> Confirm -> Order`), endpoint xem trước và kiểm tra nguyên tử `POST /orders/checkout-preview`, trừ kho nguyên tử với rollback bù trừ, chống duplicate order bằng `idempotencyKey`, tự động làm sạch giỏ hàng trên backend (`CartService.clearCart`) khi đặt hàng thành công và bảo vệ 100% unit tests.
 - **Thực hiện**:

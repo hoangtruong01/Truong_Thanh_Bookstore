@@ -18,7 +18,7 @@ export class AddressesService {
       );
     }
 
-    // Check if this is the first address, if so, make it default automatically
+    // Check if this is the first non-deleted address, if so, make it default automatically
     const count = await this.addressModel.countDocuments({
       user: new Types.ObjectId(userId),
       isDeleted: false,
@@ -29,6 +29,7 @@ export class AddressesService {
       ...data,
       user: new Types.ObjectId(userId),
       isDefault,
+      isDeleted: false,
     });
     return address.save();
   }
@@ -68,13 +69,14 @@ export class AddressesService {
     const address = await this.findById(id, userId);
     address.isDeleted = true;
     
-    // If we deleted the default address, set another address as default
+    // If we deleted the default address, set another remaining address as default
     if (address.isDefault) {
       address.isDefault = false;
       await address.save();
       
       const nextAddress = await this.addressModel
-        .findOne({ user: new Types.ObjectId(userId), isDeleted: false })
+        .findOne({ user: new Types.ObjectId(userId), isDeleted: false, _id: { $ne: address._id } })
+        .sort({ createdAt: -1 })
         .exec();
       if (nextAddress) {
         nextAddress.isDefault = true;
@@ -94,4 +96,18 @@ export class AddressesService {
     address.isDefault = true;
     return address.save();
   }
+
+  async getDefault(userId: string): Promise<AddressDocument | null> {
+    const defaultAddr = await this.addressModel
+      .findOne({ user: new Types.ObjectId(userId), isDefault: true, isDeleted: false })
+      .exec();
+    if (defaultAddr) return defaultAddr;
+
+    // Fallback: return most recent active address
+    return this.addressModel
+      .findOne({ user: new Types.ObjectId(userId), isDeleted: false })
+      .sort({ createdAt: -1 })
+      .exec();
+  }
 }
+
