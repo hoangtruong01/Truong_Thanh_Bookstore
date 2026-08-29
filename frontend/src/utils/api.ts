@@ -95,15 +95,31 @@ api.interceptors.response.use(
         isRefreshing = true
 
         try {
-          // Call refresh token endpoint with credentials (cookie)
+          const storedRefreshToken = localStorage.getItem('refreshToken') || undefined
+          const storedAccessToken = localStorage.getItem('token') || undefined
+          // Call refresh token endpoint with credentials (cookie) and body payload
           const refreshRes = await axios.post(
             `${baseURL}/auth/refresh`,
-            {},
-            { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+            { refreshToken: storedRefreshToken },
+            {
+              withCredentials: true,
+              headers: {
+                'Content-Type': 'application/json',
+                ...(storedAccessToken ? { Authorization: `Bearer ${storedAccessToken}` } : {}),
+              },
+            }
           )
 
-          if (refreshRes.data?.data?.accessToken) {
-            localStorage.setItem('token', refreshRes.data.data.accessToken)
+          const newAccessToken =
+            refreshRes.data?.data?.accessToken || refreshRes.data?.accessToken
+          const newRefreshToken =
+            refreshRes.data?.data?.refreshToken || refreshRes.data?.refreshToken
+
+          if (newAccessToken) {
+            localStorage.setItem('token', newAccessToken)
+          }
+          if (newRefreshToken) {
+            localStorage.setItem('refreshToken', newRefreshToken)
           }
 
           processQueue(null)
@@ -111,6 +127,7 @@ api.interceptors.response.use(
         } catch (refreshErr) {
           processQueue(refreshErr)
           localStorage.removeItem('token')
+          localStorage.removeItem('refreshToken')
           localStorage.removeItem('user')
           window.dispatchEvent(new CustomEvent('auth-session-expired'))
 
@@ -122,6 +139,7 @@ api.interceptors.response.use(
         } finally {
           isRefreshing = false
         }
+
       }
     }
 
