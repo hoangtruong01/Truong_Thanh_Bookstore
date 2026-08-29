@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../providers/auth_provider.dart';
@@ -22,6 +25,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _noteController = TextEditingController();
 
   String _paymentMethod = 'COD';
+  List<dynamic> _addresses = [];
+  String? _selectedAddressId;
+  bool _isLoadingAddresses = false;
 
   @override
   void initState() {
@@ -31,6 +37,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _nameController.text = auth.user!.fullName;
       _phoneController.text = auth.user!.phone ?? '';
       _emailController.text = auth.user!.email;
+      _fetchUserAddresses();
     }
   }
 
@@ -42,6 +49,49 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _addressController.dispose();
     _noteController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchUserAddresses() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!auth.isAuthenticated || auth.token == null) return;
+
+    setState(() => _isLoadingAddresses = true);
+    try {
+      final res = await http.get(
+        Uri.parse(ApiConstants.addresses),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${auth.token}',
+        },
+      );
+
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final list = (body['data'] ?? body) as List<dynamic>;
+        setState(() {
+          _addresses = list;
+          if (_addresses.isNotEmpty) {
+            final defaultAddr = _addresses.firstWhere(
+              (a) => a['isDefault'] == true,
+              orElse: () => _addresses.first,
+            );
+            _selectedAddressId = defaultAddr['_id'];
+            _applyAddress(defaultAddr);
+          }
+        });
+      }
+    } catch (_) {
+      // Optional address loading failure fallback
+    } finally {
+      if (mounted) setState(() => _isLoadingAddresses = false);
+    }
+  }
+
+  void _applyAddress(Map<String, dynamic> addr) {
+    _nameController.text = addr['recipientName'] ?? '';
+    _phoneController.text = addr['phone'] ?? '';
+    _addressController.text =
+        '${addr['detail']}, ${addr['ward']}, ${addr['district']}, ${addr['province']}';
   }
 
   Future<void> _submitOrder() async {
@@ -133,6 +183,41 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   children: [
                     const Text('THÔNG TIN GIAO NHẬN', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
                     const SizedBox(height: 14),
+
+                    // Address Book Dropdown (if available)
+                    if (_addresses.isNotEmpty) ...[
+                      DropdownButtonFormField<String>(
+                        value: _selectedAddressId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Chọn nhanh từ sổ địa chỉ',
+                          prefixIcon: Icon(Icons.bookmark_outline, color: AppTheme.primaryRed),
+                        ),
+                        items: _addresses.map<DropdownMenuItem<String>>((addr) {
+                          final label = addr['label'] ?? 'Địa chỉ';
+                          final isDef = addr['isDefault'] == true ? ' [Mặc định]' : '';
+                          final name = addr['recipientName'] ?? '';
+                          return DropdownMenuItem<String>(
+                            value: addr['_id'],
+                            child: Text(
+                              '$label$isDef - $name (${addr['phone']})',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedAddressId = val;
+                            final selected = _addresses.firstWhere((a) => a['_id'] == val, orElse: () => null);
+                            if (selected != null) {
+                              _applyAddress(selected);
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                    ],
 
                     // FullName
                     TextFormField(

@@ -161,3 +161,42 @@ export interface DashboardData {
   recentOrders: Order[]
   bestSellingProducts: Product[]
 }
+
+export interface Address {
+  _id: string
+  user?: string
+  label: string
+  recipientName: string
+  phone: string
+  province: string
+  district: string
+  ward: string
+  detail: string
+  isDefault: boolean
+  isDeleted?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface CreateAddressPayload {
+  label: string
+  recipientName: string
+  phone: string
+  province: string
+  district: string
+  ward: string
+  detail: string
+  isDefault?: boolean
+}
+
+export interface UpdateAddressPayload {
+  label?: string
+  recipientName?: string
+  phone?: string
+  province?: string
+  district?: string
+  ward?: string
+  detail?: string
+  isDefault?: boolean
+}
+

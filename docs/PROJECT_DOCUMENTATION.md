@@ -118,7 +118,19 @@ Hệ thống quản lý 4 nhóm người dùng chính:
    - Frontend Vue 3 tích hợp hàng đợi Axios Interceptor tự động làm mới token ngầm khi gặp lỗi 401 mà không làm gián đoạn trải nghiệm người dùng.
    - Mobile Flutter lưu trữ `refreshToken` an toàn và gọi API thu hồi token khi đăng xuất.
 
+### 4.5. Quản lý Sổ địa chỉ & Tính bất biến của Địa chỉ mặc định (Address Book & Default Invariant)
+1. **Quy tắc Địa chỉ mặc định (Default Invariant)**:
+   - Địa chỉ đầu tiên người dùng tạo tự động được gán `isDefault = true`.
+   - Mỗi khách hàng chỉ có duy nhất 1 địa chỉ mặc định tại một thời điểm. Khi đặt một địa chỉ làm mặc định, toàn bộ địa chỉ khác tự động chuyển về `isDefault = false`.
+   - Khi xóa mềm (soft delete) địa chỉ mặc định, hệ thống tự động thăng cấp địa chỉ hợp lệ gần nhất thành địa chỉ mặc định mới.
+2. **Tối ưu hóa Truy vấn & Hiệu năng**:
+   - Compound Index `{ user: 1, isDefault: 1, isDeleted: 1 }` giúp tra cứu địa chỉ mặc định tức thì khi người dùng vào trang Checkout.
+   - Endpoint chuyên biệt `GET /addresses/default` phục vụ luồng mua sắm 1-click.
+3. **Đồng bộ Đa nền tảng**:
+   - Web Store (Vue 3) & Mobile App (Flutter) đều hỗ trợ chọn nhanh từ sổ địa chỉ, xác thực số điện thoại 10 số chuẩn VN và tự động điền khi thanh toán.
+
 ---
+
 
 ## 📂 5. HƯỚNG DẪN CẤU TRÚC MÃ NGUỒN DÀNH CHO DEVELOPER / INTERN
 

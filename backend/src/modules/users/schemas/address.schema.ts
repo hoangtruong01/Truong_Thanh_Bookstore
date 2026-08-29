@@ -40,3 +40,5 @@ export class Address {
 export const AddressSchema = SchemaFactory.createForClass(Address);
 // Add index for query optimization
 AddressSchema.index({ user: 1, isDeleted: 1 });
+AddressSchema.index({ user: 1, isDefault: 1, isDeleted: 1 });
+
