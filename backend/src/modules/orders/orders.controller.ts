@@ -26,6 +26,7 @@ import {
 } from './dto/order.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt.guard';
 import { StaffPermission, UserRole } from '../../common/enums';
 
 @ApiTags('orders')
@@ -34,6 +35,7 @@ export class OrdersController {
   constructor(private ordersService: OrdersService) {}
 
   @Post('checkout-preview')
+  @UseGuards(OptionalJwtAuthGuard)
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({ summary: 'Preview checkout calculations, validate inventory, freeship and voucher' })
   checkoutPreview(@Body() dto: CheckoutPreviewDto, @Request() req: any) {

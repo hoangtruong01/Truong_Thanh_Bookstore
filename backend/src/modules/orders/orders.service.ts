@@ -27,6 +27,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
 import { UsersService } from '../users/users.service';
 import { CartService } from '../cart/cart.service';
+import { InventoryService } from '../inventory/inventory.service';
+import { InventoryTransactionType } from '../../common/enums';
 
 // FIX-C03: Shipping fee threshold (must match frontend)
 const FREE_SHIPPING_THRESHOLD = 299000;
@@ -45,6 +47,7 @@ export class OrdersService {
     private emailService: EmailService,
     private usersService: UsersService,
     @Optional() private cartService?: CartService,
+    @Optional() private inventoryService?: InventoryService,
   ) {}
 
 
@@ -111,11 +114,18 @@ export class OrdersService {
         case 'CONFIRMED':
           statusLabel = 'Đã xác nhận';
           break;
+        case 'PROCESSING':
+          statusLabel = 'Đang xử lý';
+          break;
         case 'SHIPPING':
           statusLabel = 'Đang giao';
           break;
+        case 'DELIVERED':
         case 'COMPLETED':
           statusLabel = 'Hoàn thành';
+          break;
+        case 'RETURNED':
+          statusLabel = 'Đã hoàn trả';
           break;
         case 'CANCELLED':
           statusLabel = 'Hủy đơn';
@@ -270,6 +280,11 @@ export class OrdersService {
         'Phương thức thanh toán này chưa được kích hoạt. Vui lòng chọn thanh toán khi nhận hàng.',
       );
     }
+    if (!userId && paymentMethod !== PaymentMethod.COD) {
+      throw new BadRequestException(
+        'Khách vãng lai chỉ có thể thanh toán khi nhận hàng. Vui lòng đăng nhập để dùng thanh toán trực tuyến.',
+      );
+    }
 
     const guestAccessToken = userId
       ? undefined
@@ -326,6 +341,7 @@ export class OrdersService {
     );
     const shippingFee =
       subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+    const orderCode = this.generateOrderCode();
 
     const persist = async (session?: ClientSession): Promise<OrderDocument> => {
       const deductedItems: Array<{ product: string; quantity: number }> = [];
@@ -362,10 +378,20 @@ export class OrdersService {
             await this.productsService.incrementSold(item.product, item.quantity);
           }
           deductedItems.push({ product: item.product, quantity: item.quantity });
+          if (this.inventoryService) {
+            await this.inventoryService.recordExternalMovement(
+              item.product,
+              InventoryTransactionType.SALE,
+              item.quantity,
+              orderCode,
+              undefined,
+              session,
+            );
+          }
         }
 
         const order = new this.orderModel({
-          orderCode: this.generateOrderCode(),
+          orderCode,
           customer: userId || null,
           guestAccessTokenHash: guestAccessToken
             ? this.hashSecret(guestAccessToken)
@@ -408,9 +434,21 @@ export class OrdersService {
           }
           if (promotionConsumed && dto.promotionCode) {
             await this.promotionsService
-              .releaseUsage(dto.promotionCode)
+              .releaseUsage(
+                dto.promotionCode,
+                userId,
+                dto.customerEmail,
+                dto.phone,
+              )
               .catch((rollbackError) =>
                 this.logger.error('Promotion rollback failed', rollbackError),
+              );
+          }
+          if (this.inventoryService) {
+            await this.inventoryService
+              .deleteTransactionsByReference(orderCode)
+              .catch((rollbackError) =>
+                this.logger.error('Inventory ledger rollback failed', rollbackError),
               );
           }
         }
@@ -650,11 +688,14 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Order not found');
 
     const oldStatus = order.orderStatus;
-    const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+    const allowedTransitions: Record<string, OrderStatus[]> = {
       [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
-      [OrderStatus.CONFIRMED]: [OrderStatus.SHIPPING, OrderStatus.CANCELLED],
-      [OrderStatus.SHIPPING]: [OrderStatus.COMPLETED],
-      [OrderStatus.COMPLETED]: [],
+      [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
+      [OrderStatus.PROCESSING]: [OrderStatus.SHIPPING, OrderStatus.CANCELLED],
+      [OrderStatus.SHIPPING]: [OrderStatus.DELIVERED],
+      [OrderStatus.DELIVERED]: [OrderStatus.RETURNED],
+      [OrderStatus.COMPLETED]: [OrderStatus.RETURNED],
+      [OrderStatus.RETURNED]: [],
       [OrderStatus.CANCELLED]: [],
     };
     if (!allowedTransitions[oldStatus]?.includes(dto.orderStatus)) {
@@ -668,7 +709,8 @@ export class OrdersService {
       order.timeline = [];
     }
 
-    let timelineNote = `Trạng thái đơn hàng: ${dto.orderStatus}`;
+    let timelineNote = dto.note || `Trạng thái đơn hàng: ${dto.orderStatus}`;
+    if (!dto.note) {
     switch (dto.orderStatus) {
       case OrderStatus.PENDING:
         timelineNote = 'Đơn hàng đang chờ xử lý.';
@@ -676,15 +718,23 @@ export class OrdersService {
       case OrderStatus.CONFIRMED:
         timelineNote = 'Cửa hàng đã xác nhận đơn hàng của bạn.';
         break;
+      case OrderStatus.PROCESSING:
+        timelineNote = 'Đơn hàng đang được đóng gói và chuẩn bị bàn giao.';
+        break;
       case OrderStatus.SHIPPING:
         timelineNote = 'Đơn hàng đang được vận chuyển đến địa chỉ nhận.';
         break;
+      case OrderStatus.DELIVERED:
       case OrderStatus.COMPLETED:
         timelineNote = 'Giao hàng thành công. Đơn hàng hoàn tất.';
+        break;
+      case OrderStatus.RETURNED:
+        timelineNote = 'Đơn hàng đã được tiếp nhận hoàn trả và hoàn kho.';
         break;
       case OrderStatus.CANCELLED:
         timelineNote = 'Đơn hàng đã bị hủy bỏ.';
         break;
+    }
     }
 
     order.timeline.push({
@@ -695,8 +745,9 @@ export class OrdersService {
 
     // If cancelled, restore stock
     if (
-      dto.orderStatus === OrderStatus.CANCELLED &&
-      oldStatus !== OrderStatus.CANCELLED
+      (dto.orderStatus === OrderStatus.CANCELLED ||
+        dto.orderStatus === OrderStatus.RETURNED) &&
+      !order.inventoryRestoredAt
     ) {
       for (const item of order.items) {
         if (item.product) {
@@ -708,8 +759,18 @@ export class OrdersService {
             item.product.toString(),
             -item.quantity,
           );
+          if (this.inventoryService) {
+            await this.inventoryService.recordExternalMovement(
+              item.product.toString(),
+              InventoryTransactionType.RETURN,
+              item.quantity,
+              `${dto.orderStatus}:${order._id.toString()}`,
+              order._id.toString(),
+            );
+          }
         }
       }
+      order.inventoryRestoredAt = new Date();
 
       // Deduct loyalty points if order was placed by a registered user
       if (order.customer) {
@@ -725,9 +786,24 @@ export class OrdersService {
       }
     }
 
+    if (
+      dto.orderStatus === OrderStatus.CANCELLED &&
+      order.promotionCode &&
+      !order.promotionUsageReleasedAt
+    ) {
+      await this.promotionsService.releaseUsage(
+        order.promotionCode,
+        order.customer?.toString(),
+        order.customerEmail,
+        order.phone,
+      );
+      order.promotionUsageReleasedAt = new Date();
+    }
+
     // If completed, mark as paid
     if (
-      dto.orderStatus === OrderStatus.COMPLETED &&
+      (dto.orderStatus === OrderStatus.DELIVERED ||
+        dto.orderStatus === OrderStatus.COMPLETED) &&
       order.paymentMethod === PaymentMethod.COD
     ) {
       order.paymentStatus = PaymentStatus.PAID;
@@ -754,11 +830,18 @@ export class OrdersService {
         case OrderStatus.CONFIRMED:
           statusText = 'đã được xác nhận và đang được chuẩn bị';
           break;
+        case OrderStatus.PROCESSING:
+          statusText = 'đang được đóng gói và chuẩn bị bàn giao';
+          break;
         case OrderStatus.SHIPPING:
           statusText = 'đang được giao đến bạn';
           break;
+        case OrderStatus.DELIVERED:
         case OrderStatus.COMPLETED:
           statusText = 'đã giao thành công. Cảm ơn bạn đã mua sắm!';
+          break;
+        case OrderStatus.RETURNED:
+          statusText = 'đã được hoàn trả';
           break;
         case OrderStatus.CANCELLED:
           statusText = 'đã bị hủy';
@@ -774,7 +857,10 @@ export class OrdersService {
         }).catch((err) => this.logger.error('Failed to create customer notification for status change', err));
 
         // If completed, trigger review invitation notification
-        if (savedOrder.orderStatus === OrderStatus.COMPLETED) {
+        if (
+          savedOrder.orderStatus === OrderStatus.DELIVERED ||
+          savedOrder.orderStatus === OrderStatus.COMPLETED
+        ) {
           this.notificationsService.create({
             userId: customerId,
             title: `⭐ Đánh giá sản phẩm đơn hàng #${savedOrder.orderCode}`,

@@ -56,14 +56,39 @@ export class InventoryTransaction {
   @Prop({ required: true })
   quantity: number;
 
+  @Prop({ required: true })
+  change: number;
+
+  @Prop({ required: true, min: 0 })
+  stockBefore: number;
+
+  @Prop({ required: true, min: 0 })
+  stockAfter: number;
+
   @Prop()
   note: string;
 
   @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   createdBy: Types.ObjectId;
 
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Order' })
+  order?: Types.ObjectId;
+
+  @Prop()
+  reference?: string;
+
   createdAt: Date;
 }
 
 export const InventoryTransactionSchema =
   SchemaFactory.createForClass(InventoryTransaction);
+
+InventoryTransactionSchema.index({ product: 1, createdAt: -1 });
+InventoryTransactionSchema.index({ type: 1, createdAt: -1 });
+InventoryTransactionSchema.index(
+  { reference: 1, product: 1, type: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { reference: { $type: 'string' } },
+  },
+);

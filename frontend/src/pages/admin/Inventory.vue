@@ -184,9 +184,11 @@
                   v-model="adjustType"
                   class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold"
                 >
-                  <option value="import">Nhập kho (Import)</option>
-                  <option value="export">Xuất kho (Export)</option>
-                  <option value="adjust">Cập nhật trực tiếp số lượng</option>
+                  <option value="import">Nhập kho (IMPORT)</option>
+                  <option value="sale">Bán hàng thủ công (SALE)</option>
+                  <option value="return">Hoàn kho (RETURN)</option>
+                  <option value="adjustment">Điều chỉnh tăng/giảm (ADJUSTMENT)</option>
+                  <option value="damage">Hư hỏng / thất thoát (DAMAGE)</option>
                 </select>
               </div>
 
@@ -195,7 +197,7 @@
                 <input
                   v-model.number="adjustQty"
                   type="number"
-                  min="1"
+                  :min="adjustType === 'adjustment' ? undefined : 1"
                   placeholder="Nhập số lượng..."
                   class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold placeholder:text-slate-400"
                 />
@@ -277,9 +279,10 @@
                 </span>
               </td>
               <td class="py-4 px-6 font-extrabold text-slate-800">
-                <span v-if="tx.type === 'IMPORT'" class="text-emerald-600 font-extrabold">+{{ tx.quantity }} {{ tx.product?.unit || 'cái' }}</span>
-                <span v-else-if="tx.type === 'EXPORT'" class="text-red-600 font-extrabold">-{{ tx.quantity }} {{ tx.product?.unit || 'cái' }}</span>
-                <span v-else class="text-blue-600 font-extrabold">{{ tx.quantity }} {{ tx.product?.unit || 'cái' }}</span>
+                <span :class="tx.change >= 0 ? 'text-emerald-600' : 'text-red-600'" class="font-extrabold">
+                  {{ tx.change >= 0 ? '+' : '' }}{{ tx.change }} {{ tx.product?.unit || 'cái' }}
+                  <small class="block text-slate-400">{{ tx.stockBefore }} → {{ tx.stockAfter }}</small>
+                </span>
               </td>
               <td class="py-4 px-6 text-slate-600 font-bold">{{ tx.createdBy?.fullName || 'Hệ thống' }}</td>
               <td class="py-4 px-6 text-slate-500 italic max-w-[150px] truncate" :title="tx.note">{{ tx.note || '-' }}</td>
@@ -303,7 +306,7 @@ const stocks = ref<Inventory[]>([])
 const loading = ref(true)
 
 const selectedStock = ref<Inventory | null>(null)
-const adjustType = ref<'import' | 'export' | 'adjust'>('import')
+const adjustType = ref<'import' | 'sale' | 'return' | 'adjustment' | 'damage'>('import')
 const adjustQty = ref(1)
 const adjustNote = ref('')
 const submittingAdjust = ref(false)
@@ -435,7 +438,7 @@ function getProductUnit(stk: Inventory | null) {
 }
 
 async function submitAdjustment() {
-  if (!selectedStock.value || adjustQty.value <= 0) return
+  if (!selectedStock.value || adjustQty.value === 0 || (adjustType.value !== 'adjustment' && adjustQty.value < 0)) return
   
   submittingAdjust.value = true
   try {
@@ -449,9 +452,15 @@ async function submitAdjustment() {
     if (adjustType.value === 'import') {
       await inventoryService.importStock(payload)
       toast.success('Nhập kho thành công!')
-    } else if (adjustType.value === 'export') {
-      await inventoryService.exportStock(payload)
-      toast.success('Xuất kho thành công!')
+    } else if (adjustType.value === 'sale') {
+      await inventoryService.saleStock(payload)
+      toast.success('Ghi nhận bán hàng thành công!')
+    } else if (adjustType.value === 'return') {
+      await inventoryService.returnStock(payload)
+      toast.success('Hoàn kho thành công!')
+    } else if (adjustType.value === 'damage') {
+      await inventoryService.damageStock(payload)
+      toast.success('Ghi nhận hư hỏng thành công!')
     } else {
       await inventoryService.adjustStock(payload)
       toast.success('Điều chỉnh số lượng kho thành công!')
@@ -490,13 +499,17 @@ function formatDateTime(dateStr: string) {
 
 function getTransactionTypeLabel(type: string) {
   if (type === 'IMPORT') return 'Nhập kho'
-  if (type === 'EXPORT') return 'Xuất kho'
+  if (type === 'SALE') return 'Bán hàng'
+  if (type === 'RETURN') return 'Hoàn kho'
+  if (type === 'DAMAGE') return 'Hư hỏng'
   return 'Điều chỉnh'
 }
 
 function getTransactionTypeStyle(type: string) {
   if (type === 'IMPORT') return 'bg-emerald-50 text-emerald-800 border-emerald-200'
-  if (type === 'EXPORT') return 'bg-red-50 text-red-800 border-red-200'
+  if (type === 'SALE') return 'bg-red-50 text-red-800 border-red-200'
+  if (type === 'RETURN') return 'bg-teal-50 text-teal-800 border-teal-200'
+  if (type === 'DAMAGE') return 'bg-rose-50 text-rose-800 border-rose-200'
   return 'bg-blue-50 text-blue-800 border-blue-200'
 }
 

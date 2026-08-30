@@ -86,7 +86,7 @@
                 <td class="py-4 px-5 text-slate-500">{{ formatDate(order.createdAt) }}</td>
                 <!-- Payment method and status stacked (Matches Screenshot) -->
                 <td class="py-4 px-5">
-                  <p class="text-[10px] text-slate-800 font-extrabold">{{ order.paymentMethod === 'COD' ? 'COD' : (order.paymentMethod === 'EWALLET' ? 'Ví điện tử' : 'Chuyển khoản') }}</p>
+                  <p class="text-[10px] text-slate-800 font-extrabold">{{ getStatusLabel(order.paymentMethod) }}</p>
                   <p :class="['text-[9px] font-semibold mt-0.5', order.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-amber-600']">
                     {{ order.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán' }}
                   </p>
@@ -134,7 +134,7 @@
             </div>
             <div class="flex justify-between items-center">
               <span class="text-slate-400 font-bold">Phương thức:</span>
-              <span class="font-extrabold text-slate-800">{{ selectedOrder.paymentMethod === 'COD' ? 'COD' : (selectedOrder.paymentMethod === 'EWALLET' ? 'Ví điện tử' : 'Chuyển khoản') }}</span>
+              <span class="font-extrabold text-slate-800">{{ getStatusLabel(selectedOrder.paymentMethod) }}</span>
             </div>
           </div>
 
@@ -189,8 +189,10 @@
               >
                 <option value="PENDING">Chờ xử lý</option>
                 <option value="CONFIRMED">Đã xác nhận</option>
+                <option value="PROCESSING">Đang đóng gói</option>
                 <option value="SHIPPING">Đang giao</option>
-                <option value="COMPLETED">Hoàn thành</option>
+                <option value="DELIVERED">Đã giao hàng</option>
+                <option value="RETURNED">Đã hoàn trả</option>
                 <option value="CANCELLED">Hủy đơn</option>
               </select>
               <button
@@ -230,8 +232,10 @@ const tabs = [
   { value: 'ALL', label: 'Tất cả' },
   { value: 'PENDING', label: 'Chờ xác nhận' },
   { value: 'CONFIRMED', label: 'Đã xác nhận' },
+  { value: 'PROCESSING', label: 'Đang đóng gói' },
   { value: 'SHIPPING', label: 'Đang giao' },
-  { value: 'COMPLETED', label: 'Hoàn thành' },
+  { value: 'DELIVERED', label: 'Đã giao' },
+  { value: 'RETURNED', label: 'Hoàn trả' },
   { value: 'CANCELLED', label: 'Đã hủy' }
 ]
 
@@ -307,10 +311,15 @@ function getStatusBadgeStyle(status: string) {
       return 'bg-amber-100 text-amber-800 border border-amber-200'
     case 'CONFIRMED':
       return 'bg-red-100 text-red-800 border border-red-200'
+    case 'PROCESSING':
+      return 'bg-orange-100 text-orange-800 border border-orange-200'
     case 'SHIPPING':
       return 'bg-blue-100 text-blue-800 border border-blue-200'
+    case 'DELIVERED':
     case 'COMPLETED':
       return 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+    case 'RETURNED':
+      return 'bg-purple-100 text-purple-800 border border-purple-200'
     case 'CANCELLED':
       return 'bg-slate-100 text-slate-800 border border-slate-200'
     default:

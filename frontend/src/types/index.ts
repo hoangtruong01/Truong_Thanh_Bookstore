@@ -93,9 +93,9 @@ export interface Order {
   shippingAddress: string
   phone: string
   note?: string
-  paymentMethod: 'COD' | 'BANK_TRANSFER' | 'EWALLET'
-  paymentStatus: 'UNPAID' | 'PAID' | 'REFUNDED'
-  orderStatus: 'PENDING' | 'CONFIRMED' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED'
+  paymentMethod: 'COD' | 'BANK_TRANSFER' | 'EWALLET' | 'VNPAY' | 'MOMO'
+  paymentStatus: 'UNPAID' | 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'CANCELLED'
+  orderStatus: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPING' | 'DELIVERED' | 'RETURNED' | 'COMPLETED' | 'CANCELLED'
   subtotal: number
   shippingFee: number
   discount: number
@@ -120,6 +120,7 @@ export interface Promotion {
   startDate: string
   endDate: string
   usageLimit: number
+  perUserLimit: number
   usedCount: number
   status: boolean
 }
@@ -132,6 +133,19 @@ export interface Inventory {
   maxStock: number
   status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK'
   lastUpdated: string
+}
+
+export interface InventoryTransaction {
+  _id: string
+  product: Product | string
+  type: 'IMPORT' | 'SALE' | 'RETURN' | 'ADJUSTMENT' | 'DAMAGE'
+  quantity: number
+  change: number
+  stockBefore: number
+  stockAfter: number
+  note?: string
+  reference?: string
+  createdAt: string
 }
 
 export interface PaginatedResponse<T> {

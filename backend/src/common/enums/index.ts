@@ -8,7 +8,11 @@ export enum UserRole {
 export enum OrderStatus {
   PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
+  PROCESSING = 'PROCESSING',
   SHIPPING = 'SHIPPING',
+  DELIVERED = 'DELIVERED',
+  RETURNED = 'RETURNED',
+  /** @deprecated Kept only for backwards compatibility with historical orders. */
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
 }
@@ -32,8 +36,6 @@ export enum PaymentStatus {
 
 export enum InventoryTransactionType {
   IMPORT = 'IMPORT',
-  EXPORT = 'EXPORT',
-  ADJUST = 'ADJUST',
   SALE = 'SALE',
   RETURN = 'RETURN',
   ADJUSTMENT = 'ADJUSTMENT',

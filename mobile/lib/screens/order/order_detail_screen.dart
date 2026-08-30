@@ -166,7 +166,10 @@ class OrderDetailScreen extends StatelessWidget {
                                     Text(
                                       time.status == 'PENDING' ? 'Chờ xử lý' :
                                       time.status == 'CONFIRMED' ? 'Đã xác nhận' :
+                                      time.status == 'PROCESSING' ? 'Đang đóng gói' :
                                       time.status == 'SHIPPING' ? 'Đang giao' :
+                                      time.status == 'DELIVERED' ? 'Đã giao hàng' :
+                                      time.status == 'RETURNED' ? 'Đã hoàn trả' :
                                       time.status == 'COMPLETED' ? 'Hoàn thành' :
                                       time.status == 'CANCELLED' ? 'Đã hủy' : time.status,
                                       style: TextStyle(

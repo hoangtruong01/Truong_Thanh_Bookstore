@@ -8,9 +8,11 @@ import '../models/cart_item_model.dart';
 class OrderProvider with ChangeNotifier {
   List<OrderModel> _myOrders = [];
   bool _isLoading = false;
+  Map<String, dynamic>? _lastPaymentAction;
 
   List<OrderModel> get myOrders => _myOrders;
   bool get isLoading => _isLoading;
+  Map<String, dynamic>? get lastPaymentAction => _lastPaymentAction;
 
   Future<OrderModel?> placeOrder({
     required List<CartItemModel> items,
@@ -63,7 +65,33 @@ class OrderProvider with ChangeNotifier {
       notifyListeners();
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return OrderModel.fromJson(body['data']);
+        final order = OrderModel.fromJson(body['data']);
+        _lastPaymentAction = null;
+        if (isAuth && paymentMethod != 'COD') {
+          try {
+            final paymentResponse = await http.post(
+              Uri.parse(ApiConstants.payments),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({
+                'orderId': order.id,
+                'provider': paymentMethod,
+              }),
+            );
+            if (paymentResponse.statusCode == 200 || paymentResponse.statusCode == 201) {
+              final paymentBody = jsonDecode(paymentResponse.body);
+              final paymentData = paymentBody['data'];
+              if (paymentData is Map && paymentData['action'] is Map) {
+                _lastPaymentAction = Map<String, dynamic>.from(paymentData['action']);
+              }
+            }
+          } catch (e) {
+            debugPrint('Order created but payment initiation failed: $e');
+          }
+        }
+        return order;
       } else {
         throw Exception(body['message'] ?? 'Đặt hàng thất bại');
       }

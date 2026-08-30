@@ -77,6 +77,13 @@ export class CreatePromotionDto {
   @Min(1, { message: 'Giới hạn sử dụng tối thiểu là 1' })
   usageLimit?: number;
 
+  @ApiPropertyOptional({ example: 1, description: 'Số lượt tối đa cho mỗi tài khoản/khách' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'Giới hạn theo người dùng phải là số nguyên' })
+  @Min(1, { message: 'Giới hạn theo người dùng tối thiểu là 1' })
+  perUserLimit?: number;
+
   @ApiPropertyOptional({ default: true })
   @IsOptional()
   @IsBoolean({ message: 'Trạng thái phải là boolean' })

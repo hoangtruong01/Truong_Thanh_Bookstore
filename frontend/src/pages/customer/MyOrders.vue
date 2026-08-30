@@ -97,7 +97,7 @@
             <p>
               <strong>Thanh toán:</strong>
               <span class="font-bold text-slate-700 ml-1">
-                {{ order.paymentMethod === 'COD' ? 'COD' : (order.paymentMethod === 'EWALLET' ? 'Ví điện tử' : 'Chuyển khoản') }}
+                {{ getStatusLabel(order.paymentMethod) }}
               </span>
               <span :class="['ml-2 text-[10px] font-black', order.paymentStatus === 'PAID' ? 'text-green-600' : 'text-amber-600']">
                 ({{ order.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán' }})
@@ -184,10 +184,15 @@ function getStatusBadgeStyle(status: string) {
       return 'bg-amber-100 text-amber-800 border border-amber-200'
     case 'CONFIRMED':
       return 'bg-red-100 text-red-800 border border-red-200'
+    case 'PROCESSING':
+      return 'bg-orange-100 text-orange-800 border border-orange-200'
     case 'SHIPPING':
       return 'bg-blue-100 text-blue-800 border border-blue-200'
+    case 'DELIVERED':
     case 'COMPLETED':
       return 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+    case 'RETURNED':
+      return 'bg-purple-100 text-purple-800 border border-purple-200'
     case 'CANCELLED':
       return 'bg-slate-100 text-slate-800 border border-slate-200'
     default:

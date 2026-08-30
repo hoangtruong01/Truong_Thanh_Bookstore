@@ -6,7 +6,13 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model } from 'mongoose';
-import { Promotion, PromotionDocument } from './schemas/promotion.schema';
+import { createHash } from 'crypto';
+import {
+  Promotion,
+  PromotionDocument,
+  PromotionUsage,
+  PromotionUsageDocument,
+} from './schemas/promotion.schema';
 import { CreatePromotionDto, ApplyPromotionDto } from './dto/promotion.dto';
 import { DiscountType, OrderStatus } from '../../common/enums';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
@@ -19,10 +25,29 @@ export class PromotionsService {
   constructor(
     @InjectModel(Promotion.name)
     private promotionModel: Model<PromotionDocument>,
+    @InjectModel(PromotionUsage.name)
+    private promotionUsageModel: Model<PromotionUsageDocument>,
     @InjectModel(Order.name)
     private orderModel: Model<OrderDocument>,
     private notificationsService: NotificationsService,
   ) {}
+
+  private getIdentityHash(
+    userId?: string,
+    guestEmail?: string,
+    guestPhone?: string,
+  ): string | undefined {
+    const identity = userId
+      ? `user:${userId}`
+      : guestEmail?.trim()
+        ? `email:${guestEmail.trim().toLowerCase()}`
+        : guestPhone?.trim()
+          ? `phone:${guestPhone.trim()}`
+          : undefined;
+    return identity
+      ? createHash('sha256').update(identity).digest('hex')
+      : undefined;
+  }
 
   async create(dto: CreatePromotionDto): Promise<PromotionDocument> {
     const promotion = new this.promotionModel(dto);
@@ -123,7 +148,9 @@ export class PromotionsService {
       );
     }
 
-    // Prevent duplicate promotion usage per user or guest email/phone
+    // Enforce a configurable per-customer limit. Historical orders remain part
+    // of the calculation while the dedicated usage counter makes new checkout
+    // reservations atomic under concurrent requests.
     const matchConditions: any[] = [];
     if (userId) {
       matchConditions.push({ customer: userId as any });
@@ -135,17 +162,31 @@ export class PromotionsService {
       matchConditions.push({ phone: guestPhone.trim() });
     }
 
+    const identityHash = this.getIdentityHash(userId, guestEmail, guestPhone);
+    let historicalUsage = 0;
     if (matchConditions.length > 0) {
-      const usedQuery = this.orderModel.findOne({
+      const usedQuery = this.orderModel.countDocuments({
           $or: matchConditions,
           promotionCode: promo.code,
           orderStatus: { $ne: OrderStatus.CANCELLED as any },
         } as any);
       if (session) usedQuery.session(session);
-      const alreadyUsed = await usedQuery.exec();
-      if (alreadyUsed) {
-        throw new BadRequestException('Bạn hoặc thông tin đặt hàng này đã sử dụng mã giảm giá này cho một đơn hàng trước đó.');
-      }
+      historicalUsage = await usedQuery.exec();
+    }
+
+    let trackedUsage = 0;
+    if (identityHash) {
+      const usageQuery = this.promotionUsageModel.findOne({
+        promotion: promo._id,
+        identityHash,
+      });
+      if (session) usageQuery.session(session);
+      trackedUsage = (await usageQuery.exec())?.count || 0;
+    }
+    if (Math.max(historicalUsage, trackedUsage) >= (promo.perUserLimit || 1)) {
+      throw new BadRequestException(
+        `Mỗi khách hàng chỉ được sử dụng mã này tối đa ${promo.perUserLimit || 1} lần.`,
+      );
     }
 
     let discount = 0;
@@ -173,15 +214,68 @@ export class PromotionsService {
         throw new BadRequestException('Promotion usage limit reached');
       }
       promo = consumed;
+
+      if (identityHash) {
+        try {
+          const usage = await this.promotionUsageModel.findOneAndUpdate(
+            {
+              promotion: promo._id,
+              identityHash,
+              count: { $lt: promo.perUserLimit || 1 },
+            },
+            {
+              $inc: { count: 1 },
+              $setOnInsert: { promotion: promo._id, identityHash },
+            },
+            {
+              upsert: true,
+              returnDocument: 'after',
+              ...(session ? { session } : {}),
+            },
+          ).exec();
+          if (!usage) throw new Error('PROMOTION_PER_USER_LIMIT');
+        } catch (error) {
+          if (!session) {
+            await this.promotionModel.updateOne(
+              { _id: promo._id, usedCount: { $gt: 0 } },
+              { $inc: { usedCount: -1 } },
+            ).exec();
+          }
+          throw new BadRequestException(
+            `Mỗi khách hàng chỉ được sử dụng mã này tối đa ${promo.perUserLimit || 1} lần.`,
+          );
+        }
+      }
     }
 
     return { discount, code: promo.code, promotion: promo };
   }
 
-  async releaseUsage(code: string): Promise<void> {
+  async releaseUsage(
+    code: string,
+    userId?: string,
+    guestEmail?: string,
+    guestPhone?: string,
+    session?: ClientSession,
+  ): Promise<void> {
+    const promoQuery = this.promotionModel.findOne({ code: code.toUpperCase() });
+    if (session) promoQuery.session(session);
+    const promo = await promoQuery.exec();
+    if (!promo) return;
+
     await this.promotionModel.updateOne(
       { code: code.toUpperCase(), usedCount: { $gt: 0 } },
       { $inc: { usedCount: -1 } },
+      session ? { session } : undefined,
     ).exec();
+
+    const identityHash = this.getIdentityHash(userId, guestEmail, guestPhone);
+    if (identityHash) {
+      await this.promotionUsageModel.updateOne(
+        { promotion: promo._id, identityHash, count: { $gt: 0 } },
+        { $inc: { count: -1 } },
+        session ? { session } : undefined,
+      ).exec();
+    }
   }
 }

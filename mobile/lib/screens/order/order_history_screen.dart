@@ -168,15 +168,26 @@ class _StatusBadge extends StatelessWidget {
         fg = const Color(0xFF1E40AF);
         label = 'Đã xác nhận';
         break;
+      case 'PROCESSING':
+        bg = const Color(0xFFFFEDD5);
+        fg = const Color(0xFF9A3412);
+        label = 'Đang đóng gói';
+        break;
       case 'SHIPPING':
         bg = const Color(0xFFF3E8FF);
         fg = const Color(0xFF6B21A8);
         label = 'Đang giao hàng';
         break;
+      case 'DELIVERED':
       case 'COMPLETED':
         bg = const Color(0xFFDCFCE7);
         fg = const Color(0xFF166534);
         label = 'Hoàn thành';
+        break;
+      case 'RETURNED':
+        bg = const Color(0xFFFAE8FF);
+        fg = const Color(0xFF86198F);
+        label = 'Đã hoàn trả';
         break;
       case 'CANCELLED':
         bg = const Color(0xFFFEE2E2);

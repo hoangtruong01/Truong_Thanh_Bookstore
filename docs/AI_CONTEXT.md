@@ -62,10 +62,10 @@ backend/src/modules/
 | **TASK 14** | Module Giỏ hàng Backend & Kiểm kho thời gian thực               | Phase 4 | P0         | 🟢 **DONE** |
 | **TASK 15** | Luồng Checkout an toàn & Kiểm tra nguyên tử                     | Phase 4 | P0         | 🟢 **DONE** |
 | **TASK 16** | Quản lý Sổ địa chỉ giao hàng người dùng                         | Phase 4 | P1         | 🟢 **DONE** |
-| **TASK 17** | Quản lý Đơn hàng, Vòng đời trạng thái & Hóa đơn PDF             | Phase 4 | P0         | ⚪ PENDING  |
-| **TASK 18** | Kiến trúc Thanh toán Provider Abstraction (VNPay, MoMo, COD)    | Phase 5 | P0         | ⚪ PENDING  |
-| **TASK 19** | Hệ thống Mã khuyến mãi (Voucher)                                | Phase 5 | P1         | ⚪ PENDING  |
-| **TASK 20** | Quản lý Tồn kho & 5 loại Inventory Transaction                  | Phase 5 | P0         | ⚪ PENDING  |
+| **TASK 17** | Quản lý Đơn hàng, Vòng đời trạng thái & Hóa đơn PDF             | Phase 4 | P0         | 🟢 **DONE** |
+| **TASK 18** | Kiến trúc Thanh toán Provider Abstraction (VNPay, MoMo, COD)    | Phase 5 | P0         | 🟢 **DONE** |
+| **TASK 19** | Hệ thống Mã khuyến mãi (Voucher)                                | Phase 5 | P1         | 🟢 **DONE** |
+| **TASK 20** | Quản lý Tồn kho & 5 loại Inventory Transaction                  | Phase 5 | P0         | 🟢 **DONE** |
 | **TASK 21** | Đánh giá & Xếp hạng sản phẩm (Verified Purchase)                | Phase 5 | P1         | ⚪ PENDING  |
 | **TASK 22** | Danh sách Yêu thích (Wishlist)                                  | Phase 5 | P2         | ⚪ PENDING  |
 | **TASK 23** | Hệ thống Thông báo WebSocket Real-time & DB                     | Phase 5 | P1         | ⚪ PENDING  |
@@ -134,6 +134,40 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-30] — Hoàn thành TASK 17–20: Order Lifecycle, Payment Providers, Voucher & Inventory Ledger
+- **Người cập nhật**: Codex
+- **Mục tiêu**: Hoàn thiện liên thông bốn phân hệ nghiệp vụ trọng yếu sau checkout trên Backend NestJS, Frontend Vue 3 và Mobile Flutter; bảo vệ vòng đời đơn hàng, thanh toán trực tuyến, giới hạn voucher và mọi biến động kho bằng quy tắc server-side cùng audit log.
+- **TASK 17 — Order Lifecycle & Invoice**:
+  - Chuẩn hóa luồng `PENDING -> CONFIRMED -> PROCESSING -> SHIPPING -> DELIVERED`, hỗ trợ `CANCELLED`, `RETURNED` và tương thích dữ liệu lịch sử `COMPLETED`.
+  - Cấm nhảy cóc trạng thái bằng ma trận chuyển đổi; hỗ trợ ghi chú audit timeline; COD tự chuyển `PAID` khi giao thành công.
+  - Hủy/hoàn trả chỉ hoàn kho một lần, hoàn lại số lượng đã bán và phát sinh transaction `RETURN`; kiểm tra owner/staff/admin cho chi tiết, hủy và hóa đơn PDF.
+- **TASK 18 — Payment Provider Abstraction**:
+  - Xây dựng `PaymentProvider` + registry cho `COD`, `BANK_TRANSFER`, `VNPAY`, `MOMO`; loại bỏ `EWALLET` mơ hồ khỏi luồng tạo thanh toán mới nhưng giữ tương thích đơn cũ.
+  - Số tiền, mã đơn, quyền sở hữu và phương thức được đối chiếu trực tiếp từ Order trong DB; không tin dữ liệu client.
+  - Callback có HMAC signature, so khớp amount, idempotency chống callback trùng/xung đột, timeout 15 phút cho online gateway và tự đồng bộ `Order.paymentStatus`.
+  - Bổ sung cấu hình fail-fast `ENABLED_PAYMENT_METHODS` và secret/URL cho từng gateway trong `.env.example`.
+- **TASK 19 — Voucher System**:
+  - Bổ sung `perUserLimit`, collection `PromotionUsage` lưu identity SHA-256 không chứa PII và unique compound index.
+  - Giới hạn tổng + theo khách được reserve nguyên tử; rollback bộ đếm khi checkout lỗi/hủy đơn; vẫn đối chiếu lịch sử đơn cũ để tương thích dữ liệu.
+  - Đồng bộ form quản trị Web cho giới hạn lượt dùng theo khách.
+- **TASK 20 — Inventory Ledger**:
+  - Chuẩn hóa đúng 5 loại `IMPORT`, `SALE`, `RETURN`, `ADJUSTMENT`, `DAMAGE`; mỗi log lưu `change`, `stockBefore`, `stockAfter`, `reference`, `order` và người thao tác.
+  - Các nghiệp vụ giảm kho dùng atomic deduction nên không thể âm; hỗ trợ idempotent reference và transaction MongoDB/fallback bù trừ.
+  - Đơn mới tự ghi `SALE`; hủy/hoàn trả tự ghi `RETURN`; giao diện Admin hiển thị số dư trước/sau và đủ 5 loại biến động.
+- **Đồng bộ đa nền tảng**:
+  - Web cập nhật types, trạng thái, Dashboard, Checkout/payment action, quản trị Order/Promotion/Inventory.
+  - Mobile cập nhật trạng thái hành trình, VNPay/MoMo, khởi tạo payment action và nội dung hướng dẫn sau đặt hàng.
+- **Kết quả kiểm thử**:
+  - Test chuyên biệt Task 17–20: **4/4 suites, 21/21 tests PASS**.
+  - `npm test` Backend toàn bộ: **18/18 suites, 218/218 tests PASS**.
+  - `npm run build` Backend: **PASS**.
+  - `npm run build` Frontend: **PASS**.
+  - `flutter test` Mobile: **6/6 tests PASS**.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 21 — Đánh giá & Xếp hạng sản phẩm (Verified Purchase).
+
+---
 
 ### [2026-08-29] — Hoàn thành TASK 16: Quản lý Sổ địa chỉ giao hàng người dùng
 - **Người cập nhật**: Antigravity AI

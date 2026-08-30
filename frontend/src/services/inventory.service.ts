@@ -6,5 +6,9 @@ export const inventoryService = {
   getTransactions: (productId?: string) => api.get('/inventory/transactions', { params: { productId } }),
   importStock: (data: any) => api.post('/inventory/import', data),
   exportStock: (data: any) => api.post('/inventory/export', data),
+  saleStock: (data: any) => api.post('/inventory/sale', data),
+  returnStock: (data: any) => api.post('/inventory/return', data),
+  damageStock: (data: any) => api.post('/inventory/damage', data),
+  createTransaction: (data: any) => api.post('/inventory/transactions', data),
   adjustStock: (data: any) => api.post('/inventory/adjust', data),
 }

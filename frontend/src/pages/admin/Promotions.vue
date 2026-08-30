@@ -207,6 +207,17 @@
             </div>
           </div>
 
+          <div>
+            <label class="text-xs font-bold text-slate-700">Lượt tối đa mỗi khách *</label>
+            <input
+              v-model.number="form.perUserLimit"
+              type="number"
+              required
+              min="1"
+              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+            />
+          </div>
+
           <button
             type="submit"
             :disabled="submitting"
@@ -279,6 +290,7 @@ const form = reactive({
   startDate: '',
   endDate: '',
   usageLimit: 100,
+  perUserLimit: 1,
 })
 
 onMounted(fetchPromotions)
@@ -305,6 +317,7 @@ function openCreateForm() {
   form.startDate = new Date().toISOString().substring(0, 10)
   form.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)
   form.usageLimit = 100
+  form.perUserLimit = 1
   showForm.value = true
 }
 
