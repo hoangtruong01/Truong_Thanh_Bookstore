@@ -25,10 +25,20 @@ export class Review {
 
   @Prop({ default: true })
   isVisible: boolean;
+
+  @Prop({ default: false })
+  isVerifiedPurchase: boolean;
+
+  @Prop({ default: null })
+  adminReply?: string;
+
+  @Prop({ default: null })
+  adminReplyAt?: Date;
 }
 
 export const ReviewSchema = SchemaFactory.createForClass(Review);
 
-ReviewSchema.index({ product: 1 });
+ReviewSchema.index({ product: 1, isVisible: 1 });
 ReviewSchema.index({ product: 1, user: 1 }, { unique: true });
+ReviewSchema.index({ isVisible: 1, createdAt: -1 });
 ReviewSchema.index({ createdAt: -1 });

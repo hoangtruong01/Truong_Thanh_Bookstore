@@ -428,6 +428,10 @@ const BannersIcon = {
   template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" /></svg>`
 }
 
+const ReviewsIcon = {
+  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>`
+}
+
 const navItems = computed(() => {
   const items = [
     { name: 'AdminDashboard', label: locale.value === 'en' ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
@@ -435,6 +439,7 @@ const navItems = computed(() => {
     { name: 'AdminOrders', label: locale.value === 'en' ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: OrdersIcon, permission: 'MANAGE_ORDERS' },
     { name: 'AdminInventory', label: locale.value === 'en' ? 'Inventory' : 'Kho hàng', to: '/admin/inventory', icon: InventoryIcon, permission: 'MANAGE_INVENTORY' },
     { name: 'AdminCombos', label: locale.value === 'en' ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon, permission: 'MANAGE_PRODUCTS' },
+    { name: 'AdminReviews', label: locale.value === 'en' ? 'Reviews' : 'Đánh giá', to: '/admin/reviews', icon: ReviewsIcon, permission: 'MANAGE_PRODUCTS' },
     { name: 'AdminCustomers', label: locale.value === 'en' ? 'Customers' : 'Khách hàng', to: '/admin/customers', icon: CustomersIcon, permission: 'MANAGE_CUSTOMERS' },
     { name: 'AdminPromotions', label: locale.value === 'en' ? 'Promotions' : 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon, permission: 'MANAGE_PROMOTIONS' },
     { name: 'AdminBanners', label: locale.value === 'en' ? 'Banners' : 'Banners', to: '/admin/banners', icon: BannersIcon, permission: 'MANAGE_BANNERS' },

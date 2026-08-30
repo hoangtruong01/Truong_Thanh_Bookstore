@@ -4,11 +4,16 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
+  Optional,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from './schemas/user.schema';
+import { Product, ProductDocument } from '../products/schemas/product.schema';
+import { CartService } from '../cart/cart.service';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
 import { UserRole, StaffPermission, LoyaltyTier } from '../../common/enums';
 import {
@@ -23,6 +28,8 @@ import {
 export class UsersService {
   constructor(
     @InjectModel('User') private userModel: Model<UserDocument>,
+    @Optional() @InjectModel(Product.name) private productModel?: Model<ProductDocument>,
+    @Optional() @Inject(forwardRef(() => CartService)) private cartService?: CartService,
   ) {}
 
   async findById(id: string): Promise<UserDocument> {
@@ -333,25 +340,100 @@ export class UsersService {
 
   // ── Loyalty and Wishlist methods ──
 
-  async getWishlist(userId: string): Promise<string[]> {
-    const user = await this.findById(userId);
-    return (user.wishlist || []).map((id) => id.toString());
+  async getWishlist(userId: string) {
+    const user = await this.userModel
+      .findById(userId)
+      .populate({
+        path: 'wishlist',
+        match: { isDeleted: { $ne: true } },
+        select: 'name slug description price discountPrice stock images brand sku rating sold status isFeatured',
+      })
+      .exec();
+
+    if (!user) throw new NotFoundException('User not found');
+
+    const validProducts = (user.wishlist || []).filter((p: any) => p && p._id);
+    const validIds = validProducts.map((p: any) => p._id.toString());
+
+    // Clean up any stale/deleted references from wishlist
+    if (user.wishlist && user.wishlist.length !== validProducts.length) {
+      await this.userModel.findByIdAndUpdate(userId, {
+        wishlist: validProducts.map((p: any) => p._id),
+      });
+    }
+
+    return {
+      products: validProducts,
+      ids: validIds,
+      total: validProducts.length,
+    };
   }
 
-  async toggleWishlist(userId: string, productId: string): Promise<string[]> {
+  async toggleWishlist(userId: string, productId: string) {
+    if (!Types.ObjectId.isValid(productId)) {
+      throw new BadRequestException('ID sản phẩm không hợp lệ');
+    }
+
     const user = await this.findById(userId);
     const wishlist = (user.wishlist || []).map((id) => id.toString());
     const index = wishlist.indexOf(productId);
+    let isInWishlist = false;
 
     if (index > -1) {
       wishlist.splice(index, 1);
+      isInWishlist = false;
     } else {
       wishlist.push(productId);
+      isInWishlist = true;
     }
 
     const objectIdList = wishlist.map((id) => new Types.ObjectId(id));
     await this.userModel.findByIdAndUpdate(userId, { wishlist: objectIdList });
-    return wishlist;
+
+    return {
+      wishlist,
+      isInWishlist,
+      total: wishlist.length,
+    };
+  }
+
+  async removeFromWishlist(userId: string, productId: string) {
+    if (!Types.ObjectId.isValid(productId)) {
+      throw new BadRequestException('ID sản phẩm không hợp lệ');
+    }
+
+    const user = await this.findById(userId);
+    const wishlist = (user.wishlist || [])
+      .map((id) => id.toString())
+      .filter((id) => id !== productId);
+
+    const objectIdList = wishlist.map((id) => new Types.ObjectId(id));
+    await this.userModel.findByIdAndUpdate(userId, { wishlist: objectIdList });
+
+    return {
+      wishlist,
+      isInWishlist: false,
+      total: wishlist.length,
+    };
+  }
+
+  async moveToCart(userId: string, productId: string) {
+    if (!Types.ObjectId.isValid(productId)) {
+      throw new BadRequestException('ID sản phẩm không hợp lệ');
+    }
+
+    // Add to cart if CartService is available
+    if (this.cartService) {
+      await this.cartService.addToCart(userId, { productId, quantity: 1 });
+    }
+
+    // Remove from wishlist
+    await this.removeFromWishlist(userId, productId);
+
+    return {
+      success: true,
+      message: 'Đã chuyển sản phẩm vào giỏ hàng thành công',
+    };
   }
 
   async addLoyaltyPoints(

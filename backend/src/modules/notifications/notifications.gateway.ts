@@ -72,7 +72,14 @@ export class NotificationsGateway
 
       const userId = user._id.toString();
       client.data.userId = userId;
+      client.data.role = user.role;
       await client.join(`user:${userId}`);
+
+      if (['ADMIN', 'STAFF', 'SUPER_ADMIN'].includes(user.role)) {
+        await client.join('admin');
+        this.logger.log(`Client ${client.id} (Role: ${user.role}) joined admin notification room`);
+      }
+
       this.logger.log(`Authenticated notification client ${client.id}`);
     } catch {
       this.logger.warn(`Rejected unauthenticated notification client ${client.id}`);
@@ -85,10 +92,21 @@ export class NotificationsGateway
   }
 
   sendNotificationToUser(userId: string, notification: unknown) {
-    this.server.to(`user:${userId}`).emit('notification_received', notification);
+    if (this.server) {
+      this.server.to(`user:${userId}`).emit('notification_received', notification);
+    }
+  }
+
+  sendAlertToAdmins(alert: unknown) {
+    if (this.server) {
+      this.server.to('admin').emit('admin_alert', alert);
+      this.server.to('admin').emit('notification_received', alert);
+    }
   }
 
   broadcastNotification(notification: unknown) {
-    this.server.emit('notification_received', notification);
+    if (this.server) {
+      this.server.emit('notification_received', notification);
+    }
   }
 }

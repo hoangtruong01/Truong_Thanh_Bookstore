@@ -51,6 +51,40 @@ export class UsersController {
     return this.usersService.createStaffOrAdmin(dto, req.user.role);
   }
 
+  // ── Customer / Authenticated User Routes (Must be declared before :id) ──
+
+  @Get('wishlist')
+  @ApiOperation({ summary: 'Lấy danh sách sản phẩm yêu thích của người dùng' })
+  async getWishlist(@Request() req: any) {
+    return this.usersService.getWishlist(req.user._id);
+  }
+
+  @Post('wishlist/move-to-cart/:productId')
+  @ApiOperation({ summary: 'Chuyển sản phẩm từ yêu thích vào giỏ hàng' })
+  async moveToCart(@Request() req: any, @Param('productId') productId: string) {
+    return this.usersService.moveToCart(req.user._id, productId);
+  }
+
+  @Post('wishlist/:productId')
+  @ApiOperation({ summary: 'Thêm / bớt sản phẩm vào danh sách yêu thích (toggle)' })
+  async toggleWishlist(@Request() req: any, @Param('productId') productId: string) {
+    return this.usersService.toggleWishlist(req.user._id, productId);
+  }
+
+  @Delete('wishlist/:productId')
+  @ApiOperation({ summary: 'Xóa sản phẩm khỏi danh sách yêu thích' })
+  async removeFromWishlist(@Request() req: any, @Param('productId') productId: string) {
+    return this.usersService.removeFromWishlist(req.user._id, productId);
+  }
+
+  @Get('loyalty')
+  @ApiOperation({ summary: 'Lấy thông tin điểm thưởng và hạng thành viên' })
+  async getLoyaltyInfo(@Request() req: any) {
+    return this.usersService.getLoyaltyInfo(req.user._id);
+  }
+
+  // ── Admin & Super Admin Management Routes ──
+
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -103,26 +137,5 @@ export class UsersController {
   @ApiOperation({ summary: 'Xóa tài khoản người dùng (Admin/SuperAdmin)' })
   async deleteUser(@Param('id') id: string, @Request() req: any) {
     return this.usersService.deleteUser(id, req.user.role, req.user._id);
-  }
-
-  // ── Customer / Authenticated User Routes ──
-
-  @Get('wishlist')
-  @ApiOperation({ summary: 'Get current user wishlist' })
-  async getWishlist(@Request() req: any) {
-    return this.usersService.getWishlist(req.user._id);
-  }
-
-  @Post('wishlist/:productId')
-  @ApiOperation({ summary: 'Toggle product in user wishlist' })
-  async toggleWishlist(@Request() req: any, @Param('productId') productId: string) {
-    const list = await this.usersService.toggleWishlist(req.user._id, productId);
-    return { success: true, wishlist: list };
-  }
-
-  @Get('loyalty')
-  @ApiOperation({ summary: 'Get current user loyalty tier and points' })
-  async getLoyaltyInfo(@Request() req: any) {
-    return this.usersService.getLoyaltyInfo(req.user._id);
   }
 }

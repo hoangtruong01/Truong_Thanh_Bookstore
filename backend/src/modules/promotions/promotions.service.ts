@@ -52,15 +52,19 @@ export class PromotionsService {
   async create(dto: CreatePromotionDto): Promise<PromotionDocument> {
     const promotion = new this.promotionModel(dto);
     const savedPromo = await promotion.save();
-    
+
     if (savedPromo.status) {
-      this.notificationsService.createGlobalPromo(
-        savedPromo.code,
-        savedPromo.name,
-        savedPromo.description,
-      ).catch((err) => this.logger.error('Failed to create global promo notification', err));
+      this.notificationsService
+        .createGlobalPromo(
+          savedPromo.code,
+          savedPromo.name,
+          savedPromo.description || '',
+        )
+        .catch((err: any) =>
+          this.logger.error('Failed to create global promo notification', err),
+        );
     }
-    
+
     return savedPromo;
   }
 
@@ -101,11 +105,18 @@ export class PromotionsService {
 
     // Trigger notification if promotion was disabled and is now enabled
     if (promo.status && !oldPromo.status) {
-      this.notificationsService.createGlobalPromo(
-        promo.code,
-        promo.name,
-        promo.description,
-      ).catch((err) => this.logger.error('Failed to create global promo notification on update', err));
+      this.notificationsService
+        .createGlobalPromo(
+          promo.code,
+          promo.name,
+          promo.description || '',
+        )
+        .catch((err: any) =>
+          this.logger.error(
+            'Failed to create global promo notification on update',
+            err,
+          ),
+        );
     }
 
     return promo;
@@ -148,9 +159,7 @@ export class PromotionsService {
       );
     }
 
-    // Enforce a configurable per-customer limit. Historical orders remain part
-    // of the calculation while the dedicated usage counter makes new checkout
-    // reservations atomic under concurrent requests.
+    // Enforce a configurable per-customer limit
     const matchConditions: any[] = [];
     if (userId) {
       matchConditions.push({ customer: userId as any });
@@ -166,10 +175,10 @@ export class PromotionsService {
     let historicalUsage = 0;
     if (matchConditions.length > 0) {
       const usedQuery = this.orderModel.countDocuments({
-          $or: matchConditions,
-          promotionCode: promo.code,
-          orderStatus: { $ne: OrderStatus.CANCELLED as any },
-        } as any);
+        $or: matchConditions,
+        promotionCode: promo.code,
+        orderStatus: { $ne: OrderStatus.CANCELLED as any },
+      } as any);
       if (session) usedQuery.session(session);
       historicalUsage = await usedQuery.exec();
     }
@@ -192,7 +201,6 @@ export class PromotionsService {
     let discount = 0;
     if (promo.discountType === DiscountType.PERCENT) {
       discount = Math.floor((dto.orderTotal * promo.discountValue) / 100);
-      // FIX-H02: Limit percentage discount based on maxDiscount
       if (promo.maxDiscount && promo.maxDiscount > 0) {
         discount = Math.min(discount, promo.maxDiscount);
       }
@@ -201,15 +209,17 @@ export class PromotionsService {
     }
 
     if (incrementUsage) {
-      const consumed = await this.promotionModel.findOneAndUpdate(
-        {
-          _id: promo._id,
-          status: true,
-          usedCount: { $lt: promo.usageLimit },
-        },
-        { $inc: { usedCount: 1 } },
-        { returnDocument: 'after', ...(session ? { session } : {}) },
-      ).exec();
+      const consumed = await this.promotionModel
+        .findOneAndUpdate(
+          {
+            _id: promo._id,
+            status: true,
+            usedCount: { $lt: promo.usageLimit },
+          },
+          { $inc: { usedCount: 1 } },
+          { returnDocument: 'after', ...(session ? { session } : {}) },
+        )
+        .exec();
       if (!consumed) {
         throw new BadRequestException('Promotion usage limit reached');
       }
@@ -217,29 +227,33 @@ export class PromotionsService {
 
       if (identityHash) {
         try {
-          const usage = await this.promotionUsageModel.findOneAndUpdate(
-            {
-              promotion: promo._id,
-              identityHash,
-              count: { $lt: promo.perUserLimit || 1 },
-            },
-            {
-              $inc: { count: 1 },
-              $setOnInsert: { promotion: promo._id, identityHash },
-            },
-            {
-              upsert: true,
-              returnDocument: 'after',
-              ...(session ? { session } : {}),
-            },
-          ).exec();
+          const usage = await this.promotionUsageModel
+            .findOneAndUpdate(
+              {
+                promotion: promo._id,
+                identityHash,
+                count: { $lt: promo.perUserLimit || 1 },
+              },
+              {
+                $inc: { count: 1 },
+                $setOnInsert: { promotion: promo._id, identityHash },
+              },
+              {
+                upsert: true,
+                returnDocument: 'after',
+                ...(session ? { session } : {}),
+              },
+            )
+            .exec();
           if (!usage) throw new Error('PROMOTION_PER_USER_LIMIT');
         } catch (error) {
           if (!session) {
-            await this.promotionModel.updateOne(
-              { _id: promo._id, usedCount: { $gt: 0 } },
-              { $inc: { usedCount: -1 } },
-            ).exec();
+            await this.promotionModel
+              .updateOne(
+                { _id: promo._id, usedCount: { $gt: 0 } },
+                { $inc: { usedCount: -1 } },
+              )
+              .exec();
           }
           throw new BadRequestException(
             `Mỗi khách hàng chỉ được sử dụng mã này tối đa ${promo.perUserLimit || 1} lần.`,
@@ -258,24 +272,30 @@ export class PromotionsService {
     guestPhone?: string,
     session?: ClientSession,
   ): Promise<void> {
-    const promoQuery = this.promotionModel.findOne({ code: code.toUpperCase() });
+    const promoQuery = this.promotionModel.findOne({
+      code: code.toUpperCase(),
+    });
     if (session) promoQuery.session(session);
     const promo = await promoQuery.exec();
     if (!promo) return;
 
-    await this.promotionModel.updateOne(
-      { code: code.toUpperCase(), usedCount: { $gt: 0 } },
-      { $inc: { usedCount: -1 } },
-      session ? { session } : undefined,
-    ).exec();
+    await this.promotionModel
+      .updateOne(
+        { code: code.toUpperCase(), usedCount: { $gt: 0 } },
+        { $inc: { usedCount: -1 } },
+        session ? { session } : undefined,
+      )
+      .exec();
 
     const identityHash = this.getIdentityHash(userId, guestEmail, guestPhone);
     if (identityHash) {
-      await this.promotionUsageModel.updateOne(
-        { promotion: promo._id, identityHash, count: { $gt: 0 } },
-        { $inc: { count: -1 } },
-        session ? { session } : undefined,
-      ).exec();
+      await this.promotionUsageModel
+        .updateOne(
+          { promotion: promo._id, identityHash, count: { $gt: 0 } },
+          { $inc: { count: -1 } },
+          session ? { session } : undefined,
+        )
+        .exec();
     }
   }
 }

@@ -17,16 +17,16 @@ Hệ thống **Trường Thành Bookstore** là nền tảng thương mại đi�
                                          ▼                ▼
                                   ┌───────────────────────────────┐
                                   │     BACKEND API (NestJS)      │
-                                  ├───────────────────────────────┤
+                                  ├───────────────┬───────────────┤
                                   │ - Modules: Auth, Users,       │
                                   │   Products, Categories,       │
                                   │   Orders, Inventory, Promo... │
                                   │ - Global Pipes, Filters,      │
                                   │   Interceptors, Guards        │
                                   │ - WebSocket Gateway (Socketio)│
-                                  └──────────────┬────────────────┘
-                                                 │
-                                                 ▼
+                                  └───────────────┬───────────────┘
+                                                  │
+                                                  ▼
                                   ┌───────────────────────────────┐
                                   │      DATABASE & STORAGE       │
                                   ├───────────────────────────────┤
@@ -96,6 +96,7 @@ Hệ thống **Trường Thành Bookstore** là nền tảng thương mại đi�
 - **TASK 08 [P0] — JWT Security [DONE]**: Đã triển khai toàn diện cơ chế bảo mật JWT: Token Rotation (cấp mới cặp access & refresh token khi refresh), Token Reuse Detection (hủy toàn bộ phiên khi phát hiện tái sử dụng refresh token cũ bị đánh cắp), Token Blacklist Service (`TokenBlacklistService` quản lý danh sách đen access token theo JTI và hash kèm TTL cleanup khi logout), quản lý phiên đa thiết bị qua `tokenVersion` trên `UserSchema` (hủy phiên tức thì khi đổi/reset mật khẩu), cập nhật `JwtStrategy`, đồng bộ Frontend Vue 3 (Axios silent auto-refresh queue) và Mobile Flutter (refresh token storage & logout API), 100% unit tests PASS.
 - **TASK 09 [P1] — API Security [DONE]**: Đã bổ sung Helmet HTTP security headers (tương thích Swagger UI & Cloudinary), CORS chặt chẽ theo whitelist hỗ trợ preflight caching, Rate limiting (Throttler) chuyên sâu cho login/register/order/payment/admin, bộ tiện ích và Middleware làm sạch input toàn cục chống XSS/NoSQL Injection/Prototype Pollution, chuẩn hóa thông điệp lỗi tiếng Việt 429 (`ERR_RATE_LIMIT_EXCEEDED`), 100% unit tests PASS.
 
+### PHASE 3 — CATALOG
 - **TASK 10 [P1] — Product Management [DONE]**: Hoàn thiện toàn diện tính năng quản trị sản phẩm Admin (CRUD, ẩn/hiện, upload ảnh, SKU, giá bán, giá khuyến mãi, tồn kho, tự động đồng bộ sang Inventory) và bộ công cụ Excel nâng cao (Xuất Excel 14 cột, Nhập Excel hàng loạt có xác thực trùng lặp/báo cáo chi tiết, Tải file mẫu chuẩn đa sheet), 100% unit tests PASS.
 - **TASK 11 [P1] — Category & Attributes [DONE]**: Nâng cấp toàn diện phân hệ quản lý danh mục đa cấp, sinh Slug tiếng Việt tự động chống trùng lặp, xây dựng Cây danh mục (Category Tree) đệ quy gom nhóm Cha -> Con -> Cháu kèm `productCount`, chống Circular Reference và xóa an toàn bảo toàn liên kết, 100% unit tests PASS.
 - **TASK 12 [P1] — Search & Filter [DONE]**: Nâng cấp bộ máy tìm kiếm Full-text & Diacritic-insensitive Tiếng Việt (Tên, SKU, ISBN, Tác giả, NXB, Thương hiệu, Mô tả), chống ReDoS, API gợi ý tìm kiếm tức thì Autocomplete Suggestions (`GET /products/suggestions`), bộ lọc đa diện (Cây danh mục đệ quy, Khoảng giá & presets, Sao, Tồn kho, Khuyến mãi, Flash Sale, Đa thương hiệu/Tác giả/NXB), bộ sắp xếp 8 chế độ, phân trang chuẩn hóa và đồng bộ Frontend Web Vue 3 & Mobile App Flutter. 100% unit tests PASS.
@@ -105,19 +106,19 @@ Hệ thống **Trường Thành Bookstore** là nền tảng thương mại đi�
 - **TASK 14 [P0] — Cart [DONE]**: Xây dựng module Cart hoàn chỉnh trên backend (thêm, sửa số lượng, xóa, làm trống), kiểm tra tồn kho và làm sạch dữ liệu thời gian thực, tính subtotal, ngưỡng miễn phí vận chuyển 299.000đ, áp dụng/hủy mã giảm giá voucher (`POST /cart/voucher`, `DELETE /cart/voucher`), đồng bộ giỏ hàng offline khi đăng nhập (`POST /cart/sync`), endpoint xác thực trước checkout (`GET /cart/validate`). Đồng bộ Frontend Web Vue 3 và Mobile App Flutter. 190 unit tests PASS 100%.
 - **TASK 15 [P0] — Checkout [DONE]**: Luồng checkout an toàn đa bước (Cart -> Address -> Shipping -> Promotion -> Payment -> Confirm -> Order) với endpoint xác thực nguyên tử `POST /orders/checkout-preview`, trừ kho nguyên tử với rollback bù trừ, chống duplicate order bằng `idempotencyKey`, tự động làm sạch giỏ hàng trên backend (`CartService.clearCart`) khi đặt hàng thành công. Đồng bộ Frontend Web Vue 3 và Mobile Flutter. 194 unit tests PASS 100%.
 - **TASK 16 [P1] — Address [DONE]**: Quản lý sổ địa chỉ giao hàng người dùng toàn diện (CRUD, đặt mặc định, bảo đảm bất biến Default Address Invariant, tự động thăng cấp địa chỉ khi xóa địa chỉ mặc định, compound indexing `{ user: 1, isDefault: 1, isDeleted: 1 }`, route chuyên biệt `GET /addresses/default`, xác thực SĐT VN). Đồng bộ Frontend Web Vue 3 (`addressService`, UI trực quan, gắn nhãn nhanh) và Mobile App Flutter. 207 unit tests PASS 100%.
-- **TASK 17 [P0] — Order [DONE]**: Hoàn thiện vòng đời `PENDING -> CONFIRMED -> PROCESSING -> SHIPPING -> DELIVERED`, hủy/hoàn trả có hoàn kho một lần, timeline audit, kiểm tra quyền sở hữu và hóa đơn PDF.
+- **TASK 17 [P0] — Order [DONE]**: Hoàn thiện vòng đời `PENDING -> CONFIRMED -> PROCESSING -> SHIPPING -> DELIVERED`, hủy/hoàn trả có hoàn kho một lần, timeline audit, kiểm tra quyền sở hữu và hóa đơn PDF. 100% unit tests PASS.
 
 ### PHASE 5 — BUSINESS
-- **TASK 18 [P0] — Payment Architecture [DONE]**: Hoàn thiện Payment Provider Abstraction cho COD, Chuyển khoản, VNPay, MoMo; callback ký HMAC, idempotency, kiểm tra số tiền/owner và timeout an toàn.
-- **TASK 19 [P1] — Promotion [DONE]**: Hoàn thiện coupon theo %/cố định, đơn tối thiểu, trần giảm, thời hạn, giới hạn tổng và giới hạn nguyên tử theo từng khách bằng identity hash.
-- **TASK 20 [P0] — Inventory [DONE]**: Hoàn thiện sổ cái 5 loại `IMPORT`, `SALE`, `RETURN`, `ADJUSTMENT`, `DAMAGE`, số dư trước/sau, không âm kho và tự động log bán/hoàn kho theo đơn.
-- **TASK 21 [P1] — Review & Rating**: Đánh giá & xếp hạng sản phẩm (chỉ khách đã mua và nhận hàng thành công mới được đánh giá), quản trị viên có quyền kiểm duyệt/ẩn/xóa review vi phạm.
-- **TASK 22 [P2] — Wishlist**: Danh sách yêu thích của người dùng (thêm, xóa, liệt kê, chuyển nhanh vào giỏ hàng).
-- **TASK 23 [P1] — Notification**: Hệ thống thông báo đa loại (đơn hàng mới, thanh toán thành công, đang giao hàng, khuyến mãi, hàng về lại kho) đẩy qua WebSocket & lưu DB.
+- **TASK 18 [P0] — Payment Architecture [DONE]**: Hoàn thiện Payment Provider Abstraction cho COD, Chuyển khoản, VNPay, MoMo; callback ký HMAC, idempotency, kiểm tra số tiền/owner và timeout an toàn. 100% unit tests PASS.
+- **TASK 19 [P1] — Promotion [DONE]**: Hoàn thiện coupon theo %/cố định, đơn tối thiểu, trần giảm, thời hạn, giới hạn tổng và giới hạn nguyên tử theo từng khách bằng identity hash. 100% unit tests PASS.
+- **TASK 20 [P0] — Inventory [DONE]**: Hoàn thiện sổ cái 5 loại `IMPORT`, `SALE`, `RETURN`, `ADJUSTMENT`, `DAMAGE`, số dư trước/sau, không âm kho và tự động log bán/hoàn kho theo đơn. 100% unit tests PASS.
+- **TASK 21 [P1] — Review & Rating [DONE]**: Đánh giá & xếp hạng sản phẩm với xác thực đơn hàng đã giao thành công (Verified Purchase), tính toán phân bổ sao 1★-5★, endpoint `can-review`, phản hồi chính thức từ Admin và trang kiểm duyệt đánh giá Admin `Reviews.vue`. 100% unit tests PASS (13/13).
+- **TASK 22 [P2] — Wishlist [DONE]**: Danh sách yêu thích đa nền tảng (Web/Mobile), tự động làm sạch tham chiếu sản phẩm đã xóa, chuyển nhanh vào giỏ hàng `move-to-cart`, khắc phục hoàn toàn xung đột route Express `@Get('wishlist')`. 100% unit tests PASS.
+- **TASK 23 [P1] — Notification [DONE]**: Hệ thống thông báo đa loại (đơn hàng mới, thanh toán thành công, đổi trạng thái, cảnh báo tồn kho, khuyến mãi) đẩy qua WebSocket Socket.IO theo rooms (`user:${userId}` và `admin`), lưu trữ DB với tính năng unread count, đánh dấu đã đọc và đọc tất cả. 100% unit tests PASS (7/7).
 
 ### PHASE 6 — ADMIN & MOBILE
-- **TASK 24 [P1] — Dashboard**: Bảng điều khiển quản trị thống kê doanh thu, đơn hàng, khách hàng, sản phẩm bán chạy, danh mục nổi bật kèm biểu đồ trực quan.
-- **TASK 25 [P1] — Admin UX**: Tối ưu trải nghiệm giao diện quản trị (Sidebar điều hướng, Breadcrumb, Modal xác nhận, Toast, Skeleton loading, Empty state, Error state).
+- **TASK 24 [P1] — Dashboard [DONE]**: Bảng điều khiển quản trị thống kê doanh thu, KPI cards (doanh thu hôm nay, tổng đơn, AOV, tỷ lệ tăng trưởng), phân bổ trạng thái đơn hàng, cơ cấu doanh thu theo danh mục sản phẩm, biểu đồ tăng trưởng khách hàng. 100% unit tests PASS.
+- **TASK 25 [P1] — Admin UX [DONE]**: Bộ components chuẩn hóa trải nghiệm Quản trị (`ConfirmModal.vue`, `SkeletonLoader.vue`, `EmptyState.vue`), tích hợp trang kiểm duyệt đánh giá `Reviews.vue`, hệ thống phản hồi toast và loading state mượt mà.
 - **TASK 26 [P0] — Mobile API Integration**: Kiểm tra và đồng bộ ứng dụng Flutter Mobile kết nối trơn tru với toàn bộ API Backend chuẩn hóa mới.
 - **TASK 27 [P1] — Mobile UX**: Cải thiện trải nghiệm Mobile (Splash, xử lý offline, slow network, loading shimmer, error retry).
 
