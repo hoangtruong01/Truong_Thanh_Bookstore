@@ -12,6 +12,7 @@ import { OrderSchema } from './schemas/order.schema';
 import { InventorySchema } from '../inventory/schemas/inventory.schema';
 import { BadRequestException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
+import { OrderStatus } from '../../common/enums';
 
 describe('ALL QA FIXES VERIFICATION SUITE', () => {
   let ordersService: OrdersService;
@@ -226,6 +227,45 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       expect(result.discount).toBe(20000);
       expect(result.appliedPromotion?.code).toBe('SALE20K');
       expect(result.total).toBe(100000 + 30000 - 20000);
+    });
+  });
+
+  describe('Task 17: Strict order lifecycle', () => {
+    it('rejects a transition that skips required lifecycle steps', async () => {
+      mockOrderModel.findById.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({
+          _id: '507f1f77bcf86cd799439099',
+          orderStatus: OrderStatus.PENDING,
+          timeline: [],
+          items: [],
+        }),
+      });
+      await expect(
+        ordersService.updateStatus('507f1f77bcf86cd799439099', {
+          orderStatus: OrderStatus.SHIPPING,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('allows CONFIRMED -> PROCESSING and appends an audit timeline entry', async () => {
+      const order: any = {
+        _id: '507f1f77bcf86cd799439099',
+        orderStatus: OrderStatus.CONFIRMED,
+        paymentMethod: 'COD',
+        timeline: [],
+        items: [],
+        save: jest.fn().mockImplementation(async () => order),
+      };
+      mockOrderModel.findById.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(order),
+      });
+      const result = await ordersService.updateStatus(order._id, {
+        orderStatus: OrderStatus.PROCESSING,
+      });
+      expect(result.orderStatus).toBe(OrderStatus.PROCESSING);
+      expect(result.timeline).toEqual([
+        expect.objectContaining({ status: OrderStatus.PROCESSING }),
+      ]);
     });
   });
 });

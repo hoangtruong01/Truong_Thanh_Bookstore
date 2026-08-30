@@ -33,17 +33,38 @@ export class Payment {
   })
   status: PaymentStatus;
 
-  @Prop({ default: '' })
-  transactionId: string;
+  @Prop()
+  transactionId?: string;
+
+  @Prop()
+  providerReference?: string;
 
   @Prop({ type: Object, default: {} })
   gatewayResponse: Record<string, any>;
 
   @Prop()
   paidAt: Date;
+
+  @Prop()
+  expiresAt?: Date;
+
+  @Prop()
+  callbackProcessedAt?: Date;
+
+  @Prop()
+  failureReason?: string;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
 
 PaymentSchema.index({ order: 1, provider: 1 });
 PaymentSchema.index({ createdAt: -1 });
+PaymentSchema.index(
+  { providerReference: 1 },
+  { unique: true, partialFilterExpression: { providerReference: { $type: 'string' } } },
+);
+PaymentSchema.index(
+  { transactionId: 1, provider: 1 },
+  { unique: true, partialFilterExpression: { transactionId: { $type: 'string' } } },
+);
+PaymentSchema.index({ expiresAt: 1, status: 1 });

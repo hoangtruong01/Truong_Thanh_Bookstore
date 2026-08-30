@@ -39,6 +39,9 @@ class ApiConstants {
   static String get authenticatedOrders => '$baseUrl/orders/authenticated';
   static String get myOrders => '$baseUrl/orders/my-orders';
 
+  // Payment Endpoints
+  static String get payments => '$baseUrl/payments';
+
   // Promotion Endpoints
   static String get activePromotions => '$baseUrl/promotions/active';
   static String get applyPromotion => '$baseUrl/promotions/apply';

@@ -18,7 +18,8 @@ export const orderService = {
       responseType: 'blob',
       headers: { 'x-guest-order-token': accessToken },
     }),
-  updateStatus: (id: string, orderStatus: string) => api.patch(`/orders/${id}/status`, { orderStatus }),
+  updateStatus: (id: string, orderStatus: string, note?: string) =>
+    api.patch(`/orders/${id}/status`, { orderStatus, ...(note ? { note } : {}) }),
   cancel: (id: string) => api.delete(`/orders/${id}`),
   cancelGuest: (id: string, accessToken: string) =>
     api.delete(`/orders/guest/${id}`, {

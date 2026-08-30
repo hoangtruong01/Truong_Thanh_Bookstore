@@ -50,10 +50,34 @@ export class InventoryController {
     return this.inventoryService.importStock(dto, req.user._id);
   }
 
+  @Post('transactions')
+  @ApiOperation({ summary: 'Create one of the five supported inventory movements' })
+  createTransaction(@Body() dto: InventoryTransactionDto, @Request() req: any) {
+    return this.inventoryService.createTransaction(dto, req.user._id);
+  }
+
   @Post('export')
-  @ApiOperation({ summary: 'Export stock' })
+  @ApiOperation({ summary: 'Record a manual sale (legacy /export route)' })
   exportStock(@Body() dto: InventoryTransactionDto, @Request() req: any) {
     return this.inventoryService.exportStock(dto, req.user._id);
+  }
+
+  @Post('sale')
+  @ApiOperation({ summary: 'Record a SALE stock movement' })
+  saleStock(@Body() dto: InventoryTransactionDto, @Request() req: any) {
+    return this.inventoryService.exportStock(dto, req.user._id);
+  }
+
+  @Post('return')
+  @ApiOperation({ summary: 'Record a RETURN stock movement' })
+  returnStock(@Body() dto: InventoryTransactionDto, @Request() req: any) {
+    return this.inventoryService.returnStock(dto, req.user._id);
+  }
+
+  @Post('damage')
+  @ApiOperation({ summary: 'Record a DAMAGE stock movement' })
+  damageStock(@Body() dto: InventoryTransactionDto, @Request() req: any) {
+    return this.inventoryService.damageStock(dto, req.user._id);
   }
 
   @Post('adjust')

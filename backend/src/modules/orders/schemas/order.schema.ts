@@ -105,6 +105,12 @@ export class Order {
   @Prop({ type: [OrderTimelineItemSchema], default: [] })
   timeline: OrderTimelineItem[];
 
+  @Prop()
+  inventoryRestoredAt?: Date;
+
+  @Prop()
+  promotionUsageReleasedAt?: Date;
+
   createdAt: Date;
   updatedAt: Date;
 }

@@ -130,6 +130,13 @@ export class UpdateOrderStatusDto {
   @IsNotEmpty({ message: 'Trạng thái đơn hàng không được để trống' })
   @IsEnum(OrderStatus, { message: 'Trạng thái đơn hàng không hợp lệ' })
   orderStatus: OrderStatus;
+
+  @ApiPropertyOptional({ description: 'Ghi chú nghiệp vụ cho lần chuyển trạng thái' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  note?: string;
 }
 
 export class OrderQueryDto extends PaginationDto {

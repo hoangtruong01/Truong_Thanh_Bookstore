@@ -279,6 +279,7 @@ import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { orderService } from '@/services/order.service'
+import { paymentService } from '@/services/payment.service'
 import { productService } from '@/services/product.service'
 import { addressService } from '@/services/address.service'
 import { formatCurrency, getEffectivePrice } from '@/utils/helpers'
@@ -343,11 +344,16 @@ function onAddressSelectChange() {
   }
 }
 
-const paymentMethod = ref<'COD' | 'BANK_TRANSFER' | 'EWALLET'>('COD')
+const paymentMethod = ref<'COD' | 'BANK_TRANSFER' | 'VNPAY' | 'MOMO'>('COD')
 
-const paymentMethods = [
+const paymentMethods = computed(() => [
   { value: 'COD', label: 'Thanh toán khi nhận hàng (COD)', description: 'Thanh toán bằng tiền mặt khi shipper giao hàng.' },
-]
+  ...(authStore.isAuthenticated ? [
+    { value: 'BANK_TRANSFER', label: 'Chuyển khoản ngân hàng', description: 'Nhận hướng dẫn và nội dung chuyển khoản theo mã đơn.' },
+    { value: 'VNPAY', label: 'VNPay', description: 'Thanh toán trực tuyến qua cổng VNPay.' },
+    { value: 'MOMO', label: 'Ví MoMo', description: 'Thanh toán trực tuyến qua ứng dụng MoMo.' },
+  ] : []),
+])
 
 const checkoutIdempotencyKey =
   sessionStorage.getItem('checkout-idempotency-key') || crypto.randomUUID()
@@ -454,6 +460,20 @@ async function placeOrder() {
     const guestToken = response.data.data?.guestAccessToken || response.data.guestAccessToken
     if (!authStore.isAuthenticated && guestToken) {
       localStorage.setItem(`guest-order-token:${orderId}`, guestToken)
+    }
+
+    if (authStore.isAuthenticated && paymentMethod.value !== 'COD') {
+      const paymentRes: any = await paymentService.create(
+        orderId,
+        paymentMethod.value,
+        `${window.location.origin}/my-orders/${orderId}`,
+      )
+      const action = paymentRes.data?.data?.action || paymentRes.data?.action
+      if (action?.instructions) toast.info(action.instructions, { timeout: 12000 })
+      if (action?.redirectUrl) {
+        window.location.assign(action.redirectUrl)
+        return
+      }
     }
 
     sessionStorage.removeItem('checkout-idempotency-key')

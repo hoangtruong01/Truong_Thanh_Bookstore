@@ -28,15 +28,21 @@ export class PaymentsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Khởi tạo phiên thanh toán cho đơn hàng' })
   create(@Body() dto: CreatePaymentDto, @Request() req: any) {
-    return this.paymentsService.createPayment(dto, req.user._id);
+    return this.paymentsService.createPayment(dto, {
+      ...req.user,
+      _id: req.user._id.toString(),
+    });
   }
 
   @Get('order/:orderId')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Lấy thông tin thanh toán của một đơn hàng' })
-  findByOrderId(@Param('orderId') orderId: string) {
-    return this.paymentsService.findByOrderId(orderId);
+  findByOrderId(@Param('orderId') orderId: string, @Request() req: any) {
+    return this.paymentsService.findByOrderId(orderId, {
+      ...req.user,
+      _id: req.user._id.toString(),
+    });
   }
 
   @Post('callback')

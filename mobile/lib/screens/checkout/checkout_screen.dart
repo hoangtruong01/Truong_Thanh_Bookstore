@@ -113,6 +113,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       if (createdOrder != null && mounted) {
         cart.clearCart();
+        final paymentAction = orderProv.lastPaymentAction;
+        final paymentHint = paymentAction?['instructions'] ??
+            (paymentAction?['redirectUrl'] != null
+                ? 'Liên kết thanh toán: ${paymentAction!['redirectUrl']}'
+                : null);
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -126,7 +131,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ],
             ),
             content: Text(
-              'Mã đơn hàng của bạn là #${createdOrder.orderCode}. Cảm ơn bạn đã mua sắm tại Trường Thành Bookstore!',
+              'Mã đơn hàng của bạn là #${createdOrder.orderCode}. '
+              '${paymentHint != null ? '$paymentHint\n\n' : ''}'
+              'Cảm ơn bạn đã mua sắm tại Trường Thành Bookstore!',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
             ),
@@ -315,11 +322,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       onChanged: (val) => setState(() => _paymentMethod = val!),
                     ),
                     RadioListTile<String>(
-                      value: 'EWALLET',
+                      value: 'VNPAY',
                       groupValue: _paymentMethod,
                       activeColor: AppTheme.primaryRed,
-                      title: const Text('Ví điện tử (MoMo / ZaloPay)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      subtitle: const Text('Thanh toán quét mã QR ví điện tử', style: TextStyle(fontSize: 11)),
+                      title: const Text('VNPay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      subtitle: const Text('Thanh toán trực tuyến qua cổng VNPay', style: TextStyle(fontSize: 11)),
+                      onChanged: (val) => setState(() => _paymentMethod = val!),
+                    ),
+                    RadioListTile<String>(
+                      value: 'MOMO',
+                      groupValue: _paymentMethod,
+                      activeColor: AppTheme.primaryRed,
+                      title: const Text('Ví MoMo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      subtitle: const Text('Thanh toán trực tuyến qua ứng dụng MoMo', style: TextStyle(fontSize: 11)),
                       onChanged: (val) => setState(() => _paymentMethod = val!),
                     ),
                   ],

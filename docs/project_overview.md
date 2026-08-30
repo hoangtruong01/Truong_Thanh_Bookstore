@@ -183,9 +183,9 @@ Lưu trữ đánh giá sản phẩm của người dùng và đã được chuy�
 *   `discountAmount`: Số.
 *   `total`: Số.
 *   `promotionCode`: Chuỗi.
-*   `paymentMethod`: Enum (`COD`, `BANK_TRANSFER`, `EWALLET`).
+*   `paymentMethod`: Enum (`COD`, `BANK_TRANSFER`, `VNPAY`, `MOMO`; `EWALLET` chỉ giữ tương thích dữ liệu cũ).
 *   `paymentStatus`: Enum (`PENDING`, `PAID`).
-*   `orderStatus`: Enum (`PENDING`, `CONFIRMED`, `SHIPPING`, `COMPLETED`, `CANCELLED`).
+*   `orderStatus`: Enum (`PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPING`, `DELIVERED`, `CANCELLED`, `RETURNED`; `COMPLETED` là trạng thái lịch sử).
 *   `notes`: Chuỗi.
 
 ### 4.6. Inventory & InventoryTransaction (`inventories`, `inventorytransactions`)
@@ -196,7 +196,7 @@ Lưu trữ đánh giá sản phẩm của người dùng và đã được chuy�
     *   `status`: Enum (`IN_STOCK`, `LOW_STOCK`, `OUT_OF_STOCK`).
 *   **InventoryTransaction**: Nhật ký điều chỉnh kho.
     *   `product`: ObjectId ref `products`.
-    *   `type`: Enum (`IMPORT`, `EXPORT`, `ADJUST`).
+    *   `type`: Enum (`IMPORT`, `SALE`, `RETURN`, `ADJUSTMENT`, `DAMAGE`).
     *   `quantity`: Số.
     *   `note`: Chuỗi.
     *   `createdBy`: ObjectId ref `users`.

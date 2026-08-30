@@ -124,6 +124,38 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   EMAIL_FROM?: string;
+
+  @IsString()
+  @IsOptional()
+  ENABLED_PAYMENT_METHODS?: string = 'COD';
+
+  @IsString()
+  @IsOptional()
+  BANK_NAME?: string;
+
+  @IsString()
+  @IsOptional()
+  BANK_ACCOUNT_NUMBER?: string;
+
+  @IsString()
+  @IsOptional()
+  PAYMENT_WEBHOOK_SECRET?: string;
+
+  @IsString()
+  @IsOptional()
+  VNPAY_PAYMENT_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  VNPAY_HASH_SECRET?: string;
+
+  @IsString()
+  @IsOptional()
+  MOMO_PAYMENT_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  MOMO_SECRET_KEY?: string;
 }
 
 /**
@@ -188,6 +220,20 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
         `========================================================================\n`
       );
     }
+  }
+
+  const enabledPayments = (validatedConfig.ENABLED_PAYMENT_METHODS || 'COD')
+    .split(',')
+    .map((value) => value.trim().toUpperCase());
+  const paymentErrors: string[] = [];
+  if (enabledPayments.includes('VNPAY') && (!validatedConfig.VNPAY_PAYMENT_URL || !validatedConfig.VNPAY_HASH_SECRET)) {
+    paymentErrors.push('VNPAY_PAYMENT_URL và VNPAY_HASH_SECRET');
+  }
+  if (enabledPayments.includes('MOMO') && (!validatedConfig.MOMO_PAYMENT_URL || !validatedConfig.MOMO_SECRET_KEY)) {
+    paymentErrors.push('MOMO_PAYMENT_URL và MOMO_SECRET_KEY');
+  }
+  if (paymentErrors.length) {
+    throw new Error(`Thiếu cấu hình cho cổng thanh toán đã bật: ${paymentErrors.join('; ')}`);
   }
 
   return validatedConfig;

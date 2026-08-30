@@ -10,23 +10,28 @@ export class CreatePaymentDto {
   @IsMongoObjectId({ message: 'orderId phải là ObjectId hợp lệ' })
   orderId: string;
 
-  @ApiProperty({ description: 'Mã đơn hàng', example: 'TT260823001' })
-  @IsNotEmpty({ message: 'orderCode không được để trống' })
+  @ApiPropertyOptional({ description: 'Mã đơn hàng để đối chiếu; server vẫn lấy giá trị thật từ DB' })
+  @IsOptional()
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  orderCode: string;
+  orderCode?: string;
 
-  @ApiProperty({ description: 'Số tiền thanh toán', example: 150000 })
-  @IsNotEmpty({ message: 'amount không được để trống' })
+  @ApiPropertyOptional({ description: 'Số tiền để đối chiếu; server không tin cậy giá trị client' })
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({}, { message: 'amount phải là số' })
   @Min(0, { message: 'Số tiền thanh toán không được âm' })
-  amount: number;
+  amount?: number;
 
   @ApiProperty({ enum: PaymentMethod, example: PaymentMethod.COD })
   @IsNotEmpty({ message: 'provider không được để trống' })
   @IsEnum(PaymentMethod, { message: 'Phương thức thanh toán không hợp lệ' })
   provider: PaymentMethod;
+
+  @ApiPropertyOptional({ description: 'URL quay lại ứng dụng sau thanh toán' })
+  @IsOptional()
+  @IsString()
+  returnUrl?: string;
 }
 
 export class PaymentCallbackDto {
@@ -40,6 +45,33 @@ export class PaymentCallbackDto {
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   transactionId: string;
+
+  @ApiPropertyOptional({ description: 'Mã yêu cầu do hệ thống sinh khi khởi tạo thanh toán' })
+  @IsOptional()
+  @IsString()
+  providerReference?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  orderCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  amount?: number;
+
+  @ApiPropertyOptional({ example: 'SUCCESS' })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  signature?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

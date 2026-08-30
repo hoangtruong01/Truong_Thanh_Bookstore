@@ -30,6 +30,12 @@ export class InventoryTransactionDto {
   @IsEnum(InventoryTransactionType, { message: 'Loại giao dịch kho không hợp lệ' })
   type?: InventoryTransactionType;
 
+  @ApiPropertyOptional({ description: 'Mã tham chiếu/idempotency của nghiệp vụ kho' })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  reference?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -54,4 +60,10 @@ export class AdjustInventoryDto {
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   note?: string;
+
+  @ApiPropertyOptional({ description: 'Mã tham chiếu/idempotency của nghiệp vụ kho' })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  reference?: string;
 }

@@ -216,8 +216,11 @@ function getStatusBadgeStyle(status: string) {
   switch (status) {
     case 'PENDING': return 'bg-amber-100 text-amber-800'
     case 'CONFIRMED': return 'bg-blue-100 text-blue-800'
+    case 'PROCESSING': return 'bg-orange-100 text-orange-800'
     case 'SHIPPING': return 'bg-purple-100 text-purple-800'
+    case 'DELIVERED':
     case 'COMPLETED': return 'bg-green-100 text-green-800'
+    case 'RETURNED': return 'bg-fuchsia-100 text-fuchsia-800'
     case 'CANCELLED': return 'bg-red-100 text-red-800'
     default: return 'bg-slate-100 text-slate-600'
   }

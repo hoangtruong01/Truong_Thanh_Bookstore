@@ -226,9 +226,10 @@
                 <div 
                   class="h-full rounded-full" 
                   :class="[
-                    item._id === 'COMPLETED' ? 'bg-emerald-500' :
+                    (item._id === 'DELIVERED' || item._id === 'COMPLETED') ? 'bg-emerald-500' :
                     item._id === 'PENDING' ? 'bg-amber-500' :
                     item._id === 'CONFIRMED' ? 'bg-red-500' :
+                    item._id === 'PROCESSING' ? 'bg-orange-500' :
                     item._id === 'SHIPPING' ? 'bg-blue-500' : 'bg-slate-400'
                   ]"
                   :style="{ width: getStatusWidthPercent(item.count) + '%' }"
@@ -410,10 +411,15 @@ function getStatusBadgeStyle(status: string) {
       return 'bg-amber-100 text-amber-800 border border-amber-200'
     case 'CONFIRMED':
       return 'bg-red-100 text-red-800 border border-red-200'
+    case 'PROCESSING':
+      return 'bg-orange-100 text-orange-800 border border-orange-200'
     case 'SHIPPING':
       return 'bg-blue-100 text-blue-800 border border-blue-200'
+    case 'DELIVERED':
     case 'COMPLETED':
       return 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+    case 'RETURNED':
+      return 'bg-purple-100 text-purple-800 border border-purple-200'
     case 'CANCELLED':
       return 'bg-slate-100 text-slate-800 border border-slate-200'
     default:
