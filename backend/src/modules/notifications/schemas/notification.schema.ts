@@ -20,8 +20,21 @@ export class Notification {
   @Prop({ type: Object, default: {} })
   meta: Record<string, any>; // Extra info like orderId, promoCode, etc.
 
+  @Prop({ default: false })
+  isRead: boolean;
+
+  @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: 'User' }], default: [] })
+  readBy: Types.ObjectId[];
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User', default: null })
+  sender?: Types.ObjectId;
+
   createdAt: Date;
   updatedAt: Date;
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);
+
+NotificationSchema.index({ userId: 1, createdAt: -1 });
+NotificationSchema.index({ userId: 1, isRead: 1 });
+NotificationSchema.index({ createdAt: -1 });

@@ -698,6 +698,14 @@
               <p class="text-sm text-slate-700 leading-relaxed pl-12">
                 {{ rev.content }}
               </p>
+
+              <!-- Admin Reply Badge -->
+              <div v-if="rev.adminReply" class="mt-3 ml-12 p-3.5 bg-red-50/60 rounded-xl border border-red-100/80 text-xs space-y-1">
+                <div class="flex items-center gap-1.5 font-extrabold text-[#dc2626]">
+                  <span>💬 Phản hồi từ Cửa hàng Trường Thành</span>
+                </div>
+                <p class="text-slate-700 font-medium leading-relaxed">{{ rev.adminReply }}</p>
+              </div>
             </div>
 
             <!-- Edit Mode Inline -->
@@ -1194,6 +1202,10 @@ interface Review {
   rating: number
   content: string
   createdAt: string
+  isVerifiedPurchase?: boolean
+  adminReply?: string
+  adminReplyAt?: string
+  images?: string[]
 }
 
 const reviews = ref<Review[]>([])

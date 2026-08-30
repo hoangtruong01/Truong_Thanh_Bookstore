@@ -60,4 +60,23 @@ export class ReportsController {
   getAdvancedDashboard() {
     return this.reportsService.getAdvancedDashboard();
   }
+
+  @Get('summary')
+  @ApiOperation({ summary: 'Lấy báo cáo tổng hợp KPI và biểu đồ dashboard' })
+  @ApiQuery({ name: 'range', required: false, enum: ['day', 'week', 'month', 'year'] })
+  getSummary(@Query('range') range?: 'day' | 'week' | 'month' | 'year') {
+    return this.reportsService.getSummary(range);
+  }
+
+  @Get('order-status-stats')
+  @ApiOperation({ summary: 'Lấy phân bổ tỷ lệ các trạng thái đơn hàng' })
+  getOrderStatusStats() {
+    return this.reportsService.getOrderStatusStats();
+  }
+
+  @Get('category-revenue')
+  @ApiOperation({ summary: 'Lấy cơ cấu doanh thu theo danh mục sản phẩm' })
+  getCategoryRevenue() {
+    return this.reportsService.getCategoryRevenue();
+  }
 }

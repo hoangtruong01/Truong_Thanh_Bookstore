@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Types } from 'mongoose';
 import { UsersService } from './users.service';
 import { UserRole, StaffPermission } from '../../common/enums';
 
@@ -305,6 +306,84 @@ describe('UsersService RBAC', () => {
 
       const result = await service.deleteUser(validStaffId, mockSuperAdminUser);
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe('Wishlist Methods', () => {
+    const mockProductId = '507f1f77bcf86cd799439099';
+
+    it('should get populated wishlist and filter out deleted/null items', async () => {
+      const mockUserWithWishlist = {
+        _id: validAdminId,
+        wishlist: [
+          { _id: new Types.ObjectId(mockProductId), name: 'Sách giáo khoa Toán 1' },
+          null, // Stale/deleted item
+        ],
+      };
+
+      mockUserModel.findById.mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(mockUserWithWishlist),
+        }),
+      });
+
+      mockUserModel.findByIdAndUpdate.mockResolvedValue({});
+
+      const result = await service.getWishlist(validAdminId);
+      expect(result.products.length).toBe(1);
+      expect(result.ids).toContain(mockProductId);
+      expect(result.total).toBe(1);
+    });
+
+    it('should toggle product into wishlist if not currently present', async () => {
+      mockUserModel.findById.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue({
+            _id: validAdminId,
+            wishlist: [],
+          }),
+        }),
+      });
+
+      mockUserModel.findByIdAndUpdate.mockResolvedValue({});
+
+      const result = await service.toggleWishlist(validAdminId, mockProductId);
+      expect(result.isInWishlist).toBe(true);
+      expect(result.wishlist).toContain(mockProductId);
+    });
+
+    it('should toggle product out of wishlist if already present', async () => {
+      mockUserModel.findById.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue({
+            _id: validAdminId,
+            wishlist: [new Types.ObjectId(mockProductId)],
+          }),
+        }),
+      });
+
+      mockUserModel.findByIdAndUpdate.mockResolvedValue({});
+
+      const result = await service.toggleWishlist(validAdminId, mockProductId);
+      expect(result.isInWishlist).toBe(false);
+      expect(result.wishlist).not.toContain(mockProductId);
+    });
+
+    it('should remove product from wishlist', async () => {
+      mockUserModel.findById.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue({
+            _id: validAdminId,
+            wishlist: [new Types.ObjectId(mockProductId)],
+          }),
+        }),
+      });
+
+      mockUserModel.findByIdAndUpdate.mockResolvedValue({});
+
+      const result = await service.removeFromWishlist(validAdminId, mockProductId);
+      expect(result.isInWishlist).toBe(false);
+      expect(result.wishlist.length).toBe(0);
     });
   });
 });

@@ -15,6 +15,7 @@ _(Hồ sơ ngữ cảnh hệ thống — AI đọc file này để nắm bắt t
 | **Mobile**         | Flutter SDK (^3.11) + Dart                    | State: Provider, Đa nền tảng Android/iOS        |
 | **Realtime**       | WebSocket Socket.IO                           | Namespace: `/notifications`                     |
 | **Storage & Mail** | Cloudinary + Nodemailer SMTP                  | Ảnh & Email giao dịch                           |
+| **Tiến độ Task**   | **25 / 30 tasks (83.3%)**                     | Tasks 01–25 hoàn thành 100%                     |
 
 ---
 
@@ -23,17 +24,17 @@ _(Hồ sơ ngữ cảnh hệ thống — AI đọc file này để nắm bắt t
 ```text
 backend/src/modules/
 ├── auth/            -> Login, Register, Logout, RefreshToken, ForgotPassword (OTP 6 số), ResetPassword
-├── users/           -> Profile, Addresses (sổ địa chỉ CRUD), Wishlist
+├── users/           -> Profile, Addresses (sổ địa chỉ CRUD), Wishlist (Multi-platform sync)
 ├── products/        -> Quản lý sách/VPP, SKU, ISBN, Lọc nâng cao, Excel Import/Export
 ├── categories/      -> Cây danh mục phân cấp (Parent/Child), Slug
-├── cart/            -> [NEW] Quản lý giỏ hàng backend, kiểm tra tồn kho realtime, tạm tính giá
+├── cart/            -> Quản lý giỏ hàng backend, kiểm tra tồn kho realtime, tạm tính giá
 ├── orders/          -> Tạo đơn hàng, trừ kho nguyên tử (Atomic rollback), xuất hóa đơn PDF
-├── payments/        -> [NEW] Lớp trừu tượng cổng thanh toán (COD, Bank Transfer, VNPay, MoMo)
+├── payments/        -> Lớp trừu tượng cổng thanh toán (COD, Bank Transfer, VNPay, MoMo)
 ├── inventory/       -> Giao dịch kho (IMPORT, SALE, RETURN, ADJUSTMENT, DAMAGE), cảnh báo hết hàng
-├── reviews/         -> [NEW] Đánh giá & xếp hạng sản phẩm (chỉ khách đã mua mới được đánh giá)
+├── reviews/         -> Đánh giá & xếp hạng sản phẩm (Verified Purchase check, Admin Reply, Moderate)
 ├── promotions/      -> Mã giảm giá (Coupon), kiểm tra điều kiện áp dụng & số lượt sử dụng
-├── notifications/   -> WebSocket Gateway & Lưu trữ thông báo trong DB
-├── reports/         -> Báo cáo thống kê doanh thu, AOV, phân bố đơn hàng cho Admin
+├── notifications/   -> WebSocket Gateway & Lưu trữ thông báo DB, Unread count, Admin alerts
+├── reports/         -> Báo cáo thống kê doanh thu, AOV, KPI Dashboard cho Admin
 ├── customers/       -> Quản lý danh sách khách hàng và lịch sử mua sắm cho Admin
 ├── banners/         -> Quản lý banner quảng cáo hiển thị trên Web/App
 ├── landing-pages/   -> Quản lý trang sự kiện flash sale/khuyến mãi động
@@ -66,11 +67,11 @@ backend/src/modules/
 | **TASK 18** | Kiến trúc Thanh toán Provider Abstraction (VNPay, MoMo, COD)    | Phase 5 | P0         | 🟢 **DONE** |
 | **TASK 19** | Hệ thống Mã khuyến mãi (Voucher)                                | Phase 5 | P1         | 🟢 **DONE** |
 | **TASK 20** | Quản lý Tồn kho & 5 loại Inventory Transaction                  | Phase 5 | P0         | 🟢 **DONE** |
-| **TASK 21** | Đánh giá & Xếp hạng sản phẩm (Verified Purchase)                | Phase 5 | P1         | ⚪ PENDING  |
-| **TASK 22** | Danh sách Yêu thích (Wishlist)                                  | Phase 5 | P2         | ⚪ PENDING  |
-| **TASK 23** | Hệ thống Thông báo WebSocket Real-time & DB                     | Phase 5 | P1         | ⚪ PENDING  |
-| **TASK 24** | Bảng điều khiển Quản trị (Admin Analytics Dashboard)            | Phase 6 | P1         | ⚪ PENDING  |
-| **TASK 25** | Tối ưu trải nghiệm Quản trị (Admin UX/Feedback States)          | Phase 6 | P1         | ⚪ PENDING  |
+| **TASK 21** | Đánh giá & Xếp hạng sản phẩm (Verified Purchase & Moderation)   | Phase 5 | P1         | 🟢 **DONE** |
+| **TASK 22** | Danh sách Yêu thích (Wishlist Multi-Platform Sync & MoveCart)   | Phase 5 | P2         | 🟢 **DONE** |
+| **TASK 23** | Hệ thống Thông báo WebSocket Real-time & DB Alerts              | Phase 5 | P1         | 🟢 **DONE** |
+| **TASK 24** | Bảng điều khiển Quản trị (Admin Analytics Dashboard & KPIs)     | Phase 6 | P1         | 🟢 **DONE** |
+| **TASK 25** | Tối ưu trải nghiệm Quản trị (Admin UX/Feedback States/Modals)   | Phase 6 | P1         | 🟢 **DONE** |
 | **TASK 26** | Đồng bộ & Tích hợp API ứng dụng Mobile Flutter                  | Phase 6 | P0         | ⚪ PENDING  |
 | **TASK 27** | Nâng cấp trải nghiệm Mobile (UX/Offline/Shimmer)                | Phase 6 | P1         | ⚪ PENDING  |
 | **TASK 28** | Kiểm thử tự động (Unit Tests & E2E Test Flow)                   | Phase 7 | P0         | ⚪ PENDING  |
@@ -134,6 +135,37 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-08-30] — Hoàn thành TASK 21 đến TASK 25: Verified Reviews, Wishlist Sync, WebSocket Notifications, Admin Analytics & UX Polish
+
+- **Người cập nhật**: Antigravity AI
+- **Mục tiêu**: Triển khai trọn vẹn 5 tasks cốt lõi nâng cao chất lượng hệ thống thương mại điện tử sách & VPP:
+  - **TASK 21**: Đánh giá & Xếp hạng sản phẩm (chỉ khách đã mua hàng giao thành công mới được đánh giá, kiểm duyệt hiển thị, phản hồi từ Admin, bảng phân bổ sao 1★-5★).
+  - **TASK 22**: Danh sách Yêu thích (Wishlist đa nền tảng, tự động làm sạch tham chiếu sản phẩm đã xóa, chuyển thẳng sang giỏ hàng `move-to-cart`, sửa triệt để xung đột thứ tự route Express).
+  - **TASK 23**: Hệ thống Thông báo WebSocket Real-time & DB (Socket.IO namespace `notifications`, rooms `user:${userId}` & `admin`, unread count, đánh dấu đã đọc/tất cả, cảnh báo tồn kho & đơn hàng mới).
+  - **TASK 24**: Bảng điều khiển Quản trị (Admin Analytics Dashboard KPIs, phân bổ doanh thu theo danh mục, tỷ lệ trạng thái đơn hàng, biểu đồ tăng trưởng khách hàng).
+  - **TASK 25**: Tối ưu trải nghiệm Quản trị (bộ components `ConfirmModal.vue`, `SkeletonLoader.vue`, `EmptyState.vue`, trang quản trị đánh giá `Reviews.vue`, feedback toasts nhất quán).
+- **Thực hiện Backend**:
+  - `ReviewsModule`: Thêm `isVerifiedPurchase`, `adminReply`, `adminReplyAt`, compound indexes, API `breakdown`, `can-review`, `admin reply`, và unit tests `reviews.service.spec.ts` (13/13 tests PASS).
+  - `UsersModule`: Khắc phục thứ tự routes `@Get('wishlist')` trước `@Get(':id')`, thêm `moveToCart`, `removeFromWishlist`, `getWishlist` kèm unit tests `users.service.spec.ts` (20/20 tests PASS).
+  - `NotificationsModule`: Schema với `isRead`, `readBy`, WebSocket gateway phòng admin/user, auto triggers khi có đơn hàng/cảnh báo tồn kho, unit tests `notifications.service.spec.ts` (7/7 tests PASS).
+  - `ReportsModule`: Phương thức `getSummary`, `getOrderStatusStats`, `getCategoryRevenue`, unit tests `reports.service.spec.ts` (4/4 tests PASS).
+- **Thực hiện Frontend & Mobile**:
+  - `frontend/src/services/`: Cập nhật `review.service.ts`, `user.service.ts`, `notification.service.ts`, `report.service.ts`.
+  - `frontend/src/components/`: Xây dựng mới `ConfirmModal.vue`, `SkeletonLoader.vue`, `EmptyState.vue`.
+  - `frontend/src/pages/admin/Reviews.vue`: Trang kiểm duyệt và phản hồi đánh giá sản phẩm.
+  - `frontend/src/pages/customer/Wishlist.vue`: Nâng cấp giao diện với nút chuyển vào giỏ hàng và xóa tức thì.
+  - `frontend/src/pages/customer/ProductDetail.vue`: Hiển thị huy hiệu "Đã mua hàng" và phản hồi chính thức từ cửa hàng.
+  - `mobile/lib/core/constants/api_constants.dart`: Bổ sung toàn bộ endpoint wishlist, reviews, notifications.
+- **Kết quả kiểm thử**:
+  - `npm test` (Backend): 21 test suites, 246/246 tests PASS 100%.
+  - `npm run build` (Backend): PASS (0 errors).
+  - `npm run build` (Frontend): PASS (0 errors).
+  - `flutter test` (Mobile): PASS.
+- **Trạng thái**: 🟢 DONE.
+- **Tiếp theo**: TASK 26 — Đồng bộ & Tích hợp API ứng dụng Mobile Flutter.
+
+---
 
 ### [2026-08-30] — Hoàn thành TASK 17–20: Order Lifecycle, Payment Providers, Voucher & Inventory Ledger
 - **Người cập nhật**: Codex
