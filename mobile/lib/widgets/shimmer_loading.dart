@@ -92,7 +92,7 @@ class ProductListSkeleton extends StatelessWidget {
         mainAxisSpacing: 10,
       ),
       itemCount: count,
-      itemBuilder: (_, __) => const ProductCardSkeleton(),
+      itemBuilder: (context, index) => const ProductCardSkeleton(),
     );
   }
 }
