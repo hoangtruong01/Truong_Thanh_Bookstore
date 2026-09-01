@@ -205,19 +205,30 @@ Khi tạo đơn hàng, hệ thống tuân thủ quy tắc trừ kho nghiêm ng�
 ## V. HƯỚNG DẪN CHẠY KIỂM THỬ (TESTING & VERIFICATION)
 
 ### 1. Kiểm thử Backend (Jest)
-Bộ test case nâng cao nằm ở [all-fixes.spec.ts](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/test/all-fixes.spec.ts). Chạy lệnh sau tại thư mục `backend` để kiểm tra:
+Các bộ test case nâng cao nằm ở [all-fixes.spec.ts](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/test/all-fixes.spec.ts) và [e2e-flow.spec.ts](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/test/e2e-flow.spec.ts). Chạy lệnh sau tại thư mục `backend`:
 ```bash
-npx jest --rootDir . test/all-fixes.spec.ts
-```
-*Các kịch bản được test bao gồm:*
-- Kiểm thử cơ chế trừ kho nguyên tử (atomic) và khôi phục khi có lỗi.
-- Kiểm thử cách tính phí vận chuyển theo ngưỡng giá trị đơn hàng.
-- Kiểm thử sự hiện diện của các trường nghiệp vụ mới như `timeline` trên Order, các index trên Address book.
-- Kiểm thử tạo hóa đơn PDF không lỗi.
+# Chạy toàn bộ 21 test suites nghiệp vụ
+npm test
 
-### 2. Kiểm thử Mobile (Flutter Widget / E2E Tests)
-Các test case tích hợp di động nằm ở `mobile/test/app_e2e_test.dart`. Chạy lệnh sau tại thư mục `mobile` để chạy:
+# Chạy test kiểm thử các ca sửa lỗi trọng yếu (Atomic, Freeship, Default Address, PDF)
+npx jest --rootDir . test/all-fixes.spec.ts
+
+# Chạy test luồng E2E tích hợp toàn diện (Auth -> Cart -> Order -> Review -> Notification)
+npx jest --rootDir . test/e2e-flow.spec.ts
+```
+
+### 2. Kiểm thử Mobile (Flutter Tests)
+Các test case tích hợp và unit test di động nằm trong `mobile/test/` (`app_e2e_test.dart`, `unit_providers_test.dart`, `ux_components_test.dart`, `widget_test.dart`). Chạy lệnh sau tại thư mục `mobile`:
 ```bash
 flutter test
 ```
-*Lưu ý kiến trúc test:* Vì thanh điều hướng phía dưới (`bottomNavigationBar`) chỉ hiển thị Text Label của tab đang active, nên bộ test được viết để tìm các tab inactive thông qua `find.byIcon(...)` thay vì tìm theo Text, đảm bảo kiểm thử E2E-01 và E2E-04 luôn vượt qua tuyệt đối.
+
+---
+
+## VI. TRIỂN KHAI SẢN XUẤT (PRODUCTION & DOCKER)
+Hệ thống hỗ trợ đóng gói và triển khai trọn gói thông qua Docker Compose:
+- `backend/Dockerfile`: Multi-stage build trên nền Node.js 20 Alpine với người dùng non-root `node` và font DejaVu/Noto phục vụ xuất hóa đơn PDF.
+- `frontend/Dockerfile` & `frontend/nginx.conf`: Nginx Alpine phục vụ Single Page Application với nén Gzip, cache 1 năm cho assets tĩnh và reverse proxy `/api` tới backend.
+- `docker-compose.yml`: Khởi chạy MongoDB 7.0 (volume persistence + healthcheck), Backend NestJS (port 3000), Frontend Nginx (port 80) và Mongo Express (port 8081).
+- `GET /api/health`: Endpoint giám sát tình trạng hệ thống thời gian thực (trạng thái kết nối CSDL, uptime, bộ nhớ RAM tiêu thụ).
+

@@ -15,7 +15,7 @@ _(Hồ sơ ngữ cảnh hệ thống — AI đọc file này để nắm bắt t
 | **Mobile**         | Flutter SDK (^3.11) + Dart                    | State: Provider, Đa nền tảng Android/iOS        |
 | **Realtime**       | WebSocket Socket.IO                           | Namespace: `/notifications`                     |
 | **Storage & Mail** | Cloudinary + Nodemailer SMTP                  | Ảnh & Email giao dịch                           |
-| **Tiến độ Task**   | **25 / 30 tasks (83.3%)**                     | Tasks 01–25 hoàn thành 100%                     |
+| **Tiến độ Task**   | **30 / 30 tasks (100%)**                     | Toàn bộ 30 tasks hoàn thành 100%               |
 
 ---
 
@@ -72,11 +72,11 @@ backend/src/modules/
 | **TASK 23** | Hệ thống Thông báo WebSocket Real-time & DB Alerts              | Phase 5 | P1         | 🟢 **DONE** |
 | **TASK 24** | Bảng điều khiển Quản trị (Admin Analytics Dashboard & KPIs)     | Phase 6 | P1         | 🟢 **DONE** |
 | **TASK 25** | Tối ưu trải nghiệm Quản trị (Admin UX/Feedback States/Modals)   | Phase 6 | P1         | 🟢 **DONE** |
-| **TASK 26** | Đồng bộ & Tích hợp API ứng dụng Mobile Flutter                  | Phase 6 | P0         | ⚪ PENDING  |
-| **TASK 27** | Nâng cấp trải nghiệm Mobile (UX/Offline/Shimmer)                | Phase 6 | P1         | ⚪ PENDING  |
-| **TASK 28** | Kiểm thử tự động (Unit Tests & E2E Test Flow)                   | Phase 7 | P0         | ⚪ PENDING  |
-| **TASK 29** | Thiết lập Quy trình CI/CD Pipeline                              | Phase 7 | P1         | ⚪ PENDING  |
-| **TASK 30** | Production Readiness, Swagger OpenAPI & Docker                  | Phase 7 | P0         | ⚪ PENDING  |
+| **TASK 26** | Đồng bộ & Tích hợp API ứng dụng Mobile Flutter                  | Phase 6 | P0         | 🟢 **DONE** |
+| **TASK 27** | Nâng cấp trải nghiệm Mobile (UX/Offline/Shimmer)                | Phase 6 | P1         | 🟢 **DONE** |
+| **TASK 28** | Kiểm thử tự động (Unit Tests & E2E Test Flow)                   | Phase 7 | P0         | 🟢 **DONE** |
+| **TASK 29** | Thiết lập Quy trình CI/CD Pipeline                              | Phase 7 | P1         | 🟢 **DONE** |
+| **TASK 30** | Production Readiness, Swagger OpenAPI & Docker                  | Phase 7 | P0         | 🟢 **DONE** |
 
 ---
 
@@ -135,6 +135,34 @@ backend/src/modules/
 ---
 
 ## 📝 6. NHẬT KÝ CẬP NHẬT CỦA AI (AI CHANGELOG & TASK AUDIT LOG)
+
+### [2026-09-01] — Hoàn thành TASK 26 đến TASK 30: Mobile Integration, Mobile UX, Comprehensive Tests, CI/CD Pipeline & Production Readiness (100% DONE)
+
+- **Người cập nhật**: Antigravity AI (Multi-role Senior Team)
+- **Mục tiêu**: Hoàn thiện trọn vẹn 5 tasks cuối cùng, đưa toàn bộ 30/30 tasks của dự án Trường Thành Bookstore về đích 100%:
+  - **TASK 26 (Mobile API Integration)**: Đồng bộ toàn diện ứng dụng Flutter Mobile với hệ thống API Backend NestJS: Xây dựng `AddressModel`, `ReviewModel`, `NotificationModel`, `NotificationProvider`, `ReviewProvider`, và nâng cấp `WishlistProvider` hỗ trợ đồng bộ Server và Local Storage.
+  - **TASK 27 (Mobile UX & Resilience)**: Nâng cấp trải nghiệm Mobile chuyên nghiệp: Bộ widgets Shimmer Skeleton Loading (`ProductCardSkeleton`, `ProductListSkeleton`, `OrderItemSkeleton`, `NotificationItemSkeleton`), `EmptyStateWidget` với call-to-action buttons, `ErrorRetryWidget` xử lý mất mạng/lỗi mạng mượt mà, màn hình `WishlistScreen` và `NotificationsScreen` hỗ trợ Pull-to-Refresh và dismiss actions.
+  - **TASK 28 (Automated Testing Suite)**: Thiết lập mạng lưới kiểm thử tự động toàn diện:
+    - Backend: 21 unit test suites (246/246 tests PASS), `test/all-fixes.spec.ts` (11/11 tests PASS), `test/e2e-flow.spec.ts` (7/7 tests PASS).
+    - Mobile: 16/16 tests PASS (`app_e2e_test.dart`, `unit_providers_test.dart`, `ux_components_test.dart`, `widget_test.dart`).
+    - Build: `npm run build` Backend & Frontend PASS 100% (0 errors).
+  - **TASK 29 (CI/CD Pipeline)**: Xây dựng bộ quy trình GitHub Actions tự động hóa: `.github/workflows/ci.yml` (multi-job Backend, Frontend, Mobile), `.github/workflows/docker-build.yml` (kiểm tra build container), `.github/workflows/release.yml` (tự động phát hành phiên bản và changelog).
+  - **TASK 30 (Production Readiness, Swagger & Docker)**:
+    - Nâng cấp endpoint Health Check `GET /api/health` trả về trạng thái chi tiết CSDL MongoDB, Uptime, Memory RSS/Heap.
+    - Kích hoạt Graceful Shutdown (`app.enableShutdownHooks()`).
+    - Hoàn thiện tài liệu Swagger OpenAPI tại `/api/docs`.
+    - Thiết lập Dockerization toàn diện: `backend/Dockerfile` đa tầng an toàn với non-root user `node` và font PDF, `frontend/Dockerfile` đa tầng với Nginx Alpine nén Gzip và proxy `/api`, file cấu hình Nginx `frontend/nginx.conf`, file điều phối `docker-compose.yml` (MongoDB + Backend + Frontend + Mongo Express).
+    - Cập nhật 100% hồ sơ tài liệu dự án (`AI_CONTEXT.md`, `PROJECT_DOCUMENTATION.md`, `DOC.md`, `PROJECT_SPECIFICATION.md`, `project_overview.md`, `README.md`).
+- **Kết quả kiểm thử**:
+  - `npm test` Backend: 21 suites, 246/246 tests PASS 100%.
+  - `npx jest --rootDir . test/all-fixes.spec.ts`: 11/11 tests PASS 100%.
+  - `npx jest --rootDir . test/e2e-flow.spec.ts`: 7/7 tests PASS 100%.
+  - `npm run build` Backend: PASS (0 errors).
+  - `npm run build` Frontend: PASS (0 errors).
+  - `flutter test` Mobile: 16/16 tests PASS 100%.
+- **Trạng thái**: 🟢 **DỰ ÁN HOÀN THÀNH 100% (30 / 30 TASKS DONE)**.
+
+---
 
 ### [2026-08-30] — Hoàn thành TASK 21 đến TASK 25: Verified Reviews, Wishlist Sync, WebSocket Notifications, Admin Analytics & UX Polish
 

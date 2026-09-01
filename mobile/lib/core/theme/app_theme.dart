@@ -9,6 +9,12 @@ class AppTheme {
   static const Color bgLight = Color(0xFFF8FAFC);
   static const Color cardBg = Colors.white;
 
+  // Semantic aliases
+  static const Color primaryColor = primaryRed;
+  static const Color secondaryColor = primaryOrange;
+  static const Color textPrimary = darkSlate;
+  static const Color textSecondary = bodyText;
+
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [primaryRed, primaryOrange],
     begin: Alignment.centerLeft,

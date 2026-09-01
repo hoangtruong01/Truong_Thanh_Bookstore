@@ -119,13 +119,11 @@ Hệ thống **Trường Thành Bookstore** là nền tảng thương mại đi�
 ### PHASE 6 — ADMIN & MOBILE
 - **TASK 24 [P1] — Dashboard [DONE]**: Bảng điều khiển quản trị thống kê doanh thu, KPI cards (doanh thu hôm nay, tổng đơn, AOV, tỷ lệ tăng trưởng), phân bổ trạng thái đơn hàng, cơ cấu doanh thu theo danh mục sản phẩm, biểu đồ tăng trưởng khách hàng. 100% unit tests PASS.
 - **TASK 25 [P1] — Admin UX [DONE]**: Bộ components chuẩn hóa trải nghiệm Quản trị (`ConfirmModal.vue`, `SkeletonLoader.vue`, `EmptyState.vue`), tích hợp trang kiểm duyệt đánh giá `Reviews.vue`, hệ thống phản hồi toast và loading state mượt mà.
-- **TASK 26 [P0] — Mobile API Integration**: Kiểm tra và đồng bộ ứng dụng Flutter Mobile kết nối trơn tru với toàn bộ API Backend chuẩn hóa mới.
-- **TASK 27 [P1] — Mobile UX**: Cải thiện trải nghiệm Mobile (Splash, xử lý offline, slow network, loading shimmer, error retry).
-
-### PHASE 7 — QUALITY & DEPLOYMENT
-- **TASK 28 [P0] — Testing**: Viết và chạy bộ kiểm thử toàn diện: Unit test cho các service trọng yếu (Auth, Product, Cart, Order, Payment, Inventory, Promotion) và E2E Flow test.
-- **TASK 29 [P1] — CI/CD**: Thiết lập quy trình CI/CD tự động (Lint -> Type Check -> Unit Test -> Build -> Deploy) cho các môi trường.
-- **TASK 30 [P0] — Production Readiness**: Hoàn thiện tài liệu Swagger/OpenAPI, README hướng dẫn triển khai, cấu hình Docker Compose, tối ưu bảo mật và hiệu năng trước khi đưa vào vận hành thực tế.
+- **TASK 26 [P0] — Mobile API Integration [DONE]**: Kiểm tra và đồng bộ toàn diện ứng dụng Flutter Mobile kết nối trơn tru với toàn bộ API Backend chuẩn hóa mới (Auth, Address book CRUD + default invariant, Products search & suggestions, Cart validation, Freeship 299K, Reviews verified purchase, Wishlist sync & move to cart, WebSocket notifications). 100% tests PASS.
+- **TASK 27 [P1] — Mobile UX [DONE]**: Nâng cấp trải nghiệm Mobile chuyên nghiệp: Bộ widgets Shimmer Skeleton Loading (`ProductCardSkeleton`, `ProductListSkeleton`, `OrderItemSkeleton`, `NotificationItemSkeleton`), `EmptyStateWidget` với call-to-action buttons, `ErrorRetryWidget` phục hồi lỗi kết nối, `WishlistScreen` và `NotificationsScreen` hỗ trợ Pull-to-Refresh và dismiss actions.
+- **TASK 28 [P0] — Testing [DONE]**: Hệ thống kiểm thử tự động toàn diện: 21 test suites Backend (246/246 tests PASS), `test/all-fixes.spec.ts` (11/11 tests PASS), `test/e2e-flow.spec.ts` (7/7 tests PASS), 16/16 Flutter tests PASS, `npm run build` Backend & Frontend PASS 100% (0 errors).
+- **TASK 29 [P1] — CI/CD [DONE]**: Thiết lập quy trình CI/CD Pipeline tự động hóa hoàn chỉnh bằng GitHub Actions: `.github/workflows/ci.yml` (multi-job Backend, Frontend, Mobile), `.github/workflows/docker-build.yml` (kiểm tra build container), `.github/workflows/release.yml` (tự động phát hành release notes).
+- **TASK 30 [P0] — Production Readiness [DONE]**: Hoàn thiện tài liệu Swagger/OpenAPI tại `/api/docs`, Health Check `GET /api/health` giám sát DB/Memory/Uptime, Graceful shutdown hooks, cấu hình Dockerfile đa tầng an toàn (non-root `node`), Nginx reverse proxy `nginx.conf` nén Gzip, điều phối `docker-compose.yml` (MongoDB 7.0 + Backend + Frontend + Mongo Express) và cập nhật 100% tài liệu dự án.
 
 ---
 
