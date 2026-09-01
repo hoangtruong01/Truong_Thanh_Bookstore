@@ -59,7 +59,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: wishlist.wishlistItems.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final product = wishlist.wishlistItems[index];
                 return Dismissible(
@@ -118,7 +118,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                 width: 80,
                                 height: 80,
                                 fit: BoxFit.cover,
-                                placeholder: (_, __) => Container(color: Colors.grey.shade100),
+                                placeholder: (context, url) => Container(color: Colors.grey.shade100),
                                 errorWidget: (context, url, error) => Container(
                                   width: 80,
                                   height: 80,

@@ -7,8 +7,6 @@ import 'package:mobile/models/user_model.dart';
 import 'package:mobile/models/promotion_model.dart';
 import 'package:mobile/providers/cart_provider.dart';
 import 'package:mobile/providers/wishlist_provider.dart';
-import 'package:mobile/providers/notification_provider.dart';
-import 'package:mobile/providers/review_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

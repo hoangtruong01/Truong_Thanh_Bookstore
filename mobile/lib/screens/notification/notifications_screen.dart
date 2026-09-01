@@ -115,7 +115,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             return ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 12),
               itemCount: 6,
-              itemBuilder: (_, __) => const NotificationItemSkeleton(),
+              itemBuilder: (context, index) => const NotificationItemSkeleton(),
             );
           }
 
@@ -139,7 +139,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: notif.notifications.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, indent: 70),
+              separatorBuilder: (context, index) => const Divider(height: 1, indent: 70),
               itemBuilder: (context, index) {
                 final item = notif.notifications[index];
                 final icon = _getNotificationIcon(item.type);
