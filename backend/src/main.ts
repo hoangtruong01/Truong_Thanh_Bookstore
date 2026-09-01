@@ -94,7 +94,7 @@ async function bootstrap() {
         const formatErrors = (errs: any[]): any[] => {
           return errs.map((err) => {
             if (err.constraints) {
-              flatMessages.push(...(Object.values(err.constraints) as string[]));
+              flatMessages.push(...Object.values(err.constraints).map(String));
             }
             return {
               field: err.property,

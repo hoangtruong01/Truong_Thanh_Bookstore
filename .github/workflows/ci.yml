@@ -2,9 +2,9 @@ name: CI Pipeline — Trường Thành Bookstore
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [ main, master, develop, dev ]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [ main, master, develop, dev ]
 
 jobs:
   backend-ci:
@@ -84,7 +84,6 @@ jobs:
       - name: 💙 Setup Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0'
           channel: 'stable'
           cache: true
 
