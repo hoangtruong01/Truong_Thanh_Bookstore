@@ -38,6 +38,8 @@ class ProductModel {
   });
 
   num get effectivePrice => (discountPrice > 0) ? discountPrice : price;
+  num get displayPrice => effectivePrice;
+  bool get hasDiscount => discountPrice > 0 && discountPrice < price;
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     List<String> imgList = [];

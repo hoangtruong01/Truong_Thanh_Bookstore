@@ -43,23 +43,39 @@ Truong_Thanh_Bookstore/
 
 ## ⚡ Hướng Dẫn Khởi Chạy Nhanh (Quick Start)
 
-### 1. Khởi Chạy Backend (NestJS API)
+### 🐳 Cách 1: Khởi Chạy Toàn Bộ Bằng Docker Compose (Khuyến nghị)
+```bash
+# Khởi động trọn gói MongoDB, Backend API, Frontend Nginx và Mongo Express
+docker-compose up -d --build
+```
+- **Web Storefront & Admin CMS**: `http://localhost` (Port 80)
+- **Backend API**: `http://localhost:3000/api`
+- **Tài liệu Swagger OpenAPI**: `http://localhost:3000/api/docs`
+- **Health Check Endpoint**: `http://localhost:3000/api/health`
+- **Quản trị Database (Mongo Express)**: `http://localhost:8081` (`admin` / `TruongThanhAdmin2026!`)
+
+---
+
+### 💻 Cách 2: Khởi Chạy Thủ Công Từng Phân Hệ
+
+#### 1. Khởi Chạy Backend (NestJS API)
 ```bash
 cd backend
 npm install
 npm run start:dev
-# API Server chạy tại: http://localhost:3000/api
+# API Server: http://localhost:3000/api
+# Swagger Docs: http://localhost:3000/api/docs
 ```
 
-### 2. Khởi Chạy Frontend Web (Vue 3 Storefront & Admin)
+#### 2. Khởi Chạy Frontend Web (Vue 3 Storefront & Admin)
 ```bash
 cd frontend
 npm install
 npm run dev
-# Web app chạy tại: http://localhost:5173
+# Web app: http://localhost:5173
 ```
 
-### 3. Khởi Chạy Mobile App (Flutter)
+#### 3. Khởi Chạy Mobile App (Flutter)
 ```bash
 cd mobile
 flutter pub get
@@ -68,16 +84,28 @@ flutter run
 
 ---
 
-## 🧪 Chạy Kiểm Thử (Testing)
+## 🧪 Chạy Kiểm Thử Tự Động (Testing)
 
+### 1. Kiểm thử Backend (NestJS + Jest)
 ```bash
 cd backend
 
-# Chạy Unit Test
+# Chạy toàn bộ 21 test suites nghiệp vụ (246 unit tests)
 npm test
 
-# Chạy End-to-End (E2E) Test Suite
-npx jest --config test/jest-e2e.json
+# Chạy test kiểm thử các ca sửa lỗi trọng yếu (Atomic rollback, Freeship 299K, Default Address, PDF)
+npx jest --rootDir . test/all-fixes.spec.ts
+
+# Chạy test luồng E2E tích hợp toàn diện (Auth -> Cart -> Order -> Review -> Notification)
+npx jest --rootDir . test/e2e-flow.spec.ts
+```
+
+### 2. Kiểm thử Mobile (Flutter Tests)
+```bash
+cd mobile
+
+# Chạy toàn bộ 16 unit, widget và E2E tests trên Mobile
+flutter test
 ```
 
 ---

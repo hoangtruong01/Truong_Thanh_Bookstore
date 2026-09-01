@@ -26,7 +26,10 @@ class CartProvider with ChangeNotifier {
       .where((i) => i.selected)
       .fold(0, (sum, i) => sum + (i.product.effectivePrice * i.quantity));
 
+  num get totalAmount => subtotal;
+
   bool get isFreeShipping => subtotal >= freeShippingThreshold;
+  bool get isEligibleForFreeShipping => isFreeShipping;
 
   num get amountNeededForFreeShipping =>
       (freeShippingThreshold - subtotal > 0) ? (freeShippingThreshold - subtotal) : 0;
@@ -58,6 +61,8 @@ class CartProvider with ChangeNotifier {
     final t = subtotal + shippingFee - discountAmount;
     return t > 0 ? t : 0;
   }
+
+  num get finalTotal => total;
 
   void addToCart(ProductModel product, {int quantity = 1}) {
     if (product.stock <= 0) return;

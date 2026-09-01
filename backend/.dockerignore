@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+.env
+.env.local
+.env.test
+.git
+.gitignore
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.md
+!README.md
+scratch_*.js

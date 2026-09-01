@@ -465,3 +465,22 @@ Vì Render Free Tier tự động chuyển sang chế độ ngủ (sleep) sau 15
 30. **Modular Refactoring**: Thiết kế component `CategoryProductSection.vue` để thay thế mã nguồn lặp của 8 phần sản phẩm ở trang chủ giúp tối ưu hiệu năng.
 31. **Reliability Logging**: Tích hợp ghi nhận stack trace lỗi 500 trong `HttpExceptionFilter` của NestJS backend.
 
+---
+
+## 🐳 11. HỆ THỐNG DOCKER & QUY TRÌNH CI/CD (DEVOPS ARCHITECTURE)
+
+### 11.1. Cấu hình Dockerization Đa tầng
+1. **Backend Dockerfile**: Nền Node.js 20 Alpine, multi-stage build, người dùng không có đặc quyền root (`node`), gói font `ttf-dejavu` và `font-noto` xuất hóa đơn PDF không lỗi.
+2. **Frontend Dockerfile**: Multi-stage build Vue 3 Vite, chuyển giao cho Nginx Alpine, nén Gzip, cache 1 năm cho assets tĩnh, reverse proxy `/api` và `/socket.io/` về backend container.
+3. **Docker Compose**: Tệp `docker-compose.yml` điều phối 4 dịch vụ (`mongodb`, `backend`, `frontend`, `mongo-express`) kết nối trong cùng bridge network `truongthanh-network` kèm healthchecks tự động.
+
+### 11.2. Tự động hóa CI/CD bằng GitHub Actions
+- `.github/workflows/ci.yml`: Chạy song song 3 jobs (Backend CI, Frontend CI, Mobile CI) kiểm tra Lint, TypeCheck, Unit Tests (Jest, Flutter Test) và Build artifact.
+- `.github/workflows/docker-build.yml`: Xác thực build Docker image không lỗi.
+- `.github/workflows/release.yml`: Tự động tạo Release Notes khi gắn tag `v*.*.*`.
+
+### 11.3. Tổng kết Trạng thái Dự án (100% Hoàn Thành)
+- **Tiến độ**: **30 / 30 Tasks (100% DONE)**.
+- **Backend**: 21 unit test suites (246 tests) + 2 integration test suites (18 tests) = **264 tests PASS 100%**.
+- **Mobile**: 16 unit & widget tests PASS 100%.
+- **Frontend & Backend Builds**: PASS 100% (0 errors).

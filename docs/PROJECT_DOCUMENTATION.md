@@ -202,12 +202,16 @@ npm run dev
 ```
 - Truy cập trình duyệt: `http://localhost:5173`
 
-### Bước 3: Khởi chạy Mobile App
+### Bước 4: Khởi chạy toàn bộ hệ thống bằng Docker Compose (Khuyến nghị cho Production)
 ```powershell
-cd mobile
-flutter pub get
-flutter run
+# Khởi động toàn bộ MongoDB, Backend NestJS, Frontend Nginx và Mongo Express
+docker-compose up -d --build
 ```
+- **Web Store & Admin**: `http://localhost` (Port 80)
+- **Backend API**: `http://localhost:3000/api`
+- **Swagger Documentation**: `http://localhost:3000/api/docs`
+- **Health Check Endpoint**: `http://localhost:3000/api/health`
+- **Database GUI (Mongo Express)**: `http://localhost:8081` (Tài khoản: `admin` / `TruongThanhAdmin2026!`)
 
 ---
 
@@ -217,3 +221,4 @@ flutter run
 2. **Không bao giờ làm lộ thông tin nhạy cảm**: Tuyệt đối không commit file `.env`, mật khẩu hoặc token bí mật lên Git. Password người dùng luôn phải băm bcrypt.
 3. **Đảm bảo tính tương thích**: Khi cập nhật API Backend, luôn đảm bảo Frontend và Mobile App không bị lỗi tương thích ngược.
 4. **Kiểm thử trước khi đóng Task**: Mọi thay đổi nghiệp vụ quan trọng đều phải chạy test tự động (`npm run test`, `npm run build`, `flutter test`) đạt kết quả PASS trước khi chuyển giao.
+5. **CI/CD Tự động hóa**: Toàn bộ PRs được bảo vệ bởi GitHub Actions CI kiểm tra Lint, TypeCheck, Jest Tests, Flutter Tests và Docker build tự động.
