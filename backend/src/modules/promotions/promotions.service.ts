@@ -106,11 +106,7 @@ export class PromotionsService {
     // Trigger notification if promotion was disabled and is now enabled
     if (promo.status && !oldPromo.status) {
       this.notificationsService
-        .createGlobalPromo(
-          promo.code,
-          promo.name,
-          promo.description || '',
-        )
+        .createGlobalPromo(promo.code, promo.name, promo.description || '')
         .catch((err: any) =>
           this.logger.error(
             'Failed to create global promo notification on update',
@@ -177,8 +173,8 @@ export class PromotionsService {
       const usedQuery = this.orderModel.countDocuments({
         $or: matchConditions,
         promotionCode: promo.code,
-        orderStatus: { $ne: OrderStatus.CANCELLED as any },
-      } as any);
+        orderStatus: { $ne: OrderStatus.CANCELLED },
+      });
       if (session) usedQuery.session(session);
       historicalUsage = await usedQuery.exec();
     }
@@ -246,7 +242,7 @@ export class PromotionsService {
             )
             .exec();
           if (!usage) throw new Error('PROMOTION_PER_USER_LIMIT');
-        } catch (error) {
+        } catch {
           if (!session) {
             await this.promotionModel
               .updateOne(

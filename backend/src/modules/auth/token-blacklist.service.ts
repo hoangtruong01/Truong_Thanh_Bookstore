@@ -13,9 +13,12 @@ export class TokenBlacklistService implements OnModuleDestroy {
 
   constructor() {
     // Run cleanup every 10 minutes to prevent memory leak from expired tokens
-    this.cleanupInterval = setInterval(() => {
-      this.cleanupExpiredTokens();
-    }, 10 * 60 * 1000);
+    this.cleanupInterval = setInterval(
+      () => {
+        this.cleanupExpiredTokens();
+      },
+      10 * 60 * 1000,
+    );
   }
 
   onModuleDestroy() {
@@ -110,7 +113,9 @@ export class TokenBlacklistService implements OnModuleDestroy {
     }
 
     if (clearedCount > 0) {
-      this.logger.debug(`Token blacklist cleanup completed. Removed ${clearedCount} expired entries.`);
+      this.logger.debug(
+        `Token blacklist cleanup completed. Removed ${clearedCount} expired entries.`,
+      );
     }
 
     return clearedCount;

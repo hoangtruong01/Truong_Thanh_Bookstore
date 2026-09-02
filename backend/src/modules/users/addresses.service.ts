@@ -9,7 +9,10 @@ export class AddressesService {
     @InjectModel(Address.name) private addressModel: Model<AddressDocument>,
   ) {}
 
-  async create(userId: string, data: Partial<Address>): Promise<AddressDocument> {
+  async create(
+    userId: string,
+    data: Partial<Address>,
+  ): Promise<AddressDocument> {
     // If setting default, reset others first
     if (data.isDefault) {
       await this.addressModel.updateMany(
@@ -43,7 +46,11 @@ export class AddressesService {
 
   async findById(id: string, userId: string): Promise<AddressDocument> {
     const address = await this.addressModel
-      .findOne({ _id: new Types.ObjectId(id), user: new Types.ObjectId(userId), isDeleted: false })
+      .findOne({
+        _id: new Types.ObjectId(id),
+        user: new Types.ObjectId(userId),
+        isDeleted: false,
+      })
       .exec();
     if (!address) {
       throw new NotFoundException('Không tìm thấy địa chỉ');
@@ -51,7 +58,11 @@ export class AddressesService {
     return address;
   }
 
-  async update(id: string, userId: string, data: Partial<Address>): Promise<AddressDocument> {
+  async update(
+    id: string,
+    userId: string,
+    data: Partial<Address>,
+  ): Promise<AddressDocument> {
     const address = await this.findById(id, userId);
 
     if (data.isDefault && !address.isDefault) {
@@ -68,14 +79,18 @@ export class AddressesService {
   async softDelete(id: string, userId: string): Promise<void> {
     const address = await this.findById(id, userId);
     address.isDeleted = true;
-    
+
     // If we deleted the default address, set another remaining address as default
     if (address.isDefault) {
       address.isDefault = false;
       await address.save();
-      
+
       const nextAddress = await this.addressModel
-        .findOne({ user: new Types.ObjectId(userId), isDeleted: false, _id: { $ne: address._id } })
+        .findOne({
+          user: new Types.ObjectId(userId),
+          isDeleted: false,
+          _id: { $ne: address._id },
+        })
         .sort({ createdAt: -1 })
         .exec();
       if (nextAddress) {
@@ -99,7 +114,11 @@ export class AddressesService {
 
   async getDefault(userId: string): Promise<AddressDocument | null> {
     const defaultAddr = await this.addressModel
-      .findOne({ user: new Types.ObjectId(userId), isDefault: true, isDeleted: false })
+      .findOne({
+        user: new Types.ObjectId(userId),
+        isDefault: true,
+        isDeleted: false,
+      })
       .exec();
     if (defaultAddr) return defaultAddr;
 
@@ -110,4 +129,3 @@ export class AddressesService {
       .exec();
   }
 }
-

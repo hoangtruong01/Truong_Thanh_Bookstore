@@ -71,5 +71,6 @@ export class PromotionUsage {
   updatedAt: Date;
 }
 
-export const PromotionUsageSchema = SchemaFactory.createForClass(PromotionUsage);
+export const PromotionUsageSchema =
+  SchemaFactory.createForClass(PromotionUsage);
 PromotionUsageSchema.index({ promotion: 1, identityHash: 1 }, { unique: true });

@@ -1,4 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException, Logger, ForbiddenException, Optional, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+  ForbiddenException,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model } from 'mongoose';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
@@ -49,7 +57,6 @@ export class OrdersService {
     @Optional() private cartService?: CartService,
     @Optional() private inventoryService?: InventoryService,
   ) {}
-
 
   private generateOrderCode(): string {
     const now = new Date();
@@ -158,7 +165,7 @@ export class OrdersService {
           `Google Sheet Sync Error: Status ${response.status}, ${text}`,
         );
       } else {
-        const data = await response.json();
+        await response.json();
         this.logger.log('Google Sheet Sync success');
       }
     } catch (error) {
@@ -186,10 +193,11 @@ export class OrdersService {
         (product as any).isDeleted === true ||
         ((product as any).status && (product as any).status !== 'ACTIVE')
       ) {
-        warnings.push(`Sản phẩm "${item.name || item.product}" hiện không khả dụng.`);
+        warnings.push(
+          `Sản phẩm "${item.name || item.product}" hiện không khả dụng.`,
+        );
         continue;
       }
-
 
       const availableStock = (product as any).stock ?? 0;
       let effectiveQty = item.quantity;
@@ -206,7 +214,9 @@ export class OrdersService {
       }
 
       const effectivePrice =
-        (product as any).discountPrice > 0 ? (product as any).discountPrice : (product as any).price;
+        (product as any).discountPrice > 0
+          ? (product as any).discountPrice
+          : (product as any).price;
 
       if (item.price && item.price !== effectivePrice) {
         warnings.push(`Giá sản phẩm "${product.name}" đã thay đổi.`);
@@ -226,8 +236,12 @@ export class OrdersService {
 
     const subtotal = verifiedItems.reduce((sum, i) => sum + i.subtotal, 0);
     const isEligibleForFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
-    const shippingFee = subtotal === 0 ? 0 : (isEligibleForFreeShipping ? 0 : SHIPPING_FEE);
-    const amountNeededForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
+    const shippingFee =
+      subtotal === 0 ? 0 : isEligibleForFreeShipping ? 0 : SHIPPING_FEE;
+    const amountNeededForFreeShipping = Math.max(
+      0,
+      FREE_SHIPPING_THRESHOLD - subtotal,
+    );
 
     let discount = 0;
     let appliedPromotion: any = null;
@@ -246,7 +260,9 @@ export class OrdersService {
           discount,
         };
       } catch (err: any) {
-        warnings.push(err.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện.');
+        warnings.push(
+          err.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện.',
+        );
       }
     }
 
@@ -272,8 +288,10 @@ export class OrdersService {
     return this.createAtomic(dto, userId);
   }
 
-
-  private async createAtomic(dto: CreateOrderDto, userId?: string): Promise<any> {
+  private async createAtomic(
+    dto: CreateOrderDto,
+    userId?: string,
+  ): Promise<any> {
     const paymentMethod = dto.paymentMethod || PaymentMethod.COD;
     if (!this.getEnabledPaymentMethods().includes(paymentMethod)) {
       throw new BadRequestException(
@@ -296,7 +314,9 @@ export class OrdersService {
     if (idempotencyKeyHash) {
       const existingQuery = this.orderModel.findOne({
         idempotencyKeyHash,
-        ...(userId ? { customer: userId } : { customer: null, phone: dto.phone }),
+        ...(userId
+          ? { customer: userId }
+          : { customer: null, phone: dto.phone }),
       });
       if (existingQuery?.exec) {
         const existing = await existingQuery.exec();
@@ -311,9 +331,9 @@ export class OrdersService {
       }
     }
 
-    const productIds = dto.items.map(item => item.product);
+    const productIds = dto.items.map((item) => item.product);
     const products = await this.productsService.findByIds(productIds);
-    const productMap = new Map(products.map(p => [p._id.toString(), p]));
+    const productMap = new Map(products.map((p) => [p._id.toString(), p]));
 
     const verifiedItems: Array<{
       product: string;
@@ -325,7 +345,9 @@ export class OrdersService {
     for (const item of dto.items) {
       const product = productMap.get(item.product);
       if (!product) {
-        throw new BadRequestException(`Sản phẩm không tồn tại: ${item.product}`);
+        throw new BadRequestException(
+          `Sản phẩm không tồn tại: ${item.product}`,
+        );
       }
       if (product.stock < item.quantity) {
         throw new BadRequestException(
@@ -346,8 +368,7 @@ export class OrdersService {
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
-    const shippingFee =
-      subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+    const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
     const orderCode = this.generateOrderCode();
 
     const persist = async (session?: ClientSession): Promise<OrderDocument> => {
@@ -382,9 +403,15 @@ export class OrdersService {
             );
           } else {
             await this.productsService.deductStock(item.product, item.quantity);
-            await this.productsService.incrementSold(item.product, item.quantity);
+            await this.productsService.incrementSold(
+              item.product,
+              item.quantity,
+            );
           }
-          deductedItems.push({ product: item.product, quantity: item.quantity });
+          deductedItems.push({
+            product: item.product,
+            quantity: item.quantity,
+          });
           if (this.inventoryService) {
             await this.inventoryService.recordExternalMovement(
               item.product,
@@ -436,7 +463,10 @@ export class OrdersService {
             await this.productsService
               .incrementSold(deducted.product, -deducted.quantity)
               .catch((rollbackError) =>
-                this.logger.error('Sold counter rollback failed', rollbackError),
+                this.logger.error(
+                  'Sold counter rollback failed',
+                  rollbackError,
+                ),
               );
           }
           if (promotionConsumed && dto.promotionCode) {
@@ -455,7 +485,10 @@ export class OrdersService {
             await this.inventoryService
               .deleteTransactionsByReference(orderCode)
               .catch((rollbackError) =>
-                this.logger.error('Inventory ledger rollback failed', rollbackError),
+                this.logger.error(
+                  'Inventory ledger rollback failed',
+                  rollbackError,
+                ),
               );
           }
         }
@@ -491,60 +524,84 @@ export class OrdersService {
 
     if (userId) {
       if (this.cartService) {
-        await this.cartService.clearCart(userId).catch((err) =>
-          this.logger.error('Failed to clear cart after order creation', err),
-        );
+        await this.cartService
+          .clearCart(userId)
+          .catch((err) =>
+            this.logger.error('Failed to clear cart after order creation', err),
+          );
       }
 
       const points = Math.floor(savedOrder.total / 1000);
 
-      await this.notificationsService.create({
-        userId,
-        title: 'Đặt hàng thành công',
-        message: `Đơn hàng #${savedOrder.orderCode} trị giá ${savedOrder.total.toLocaleString('vi-VN')}đ đã được tiếp nhận.`,
-        type: 'order',
-        meta: {
-          orderId: savedOrder._id.toString(),
-          orderCode: savedOrder.orderCode,
-        },
-      }).catch((error) =>
-        this.logger.error('Failed to create order notification', error),
-      );
-
+      await this.notificationsService
+        .create({
+          userId,
+          title: 'Đặt hàng thành công',
+          message: `Đơn hàng #${savedOrder.orderCode} trị giá ${savedOrder.total.toLocaleString('vi-VN')}đ đã được tiếp nhận.`,
+          type: 'order',
+          meta: {
+            orderId: savedOrder._id.toString(),
+            orderCode: savedOrder.orderCode,
+          },
+        })
+        .catch((error) =>
+          this.logger.error('Failed to create order notification', error),
+        );
 
       if (points > 0) {
-        await this.usersService.addLoyaltyPoints(userId, points).then(async (res) => {
-          if (res) {
-            // Loyalty points notification
-            await this.notificationsService.create({
-              userId,
-              title: '🪙 Tích điểm thành công',
-              message: `Bạn được cộng +${points.toLocaleString('vi-VN')} điểm từ đơn hàng #${savedOrder.orderCode}. Tổng tích lũy: ${res.user.loyaltyPoints} điểm.`,
-              type: 'loyalty',
-              meta: { points, totalPoints: res.user.loyaltyPoints, orderCode: savedOrder.orderCode },
-            }).catch((err) => this.logger.error('Failed to create loyalty notification', err));
+        await this.usersService
+          .addLoyaltyPoints(userId, points)
+          .then(async (res) => {
+            if (res) {
+              // Loyalty points notification
+              await this.notificationsService
+                .create({
+                  userId,
+                  title: '🪙 Tích điểm thành công',
+                  message: `Bạn được cộng +${points.toLocaleString('vi-VN')} điểm từ đơn hàng #${savedOrder.orderCode}. Tổng tích lũy: ${res.user.loyaltyPoints} điểm.`,
+                  type: 'loyalty',
+                  meta: {
+                    points,
+                    totalPoints: res.user.loyaltyPoints,
+                    orderCode: savedOrder.orderCode,
+                  },
+                })
+                .catch((err) =>
+                  this.logger.error(
+                    'Failed to create loyalty notification',
+                    err,
+                  ),
+                );
 
-            // Tier upgrade notification
-            if (res.tierUpgraded) {
-              const tierNameMap: any = {
-                BRONZE: 'ĐỒNG',
-                SILVER: 'BẠC',
-                GOLD: 'VÀNG',
-                DIAMOND: 'KIM CƯƠNG',
-              };
-              const tierVN = tierNameMap[res.newTier] || res.newTier;
-              await this.notificationsService.create({
-                userId,
-                title: `🏆 Chúc mừng nâng hạng ${tierVN}`,
-                message: `Chúc mừng bạn đã thăng hạng thành viên ${tierVN}! Mở khóa thêm nhiều quyền lợi và ưu đãi độc quyền.`,
-                type: 'tier',
-                meta: { newTier: res.newTier, oldTier: res.oldTier },
-              }).catch((err) => this.logger.error('Failed to create tier notification', err));
+              // Tier upgrade notification
+              if (res.tierUpgraded) {
+                const tierNameMap: any = {
+                  BRONZE: 'ĐỒNG',
+                  SILVER: 'BẠC',
+                  GOLD: 'VÀNG',
+                  DIAMOND: 'KIM CƯƠNG',
+                };
+                const tierVN = tierNameMap[res.newTier] || res.newTier;
+                await this.notificationsService
+                  .create({
+                    userId,
+                    title: `🏆 Chúc mừng nâng hạng ${tierVN}`,
+                    message: `Chúc mừng bạn đã thăng hạng thành viên ${tierVN}! Mở khóa thêm nhiều quyền lợi và ưu đãi độc quyền.`,
+                    type: 'tier',
+                    meta: { newTier: res.newTier, oldTier: res.oldTier },
+                  })
+                  .catch((err) =>
+                    this.logger.error(
+                      'Failed to create tier notification',
+                      err,
+                    ),
+                  );
+              }
             }
-          }
-        }).catch((error) =>
-          this.logger.error('Failed to add loyalty points', error),
-        );
+          })
+          .catch((error) =>
+            this.logger.error('Failed to add loyalty points', error),
+          );
       }
     }
 
@@ -575,7 +632,9 @@ export class OrdersService {
 
     if (status) filter.orderStatus = status;
     if (search) {
-      const safeSearch = search.substring(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const safeSearch = search
+        .substring(0, 100)
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
         { orderCode: { $regex: safeSearch, $options: 'i' } },
         { customerName: { $regex: safeSearch, $options: 'i' } },
@@ -598,7 +657,11 @@ export class OrdersService {
     return paginate(data, total, page, limit);
   }
 
-  async findById(id: string, userId?: string, userRole?: string): Promise<OrderDocument> {
+  async findById(
+    id: string,
+    userId?: string,
+    userRole?: string,
+  ): Promise<OrderDocument> {
     const order = await this.orderModel
       .findById(id)
       .populate('customer', 'fullName email phone')
@@ -616,7 +679,9 @@ export class OrdersService {
       order.customer &&
       order.customer._id.toString() !== userId.toString()
     ) {
-      throw new ForbiddenException('Bạn không có quyền xem thông tin đơn hàng này');
+      throw new ForbiddenException(
+        'Bạn không có quyền xem thông tin đơn hàng này',
+      );
     }
 
     return order;
@@ -627,9 +692,10 @@ export class OrdersService {
     actor: { _id: string; role: string; permissions?: string[] },
   ): Promise<OrderDocument> {
     const order = await this.findById(id);
-    if (actor.role === UserRole.SUPER_ADMIN || actor.role === 'SUPER_ADMIN' || actor.role === UserRole.ADMIN || actor.role === 'ADMIN') return order;
+    const actorRole = actor.role.toUpperCase();
+    if (actorRole === 'SUPER_ADMIN' || actorRole === 'ADMIN') return order;
     if (
-      (actor.role === UserRole.STAFF || actor.role === 'STAFF') &&
+      actorRole === 'STAFF' &&
       actor.permissions?.includes(StaffPermission.MANAGE_ORDERS)
     ) {
       return order;
@@ -637,13 +703,18 @@ export class OrdersService {
     const customerId = order.customer
       ? ((order.customer as any)._id || order.customer).toString()
       : undefined;
-    if ((actor.role !== UserRole.CUSTOMER && actor.role !== 'CUSTOMER') || customerId !== actor._id.toString()) {
-      throw new ForbiddenException('Bạn không có quyền xem thông tin đơn hàng này');
+    if (actorRole !== 'CUSTOMER' || customerId !== actor._id.toString()) {
+      throw new ForbiddenException(
+        'Bạn không có quyền xem thông tin đơn hàng này',
+      );
     }
     return order;
   }
 
-  async findGuestById(id: string, accessToken?: string): Promise<OrderDocument> {
+  async findGuestById(
+    id: string,
+    accessToken?: string,
+  ): Promise<OrderDocument> {
     if (!accessToken) {
       throw new ForbiddenException('Thiếu mã truy cập đơn hàng');
     }
@@ -749,30 +820,30 @@ export class OrdersService {
 
     let timelineNote = dto.note || `Trạng thái đơn hàng: ${dto.orderStatus}`;
     if (!dto.note) {
-    switch (dto.orderStatus) {
-      case OrderStatus.PENDING:
-        timelineNote = 'Đơn hàng đang chờ xử lý.';
-        break;
-      case OrderStatus.CONFIRMED:
-        timelineNote = 'Cửa hàng đã xác nhận đơn hàng của bạn.';
-        break;
-      case OrderStatus.PROCESSING:
-        timelineNote = 'Đơn hàng đang được đóng gói và chuẩn bị bàn giao.';
-        break;
-      case OrderStatus.SHIPPING:
-        timelineNote = 'Đơn hàng đang được vận chuyển đến địa chỉ nhận.';
-        break;
-      case OrderStatus.DELIVERED:
-      case OrderStatus.COMPLETED:
-        timelineNote = 'Giao hàng thành công. Đơn hàng hoàn tất.';
-        break;
-      case OrderStatus.RETURNED:
-        timelineNote = 'Đơn hàng đã được tiếp nhận hoàn trả và hoàn kho.';
-        break;
-      case OrderStatus.CANCELLED:
-        timelineNote = 'Đơn hàng đã bị hủy bỏ.';
-        break;
-    }
+      switch (dto.orderStatus) {
+        case OrderStatus.PENDING:
+          timelineNote = 'Đơn hàng đang chờ xử lý.';
+          break;
+        case OrderStatus.CONFIRMED:
+          timelineNote = 'Cửa hàng đã xác nhận đơn hàng của bạn.';
+          break;
+        case OrderStatus.PROCESSING:
+          timelineNote = 'Đơn hàng đang được đóng gói và chuẩn bị bàn giao.';
+          break;
+        case OrderStatus.SHIPPING:
+          timelineNote = 'Đơn hàng đang được vận chuyển đến địa chỉ nhận.';
+          break;
+        case OrderStatus.DELIVERED:
+        case OrderStatus.COMPLETED:
+          timelineNote = 'Giao hàng thành công. Đơn hàng hoàn tất.';
+          break;
+        case OrderStatus.RETURNED:
+          timelineNote = 'Đơn hàng đã được tiếp nhận hoàn trả và hoàn kho.';
+          break;
+        case OrderStatus.CANCELLED:
+          timelineNote = 'Đơn hàng đã bị hủy bỏ.';
+          break;
+      }
     }
 
     order.timeline.push({
@@ -827,7 +898,7 @@ export class OrdersService {
             // A transactional status update must roll back as one unit.
             if (session) throw error;
             this.logger.error(
-              `Failed to deduct loyalty points for user ${order.customer}`,
+              `Failed to deduct loyalty points for user ${order.customer.toString()}`,
               error,
             );
           }
@@ -862,16 +933,21 @@ export class OrdersService {
     const savedOrder = await order.save(session ? { session } : undefined);
 
     // Sync to Google Sheet (async)
-    this.syncToGoogleSheet(savedOrder).catch((err) => this.logger.error('Sheet sync failed', err));
+    this.syncToGoogleSheet(savedOrder).catch((err) =>
+      this.logger.error('Sheet sync failed', err),
+    );
 
     if (savedOrder.customer && savedOrder.orderStatus !== oldStatus) {
       const customerId = savedOrder.customer.toString();
-      
+
       // Ensure customer is populated to get email
-      if (typeof savedOrder.customer === 'object' && !(savedOrder.customer as any).email) {
+      if (
+        typeof savedOrder.customer === 'object' &&
+        !(savedOrder.customer as any).email
+      ) {
         await savedOrder.populate('customer', 'fullName email');
       }
-      
+
       const customerObj = savedOrder.customer as any;
       const customerEmail = customerObj?.email || savedOrder.customerEmail;
 
@@ -898,33 +974,58 @@ export class OrdersService {
           break;
       }
       if (statusText) {
-        this.notificationsService.create({
-          userId: customerId,
-          title: `Cập nhật đơn hàng #${savedOrder.orderCode}`,
-          message: `Đơn hàng #${savedOrder.orderCode} của bạn ${statusText}.`,
-          type: 'order',
-          meta: { orderId: savedOrder._id.toString(), orderCode: savedOrder.orderCode },
-        }).catch((err) => this.logger.error('Failed to create customer notification for status change', err));
+        this.notificationsService
+          .create({
+            userId: customerId,
+            title: `Cập nhật đơn hàng #${savedOrder.orderCode}`,
+            message: `Đơn hàng #${savedOrder.orderCode} của bạn ${statusText}.`,
+            type: 'order',
+            meta: {
+              orderId: savedOrder._id.toString(),
+              orderCode: savedOrder.orderCode,
+            },
+          })
+          .catch((err) =>
+            this.logger.error(
+              'Failed to create customer notification for status change',
+              err,
+            ),
+          );
 
         // If completed, trigger review invitation notification
         if (
           savedOrder.orderStatus === OrderStatus.DELIVERED ||
           savedOrder.orderStatus === OrderStatus.COMPLETED
         ) {
-          this.notificationsService.create({
-            userId: customerId,
-            title: `⭐ Đánh giá sản phẩm đơn hàng #${savedOrder.orderCode}`,
-            message: `Đơn hàng #${savedOrder.orderCode} đã hoàn tất! Hãy để lại đánh giá để chia sẻ cảm nhận và nhận thêm ưu đãi nhé.`,
-            type: 'review',
-            meta: { orderId: savedOrder._id.toString(), orderCode: savedOrder.orderCode },
-          }).catch((err) => this.logger.error('Failed to create review invite notification', err));
+          this.notificationsService
+            .create({
+              userId: customerId,
+              title: `⭐ Đánh giá sản phẩm đơn hàng #${savedOrder.orderCode}`,
+              message: `Đơn hàng #${savedOrder.orderCode} đã hoàn tất! Hãy để lại đánh giá để chia sẻ cảm nhận và nhận thêm ưu đãi nhé.`,
+              type: 'review',
+              meta: {
+                orderId: savedOrder._id.toString(),
+                orderCode: savedOrder.orderCode,
+              },
+            })
+            .catch((err) =>
+              this.logger.error(
+                'Failed to create review invite notification',
+                err,
+              ),
+            );
         }
 
         // Send email notification (async)
         if (customerEmail) {
-          this.emailService.sendOrderStatusEmail(customerEmail, savedOrder, statusText).catch((err) => {
-            this.logger.error(`Failed to send order status email to ${customerEmail}:`, err);
-          });
+          this.emailService
+            .sendOrderStatusEmail(customerEmail, savedOrder, statusText)
+            .catch((err) => {
+              this.logger.error(
+                `Failed to send order status email to ${customerEmail}:`,
+                err,
+              );
+            });
         }
       }
     }
@@ -938,13 +1039,19 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Order not found');
 
     // Only the order owner or admin/staff can cancel
-    if (userId && order.customer && order.customer.toString() !== userId.toString()) {
+    if (
+      userId &&
+      order.customer &&
+      order.customer.toString() !== userId.toString()
+    ) {
       throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này');
     }
 
     // Only allow cancelling PENDING orders
     if (order.orderStatus !== OrderStatus.PENDING) {
-      throw new BadRequestException('Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý');
+      throw new BadRequestException(
+        'Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý',
+      );
     }
 
     return this.updateStatus(id, { orderStatus: OrderStatus.CANCELLED });
@@ -957,16 +1064,13 @@ export class OrdersService {
     const order = await this.orderModel.findById(id).exec();
     if (!order) throw new NotFoundException('Order not found');
 
-    const isAdmin =
-      actor.role === UserRole.SUPER_ADMIN ||
-      actor.role === 'SUPER_ADMIN' ||
-      actor.role === UserRole.ADMIN ||
-      actor.role === 'ADMIN';
+    const actorRole = actor.role.toUpperCase();
+    const isAdmin = actorRole === 'SUPER_ADMIN' || actorRole === 'ADMIN';
     const isAuthorizedStaff =
-      (actor.role === UserRole.STAFF || actor.role === 'STAFF') &&
+      actorRole === 'STAFF' &&
       actor.permissions?.includes(StaffPermission.MANAGE_ORDERS);
     const isOwner =
-      (actor.role === UserRole.CUSTOMER || actor.role === 'CUSTOMER') &&
+      actorRole === 'CUSTOMER' &&
       !!order.customer &&
       order.customer.toString() === actor._id.toString();
     if (!isAdmin && !isAuthorizedStaff && !isOwner) {
@@ -1023,7 +1127,13 @@ export class OrdersService {
       },
       {
         $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
+          _id: {
+            $dateToString: {
+              format: '%Y-%m-%d',
+              date: '$createdAt',
+              timezone: 'Asia/Ho_Chi_Minh',
+            },
+          },
           total: { $sum: '$total' },
           subtotal: { $sum: '$subtotal' },
           discount: { $sum: '$discount' },
@@ -1102,19 +1212,35 @@ export class OrdersService {
 
     // Header
     doc.fontSize(16).text('VĂN PHÒNG PHẨM TRƯỜNG THÀNH', { align: 'center' });
-    doc.fontSize(10).text('Địa chỉ: Chợ Chanh - Nhân Hà, Ninh Bình, Việt Nam', { align: 'center' });
-    doc.fontSize(10).text('Điện thoại: 0982938316 | Email: giaoductruongthanh@gmail.com', { align: 'center' });
+    doc.fontSize(10).text('Địa chỉ: Chợ Chanh - Nhân Hà, Ninh Bình, Việt Nam', {
+      align: 'center',
+    });
+    doc
+      .fontSize(10)
+      .text('Điện thoại: 0982938316 | Email: giaoductruongthanh@gmail.com', {
+        align: 'center',
+      });
     doc.moveDown(1);
-    
+
     // Invoice Title
-    doc.fontSize(14).text('HÓA ĐƠN BÁN HÀNG', { align: 'center', underline: true });
-    doc.fontSize(10).text(`Mã đơn hàng: #${order.orderCode}`, { align: 'center' });
-    doc.fontSize(10).text(`Ngày đặt: ${new Date(order.createdAt).toLocaleString('vi-VN')}`, { align: 'center' });
+    doc
+      .fontSize(14)
+      .text('HÓA ĐƠN BÁN HÀNG', { align: 'center', underline: true });
+    doc
+      .fontSize(10)
+      .text(`Mã đơn hàng: #${order.orderCode}`, { align: 'center' });
+    doc
+      .fontSize(10)
+      .text(`Ngày đặt: ${new Date(order.createdAt).toLocaleString('vi-VN')}`, {
+        align: 'center',
+      });
     doc.moveDown(1.5);
 
     // Customer Info
     doc.fontSize(11).text('THÔNG TIN KHÁCH HÀNG', { underline: true });
-    doc.fontSize(10).text(`Họ và tên: ${order.customerName || 'Khách vãng lai'}`);
+    doc
+      .fontSize(10)
+      .text(`Họ và tên: ${order.customerName || 'Khách vãng lai'}`);
     doc.fontSize(10).text(`Số điện thoại: ${order.phone}`);
     doc.fontSize(10).text(`Email: ${order.customerEmail || 'N/A'}`);
     doc.fontSize(10).text(`Địa chỉ nhận hàng: ${order.shippingAddress}`);
@@ -1133,18 +1259,32 @@ export class OrdersService {
     doc.text('Đơn giá', startX + 280, startY, { width: 60, align: 'right' });
     doc.text('SL', startX + 350, startY, { width: 30, align: 'center' });
     doc.text('Thành tiền', startX + 390, startY, { width: 80, align: 'right' });
-    
-    doc.moveTo(startX, startY + 15).lineTo(500, startY + 15).stroke();
-    
+
+    doc
+      .moveTo(startX, startY + 15)
+      .lineTo(500, startY + 15)
+      .stroke();
+
     startY += 20;
-    
+
     order.items.forEach((item: any, index: number) => {
       doc.text((index + 1).toString(), startX, startY);
       doc.text(item.name, startX + 30, startY, { width: 240 });
-      doc.text(item.price.toLocaleString('vi-VN') + 'đ', startX + 280, startY, { width: 60, align: 'right' });
-      doc.text(item.quantity.toString(), startX + 350, startY, { width: 30, align: 'center' });
-      doc.text((item.price * item.quantity).toLocaleString('vi-VN') + 'đ', startX + 390, startY, { width: 80, align: 'right' });
-      
+      doc.text(item.price.toLocaleString('vi-VN') + 'đ', startX + 280, startY, {
+        width: 60,
+        align: 'right',
+      });
+      doc.text(item.quantity.toString(), startX + 350, startY, {
+        width: 30,
+        align: 'center',
+      });
+      doc.text(
+        (item.price * item.quantity).toLocaleString('vi-VN') + 'đ',
+        startX + 390,
+        startY,
+        { width: 80, align: 'right' },
+      );
+
       const textHeight = doc.heightOfString(item.name, { width: 240 });
       startY += Math.max(15, textHeight) + 5;
     });
@@ -1164,33 +1304,70 @@ export class OrdersService {
 
     // Summary Info
     doc.fontSize(10);
-    
+
     // Draw QR code if generated
     if (qrDataUrl) {
       doc.image(qrDataUrl, startX, startY, { width: 80 });
-      doc.fontSize(7).text('Quét tra cứu đơn hàng', startX, startY + 85, { width: 80, align: 'center' });
+      doc.fontSize(7).text('Quét tra cứu đơn hàng', startX, startY + 85, {
+        width: 80,
+        align: 'center',
+      });
     }
 
-    doc.text('Cộng tiền hàng:', startX + 280, startY, { width: 100, align: 'left' });
-    doc.text(order.subtotal.toLocaleString('vi-VN') + 'đ', startX + 390, startY, { width: 80, align: 'right' });
-    
+    doc.text('Cộng tiền hàng:', startX + 280, startY, {
+      width: 100,
+      align: 'left',
+    });
+    doc.text(
+      order.subtotal.toLocaleString('vi-VN') + 'đ',
+      startX + 390,
+      startY,
+      { width: 80, align: 'right' },
+    );
+
     startY += 15;
-    doc.text('Phí vận chuyển:', startX + 280, startY, { width: 100, align: 'left' });
-    doc.text((order.shippingFee === 0 ? 'Miễn phí' : order.shippingFee.toLocaleString('vi-VN') + 'đ'), startX + 390, startY, { width: 80, align: 'right' });
+    doc.text('Phí vận chuyển:', startX + 280, startY, {
+      width: 100,
+      align: 'left',
+    });
+    doc.text(
+      order.shippingFee === 0
+        ? 'Miễn phí'
+        : order.shippingFee.toLocaleString('vi-VN') + 'đ',
+      startX + 390,
+      startY,
+      { width: 80, align: 'right' },
+    );
 
     if (order.discount > 0) {
       startY += 15;
-      doc.text('Giảm giá:', startX + 280, startY, { width: 100, align: 'left' });
-      doc.text('-' + order.discount.toLocaleString('vi-VN') + 'đ', startX + 390, startY, { width: 80, align: 'right' });
+      doc.text('Giảm giá:', startX + 280, startY, {
+        width: 100,
+        align: 'left',
+      });
+      doc.text(
+        '-' + order.discount.toLocaleString('vi-VN') + 'đ',
+        startX + 390,
+        startY,
+        { width: 80, align: 'right' },
+      );
     }
 
     startY += 20;
     doc.fontSize(11).font(fontName);
     doc.text('TỔNG CỘNG:', startX + 280, startY, { width: 100, align: 'left' });
-    doc.text(order.total.toLocaleString('vi-VN') + 'đ', startX + 390, startY, { width: 80, align: 'right' });
+    doc.text(order.total.toLocaleString('vi-VN') + 'đ', startX + 390, startY, {
+      width: 80,
+      align: 'right',
+    });
 
     doc.moveDown(3);
-    doc.fontSize(10).text('Cảm ơn quý khách đã tin tưởng và mua sắm tại Trường Thành Bookstore!', { align: 'center' });
+    doc
+      .fontSize(10)
+      .text(
+        'Cảm ơn quý khách đã tin tưởng và mua sắm tại Trường Thành Bookstore!',
+        { align: 'center' },
+      );
 
     return doc;
   }

@@ -6,7 +6,12 @@ export type PaymentDocument = Payment & Document;
 
 @Schema({ timestamps: true })
 export class Payment {
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'Order', required: true, index: true })
+  @Prop({
+    type: SchemaTypes.ObjectId,
+    ref: 'Order',
+    required: true,
+    index: true,
+  })
   order: Types.ObjectId;
 
   @Prop({ type: SchemaTypes.ObjectId, ref: 'User', index: true })
@@ -61,10 +66,16 @@ PaymentSchema.index({ order: 1, provider: 1 });
 PaymentSchema.index({ createdAt: -1 });
 PaymentSchema.index(
   { providerReference: 1 },
-  { unique: true, partialFilterExpression: { providerReference: { $type: 'string' } } },
+  {
+    unique: true,
+    partialFilterExpression: { providerReference: { $type: 'string' } },
+  },
 );
 PaymentSchema.index(
   { transactionId: 1, provider: 1 },
-  { unique: true, partialFilterExpression: { transactionId: { $type: 'string' } } },
+  {
+    unique: true,
+    partialFilterExpression: { transactionId: { $type: 'string' } },
+  },
 );
 PaymentSchema.index({ expiresAt: 1, status: 1 });

@@ -74,8 +74,8 @@ export class LandingPageService {
       .replace(/[đĐ]/g, 'd')
       .trim()
       .replace(/\s+/g, '-')
-      .replace(/[^\w\-]+/g, '')
-      .replace(/\-\-+/g, '-')
+      .replace(/[^\w-]+/g, '')
+      .replace(/--+/g, '-')
       .replace(/^-+/, '')
       .replace(/-+$/, '');
   }
@@ -101,7 +101,10 @@ export class LandingPageService {
     // Clean numeric values
     cleaned.price = Math.max(0, Number(cleaned.price) || 0);
     cleaned.originalPrice = Math.max(0, Number(cleaned.originalPrice) || 0);
-    cleaned.countdownMinutes = Math.max(1, Number(cleaned.countdownMinutes) || 30);
+    cleaned.countdownMinutes = Math.max(
+      1,
+      Number(cleaned.countdownMinutes) || 30,
+    );
 
     // Clean packages
     if (cleaned.packages && Array.isArray(cleaned.packages)) {
@@ -122,7 +125,8 @@ export class LandingPageService {
 
     // Synchronize root price with packages
     if (cleaned.packages.length > 0) {
-      const best = cleaned.packages.find((p) => p.isBestSeller) || cleaned.packages[0];
+      const best =
+        cleaned.packages.find((p) => p.isBestSeller) || cleaned.packages[0];
       cleaned.price = best.price;
       cleaned.originalPrice = best.originalPrice;
     }
@@ -161,7 +165,8 @@ export class LandingPageService {
     cleaned.backgroundColor = cleaned.backgroundColor?.trim() || '#ffffff';
     cleaned.textColor = cleaned.textColor?.trim() || '#1e293b';
     cleaned.customCss = cleaned.customCss || '';
-    cleaned.status = cleaned.status !== undefined ? Boolean(cleaned.status) : true;
+    cleaned.status =
+      cleaned.status !== undefined ? Boolean(cleaned.status) : true;
 
     return cleaned;
   }
@@ -218,7 +223,9 @@ export class LandingPageService {
       throw new BadRequestException('ID trang bán hàng không hợp lệ');
     }
     if (!dto.fullName || !dto.phone || !dto.address) {
-      throw new BadRequestException('Vui lòng điền đầy đủ họ tên, số điện thoại và địa chỉ');
+      throw new BadRequestException(
+        'Vui lòng điền đầy đủ họ tên, số điện thoại và địa chỉ',
+      );
     }
 
     const page = await this.landingPageModel.findById(dto.landingPageId).exec();
@@ -231,7 +238,7 @@ export class LandingPageService {
     const selectedPkg = page.packages?.find(
       (p) => p.name?.trim().toLowerCase() === searchPkgName,
     );
-    const orderPrice = selectedPkg ? selectedPkg.price : (page.price || 0);
+    const orderPrice = selectedPkg ? selectedPkg.price : page.price || 0;
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderCode = `LP${new Date().toISOString().slice(2, 10).replace(/-/g, '')}${randomSuffix}`;
@@ -244,7 +251,9 @@ export class LandingPageService {
       customerEmail: `${dto.phone.replace(/\s+/g, '')}@truongthanh.vn`, // Standardized phone email
       phone: dto.phone.trim(),
       shippingAddress: dto.address.trim(),
-      note: dto.note ? `${dto.packageName} - ${dto.note}` : (dto.packageName || 'Đơn hàng từ Landing Page'),
+      note: dto.note
+        ? `${dto.packageName} - ${dto.note}`
+        : dto.packageName || 'Đơn hàng từ Landing Page',
       items: [
         {
           product: null,
@@ -268,7 +277,11 @@ export class LandingPageService {
     // Sync to Google Sheet (async)
     this.ordersService
       .syncToGoogleSheet(savedOrder)
-      .catch((err) => this.logger.error(`Error syncing order to Google Sheet: ${err.message}`));
+      .catch((err) =>
+        this.logger.error(
+          `Error syncing order to Google Sheet: ${err.message}`,
+        ),
+      );
 
     return savedOrder;
   }
@@ -360,7 +373,9 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`Gemini API Error (${response.status}): ${errorText}`);
+        this.logger.error(
+          `Gemini API Error (${response.status}): ${errorText}`,
+        );
         throw new Error(`Gemini API responded with status ${response.status}`);
       }
 

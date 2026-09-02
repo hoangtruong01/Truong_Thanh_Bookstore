@@ -52,12 +52,14 @@ describe('Security Sanitizer & Middleware Spec', () => {
     });
 
     it('should strip script tags with attributes and multiline code', () => {
-      const input = '<script type="text/javascript">\nconsole.log("hacked");\n</script>Safe Content';
+      const input =
+        '<script type="text/javascript">\nconsole.log("hacked");\n</script>Safe Content';
       expect(sanitizeXss(input)).toBe('Safe Content');
     });
 
     it('should strip iframe, object, embed and applet tags', () => {
-      const input = '<iframe src="http://evil.com"></iframe><object data="evil.swf"></object><embed src="evil.swf"><applet code="evil.class"></applet>Content';
+      const input =
+        '<iframe src="http://evil.com"></iframe><object data="evil.swf"></object><embed src="evil.swf"><applet code="evil.class"></applet>Content';
       expect(sanitizeXss(input)).toBe('Content');
     });
 
@@ -67,7 +69,8 @@ describe('Security Sanitizer & Middleware Spec', () => {
     });
 
     it('should strip inline event handlers like onerror and onload', () => {
-      const input = '<img src="invalid.jpg" onerror="alert(1)" onload="fetch()"/>';
+      const input =
+        '<img src="invalid.jpg" onerror="alert(1)" onload="fetch()"/>';
       const output = sanitizeXss(input);
       expect(output).not.toContain('onerror');
       expect(output).not.toContain('onload');
@@ -75,12 +78,14 @@ describe('Security Sanitizer & Middleware Spec', () => {
     });
 
     it('should preserve safe Vietnamese text with diacritics and symbols', () => {
-      const input = 'Sách Giáo Khoa Toán Lớp 10 & Tập Vở Học Sinh (Mới 100% - Giá 25.000đ)';
+      const input =
+        'Sách Giáo Khoa Toán Lớp 10 & Tập Vở Học Sinh (Mới 100% - Giá 25.000đ)';
       expect(sanitizeXss(input)).toBe(input);
     });
 
     it('should preserve standard web links and emails', () => {
-      const input = 'https://truongthanh.vn/products/but-bi?brand=ThienLong&sort=asc';
+      const input =
+        'https://truongthanh.vn/products/but-bi?brand=ThienLong&sort=asc';
       expect(sanitizeXss(input)).toBe(input);
     });
   });
@@ -109,8 +114,12 @@ describe('Security Sanitizer & Middleware Spec', () => {
 
       const cleaned = sanitizePayload(maliciousPayload);
       expect(cleaned.name).toBe('Hacker');
-      expect(Object.prototype.hasOwnProperty.call(cleaned, '__proto__')).toBe(false);
-      expect(Object.prototype.hasOwnProperty.call(cleaned, 'constructor')).toBe(false);
+      expect(Object.prototype.hasOwnProperty.call(cleaned, '__proto__')).toBe(
+        false,
+      );
+      expect(Object.prototype.hasOwnProperty.call(cleaned, 'constructor')).toBe(
+        false,
+      );
       expect((Object.prototype as any).isAdmin).toBeUndefined();
     });
 
@@ -268,7 +277,8 @@ describe('Security Sanitizer & Middleware Spec', () => {
           success: false,
           statusCode: HttpStatus.TOO_MANY_REQUESTS,
           errorCode: ErrorCode.ERR_RATE_LIMIT_EXCEEDED,
-          message: 'Bạn đã gửi quá nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau ít phút!',
+          message:
+            'Bạn đã gửi quá nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau ít phút!',
         }),
       );
     });

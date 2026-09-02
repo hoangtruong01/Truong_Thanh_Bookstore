@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -10,7 +9,13 @@ import { Review, ReviewDocument } from './schemas/review.schema';
 import { Product, ProductDocument } from '../products/schemas/product.schema';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
 import { OrderStatus } from '../../common/enums';
-import { CreateReviewDto, UpdateReviewDto, ModerateReviewDto, AdminReplyReviewDto, ReviewQueryDto } from './dto/review.dto';
+import {
+  CreateReviewDto,
+  UpdateReviewDto,
+  ModerateReviewDto,
+  AdminReplyReviewDto,
+  ReviewQueryDto,
+} from './dto/review.dto';
 
 @Injectable()
 export class ReviewsService {
@@ -50,7 +55,13 @@ export class ReviewsService {
 
     const total = reviews.length;
     const average = total > 0 ? Math.round((sum / total) * 10) / 10 : 5;
-    const percentages: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const percentages: Record<number, number> = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    };
 
     if (total > 0) {
       for (let star = 1; star <= 5; star++) {
@@ -114,7 +125,9 @@ export class ReviewsService {
       .exec();
 
     if (!deliveredOrder) {
-      throw new ForbiddenException('Chỉ khách hàng đã mua và nhận hàng thành công mới có thể gửi đánh giá cho sản phẩm này!');
+      throw new ForbiddenException(
+        'Chỉ khách hàng đã mua và nhận hàng thành công mới có thể gửi đánh giá cho sản phẩm này!',
+      );
     }
 
     const existing = await this.reviewModel
@@ -198,7 +211,10 @@ export class ReviewsService {
     return { success: true };
   }
 
-  async moderate(reviewId: string, dto: ModerateReviewDto): Promise<ReviewDocument> {
+  async moderate(
+    reviewId: string,
+    dto: ModerateReviewDto,
+  ): Promise<ReviewDocument> {
     const review = await this.reviewModel.findById(reviewId).exec();
     if (!review) {
       throw new NotFoundException('Không tìm thấy đánh giá');
@@ -210,7 +226,10 @@ export class ReviewsService {
     return saved;
   }
 
-  async adminReply(reviewId: string, dto: AdminReplyReviewDto): Promise<ReviewDocument> {
+  async adminReply(
+    reviewId: string,
+    dto: AdminReplyReviewDto,
+  ): Promise<ReviewDocument> {
     const review = await this.reviewModel.findById(reviewId).exec();
     if (!review) {
       throw new NotFoundException('Không tìm thấy đánh giá');
@@ -277,12 +296,16 @@ export class ReviewsService {
       .exec();
 
     if (reviews.length === 0) {
-      await this.productModel.findByIdAndUpdate(productId, { rating: 5 }).exec();
+      await this.productModel
+        .findByIdAndUpdate(productId, { rating: 5 })
+        .exec();
       return;
     }
 
     const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
     const avgRating = Math.round((sum / reviews.length) * 10) / 10;
-    await this.productModel.findByIdAndUpdate(productId, { rating: avgRating }).exec();
+    await this.productModel
+      .findByIdAndUpdate(productId, { rating: avgRating })
+      .exec();
   }
 }

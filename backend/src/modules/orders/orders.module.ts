@@ -25,4 +25,3 @@ import { InventoryModule } from '../inventory/inventory.module';
   exports: [OrdersService, MongooseModule],
 })
 export class OrdersModule {}
-

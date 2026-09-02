@@ -72,7 +72,10 @@ export class InventoryService {
         await this.inventoryModel.insertMany(newInventories);
       }
     } catch (err) {
-      this.logger.error('Failed to sync missing product inventory records:', err);
+      this.logger.error(
+        'Failed to sync missing product inventory records:',
+        err,
+      );
     }
     const items = await this.inventoryModel
       .find()
@@ -156,10 +159,16 @@ export class InventoryService {
     quantity: number,
     adjustmentSign = 1,
   ): number {
-    if (type === InventoryTransactionType.IMPORT || type === InventoryTransactionType.RETURN) {
+    if (
+      type === InventoryTransactionType.IMPORT ||
+      type === InventoryTransactionType.RETURN
+    ) {
       return quantity;
     }
-    if (type === InventoryTransactionType.SALE || type === InventoryTransactionType.DAMAGE) {
+    if (
+      type === InventoryTransactionType.SALE ||
+      type === InventoryTransactionType.DAMAGE
+    ) {
       return -quantity;
     }
     return quantity * adjustmentSign;
@@ -167,7 +176,9 @@ export class InventoryService {
 
   private isTransactionUnsupported(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
-    return /Transaction numbers are only allowed|replica set|mongos|retryable writes|retryWrites|standalone/i.test(message);
+    return /Transaction numbers are only allowed|replica set|mongos|retryable writes|retryWrites|standalone/i.test(
+      message,
+    );
   }
 
   private async applyMovement(
@@ -180,7 +191,9 @@ export class InventoryService {
     const productId = dto.product.toString();
     let fallbackMutated = false;
 
-    const persist = async (session?: ClientSession): Promise<InventoryDocument> => {
+    const persist = async (
+      session?: ClientSession,
+    ): Promise<InventoryDocument> => {
       if (dto.reference) {
         const existingQuery = this.transactionModel.findOne({
           reference: dto.reference,
@@ -190,27 +203,38 @@ export class InventoryService {
         if (session) existingQuery.session(session);
         const existing = await existingQuery.exec();
         if (existing) {
-          const inventoryQuery = this.inventoryModel.findOne({ product: productId });
+          const inventoryQuery = this.inventoryModel.findOne({
+            product: productId,
+          });
           if (session) inventoryQuery.session(session);
           const current = await inventoryQuery.exec();
-          if (!current) throw new NotFoundException('Inventory record not found');
+          if (!current)
+            throw new NotFoundException('Inventory record not found');
           return current;
         }
       }
 
       if (delta < 0) {
-        await this.productsService.deductStock(productId, Math.abs(delta), session);
+        await this.productsService.deductStock(
+          productId,
+          Math.abs(delta),
+          session,
+        );
       } else {
         await this.productsService.updateStock(productId, delta, session);
       }
       if (!session) fallbackMutated = true;
 
-      const inventoryQuery = this.inventoryModel.findOne({ product: productId });
+      const inventoryQuery = this.inventoryModel.findOne({
+        product: productId,
+      });
       if (session) inventoryQuery.session(session);
       const inventory = await inventoryQuery.exec();
       if (!inventory) throw new NotFoundException('Inventory record not found');
       if (inventory.currentStock < 0) {
-        throw new BadRequestException('Giao dịch bị từ chối vì tồn kho không thể âm');
+        throw new BadRequestException(
+          'Giao dịch bị từ chối vì tồn kho không thể âm',
+        );
       }
 
       const payload = {
@@ -240,18 +264,25 @@ export class InventoryService {
       await session.withTransaction(async () => {
         result = await persist(session);
       });
-      if (!result) throw new Error('Inventory transaction completed without a result');
+      if (!result)
+        throw new Error('Inventory transaction completed without a result');
       return result;
     } catch (error) {
       if (!this.isTransactionUnsupported(error)) throw error;
-      this.logger.warn('MongoDB transactions unavailable; using compensated inventory mode.');
+      this.logger.warn(
+        'MongoDB transactions unavailable; using compensated inventory mode.',
+      );
       try {
         return await persist();
       } catch (persistError) {
         if (fallbackMutated && delta < 0) {
-          await this.productsService.updateStock(productId, Math.abs(delta)).catch(() => undefined);
+          await this.productsService
+            .updateStock(productId, Math.abs(delta))
+            .catch(() => undefined);
         } else if (fallbackMutated) {
-          await this.productsService.deductStock(productId, delta).catch(() => undefined);
+          await this.productsService
+            .deductStock(productId, delta)
+            .catch(() => undefined);
         }
         throw persistError;
       }
@@ -269,7 +300,11 @@ export class InventoryService {
     orderId?: string,
     session?: ClientSession,
   ): Promise<void> {
-    const existingQuery = this.transactionModel.findOne({ reference, product: productId, type });
+    const existingQuery = this.transactionModel.findOne({
+      reference,
+      product: productId,
+      type,
+    });
     if (session) existingQuery.session(session);
     if (await existingQuery.exec()) return;
 
@@ -285,7 +320,10 @@ export class InventoryService {
       change: delta,
       stockBefore: inventory.currentStock - delta,
       stockAfter: inventory.currentStock,
-      note: type === InventoryTransactionType.SALE ? 'Xuất kho theo đơn hàng' : 'Hoàn kho từ đơn hàng',
+      note:
+        type === InventoryTransactionType.SALE
+          ? 'Xuất kho theo đơn hàng'
+          : 'Hoàn kho từ đơn hàng',
       reference,
       order: orderId ? new Types.ObjectId(orderId) : undefined,
     };

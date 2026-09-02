@@ -1,10 +1,19 @@
-import { IsNotEmpty, IsInt, Min, IsArray, ValidateNested } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsInt,
+  Min,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsMongoObjectId } from '../../../common/validators';
 
 export class AddToCartDto {
-  @ApiProperty({ description: 'ID sản phẩm', example: '507f1f77bcf86cd799439011' })
+  @ApiProperty({
+    description: 'ID sản phẩm',
+    example: '507f1f77bcf86cd799439011',
+  })
   @IsNotEmpty({ message: 'productId không được để trống' })
   @IsMongoObjectId({ message: 'productId phải là ObjectId hợp lệ' })
   productId: string;
@@ -25,7 +34,10 @@ export class UpdateCartItemDto {
 }
 
 export class CartSyncItemDto {
-  @ApiProperty({ description: 'ID sản phẩm', example: '507f1f77bcf86cd799439011' })
+  @ApiProperty({
+    description: 'ID sản phẩm',
+    example: '507f1f77bcf86cd799439011',
+  })
   @IsNotEmpty({ message: 'productId không được để trống' })
   @IsMongoObjectId({ message: 'productId phải là ObjectId hợp lệ' })
   productId: string;
@@ -38,7 +50,10 @@ export class CartSyncItemDto {
 }
 
 export class SyncCartDto {
-  @ApiProperty({ description: 'Danh sách sản phẩm cần đồng bộ', type: [CartSyncItemDto] })
+  @ApiProperty({
+    description: 'Danh sách sản phẩm cần đồng bộ',
+    type: [CartSyncItemDto],
+  })
   @IsArray({ message: 'items phải là một danh sách' })
   @ValidateNested({ each: true })
   @Type(() => CartSyncItemDto)
@@ -50,4 +65,3 @@ export class ApplyVoucherDto {
   @IsNotEmpty({ message: 'Mã voucher không được để trống' })
   code: string;
 }
-

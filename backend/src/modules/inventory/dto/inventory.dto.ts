@@ -1,7 +1,6 @@
 import {
   IsNotEmpty,
   IsOptional,
-  IsNumber,
   IsString,
   IsEnum,
   Min,
@@ -13,7 +12,10 @@ import { InventoryTransactionType } from '../../../common/enums';
 import { IsMongoObjectId } from '../../../common/validators';
 
 export class InventoryTransactionDto {
-  @ApiProperty({ description: 'ID sản phẩm', example: '507f1f77bcf86cd799439011' })
+  @ApiProperty({
+    description: 'ID sản phẩm',
+    example: '507f1f77bcf86cd799439011',
+  })
   @IsNotEmpty({ message: 'product không được để trống' })
   @IsMongoObjectId({ message: 'product phải là ObjectId hợp lệ' })
   product: string;
@@ -25,12 +27,19 @@ export class InventoryTransactionDto {
   @Min(1, { message: 'Số lượng tối thiểu là 1' })
   quantity: number;
 
-  @ApiPropertyOptional({ enum: InventoryTransactionType, default: InventoryTransactionType.IMPORT })
+  @ApiPropertyOptional({
+    enum: InventoryTransactionType,
+    default: InventoryTransactionType.IMPORT,
+  })
   @IsOptional()
-  @IsEnum(InventoryTransactionType, { message: 'Loại giao dịch kho không hợp lệ' })
+  @IsEnum(InventoryTransactionType, {
+    message: 'Loại giao dịch kho không hợp lệ',
+  })
   type?: InventoryTransactionType;
 
-  @ApiPropertyOptional({ description: 'Mã tham chiếu/idempotency của nghiệp vụ kho' })
+  @ApiPropertyOptional({
+    description: 'Mã tham chiếu/idempotency của nghiệp vụ kho',
+  })
   @IsOptional()
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -44,12 +53,18 @@ export class InventoryTransactionDto {
 }
 
 export class AdjustInventoryDto {
-  @ApiProperty({ description: 'ID sản phẩm', example: '507f1f77bcf86cd799439011' })
+  @ApiProperty({
+    description: 'ID sản phẩm',
+    example: '507f1f77bcf86cd799439011',
+  })
   @IsNotEmpty({ message: 'product không được để trống' })
   @IsMongoObjectId({ message: 'product phải là ObjectId hợp lệ' })
   product: string;
 
-  @ApiProperty({ description: 'Số lượng điều chỉnh (có thể âm hoặc dương)', example: -5 })
+  @ApiProperty({
+    description: 'Số lượng điều chỉnh (có thể âm hoặc dương)',
+    example: -5,
+  })
   @IsNotEmpty({ message: 'Số lượng điều chỉnh không được để trống' })
   @Type(() => Number)
   @IsInt({ message: 'Số lượng điều chỉnh phải là số nguyên' })
@@ -61,7 +76,9 @@ export class AdjustInventoryDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   note?: string;
 
-  @ApiPropertyOptional({ description: 'Mã tham chiếu/idempotency của nghiệp vụ kho' })
+  @ApiPropertyOptional({
+    description: 'Mã tham chiếu/idempotency của nghiệp vụ kho',
+  })
   @IsOptional()
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))

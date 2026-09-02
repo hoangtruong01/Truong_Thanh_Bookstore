@@ -38,5 +38,7 @@ export interface PaymentCallbackResult {
 export interface PaymentProvider {
   readonly method: PaymentMethod;
   initiate(context: PaymentInitiationContext): Promise<PaymentInitiationResult>;
-  verifyCallback(payload: PaymentCallbackPayload): Promise<PaymentCallbackResult>;
+  verifyCallback(
+    payload: PaymentCallbackPayload,
+  ): Promise<PaymentCallbackResult>;
 }

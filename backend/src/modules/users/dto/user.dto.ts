@@ -46,7 +46,10 @@ export class CreateStaffUserDto {
 
   @ApiPropertyOptional({ example: '0901234567' })
   @IsOptional()
-  @IsPhoneNumberVN({ message: 'Số điện thoại Việt Nam không hợp lệ (10 số, bắt đầu bằng 03, 05, 07, 08, 09 hoặc +84)' })
+  @IsPhoneNumberVN({
+    message:
+      'Số điện thoại Việt Nam không hợp lệ (10 số, bắt đầu bằng 03, 05, 07, 08, 09 hoặc +84)',
+  })
   phone?: string;
 
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.STAFF })
@@ -119,8 +122,10 @@ export class UserQueryDto {
   @ApiPropertyOptional({ example: true })
   @IsOptional()
   @Transform(({ value }) => {
-    if (value === 'true' || value === true || value === 1 || value === '1') return true;
-    if (value === 'false' || value === false || value === 0 || value === '0') return false;
+    if (value === 'true' || value === true || value === 1 || value === '1')
+      return true;
+    if (value === 'false' || value === false || value === 0 || value === '0')
+      return false;
     return undefined;
   })
   @IsBoolean({ message: 'Trạng thái lọc phải là boolean' })

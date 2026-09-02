@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { CartService, FREE_SHIPPING_THRESHOLD, DEFAULT_SHIPPING_FEE } from './cart.service';
+import {
+  CartService,
+  FREE_SHIPPING_THRESHOLD,
+  DEFAULT_SHIPPING_FEE,
+} from './cart.service';
 import { Cart } from './schemas/cart.schema';
 import { Product } from '../products/schemas/product.schema';
 import { Promotion } from '../promotions/schemas/promotion.schema';
@@ -59,7 +63,10 @@ describe('CartService Unit Tests', () => {
         CartService,
         { provide: getModelToken(Cart.name), useValue: mockCartModel },
         { provide: getModelToken(Product.name), useValue: mockProductModel },
-        { provide: getModelToken(Promotion.name), useValue: mockPromotionModel },
+        {
+          provide: getModelToken(Promotion.name),
+          useValue: mockPromotionModel,
+        },
       ],
     }).compile();
 
@@ -284,7 +291,14 @@ describe('CartService Unit Tests', () => {
 
     it('should throw BadRequestException if subtotal is less than minOrderValue', async () => {
       const userCart: any = {
-        items: [{ product: validProductId, quantity: 1, price: 100000, discountPrice: 0 }],
+        items: [
+          {
+            product: validProductId,
+            quantity: 1,
+            price: 100000,
+            discountPrice: 0,
+          },
+        ],
         subtotal: 100000,
       };
       mockCartModel.findOne.mockReturnValue({
@@ -309,7 +323,14 @@ describe('CartService Unit Tests', () => {
     it('should apply valid voucher and calculate discount', async () => {
       const userCart: any = {
         _id: '507f1f77bcf86cd799439099',
-        items: [{ product: validProductId, quantity: 2, price: 150000, discountPrice: 0 }],
+        items: [
+          {
+            product: validProductId,
+            quantity: 2,
+            price: 150000,
+            discountPrice: 0,
+          },
+        ],
         subtotal: 300000,
         save: jest.fn().mockImplementation(function () {
           return Promise.resolve(this);
@@ -337,4 +358,3 @@ describe('CartService Unit Tests', () => {
     });
   });
 });
-

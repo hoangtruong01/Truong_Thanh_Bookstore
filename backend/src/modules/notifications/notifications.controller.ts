@@ -28,8 +28,13 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get('my-notifications')
-  @ApiOperation({ summary: 'Lấy danh sách thông báo của người dùng (kèm số lượng chưa đọc)' })
-  async getMyNotifications(@Request() req: any, @Query() query: NotificationQueryDto) {
+  @ApiOperation({
+    summary: 'Lấy danh sách thông báo của người dùng (kèm số lượng chưa đọc)',
+  })
+  async getMyNotifications(
+    @Request() req: any,
+    @Query() query: NotificationQueryDto,
+  ) {
     const userId = req.user._id.toString();
     return this.notificationsService.findByUser(userId, query);
   }
@@ -50,7 +55,9 @@ export class NotificationsController {
   }
 
   @Patch('read-all')
-  @ApiOperation({ summary: 'Đánh dấu tất cả thông báo của người dùng là đã đọc' })
+  @ApiOperation({
+    summary: 'Đánh dấu tất cả thông báo của người dùng là đã đọc',
+  })
   async markAllAsRead(@Request() req: any) {
     const userId = req.user._id.toString();
     return this.notificationsService.markAllAsRead(userId);
@@ -59,7 +66,9 @@ export class NotificationsController {
   @Post('broadcast')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Quản trị viên phát thông báo toàn hệ thống (Broadcast)' })
+  @ApiOperation({
+    summary: 'Quản trị viên phát thông báo toàn hệ thống (Broadcast)',
+  })
   async broadcast(@Body() dto: BroadcastNotificationDto) {
     return this.notificationsService.create({
       title: dto.title,

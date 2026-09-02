@@ -12,8 +12,13 @@ import { TokenBlacklistService } from '../auth/token-blacklist.service';
 
 @WebSocketGateway({
   cors: {
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      const allowedOrigins = (
+        process.env.FRONTEND_URL || 'http://localhost:5173'
+      )
         .split(',')
         .map((o) => o.trim());
       if (
@@ -75,7 +80,8 @@ export class NotificationsGateway
         tokenVersion?: number;
       }>(token);
       if (
-        (payload.jti && this.tokenBlacklistService.isJtiBlacklisted(payload.jti)) ||
+        (payload.jti &&
+          this.tokenBlacklistService.isJtiBlacklisted(payload.jti)) ||
         this.tokenBlacklistService.isTokenBlacklisted(token)
       ) {
         throw new Error('Revoked token');
@@ -97,12 +103,16 @@ export class NotificationsGateway
 
       if (['ADMIN', 'STAFF', 'SUPER_ADMIN'].includes(user.role)) {
         await client.join('admin');
-        this.logger.log(`Client ${client.id} (Role: ${user.role}) joined admin notification room`);
+        this.logger.log(
+          `Client ${client.id} (Role: ${user.role}) joined admin notification room`,
+        );
       }
 
       this.logger.log(`Authenticated notification client ${client.id}`);
     } catch {
-      this.logger.warn(`Rejected unauthenticated notification client ${client.id}`);
+      this.logger.warn(
+        `Rejected unauthenticated notification client ${client.id}`,
+      );
       client.disconnect(true);
     }
   }
@@ -113,7 +123,9 @@ export class NotificationsGateway
 
   sendNotificationToUser(userId: string, notification: unknown) {
     if (this.server) {
-      this.server.to(`user:${userId}`).emit('notification_received', notification);
+      this.server
+        .to(`user:${userId}`)
+        .emit('notification_received', notification);
     }
   }
 

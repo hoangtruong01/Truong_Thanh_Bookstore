@@ -25,14 +25,21 @@ describe('Custom Exceptions', () => {
   });
 
   it('BusinessException should instantiate with BAD_REQUEST', () => {
-    const exc = new BusinessException('Voucher hết lượt dùng', ErrorCode.ERR_VOUCHER_USAGE_LIMIT, { code: 'SALE50' });
+    const exc = new BusinessException(
+      'Voucher hết lượt dùng',
+      ErrorCode.ERR_VOUCHER_USAGE_LIMIT,
+      { code: 'SALE50' },
+    );
     expect(exc.getStatus()).toBe(HttpStatus.BAD_REQUEST);
     expect(exc.errorCode).toBe(ErrorCode.ERR_VOUCHER_USAGE_LIMIT);
     expect(exc.details).toEqual({ code: 'SALE50' });
   });
 
   it('ResourceNotFoundException should instantiate with NOT_FOUND', () => {
-    const exc = new ResourceNotFoundException('Không tìm thấy sản phẩm', ErrorCode.ERR_PRODUCT_NOT_FOUND);
+    const exc = new ResourceNotFoundException(
+      'Không tìm thấy sản phẩm',
+      ErrorCode.ERR_PRODUCT_NOT_FOUND,
+    );
     expect(exc.getStatus()).toBe(HttpStatus.NOT_FOUND);
     expect(exc.errorCode).toBe(ErrorCode.ERR_PRODUCT_NOT_FOUND);
   });
@@ -50,14 +57,19 @@ describe('Custom Exceptions', () => {
   });
 
   it('ValidationException should instantiate with ERR_VALIDATION', () => {
-    const exc = new ValidationException('Lỗi validation', { email: 'Email required' });
+    const exc = new ValidationException('Lỗi validation', {
+      email: 'Email required',
+    });
     expect(exc.getStatus()).toBe(HttpStatus.BAD_REQUEST);
     expect(exc.errorCode).toBe(ErrorCode.ERR_VALIDATION);
     expect(exc.details).toEqual({ email: 'Email required' });
   });
 
   it('ConflictResourceException should instantiate with CONFLICT', () => {
-    const exc = new ConflictResourceException('Email đã tồn tại', ErrorCode.ERR_EMAIL_ALREADY_EXISTS);
+    const exc = new ConflictResourceException(
+      'Email đã tồn tại',
+      ErrorCode.ERR_EMAIL_ALREADY_EXISTS,
+    );
     expect(exc.getStatus()).toBe(HttpStatus.CONFLICT);
     expect(exc.errorCode).toBe(ErrorCode.ERR_EMAIL_ALREADY_EXISTS);
   });

@@ -7,8 +7,16 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Cart, CartDocument } from './schemas/cart.schema';
 import { Product, ProductDocument } from '../products/schemas/product.schema';
-import { Promotion, PromotionDocument } from '../promotions/schemas/promotion.schema';
-import { AddToCartDto, UpdateCartItemDto, SyncCartDto, ApplyVoucherDto } from './dto/cart.dto';
+import {
+  Promotion,
+  PromotionDocument,
+} from '../promotions/schemas/promotion.schema';
+import {
+  AddToCartDto,
+  UpdateCartItemDto,
+  SyncCartDto,
+  ApplyVoucherDto,
+} from './dto/cart.dto';
 import { ProductStatus, DiscountType } from '../../common/enums';
 
 export const FREE_SHIPPING_THRESHOLD = 299000;
@@ -28,7 +36,8 @@ export class CartService {
   constructor(
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
-    @InjectModel(Promotion.name) private promotionModel: Model<PromotionDocument>,
+    @InjectModel(Promotion.name)
+    private promotionModel: Model<PromotionDocument>,
   ) {}
 
   private toObjectId(id: string | Types.ObjectId): Types.ObjectId {
@@ -42,7 +51,7 @@ export class CartService {
   /**
    * Tính toán lại subtotal, shippingFee, discountAmount, totalPrice cho Cart
    */
-  public calculateCartTotals(cart: CartDocument | any): void {
+  public calculateCartTotals(cart: CartDocument): void {
     const items = cart.items || [];
     const subtotal = items.reduce((sum: number, item: any) => {
       const price = item.discountPrice > 0 ? item.discountPrice : item.price;
@@ -50,7 +59,12 @@ export class CartService {
     }, 0);
 
     cart.subtotal = subtotal;
-    cart.shippingFee = subtotal === 0 ? 0 : (subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : DEFAULT_SHIPPING_FEE);
+    cart.shippingFee =
+      subtotal === 0
+        ? 0
+        : subtotal >= FREE_SHIPPING_THRESHOLD
+          ? 0
+          : DEFAULT_SHIPPING_FEE;
 
     let discountAmount = 0;
     if (cart.appliedVoucher && cart.appliedVoucher.code) {
@@ -58,7 +72,7 @@ export class CartService {
       if (subtotal < (voucher.minOrderValue || 0)) {
         voucher.discountAmount = 0;
       } else {
-        if (voucher.discountType === DiscountType.PERCENT || voucher.discountType === 'PERCENT') {
+        if (String(voucher.discountType) === String(DiscountType.PERCENT)) {
           discountAmount = Math.round((subtotal * voucher.discountValue) / 100);
           if (voucher.maxDiscount && voucher.maxDiscount > 0) {
             discountAmount = Math.min(discountAmount, voucher.maxDiscount);
@@ -101,10 +115,17 @@ export class CartService {
     const sanitizedItems = [];
 
     for (const item of cart.items) {
-      const prodId = typeof item.product === 'object' && item.product ? (item.product as any)._id : item.product;
+      const prodId =
+        typeof item.product === 'object' && item.product
+          ? (item.product as any)._id
+          : item.product;
       const product = await this.productModel.findById(prodId).exec();
 
-      if (!product || product.isDeleted || product.status === ProductStatus.INACTIVE) {
+      if (
+        !product ||
+        product.isDeleted ||
+        product.status === ProductStatus.INACTIVE
+      ) {
         hasChanges = true;
         continue; // Bỏ item đã bị xóa hoặc ngừng kinh doanh
       }
@@ -122,7 +143,11 @@ export class CartService {
 
       const price = product.price;
       const discountPrice = product.discountPrice || 0;
-      if (item.price !== price || item.discountPrice !== discountPrice || item.name !== product.name) {
+      if (
+        item.price !== price ||
+        item.discountPrice !== discountPrice ||
+        item.name !== product.name
+      ) {
         hasChanges = true;
       }
 
@@ -131,12 +156,15 @@ export class CartService {
         name: product.name,
         price,
         discountPrice,
-        image: product.images && product.images.length > 0 ? product.images[0] : item.image,
+        image:
+          product.images && product.images.length > 0
+            ? product.images[0]
+            : item.image,
         quantity,
       });
     }
 
-    cart.items = sanitizedItems as any;
+    cart.items = sanitizedItems;
     this.calculateCartTotals(cart);
 
     if (hasChanges || cart.isModified()) {
@@ -144,14 +172,16 @@ export class CartService {
     }
 
     // Populate lại để trả về data đầy đủ
-    return (await this.cartModel.findById(cart._id).populate('items.product').exec()) as CartDocument;
+    return (await this.cartModel
+      .findById(cart._id)
+      .populate('items.product')
+      .exec()) as CartDocument;
   }
 
   /**
    * Xác thực trạng thái giỏ hàng trước khi tiến hành Checkout
    */
   async validateCart(userId: string): Promise<CartValidationResult> {
-    const userOid = this.toObjectId(userId);
     const cart = await this.getCart(userId);
     const warnings: string[] = [];
 
@@ -160,12 +190,17 @@ export class CartService {
       if (!prod || prod.isDeleted || prod.status === ProductStatus.INACTIVE) {
         warnings.push(`Sản phẩm "${item.name}" hiện không còn kinh doanh.`);
       } else if (prod.stock < item.quantity) {
-        warnings.push(`Sản phẩm "${item.name}" chỉ còn ${prod.stock} trong kho.`);
+        warnings.push(
+          `Sản phẩm "${item.name}" chỉ còn ${prod.stock} trong kho.`,
+        );
       }
     }
 
     const subtotal = cart.subtotal || 0;
-    const amountNeededForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
+    const amountNeededForFreeShipping = Math.max(
+      0,
+      FREE_SHIPPING_THRESHOLD - subtotal,
+    );
     const isEligibleForFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
     const isValidForCheckout = cart.items.length > 0 && warnings.length === 0;
 
@@ -186,8 +221,14 @@ export class CartService {
     const userOid = this.toObjectId(userId);
     const productOid = this.toObjectId(dto.productId);
     const product = await this.productModel.findById(productOid).exec();
-    if (!product || product.isDeleted || product.status === ProductStatus.INACTIVE) {
-      throw new NotFoundException('Sản phẩm không tồn tại hoặc đã ngừng kinh doanh');
+    if (
+      !product ||
+      product.isDeleted ||
+      product.status === ProductStatus.INACTIVE
+    ) {
+      throw new NotFoundException(
+        'Sản phẩm không tồn tại hoặc đã ngừng kinh doanh',
+      );
     }
 
     if (product.stock <= 0) {
@@ -195,7 +236,9 @@ export class CartService {
     }
 
     if (product.stock < dto.quantity) {
-      throw new BadRequestException(`Sản phẩm chỉ còn ${product.stock} sản phẩm trong kho`);
+      throw new BadRequestException(
+        `Sản phẩm chỉ còn ${product.stock} sản phẩm trong kho`,
+      );
     }
 
     let cart = await this.cartModel.findOne({ user: userOid }).exec();
@@ -216,7 +259,8 @@ export class CartService {
 
     const price = product.price;
     const discountPrice = product.discountPrice || 0;
-    const image = product.images && product.images.length > 0 ? product.images[0] : '';
+    const image =
+      product.images && product.images.length > 0 ? product.images[0] : '';
 
     if (existingIndex > -1) {
       const newQuantity = cart.items[existingIndex].quantity + dto.quantity;
@@ -232,7 +276,7 @@ export class CartService {
       cart.items[existingIndex].name = product.name;
     } else {
       cart.items.push({
-        product: productOid as any,
+        product: productOid,
         name: product.name,
         price,
         discountPrice,
@@ -243,7 +287,10 @@ export class CartService {
 
     this.calculateCartTotals(cart);
     await cart.save();
-    return (await this.cartModel.findById(cart._id).populate('items.product').exec()) as CartDocument;
+    return (await this.cartModel
+      .findById(cart._id)
+      .populate('items.product')
+      .exec()) as CartDocument;
   }
 
   /**
@@ -257,12 +304,20 @@ export class CartService {
     const userOid = this.toObjectId(userId);
     const productOid = this.toObjectId(productId);
     const product = await this.productModel.findById(productOid).exec();
-    if (!product || product.isDeleted || product.status === ProductStatus.INACTIVE) {
-      throw new NotFoundException('Sản phẩm không tồn tại hoặc đã ngừng kinh doanh');
+    if (
+      !product ||
+      product.isDeleted ||
+      product.status === ProductStatus.INACTIVE
+    ) {
+      throw new NotFoundException(
+        'Sản phẩm không tồn tại hoặc đã ngừng kinh doanh',
+      );
     }
 
     if (product.stock < dto.quantity) {
-      throw new BadRequestException(`Tồn kho chỉ còn ${product.stock} sản phẩm`);
+      throw new BadRequestException(
+        `Tồn kho chỉ còn ${product.stock} sản phẩm`,
+      );
     }
 
     const cart = await this.cartModel.findOne({ user: userOid }).exec();
@@ -270,7 +325,9 @@ export class CartService {
       throw new NotFoundException('Không tìm thấy giỏ hàng');
     }
 
-    const itemIndex = cart.items.findIndex((item) => item.product.toString() === productId);
+    const itemIndex = cart.items.findIndex(
+      (item) => item.product.toString() === productId,
+    );
     if (itemIndex === -1) {
       throw new NotFoundException('Sản phẩm không có trong giỏ hàng');
     }
@@ -282,7 +339,10 @@ export class CartService {
 
     this.calculateCartTotals(cart);
     await cart.save();
-    return (await this.cartModel.findById(cart._id).populate('items.product').exec()) as CartDocument;
+    return (await this.cartModel
+      .findById(cart._id)
+      .populate('items.product')
+      .exec()) as CartDocument;
   }
 
   /**
@@ -295,10 +355,15 @@ export class CartService {
       throw new NotFoundException('Không tìm thấy giỏ hàng');
     }
 
-    cart.items = cart.items.filter((item) => item.product.toString() !== productId);
+    cart.items = cart.items.filter(
+      (item) => item.product.toString() !== productId,
+    );
     this.calculateCartTotals(cart);
     await cart.save();
-    return (await this.cartModel.findById(cart._id).populate('items.product').exec()) as CartDocument;
+    return (await this.cartModel
+      .findById(cart._id)
+      .populate('items.product')
+      .exec()) as CartDocument;
   }
 
   /**
@@ -345,7 +410,12 @@ export class CartService {
     for (const item of dto.items) {
       if (!Types.ObjectId.isValid(item.productId)) continue;
       const product = await this.productModel.findById(item.productId).exec();
-      if (!product || product.isDeleted || product.status === ProductStatus.INACTIVE || product.stock <= 0) {
+      if (
+        !product ||
+        product.isDeleted ||
+        product.status === ProductStatus.INACTIVE ||
+        product.stock <= 0
+      ) {
         continue;
       }
 
@@ -356,16 +426,20 @@ export class CartService {
 
       const price = product.price;
       const discountPrice = product.discountPrice || 0;
-      const image = product.images && product.images.length > 0 ? product.images[0] : '';
+      const image =
+        product.images && product.images.length > 0 ? product.images[0] : '';
 
       if (existingIdx > -1) {
-        cart.items[existingIdx].quantity = Math.min(product.stock, cart.items[existingIdx].quantity + cappedQuantity);
+        cart.items[existingIdx].quantity = Math.min(
+          product.stock,
+          cart.items[existingIdx].quantity + cappedQuantity,
+        );
         cart.items[existingIdx].price = price;
         cart.items[existingIdx].discountPrice = discountPrice;
         cart.items[existingIdx].image = image;
       } else {
         cart.items.push({
-          product: new Types.ObjectId(item.productId) as any,
+          product: new Types.ObjectId(item.productId),
           name: product.name,
           price,
           discountPrice,
@@ -377,23 +451,35 @@ export class CartService {
 
     this.calculateCartTotals(cart);
     await cart.save();
-    return (await this.cartModel.findById(cart._id).populate('items.product').exec()) as CartDocument;
+    return (await this.cartModel
+      .findById(cart._id)
+      .populate('items.product')
+      .exec()) as CartDocument;
   }
 
   /**
    * Áp dụng mã giảm giá voucher vào giỏ hàng
    */
-  async applyVoucher(userId: string, dto: ApplyVoucherDto): Promise<CartDocument> {
+  async applyVoucher(
+    userId: string,
+    dto: ApplyVoucherDto,
+  ): Promise<CartDocument> {
     const userOid = this.toObjectId(userId);
     const cart = await this.cartModel.findOne({ user: userOid }).exec();
     if (!cart || cart.items.length === 0) {
-      throw new BadRequestException('Giỏ hàng trống, không thể áp dụng mã giảm giá');
+      throw new BadRequestException(
+        'Giỏ hàng trống, không thể áp dụng mã giảm giá',
+      );
     }
 
     const code = dto.code.trim().toUpperCase();
-    const promotion = await this.promotionModel.findOne({ code, status: true }).exec();
+    const promotion = await this.promotionModel
+      .findOne({ code, status: true })
+      .exec();
     if (!promotion) {
-      throw new NotFoundException('Mã giảm giá không tồn tại hoặc đã hết hiệu lực');
+      throw new NotFoundException(
+        'Mã giảm giá không tồn tại hoặc đã hết hiệu lực',
+      );
     }
 
     const now = new Date();
@@ -426,7 +512,10 @@ export class CartService {
 
     this.calculateCartTotals(cart);
     await cart.save();
-    return (await this.cartModel.findById(cart._id).populate('items.product').exec()) as CartDocument;
+    return (await this.cartModel
+      .findById(cart._id)
+      .populate('items.product')
+      .exec()) as CartDocument;
   }
 
   /**
@@ -442,7 +531,9 @@ export class CartService {
     cart.appliedVoucher = undefined;
     this.calculateCartTotals(cart);
     await cart.save();
-    return (await this.cartModel.findById(cart._id).populate('items.product').exec()) as CartDocument;
+    return (await this.cartModel
+      .findById(cart._id)
+      .populate('items.product')
+      .exec()) as CartDocument;
   }
 }
-

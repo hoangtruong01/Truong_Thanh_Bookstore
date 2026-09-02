@@ -86,9 +86,15 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       }),
     }));
 
-    mockProductModel.find = jest.fn().mockImplementation(() => createMockQuery([mockProduct]));
-    mockProductModel.findOne = jest.fn().mockImplementation(() => createMockQuery(mockProduct));
-    mockProductModel.findById = jest.fn().mockImplementation(() => createMockQuery(mockProduct));
+    mockProductModel.find = jest
+      .fn()
+      .mockImplementation(() => createMockQuery([mockProduct]));
+    mockProductModel.findOne = jest
+      .fn()
+      .mockImplementation(() => createMockQuery(mockProduct));
+    mockProductModel.findById = jest
+      .fn()
+      .mockImplementation(() => createMockQuery(mockProduct));
     mockProductModel.findByIdAndUpdate = jest.fn().mockImplementation(() =>
       createMockQuery({
         ...mockProduct,
@@ -127,7 +133,10 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
         { provide: getModelToken(Review.name), useValue: {} },
         { provide: getModelToken(StockAlert.name), useValue: {} },
         { provide: getModelToken(Category.name), useValue: mockCategoryModel },
-        { provide: getModelToken(Inventory.name), useValue: mockInventoryModel },
+        {
+          provide: getModelToken(Inventory.name),
+          useValue: mockInventoryModel,
+        },
         {
           provide: EmailService,
           useValue: { sendStockAlert: jest.fn().mockResolvedValue(true) },
@@ -180,9 +189,9 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
     it('should throw NotFoundException when product is not found by id', async () => {
       mockProductModel.findById.mockReturnValueOnce(createMockQuery(null));
 
-      await expect(service.findById('507f1f77bcf86cd799439099')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findById('507f1f77bcf86cd799439099'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should update product details', async () => {
@@ -200,7 +209,9 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
         exec: jest.fn().mockResolvedValue({ ...mockProduct, isDeleted: true }),
       });
 
-      await expect(service.softDelete(mockProduct._id)).resolves.toBeUndefined();
+      await expect(
+        service.softDelete(mockProduct._id),
+      ).resolves.toBeUndefined();
       expect(mockProductModel.findByIdAndUpdate).toHaveBeenCalledWith(
         mockProduct._id,
         { isDeleted: true },
@@ -284,7 +295,9 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
         lean: jest.fn().mockResolvedValue(null),
       });
 
-      const importResult = await service.importFromExcel(Buffer.from(excelBuffer));
+      const importResult = await service.importFromExcel(
+        Buffer.from(excelBuffer),
+      );
       expect(importResult).toBeDefined();
       expect(importResult.success).toBe(true);
       expect(importResult.summary.createdCount).toBe(1);
@@ -297,7 +310,10 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       const result = await service.search('dac nhan tam');
       expect(result).toBeDefined();
       expect(mockProductModel.find).toHaveBeenCalled();
-      const findArgs = mockProductModel.find.mock.calls[mockProductModel.find.mock.calls.length - 1][0];
+      const findArgs =
+        mockProductModel.find.mock.calls[
+          mockProductModel.find.mock.calls.length - 1
+        ][0];
       expect(findArgs.isDeleted).toBe(false);
       expect(findArgs.$or).toBeDefined();
       expect(findArgs.$or.length).toBeGreaterThan(0);
@@ -326,7 +342,10 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
 
       expect(result).toBeDefined();
       expect(result.data).toBeDefined();
-      const findArgs = mockProductModel.find.mock.calls[mockProductModel.find.mock.calls.length - 1][0];
+      const findArgs =
+        mockProductModel.find.mock.calls[
+          mockProductModel.find.mock.calls.length - 1
+        ][0];
       expect(findArgs.price.$gte).toBe(10000);
       expect(findArgs.price.$lte).toBe(50000);
       expect(findArgs.rating.$gte).toBe(4);
@@ -342,7 +361,10 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
         publisher: 'NXB Trẻ, NXB Kim Đồng',
       });
 
-      const findArgs = mockProductModel.find.mock.calls[mockProductModel.find.mock.calls.length - 1][0];
+      const findArgs =
+        mockProductModel.find.mock.calls[
+          mockProductModel.find.mock.calls.length - 1
+        ][0];
       expect(findArgs.brand.$in).toEqual(['Thiên Long', 'Deli', 'Hồng Hà']);
       expect(findArgs.author.$in).toEqual(['Nguyễn Nhật Ánh', 'Dale Carnegie']);
       expect(findArgs.publisher.$in).toEqual(['NXB Trẻ', 'NXB Kim Đồng']);
@@ -402,7 +424,11 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
 
     it('should return empty suggestions when query is empty', async () => {
       const suggestions = await service.getSuggestions('');
-      expect(suggestions).toEqual({ keywords: [], categories: [], products: [] });
+      expect(suggestions).toEqual({
+        keywords: [],
+        categories: [],
+        products: [],
+      });
     });
 
     it('should safely sanitize and prevent ReDoS attacks for long inputs or special regex characters', async () => {
@@ -414,7 +440,9 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
 
   describe('4. TASK 13: Product Detail, SEO Slug & Related Products', () => {
     it('should find product detail by valid ID', async () => {
-      mockProductModel.findById.mockReturnValueOnce(createMockQuery(mockProduct));
+      mockProductModel.findById.mockReturnValueOnce(
+        createMockQuery(mockProduct),
+      );
       const res = await service.findById(mockProduct._id.toString());
       expect(res).toBeDefined();
       expect(res.name).toBe(mockProduct.name);
@@ -422,7 +450,9 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
 
     it('should fallback to finding by slug when ID is not found or is a slug string', async () => {
       mockProductModel.findById.mockReturnValueOnce(createMockQuery(null));
-      mockProductModel.findOne.mockReturnValueOnce(createMockQuery(mockProduct));
+      mockProductModel.findOne.mockReturnValueOnce(
+        createMockQuery(mockProduct),
+      );
       const res = await service.findById('but-bi-thien-long');
       expect(res).toBeDefined();
       expect(res.slug).toBe(mockProduct.slug);
@@ -431,11 +461,15 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
     it('should throw NotFoundException when product is not found by ID or slug', async () => {
       mockProductModel.findById.mockReturnValueOnce(createMockQuery(null));
       mockProductModel.findOne.mockReturnValueOnce(createMockQuery(null));
-      await expect(service.findById('non-existent-product')).rejects.toThrow(NotFoundException);
+      await expect(service.findById('non-existent-product')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should find product detail by SEO slug', async () => {
-      mockProductModel.findOne.mockReturnValueOnce(createMockQuery(mockProduct));
+      mockProductModel.findOne.mockReturnValueOnce(
+        createMockQuery(mockProduct),
+      );
       const res = await service.findBySlug('but-bi-thien-long');
       expect(res).toBeDefined();
       expect(res.slug).toBe(mockProduct.slug);
@@ -443,7 +477,9 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
 
     it('should throw NotFoundException when slug does not exist', async () => {
       mockProductModel.findOne.mockReturnValueOnce(createMockQuery(null));
-      await expect(service.findBySlug('unknown-slug')).rejects.toThrow(NotFoundException);
+      await expect(service.findBySlug('unknown-slug')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should return related products matching category, author or brand', async () => {

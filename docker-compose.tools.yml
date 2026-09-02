@@ -1,0 +1,18 @@
+services:
+  mongo-express:
+    image: mongo-express:1.0.2-20-alpine3.19
+    container_name: truongthanh-mongo-express
+    restart: unless-stopped
+    profiles: ["tools"]
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME:?Mongo Express username is required}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD:?Mongo Express password is required}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - truongthanh-network

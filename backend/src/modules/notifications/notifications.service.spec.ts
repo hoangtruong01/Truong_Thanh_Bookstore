@@ -26,7 +26,9 @@ describe('NotificationsService', () => {
     // Constructor mock
     function MockNotification(this: any, data: any) {
       Object.assign(this, data);
-      this.save = jest.fn().mockResolvedValue({ _id: mockNotificationId, ...data });
+      this.save = jest
+        .fn()
+        .mockResolvedValue({ _id: mockNotificationId, ...data });
     }
     Object.assign(MockNotification, mockNotificationModel);
 
@@ -39,7 +41,10 @@ describe('NotificationsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
-        { provide: getModelToken(Notification.name), useValue: MockNotification },
+        {
+          provide: getModelToken(Notification.name),
+          useValue: MockNotification,
+        },
         { provide: NotificationsGateway, useValue: mockGateway },
       ],
     }).compile();
@@ -108,7 +113,10 @@ describe('NotificationsService', () => {
         .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(1) }) // total
         .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(1) }); // unread
 
-      const result = await service.findByUser(mockUserId, { page: 1, limit: 10 });
+      const result = await service.findByUser(mockUserId, {
+        page: 1,
+        limit: 10,
+      });
       expect(result.items.length).toBe(1);
       expect(result.items[0].isRead).toBe(false);
       expect(result.total).toBe(1);
@@ -136,7 +144,9 @@ describe('NotificationsService', () => {
     });
 
     it('should mark all notifications as read for user', async () => {
-      (mockNotificationModel.updateMany as jest.Mock).mockResolvedValue({ modifiedCount: 3 });
+      (mockNotificationModel.updateMany as jest.Mock).mockResolvedValue({
+        modifiedCount: 3,
+      });
 
       const result = await service.markAllAsRead(mockUserId);
       expect(result.success).toBe(true);

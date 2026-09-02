@@ -52,7 +52,10 @@ export class CustomersService {
       },
     ]);
 
-    const statsMap = new Map<string, { totalOrders: number; totalSpent: number }>(
+    const statsMap = new Map<
+      string,
+      { totalOrders: number; totalSpent: number }
+    >(
       orderStats.map((stat) => [
         stat._id ? stat._id.toString() : '',
         { totalOrders: stat.totalOrders, totalSpent: stat.totalSpent },

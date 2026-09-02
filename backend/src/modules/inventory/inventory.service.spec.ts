@@ -32,7 +32,10 @@ describe('Task 20: Five-type inventory ledger', () => {
 
   it('records IMPORT with before/after balances', async () => {
     const { service, transactionModel, products } = createService(15);
-    await service.importStock({ product: '507f1f77bcf86cd799439011', quantity: 5 });
+    await service.importStock({
+      product: '507f1f77bcf86cd799439011',
+      quantity: 5,
+    });
     expect(products.updateStock).toHaveBeenCalledWith(
       '507f1f77bcf86cd799439011',
       5,
@@ -51,21 +54,29 @@ describe('Task 20: Five-type inventory ledger', () => {
   it.each([
     [InventoryTransactionType.SALE, 'exportStock'],
     [InventoryTransactionType.DAMAGE, 'damageStock'],
-  ] as const)('prevents negative stock through atomic deduction for %s', async (type, method) => {
-    const { service, transactionModel, products } = createService(7);
-    await (service[method] as any).call(service, {
-      product: '507f1f77bcf86cd799439011',
-      quantity: 3,
-    });
-    expect(products.deductStock).toHaveBeenCalledWith(
-      '507f1f77bcf86cd799439011',
-      3,
-      undefined,
-    );
-    expect(transactionModel.create).toHaveBeenCalledWith(
-      expect.objectContaining({ type, change: -3, stockBefore: 10, stockAfter: 7 }),
-    );
-  });
+  ] as const)(
+    'prevents negative stock through atomic deduction for %s',
+    async (type, method) => {
+      const { service, transactionModel, products } = createService(7);
+      await (service[method] as any).call(service, {
+        product: '507f1f77bcf86cd799439011',
+        quantity: 3,
+      });
+      expect(products.deductStock).toHaveBeenCalledWith(
+        '507f1f77bcf86cd799439011',
+        3,
+        undefined,
+      );
+      expect(transactionModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type,
+          change: -3,
+          stockBefore: 10,
+          stockAfter: 7,
+        }),
+      );
+    },
+  );
 
   it('supports signed ADJUSTMENT and RETURN movements', async () => {
     const adjustment = createService(8);
@@ -74,7 +85,10 @@ describe('Task 20: Five-type inventory ledger', () => {
       quantity: -2,
     });
     expect(adjustment.transactionModel.create).toHaveBeenCalledWith(
-      expect.objectContaining({ type: InventoryTransactionType.ADJUSTMENT, change: -2 }),
+      expect.objectContaining({
+        type: InventoryTransactionType.ADJUSTMENT,
+        change: -2,
+      }),
     );
 
     const returned = createService(12);
@@ -83,7 +97,10 @@ describe('Task 20: Five-type inventory ledger', () => {
       quantity: 2,
     });
     expect(returned.transactionModel.create).toHaveBeenCalledWith(
-      expect.objectContaining({ type: InventoryTransactionType.RETURN, change: 2 }),
+      expect.objectContaining({
+        type: InventoryTransactionType.RETURN,
+        change: 2,
+      }),
     );
   });
 });

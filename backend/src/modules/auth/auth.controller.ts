@@ -13,7 +13,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Response, Request as ExpressRequest } from 'express';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import {
@@ -35,7 +40,10 @@ export class AuthController {
     private configService: ConfigService,
   ) {}
 
-  private extractAccessToken(req: ExpressRequest, authHeader?: string): string | undefined {
+  private extractAccessToken(
+    req: ExpressRequest,
+    authHeader?: string,
+  ): string | undefined {
     if (authHeader?.startsWith('Bearer ')) {
       return authHeader.substring(7);
     }
@@ -51,7 +59,10 @@ export class AuthController {
     return undefined;
   }
 
-  private extractRefreshToken(req: ExpressRequest, bodyRefreshToken?: string): string | undefined {
+  private extractRefreshToken(
+    req: ExpressRequest,
+    bodyRefreshToken?: string,
+  ): string | undefined {
     if (bodyRefreshToken) return bodyRefreshToken;
     if (req.headers.cookie) {
       const cookie = req.headers.cookie
@@ -65,14 +76,22 @@ export class AuthController {
     return undefined;
   }
 
-  private setAuthCookies(response: Response, accessToken: string, refreshToken?: string) {
-    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
-    const configuredSameSite = this.configService.get<string>('COOKIE_SAME_SITE')?.toLowerCase();
-    const sameSite = configuredSameSite === 'none' || (isProduction && !configuredSameSite)
-      ? 'none'
-      : configuredSameSite === 'strict'
-        ? 'strict'
-        : 'lax';
+  private setAuthCookies(
+    response: Response,
+    accessToken: string,
+    refreshToken?: string,
+  ) {
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
+    const configuredSameSite = this.configService
+      .get<string>('COOKIE_SAME_SITE')
+      ?.toLowerCase();
+    const sameSite =
+      configuredSameSite === 'none' || (isProduction && !configuredSameSite)
+        ? 'none'
+        : configuredSameSite === 'strict'
+          ? 'strict'
+          : 'lax';
 
     response.cookie('access_token', accessToken, {
       httpOnly: true,
@@ -106,10 +125,13 @@ export class AuthController {
 
     this.setAuthCookies(response, result.accessToken, result.refreshToken);
     // Browser tokens remain HttpOnly and are never exposed to JavaScript.
-    const { accessToken: _accessToken, refreshToken: _refreshToken, ...browserResult } = result;
+    const {
+      accessToken: _accessToken,
+      refreshToken: _refreshToken,
+      ...browserResult
+    } = result;
     return browserResult;
   }
-
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -139,7 +161,9 @@ export class AuthController {
 
   @Post('refresh')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'Refresh access and refresh token pair (Token Rotation)' })
+  @ApiOperation({
+    summary: 'Refresh access and refresh token pair (Token Rotation)',
+  })
   @ApiResponse({ status: 200, description: 'Tokens rotated successfully' })
   async refreshToken(
     @Body() dto: RefreshTokenDto,
@@ -151,14 +175,22 @@ export class AuthController {
     const token = this.extractRefreshToken(req, dto?.refreshToken);
     const rawAccessToken = this.extractAccessToken(req, authHeader);
 
-    const result = await this.authService.refreshToken(token || '', rawAccessToken);
+    const result = await this.authService.refreshToken(
+      token || '',
+      rawAccessToken,
+    );
     return this.finishBrowserOrMobileAuth(result, response, clientPlatform);
   }
 
   @Post('logout')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'Clear the authentication session and revoke tokens' })
-  @ApiResponse({ status: 200, description: 'Session cleared and tokens revoked' })
+  @ApiOperation({
+    summary: 'Clear the authentication session and revoke tokens',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Session cleared and tokens revoked',
+  })
   async logout(
     @Req() req: any,
     @Body() dto: RefreshTokenDto,
@@ -187,7 +219,10 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update current user profile info' })
-  async updateProfile(@Request() req: any, @Body() updateProfileDto: UpdateProfileDto) {
+  async updateProfile(
+    @Request() req: any,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
     return this.authService.updateProfile(req.user._id, updateProfileDto);
   }
 
@@ -195,7 +230,9 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Change current user password and revoke other sessions' })
+  @ApiOperation({
+    summary: 'Change current user password and revoke other sessions',
+  })
   async changePassword(
     @Request() req: any,
     @Body() dto: ChangePasswordDto,

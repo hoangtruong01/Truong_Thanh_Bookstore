@@ -110,9 +110,7 @@ export class CategoriesService {
       }
     }
 
-    const slug = dto.slug
-      ? dto.slug
-      : await this.generateUniqueSlug(dto.name);
+    const slug = dto.slug ? dto.slug : await this.generateUniqueSlug(dto.name);
 
     const category = new this.categoryModel({
       ...dto,
@@ -166,9 +164,7 @@ export class CategoriesService {
   /**
    * Xây dựng Cây danh mục đa cấp phân nhóm Cha -> Con -> Cháu
    */
-  async getCategoryTree(
-    includeInactive = false,
-  ): Promise<CategoryTreeItem[]> {
+  async getCategoryTree(includeInactive = false): Promise<CategoryTreeItem[]> {
     const filter = includeInactive ? {} : { status: true };
     const categories = await this.categoryModel
       .find(filter)
@@ -211,10 +207,7 @@ export class CategoriesService {
     return rootCategories;
   }
 
-  async update(
-    id: string,
-    dto: UpdateCategoryDto,
-  ): Promise<CategoryDocument> {
+  async update(id: string, dto: UpdateCategoryDto): Promise<CategoryDocument> {
     // 1. Kiểm tra danh mục có tồn tại không
     const existing = await this.categoryModel.findById(id).exec();
     if (!existing) {

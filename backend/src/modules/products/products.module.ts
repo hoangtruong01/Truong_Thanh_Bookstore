@@ -3,8 +3,14 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Product, ProductSchema } from './schemas/product.schema';
 import { Review, ReviewSchema } from './schemas/review.schema';
 import { StockAlert, StockAlertSchema } from './schemas/stock-alert.schema';
-import { Category, CategorySchema } from '../categories/schemas/category.schema';
-import { Inventory, InventorySchema } from '../inventory/schemas/inventory.schema';
+import {
+  Category,
+  CategorySchema,
+} from '../categories/schemas/category.schema';
+import {
+  Inventory,
+  InventorySchema,
+} from '../inventory/schemas/inventory.schema';
 import { ProductsService } from './products.service';
 import { ProductsController } from './products.controller';
 
@@ -23,4 +29,3 @@ import { ProductsController } from './products.controller';
   exports: [ProductsService, MongooseModule],
 })
 export class ProductsModule {}
-

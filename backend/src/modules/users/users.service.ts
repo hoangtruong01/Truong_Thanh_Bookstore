@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Inject,
   Optional,
@@ -28,8 +27,12 @@ import {
 export class UsersService {
   constructor(
     @InjectModel('User') private userModel: Model<UserDocument>,
-    @Optional() @InjectModel(Product.name) private productModel?: Model<ProductDocument>,
-    @Optional() @Inject(forwardRef(() => CartService)) private cartService?: CartService,
+    @Optional()
+    @InjectModel(Product.name)
+    private productModel?: Model<ProductDocument>,
+    @Optional()
+    @Inject(forwardRef(() => CartService))
+    private cartService?: CartService,
   ) {}
 
   async findById(id: string): Promise<UserDocument> {
@@ -43,7 +46,10 @@ export class UsersService {
 
   async findByIdWithPassword(id: string): Promise<UserDocument | null> {
     if (!Types.ObjectId.isValid(id)) return null;
-    return this.userModel.findById(id).select('+password +refreshTokenHash').exec();
+    return this.userModel
+      .findById(id)
+      .select('+password +refreshTokenHash')
+      .exec();
   }
 
   async findByEmail(email: string): Promise<UserDocument | null> {
@@ -79,7 +85,9 @@ export class UsersService {
 
   // ── RBAC User Management Methods ──
 
-  async findAllUsers(query: UserQueryDto): Promise<PaginatedResult<UserDocument>> {
+  async findAllUsers(
+    query: UserQueryDto,
+  ): Promise<PaginatedResult<UserDocument>> {
     const { page = 1, limit = 10, role, status, search } = query;
     const filter: any = {};
 
@@ -92,7 +100,9 @@ export class UsersService {
     }
 
     if (search) {
-      const safeSearch = search.substring(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const safeSearch = search
+        .substring(0, 100)
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
         { fullName: { $regex: safeSearch, $options: 'i' } },
         { email: { $regex: safeSearch, $options: 'i' } },
@@ -119,7 +129,8 @@ export class UsersService {
     dto: CreateStaffUserDto,
     actor: UserRole | string | { role: UserRole | string },
   ): Promise<UserDocument> {
-    const actorRole = typeof actor === 'object' && actor !== null ? actor.role : actor;
+    const actorRole =
+      typeof actor === 'object' && actor !== null ? actor.role : actor;
     const existing = await this.findByEmail(dto.email);
     if (existing) {
       throw new BadRequestException('Email này đã được sử dụng');
@@ -129,8 +140,9 @@ export class UsersService {
 
     // Hierarchy check: Only SUPER_ADMIN can create ADMIN or SUPER_ADMIN
     if (
-      (assignedRole === UserRole.ADMIN || assignedRole === UserRole.SUPER_ADMIN) &&
-      actorRole !== UserRole.SUPER_ADMIN
+      (assignedRole === UserRole.ADMIN ||
+        assignedRole === UserRole.SUPER_ADMIN) &&
+      String(actorRole) !== String(UserRole.SUPER_ADMIN)
     ) {
       throw new ForbiddenException(
         'Chỉ Super Admin mới có quyền tạo tài khoản Admin hoặc Super Admin',
@@ -159,14 +171,20 @@ export class UsersService {
   async updateRole(
     targetUserId: string,
     roleOrDto: UserRole | UpdateUserRoleDto | { role: UserRole },
-    actorRoleOrActor: UserRole | string | { role: UserRole | string; _id?: string },
+    actorRoleOrActor:
+      | UserRole
+      | string
+      | { role: UserRole | string; _id?: string },
     actorIdParam?: string,
   ): Promise<UserDocument> {
     if (!Types.ObjectId.isValid(targetUserId)) {
       throw new BadRequestException('ID người dùng không đúng định dạng');
     }
 
-    const newRole = typeof roleOrDto === 'object' && roleOrDto !== null ? roleOrDto.role : roleOrDto;
+    const newRole =
+      typeof roleOrDto === 'object' && roleOrDto !== null
+        ? roleOrDto.role
+        : roleOrDto;
     let actorRole = actorRoleOrActor;
     let actorId = actorIdParam;
 
@@ -176,7 +194,9 @@ export class UsersService {
     }
 
     if (actorId && targetUserId === actorId.toString()) {
-      throw new ForbiddenException('Không thể tự thay đổi vai trò của chính mình');
+      throw new ForbiddenException(
+        'Không thể tự thay đổi vai trò của chính mình',
+      );
     }
 
     const targetUser = await this.userModel.findById(targetUserId).exec();
@@ -185,14 +205,20 @@ export class UsersService {
     }
 
     // Protect SUPER_ADMIN
-    if (targetUser.role === UserRole.SUPER_ADMIN && actorRole !== UserRole.SUPER_ADMIN) {
+    if (
+      targetUser.role === UserRole.SUPER_ADMIN &&
+      actorRole !== UserRole.SUPER_ADMIN
+    ) {
       throw new ForbiddenException(
         'Chỉ Super Admin mới có quyền chỉnh sửa tài khoản Super Admin',
       );
     }
 
     // Only SUPER_ADMIN can promote to SUPER_ADMIN
-    if (newRole === UserRole.SUPER_ADMIN && actorRole !== UserRole.SUPER_ADMIN) {
+    if (
+      newRole === UserRole.SUPER_ADMIN &&
+      actorRole !== UserRole.SUPER_ADMIN
+    ) {
       throw new ForbiddenException(
         'Chỉ Super Admin mới có quyền thăng cấp thành Super Admin',
       );
@@ -200,7 +226,10 @@ export class UsersService {
 
     // Regular ADMIN can only manage STAFF and CUSTOMER roles
     if (actorRole === UserRole.ADMIN) {
-      if (targetUser.role === UserRole.ADMIN || targetUser.role === UserRole.SUPER_ADMIN) {
+      if (
+        targetUser.role === UserRole.ADMIN ||
+        targetUser.role === UserRole.SUPER_ADMIN
+      ) {
         throw new ForbiddenException(
           'Admin không có quyền thay đổi vai trò của quản trị viên khác',
         );
@@ -225,8 +254,11 @@ export class UsersService {
 
   async updatePermissions(
     targetUserId: string,
-    permissionsOrDto: StaffPermission[] | UpdateUserPermissionsDto | { permissions: StaffPermission[] },
-    actorRoleParam?: UserRole | string,
+    permissionsOrDto:
+      | StaffPermission[]
+      | UpdateUserPermissionsDto
+      | { permissions: StaffPermission[] },
+    _actorRoleParam?: UserRole | string,
   ): Promise<UserDocument> {
     if (!Types.ObjectId.isValid(targetUserId)) {
       throw new BadRequestException('ID người dùng không đúng định dạng');
@@ -242,7 +274,9 @@ export class UsersService {
     }
 
     if (targetUser.role !== UserRole.STAFF) {
-      throw new BadRequestException('Chỉ có thể gán quyền cho tài khoản nhân viên (STAFF)');
+      throw new BadRequestException(
+        'Chỉ có thể gán quyền cho tài khoản nhân viên (STAFF)',
+      );
     }
 
     targetUser.permissions = permissions;
@@ -255,14 +289,20 @@ export class UsersService {
   async updateStatus(
     targetUserId: string,
     statusOrDto: boolean | UpdateUserStatusDto | { status: boolean },
-    actorRoleOrActor: UserRole | string | { role: UserRole | string; _id?: string },
+    actorRoleOrActor:
+      | UserRole
+      | string
+      | { role: UserRole | string; _id?: string },
     actorIdParam?: string,
   ): Promise<UserDocument> {
     if (!Types.ObjectId.isValid(targetUserId)) {
       throw new BadRequestException('ID người dùng không đúng định dạng');
     }
 
-    const status = typeof statusOrDto === 'object' && statusOrDto !== null ? statusOrDto.status : statusOrDto;
+    const status =
+      typeof statusOrDto === 'object' && statusOrDto !== null
+        ? statusOrDto.status
+        : statusOrDto;
     let actorRole = actorRoleOrActor;
     let actorId = actorIdParam;
 
@@ -272,7 +312,9 @@ export class UsersService {
     }
 
     if (actorId && targetUserId === actorId.toString()) {
-      throw new ForbiddenException('Không thể tự khóa tài khoản của chính mình');
+      throw new ForbiddenException(
+        'Không thể tự khóa tài khoản của chính mình',
+      );
     }
 
     const targetUser = await this.userModel.findById(targetUserId).exec();
@@ -285,7 +327,10 @@ export class UsersService {
       throw new ForbiddenException('Không thể khóa tài khoản Super Admin');
     }
 
-    if (targetUser.role === UserRole.ADMIN && actorRole !== UserRole.SUPER_ADMIN) {
+    if (
+      targetUser.role === UserRole.ADMIN &&
+      actorRole !== UserRole.SUPER_ADMIN
+    ) {
       throw new ForbiddenException(
         'Chỉ Super Admin mới có quyền khóa tài khoản Admin',
       );
@@ -300,7 +345,10 @@ export class UsersService {
 
   async deleteUser(
     targetUserId: string,
-    actorRoleOrActor: UserRole | string | { role: UserRole | string; _id?: string },
+    actorRoleOrActor:
+      | UserRole
+      | string
+      | { role: UserRole | string; _id?: string },
     actorIdParam?: string,
   ): Promise<{ success: boolean; message: string }> {
     if (!Types.ObjectId.isValid(targetUserId)) {
@@ -328,7 +376,10 @@ export class UsersService {
       throw new ForbiddenException('Không thể xóa tài khoản Super Admin');
     }
 
-    if (targetUser.role === UserRole.ADMIN && actorRole !== UserRole.SUPER_ADMIN) {
+    if (
+      targetUser.role === UserRole.ADMIN &&
+      actorRole !== UserRole.SUPER_ADMIN
+    ) {
       throw new ForbiddenException(
         'Chỉ Super Admin mới có quyền xóa tài khoản Admin',
       );
@@ -346,7 +397,8 @@ export class UsersService {
       .populate({
         path: 'wishlist',
         match: { isDeleted: { $ne: true } },
-        select: 'name slug description price discountPrice stock images brand sku rating sold status isFeatured',
+        select:
+          'name slug description price discountPrice stock images brand sku rating sold status isFeatured',
       })
       .exec();
 
@@ -439,7 +491,12 @@ export class UsersService {
   async addLoyaltyPoints(
     userId: string,
     points: number,
-  ): Promise<{ user: UserDocument; tierUpgraded: boolean; newTier: string; oldTier: string } | null> {
+  ): Promise<{
+    user: UserDocument;
+    tierUpgraded: boolean;
+    newTier: string;
+    oldTier: string;
+  } | null> {
     const user = await this.userModel.findById(userId).exec();
     if (!user) return null;
 

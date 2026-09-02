@@ -36,7 +36,8 @@ describe('TokenBlacklistService', () => {
 
   describe('Raw Token Blacklisting', () => {
     it('should correctly blacklist and verify a raw token string', () => {
-      const rawToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0';
+      const rawToken =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0';
       expect(service.isTokenBlacklisted(rawToken)).toBe(false);
 
       service.blacklistToken(rawToken);

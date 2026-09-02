@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsEnum, IsNumber, IsBoolean, IsNotEmpty, Min, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  IsNotEmpty,
+  Min,
+  IsInt,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { BannerPosition } from '../schemas/banner.schema';
@@ -15,17 +23,26 @@ export class CreateBannerDto {
   @IsString()
   imageUrl: string;
 
-  @ApiProperty({ description: 'Link URL when banner is clicked', required: false })
+  @ApiProperty({
+    description: 'Link URL when banner is clicked',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   linkUrl?: string;
 
-  @ApiProperty({ description: 'Banner position in the grid', enum: BannerPosition })
+  @ApiProperty({
+    description: 'Banner position in the grid',
+    enum: BannerPosition,
+  })
   @IsNotEmpty({ message: 'Vị trí banner không được để trống' })
   @IsEnum(BannerPosition, { message: 'Vị trí banner không hợp lệ' })
   position: BannerPosition;
 
-  @ApiProperty({ description: 'Sort order within the position group', required: false })
+  @ApiProperty({
+    description: 'Sort order within the position group',
+    required: false,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'Thứ tự hiển thị phải là số nguyên' })

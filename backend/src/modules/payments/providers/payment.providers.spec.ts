@@ -1,11 +1,11 @@
-import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac } from 'crypto';
 import { PaymentMethod, PaymentStatus } from '../../../common/enums';
-import {
-  CodPaymentProvider,
-  VnPayPaymentProvider,
-} from './payment.providers';
+import { CodPaymentProvider, VnPayPaymentProvider } from './payment.providers';
 
 describe('Task 18: Payment provider abstraction', () => {
   const context = {

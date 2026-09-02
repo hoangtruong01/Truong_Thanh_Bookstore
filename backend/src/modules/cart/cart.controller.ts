@@ -12,7 +12,12 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CartService } from './cart.service';
-import { AddToCartDto, UpdateCartItemDto, SyncCartDto, ApplyVoucherDto } from './dto/cart.dto';
+import {
+  AddToCartDto,
+  UpdateCartItemDto,
+  SyncCartDto,
+  ApplyVoucherDto,
+} from './dto/cart.dto';
 
 @ApiTags('cart')
 @Controller('cart')
@@ -22,13 +27,17 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lấy giỏ hàng của người dùng hiện tại (kiểm kho thời gian thực)' })
+  @ApiOperation({
+    summary: 'Lấy giỏ hàng của người dùng hiện tại (kiểm kho thời gian thực)',
+  })
   getCart(@Request() req: any) {
     return this.cartService.getCart(req.user._id);
   }
 
   @Get('validate')
-  @ApiOperation({ summary: 'Kiểm tra tính hợp lệ và tồn kho của giỏ hàng trước khi checkout' })
+  @ApiOperation({
+    summary: 'Kiểm tra tính hợp lệ và tồn kho của giỏ hàng trước khi checkout',
+  })
   validateCart(@Request() req: any) {
     return this.cartService.validateCart(req.user._id);
   }
@@ -79,4 +88,3 @@ export class CartController {
     return this.cartService.removeVoucher(req.user._id);
   }
 }
-

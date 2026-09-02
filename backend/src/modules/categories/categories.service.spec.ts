@@ -217,9 +217,9 @@ describe('CategoriesService (TASK 11: Multi-level Category Tree & Slug)', () => 
         parentId: mockRootCat._id,
       };
 
-      await expect(
-        service.update(mockRootCat._id, updateDto),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.update(mockRootCat._id, updateDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when circular hierarchy is detected (A -> B -> A)', async () => {
@@ -229,9 +229,9 @@ describe('CategoriesService (TASK 11: Multi-level Category Tree & Slug)', () => 
         parentId: mockChildCat._id,
       };
 
-      await expect(
-        service.update(mockRootCat._id, updateDto),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.update(mockRootCat._id, updateDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when non-existent parentId is provided on create', async () => {

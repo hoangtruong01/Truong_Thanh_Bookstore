@@ -1,9 +1,20 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsObject, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsObject,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateNotificationDto {
-  @ApiPropertyOptional({ description: 'ID người nhận (nếu để trống là thông báo toàn hệ thống)' })
+  @ApiPropertyOptional({
+    description: 'ID người nhận (nếu để trống là thông báo toàn hệ thống)',
+  })
   @IsOptional()
   @IsString()
   userId?: string;
@@ -20,8 +31,29 @@ export class CreateNotificationDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   message: string;
 
-  @ApiPropertyOptional({ enum: ['order', 'promotion', 'loyalty', 'tier', 'review', 'stock', 'payment', 'system'], default: 'order' })
-  @IsEnum(['order', 'promotion', 'loyalty', 'tier', 'review', 'stock', 'payment', 'system'])
+  @ApiPropertyOptional({
+    enum: [
+      'order',
+      'promotion',
+      'loyalty',
+      'tier',
+      'review',
+      'stock',
+      'payment',
+      'system',
+    ],
+    default: 'order',
+  })
+  @IsEnum([
+    'order',
+    'promotion',
+    'loyalty',
+    'tier',
+    'review',
+    'stock',
+    'payment',
+    'system',
+  ])
   @IsOptional()
   type?: string = 'order';
 
@@ -38,7 +70,9 @@ export class BroadcastNotificationDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   title: string;
 
-  @ApiProperty({ example: 'Giảm ngay 20% cho toàn bộ sách giáo khoa và dụng cụ học tập.' })
+  @ApiProperty({
+    example: 'Giảm ngay 20% cho toàn bộ sách giáo khoa và dụng cụ học tập.',
+  })
   @IsString()
   @IsNotEmpty({ message: 'Nội dung không được để trống' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -71,7 +105,18 @@ export class NotificationQueryDto {
   @Max(100)
   limit?: number = 20;
 
-  @ApiPropertyOptional({ enum: ['order', 'promotion', 'loyalty', 'tier', 'review', 'stock', 'payment', 'system'] })
+  @ApiPropertyOptional({
+    enum: [
+      'order',
+      'promotion',
+      'loyalty',
+      'tier',
+      'review',
+      'stock',
+      'payment',
+      'system',
+    ],
+  })
   @IsOptional()
   @IsString()
   type?: string;

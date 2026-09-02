@@ -35,8 +35,10 @@ const IFRAME_TAG_REGEX = /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi;
 const OBJECT_TAG_REGEX = /<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi;
 const EMBED_TAG_REGEX = /<embed\b[^>]*>/gi;
 const APPLET_TAG_REGEX = /<applet\b[^<]*(?:(?!<\/applet>)<[^<]*)*<\/applet>/gi;
-const JAVASCRIPT_URI_REGEX = /(?:java\s*script\s*:|vbscript\s*:|data\s*:\s*text\/html)/gi;
-const INLINE_EVENT_HANDLER_REGEX = /\bon\w+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi;
+const JAVASCRIPT_URI_REGEX =
+  /(?:java\s*script\s*:|vbscript\s*:|data\s*:\s*text\/html)/gi;
+const INLINE_EVENT_HANDLER_REGEX =
+  /\bon\w+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi;
 
 /**
  * Sanitize a string against Cross-Site Scripting (XSS)
@@ -148,12 +150,7 @@ export function sanitizePayload<T = any>(
     }
 
     // 2. Sanitize value recursively
-    sanitizedObj[key] = sanitizePayload(
-      value,
-      options,
-      currentDepth + 1,
-      key,
-    );
+    sanitizedObj[key] = sanitizePayload(value, options, currentDepth + 1, key);
   }
 
   return sanitizedObj as T;

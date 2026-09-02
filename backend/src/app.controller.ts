@@ -13,10 +13,13 @@ export class AppController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Health check endpoint — kiểm tra trạng thái hoạt động của hệ thống và CSDL' })
+  @ApiOperation({
+    summary:
+      'Health check endpoint — kiểm tra trạng thái hoạt động của hệ thống và CSDL',
+  })
   @ApiResponse({ status: 200, description: 'Hệ thống hoạt động bình thường' })
   getHealth() {
-    const isDbConnected = this.connection.readyState === 1;
+    const isDbConnected = Number(this.connection.readyState) === 1;
     const dbStateMap: Record<number, string> = {
       0: 'DISCONNECTED',
       1: 'CONNECTED',

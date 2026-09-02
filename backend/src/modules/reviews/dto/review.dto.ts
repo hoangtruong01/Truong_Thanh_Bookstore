@@ -1,6 +1,5 @@
 import {
   IsNotEmpty,
-  IsNumber,
   IsString,
   Min,
   Max,
@@ -29,7 +28,10 @@ export class CreateReviewDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   content: string;
 
-  @ApiPropertyOptional({ example: ['https://example.com/review1.jpg'], type: [String] })
+  @ApiPropertyOptional({
+    example: ['https://example.com/review1.jpg'],
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -52,7 +54,10 @@ export class UpdateReviewDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   content?: string;
 
-  @ApiPropertyOptional({ example: ['https://example.com/review1.jpg'], type: [String] })
+  @ApiPropertyOptional({
+    example: ['https://example.com/review1.jpg'],
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -114,7 +119,9 @@ export class ReviewQueryDto {
   @IsBoolean()
   isVisible?: boolean;
 
-  @ApiPropertyOptional({ description: 'Tìm kiếm theo tên khách hàng hoặc nội dung' })
+  @ApiPropertyOptional({
+    description: 'Tìm kiếm theo tên khách hàng hoặc nội dung',
+  })
   @IsOptional()
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))

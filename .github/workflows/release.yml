@@ -6,7 +6,72 @@ on:
       - 'v*.*.*'
 
 jobs:
+  verify-release:
+    name: Verify tagged source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Start MongoDB replica set for E2E
+        run: |
+          docker run --detach --name truongthanh-e2e-mongodb --publish 27017:27017 mongo:7.0-jammy mongod --replSet rs0 --bind_ip_all
+          until docker exec truongthanh-e2e-mongodb mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep -q 1; do sleep 2; done
+          docker exec truongthanh-e2e-mongodb mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+          until docker exec truongthanh-e2e-mongodb mongosh --quiet --eval 'db.hello().isWritablePrimary' | grep -q true; do sleep 2; done
+
+      - name: Verify backend
+        working-directory: backend
+        run: |
+          npm ci
+          npm audit --audit-level=high
+          npm run lint
+          npm test -- --runInBand
+          npx jest --rootDir . test/all-fixes.spec.ts test/e2e-flow.spec.ts test/critical-commerce-regression.spec.ts --runInBand --detectOpenHandles
+          npm run test:e2e -- --runInBand --detectOpenHandles
+          npm run build
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/truongthanh_e2e?replicaSet=rs0&directConnection=true
+          JWT_SECRET: ci-only-jwt-secret-at-least-32-characters
+
+      - name: Verify frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level=high
+          npm run test:unit
+          npm run build
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Verify mobile
+        working-directory: mobile
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+
   create-release:
+    needs: verify-release
     name: 🏷️ Create GitHub Release
     runs-on: ubuntu-latest
     permissions:

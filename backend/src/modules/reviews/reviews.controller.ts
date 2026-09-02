@@ -45,7 +45,10 @@ export class ReviewsController {
   @Get('product/:productId/can-review')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Kiểm tra người dùng hiện tại có đủ điều kiện đánh giá sản phẩm (đã mua & nhận hàng)' })
+  @ApiOperation({
+    summary:
+      'Kiểm tra người dùng hiện tại có đủ điều kiện đánh giá sản phẩm (đã mua & nhận hàng)',
+  })
   canUserReview(@Param('productId') productId: string, @Request() req: any) {
     return this.reviewsService.canUserReview(productId, req.user._id);
   }
@@ -54,7 +57,9 @@ export class ReviewsController {
   @UseGuards(AuthGuard('jwt'))
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Đăng đánh giá cho một sản phẩm (yêu cầu Verified Purchase)' })
+  @ApiOperation({
+    summary: 'Đăng đánh giá cho một sản phẩm (yêu cầu Verified Purchase)',
+  })
   create(
     @Param('productId') productId: string,
     @Body() dto: CreateReviewDto,
@@ -103,7 +108,9 @@ export class ReviewsController {
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(StaffPermission.MANAGE_PRODUCTS)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Quản trị viên lấy danh sách đánh giá để kiểm duyệt' })
+  @ApiOperation({
+    summary: 'Quản trị viên lấy danh sách đánh giá để kiểm duyệt',
+  })
   findAllAdmin(@Query() query: ReviewQueryDto) {
     return this.reviewsService.findAllAdmin(query);
   }

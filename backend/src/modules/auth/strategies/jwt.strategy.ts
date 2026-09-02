@@ -36,9 +36,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(request: any, payload: any) {
     // 1. Check if token JTI is blacklisted
-    if (payload?.jti && this.tokenBlacklistService.isJtiBlacklisted(payload.jti)) {
+    if (
+      payload?.jti &&
+      this.tokenBlacklistService.isJtiBlacklisted(payload.jti)
+    ) {
       throw new UnauthorizedException({
-        message: 'Mã xác thực đã bị thu hồi (đã đăng xuất). Vui lòng đăng nhập lại.',
+        message:
+          'Mã xác thực đã bị thu hồi (đã đăng xuất). Vui lòng đăng nhập lại.',
         errorCode: ErrorCode.ERR_TOKEN_REVOKED,
       });
     }
@@ -62,7 +66,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (rawToken && this.tokenBlacklistService.isTokenBlacklisted(rawToken)) {
       throw new UnauthorizedException({
-        message: 'Mã xác thực đã bị thu hồi (đã đăng xuất). Vui lòng đăng nhập lại.',
+        message:
+          'Mã xác thực đã bị thu hồi (đã đăng xuất). Vui lòng đăng nhập lại.',
         errorCode: ErrorCode.ERR_TOKEN_REVOKED,
       });
     }
@@ -82,7 +87,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       payload.tokenVersion < user.tokenVersion
     ) {
       throw new UnauthorizedException({
-        message: 'Phiên đăng nhập đã bị vô hiệu hóa do đổi mật khẩu hoặc đăng xuất toàn thiết bị.',
+        message:
+          'Phiên đăng nhập đã bị vô hiệu hóa do đổi mật khẩu hoặc đăng xuất toàn thiết bị.',
         errorCode: ErrorCode.ERR_TOKEN_REVOKED,
       });
     }

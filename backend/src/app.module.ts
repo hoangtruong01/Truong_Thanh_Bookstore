@@ -51,11 +51,13 @@ import { SecuritySanitizerMiddleware } from './common/middleware/security-saniti
       }),
       inject: [ConfigService],
     }),
-    ThrottlerModule.forRoot([{
-      name: 'default',
-      ttl: 60000,
-      limit: 100, // 100 requests per minute
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60000,
+        limit: 100, // 100 requests per minute
+      },
+    ]),
     AuthModule,
     UsersModule,
     ProductsModule,
@@ -88,4 +90,3 @@ export class AppModule implements NestModule {
     consumer.apply(SecuritySanitizerMiddleware).forRoutes('*');
   }
 }
-

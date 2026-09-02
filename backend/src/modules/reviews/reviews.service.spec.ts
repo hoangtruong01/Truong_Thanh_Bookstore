@@ -117,7 +117,10 @@ describe('ReviewsService', () => {
       });
 
       mockOrderModel.findOne.mockReturnValue({
-        exec: jest.fn().mockResolvedValue({ _id: 'order1', orderStatus: OrderStatus.DELIVERED }),
+        exec: jest.fn().mockResolvedValue({
+          _id: 'order1',
+          orderStatus: OrderStatus.DELIVERED,
+        }),
       });
 
       const result = await service.canUserReview(mockProductId, mockUserId);
@@ -178,7 +181,10 @@ describe('ReviewsService', () => {
       });
 
       mockOrderModel.findOne.mockReturnValue({
-        exec: jest.fn().mockResolvedValue({ _id: 'order1', orderStatus: OrderStatus.DELIVERED }),
+        exec: jest.fn().mockResolvedValue({
+          _id: 'order1',
+          orderStatus: OrderStatus.DELIVERED,
+        }),
       });
 
       mockReviewModel.findOne.mockReturnValue({
@@ -201,13 +207,21 @@ describe('ReviewsService', () => {
         exec: jest.fn().mockResolvedValue({}),
       });
 
-      const result = await service.create(mockProductId, mockUserId, 'Nguyễn Văn A', {
-        rating: 5,
-        content: 'Rất hài lòng',
-      });
+      const result = await service.create(
+        mockProductId,
+        mockUserId,
+        'Nguyễn Văn A',
+        {
+          rating: 5,
+          content: 'Rất hài lòng',
+        },
+      );
 
       expect(result).toEqual(createdReview);
-      expect(mockProductModel.findByIdAndUpdate).toHaveBeenCalledWith(mockProductId, { rating: 5 });
+      expect(mockProductModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        mockProductId,
+        { rating: 5 },
+      );
     });
   });
 
@@ -221,7 +235,9 @@ describe('ReviewsService', () => {
       });
 
       await expect(
-        service.update(mockProductId, mockReviewId, mockUserId, { content: 'Sửa nội dung' }),
+        service.update(mockProductId, mockReviewId, mockUserId, {
+          content: 'Sửa nội dung',
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -245,9 +261,16 @@ describe('ReviewsService', () => {
         exec: jest.fn().mockResolvedValue({}),
       });
 
-      const result = await service.delete(mockProductId, mockReviewId, mockUserId, 'ADMIN');
+      const result = await service.delete(
+        mockProductId,
+        mockReviewId,
+        mockUserId,
+        'ADMIN',
+      );
       expect(result).toEqual({ success: true });
-      expect(mockReviewModel.findByIdAndDelete).toHaveBeenCalledWith(mockReviewId);
+      expect(mockReviewModel.findByIdAndDelete).toHaveBeenCalledWith(
+        mockReviewId,
+      );
     });
   });
 
@@ -257,7 +280,9 @@ describe('ReviewsService', () => {
         _id: mockReviewId,
         product: new Types.ObjectId(mockProductId),
         isVisible: true,
-        save: jest.fn().mockResolvedValue({ _id: mockReviewId, isVisible: false }),
+        save: jest
+          .fn()
+          .mockResolvedValue({ _id: mockReviewId, isVisible: false }),
       };
 
       mockReviewModel.findById.mockReturnValue({
@@ -321,7 +346,11 @@ describe('ReviewsService', () => {
         exec: jest.fn().mockResolvedValue(1),
       });
 
-      const result = await service.findAllAdmin({ page: 1, limit: 10, rating: 5 });
+      const result = await service.findAllAdmin({
+        page: 1,
+        limit: 10,
+        rating: 5,
+      });
       expect(result.items).toEqual(mockItems);
       expect(result.total).toBe(1);
       expect(result.totalPages).toBe(1);

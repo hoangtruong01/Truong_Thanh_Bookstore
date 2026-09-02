@@ -24,8 +24,14 @@ export interface StandardApiResponse<T> {
 }
 
 @Injectable()
-export class TransformInterceptor<T> implements NestInterceptor<T, StandardApiResponse<any>> {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<StandardApiResponse<any>> {
+export class TransformInterceptor<T> implements NestInterceptor<
+  T,
+  StandardApiResponse<any>
+> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<StandardApiResponse<any>> {
     return next.handle().pipe(
       map((resData) => {
         // If response is already formatted with success boolean
@@ -52,7 +58,8 @@ export class TransformInterceptor<T> implements NestInterceptor<T, StandardApiRe
           'total' in resData &&
           'page' in resData
         ) {
-          const { data, total, page, limit, totalPages, message, ...restMeta } = resData;
+          const { data, total, page, limit, totalPages, message, ...restMeta } =
+            resData;
           return {
             success: true,
             message: message || 'Thao tác thành công',
@@ -61,7 +68,9 @@ export class TransformInterceptor<T> implements NestInterceptor<T, StandardApiRe
               page: Number(page) || 1,
               limit: Number(limit) || 10,
               total: Number(total) || 0,
-              totalPages: Number(totalPages) || Math.ceil((Number(total) || 0) / (Number(limit) || 10)),
+              totalPages:
+                Number(totalPages) ||
+                Math.ceil((Number(total) || 0) / (Number(limit) || 10)),
               ...restMeta,
             },
             timestamp: new Date().toISOString(),
@@ -72,7 +81,10 @@ export class TransformInterceptor<T> implements NestInterceptor<T, StandardApiRe
         return {
           success: true,
           message:
-            resData && typeof resData === 'object' && 'message' in resData && typeof resData.message === 'string'
+            resData &&
+            typeof resData === 'object' &&
+            'message' in resData &&
+            typeof resData.message === 'string'
               ? resData.message
               : 'Thao tác thành công',
           data: resData !== undefined ? resData : null,

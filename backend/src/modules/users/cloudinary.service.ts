@@ -18,9 +18,13 @@ export class CloudinaryService {
     }
 
     // Validate MIME type
-    const matches = base64Str.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i);
+    const matches = base64Str.match(
+      /^data:image\/(png|jpeg|jpg|webp|gif);base64,/i,
+    );
     if (!matches) {
-      throw new BadRequestException('Định dạng hình ảnh không được hỗ trợ. Chỉ chấp nhận PNG, JPEG, JPG, WEBP, GIF');
+      throw new BadRequestException(
+        'Định dạng hình ảnh không được hỗ trợ. Chỉ chấp nhận PNG, JPEG, JPG, WEBP, GIF',
+      );
     }
 
     // Validate size limit (5MB = 5 * 1024 * 1024 bytes)
@@ -28,7 +32,9 @@ export class CloudinaryService {
     const approximateSizeBytes = (base64Data.length * 3) / 4;
     const MAX_SIZE = 5 * 1024 * 1024;
     if (approximateSizeBytes > MAX_SIZE) {
-      throw new BadRequestException('Kích thước hình ảnh vượt quá giới hạn tối đa 5MB');
+      throw new BadRequestException(
+        'Kích thước hình ảnh vượt quá giới hạn tối đa 5MB',
+      );
     }
 
     try {
