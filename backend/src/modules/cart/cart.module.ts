@@ -2,7 +2,10 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Cart, CartSchema } from './schemas/cart.schema';
 import { Product, ProductSchema } from '../products/schemas/product.schema';
-import { Promotion, PromotionSchema } from '../promotions/schemas/promotion.schema';
+import {
+  Promotion,
+  PromotionSchema,
+} from '../promotions/schemas/promotion.schema';
 import { CartService } from './cart.service';
 import { CartController } from './cart.controller';
 

@@ -37,7 +37,10 @@ export class OrdersController {
   @Post('checkout-preview')
   @UseGuards(OptionalJwtAuthGuard)
   @Throttle({ default: { limit: 30, ttl: 60000 } })
-  @ApiOperation({ summary: 'Preview checkout calculations, validate inventory, freeship and voucher' })
+  @ApiOperation({
+    summary:
+      'Preview checkout calculations, validate inventory, freeship and voucher',
+  })
   checkoutPreview(@Body() dto: CheckoutPreviewDto, @Request() req: any) {
     const userId = req.user?._id;
     return this.ordersService.checkoutPreview(dto, userId);
@@ -58,7 +61,6 @@ export class OrdersController {
   createAuthenticated(@Body() dto: CreateOrderDto, @Request() req: any) {
     return this.ordersService.create(dto, req.user._id);
   }
-
 
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
@@ -81,12 +83,16 @@ export class OrdersController {
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Export invoice PDF' })
-  async getInvoice(@Param('id') id: string, @Request() req: any, @Res() res: Response) {
+  async getInvoice(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ) {
     const order = await this.ordersService.findByIdForActor(id, {
       ...req.user,
       _id: req.user._id.toString(),
     });
-    
+
     // Verify ownership of the invoice before rendering the PDF
     if (
       order.customer &&
@@ -97,17 +103,22 @@ export class OrdersController {
     ) {
       throw new ForbiddenException('Bạn không có quyền tải hóa đơn này');
     }
-    
+
     const pdfDoc = await this.ordersService.generateInvoicePdf(order);
-    
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderCode}.pdf`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=invoice-${order.orderCode}.pdf`,
+    );
     pdfDoc.pipe(res);
     pdfDoc.end();
   }
 
   @Get('guest/:id/invoice')
-  @ApiOperation({ summary: 'Export a guest invoice using its private access token' })
+  @ApiOperation({
+    summary: 'Export a guest invoice using its private access token',
+  })
   async getGuestInvoice(
     @Param('id') id: string,
     @Headers('x-guest-order-token') accessToken: string | undefined,
@@ -137,7 +148,9 @@ export class OrdersController {
   @Get(':id')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get order by ID (authenticated owner or staff/admin)' })
+  @ApiOperation({
+    summary: 'Get order by ID (authenticated owner or staff/admin)',
+  })
   findById(@Param('id') id: string, @Request() req: any) {
     return this.ordersService.findByIdForActor(id, {
       ...req.user,
@@ -167,7 +180,9 @@ export class OrdersController {
   }
 
   @Delete('guest/:id')
-  @ApiOperation({ summary: 'Cancel a pending guest order using its private access token' })
+  @ApiOperation({
+    summary: 'Cancel a pending guest order using its private access token',
+  })
   cancelGuest(
     @Param('id') id: string,
     @Headers('x-guest-order-token') accessToken: string | undefined,

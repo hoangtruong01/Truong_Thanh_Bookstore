@@ -38,7 +38,8 @@ export class OrderTimelineItem {
   createdAt: Date;
 }
 
-export const OrderTimelineItemSchema = SchemaFactory.createForClass(OrderTimelineItem);
+export const OrderTimelineItemSchema =
+  SchemaFactory.createForClass(OrderTimelineItem);
 
 export type OrderDocument = Order & Document;
 
@@ -124,5 +125,8 @@ OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ promotionCode: 1 });
 OrderSchema.index(
   { customer: 1, idempotencyKeyHash: 1 },
-  { unique: true, partialFilterExpression: { idempotencyKeyHash: { $type: 'string' } } },
+  {
+    unique: true,
+    partialFilterExpression: { idempotencyKeyHash: { $type: 'string' } },
+  },
 );

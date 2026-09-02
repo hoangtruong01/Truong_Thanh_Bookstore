@@ -97,6 +97,11 @@ export class InsufficientStockException extends AppException {
     message: string = 'Sản phẩm trong kho không đủ số lượng yêu cầu',
     details: any = null,
   ) {
-    super(message, ErrorCode.ERR_INSUFFICIENT_STOCK, HttpStatus.BAD_REQUEST, details);
+    super(
+      message,
+      ErrorCode.ERR_INSUFFICIENT_STOCK,
+      HttpStatus.BAD_REQUEST,
+      details,
+    );
   }
 }

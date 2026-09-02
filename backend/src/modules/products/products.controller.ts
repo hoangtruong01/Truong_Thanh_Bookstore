@@ -15,7 +15,12 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
@@ -99,7 +104,9 @@ export class ProductsController {
       throw new BadRequestException('Vui lòng chọn file Excel để tải lên');
     }
     if (!file.originalname.match(/\.(xlsx|xls)$/i)) {
-      throw new BadRequestException('Chỉ chấp nhận file Excel định dạng .xlsx hoặc .xls');
+      throw new BadRequestException(
+        'Chỉ chấp nhận file Excel định dạng .xlsx hoặc .xls',
+      );
     }
     return this.productsService.importFromExcel(file.buffer);
   }
@@ -135,12 +142,15 @@ export class ProductsController {
   }
 
   @Get('suggestions')
-  @ApiOperation({ summary: 'Get search autocomplete suggestions (keywords, categories, products)' })
-  getSuggestions(
-    @Query('q') q?: string,
-    @Query('limit') limit?: number,
-  ) {
-    return this.productsService.getSuggestions(q || '', limit ? Number(limit) : 6);
+  @ApiOperation({
+    summary:
+      'Get search autocomplete suggestions (keywords, categories, products)',
+  })
+  getSuggestions(@Query('q') q?: string, @Query('limit') limit?: number) {
+    return this.productsService.getSuggestions(
+      q || '',
+      limit ? Number(limit) : 6,
+    );
   }
 
   @Get('slug/:slug')
@@ -151,10 +161,7 @@ export class ProductsController {
 
   @Get(':id/related')
   @ApiOperation({ summary: 'Get related / similar products' })
-  getRelated(
-    @Param('id') id: string,
-    @Query('limit') limit?: number,
-  ) {
+  getRelated(@Param('id') id: string, @Query('limit') limit?: number) {
     return this.productsService.getRelated(id, limit ? Number(limit) : 8);
   }
 

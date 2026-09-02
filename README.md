@@ -45,14 +45,18 @@ Truong_Thanh_Bookstore/
 
 ### 🐳 Cách 1: Khởi Chạy Toàn Bộ Bằng Docker Compose (Khuyến nghị)
 ```bash
-# Khởi động trọn gói MongoDB, Backend API, Frontend Nginx và Mongo Express
-docker-compose up -d --build
+# Tạo file .env ở thư mục gốc và đặt JWT_SECRET ngẫu nhiên >= 16 ký tự cho local.
+docker compose up -d --build
 ```
 - **Web Storefront & Admin CMS**: `http://localhost` (Port 80)
 - **Backend API**: `http://localhost:3000/api`
 - **Tài liệu Swagger OpenAPI**: `http://localhost:3000/api/docs`
 - **Health Check Endpoint**: `http://localhost:3000/api/health`
-- **Quản trị Database (Mongo Express)**: `http://localhost:8081` (`admin` / `TruongThanhAdmin2026!`)
+
+Mongo Express không chạy mặc định. Khi cần dùng local, đặt
+`ME_CONFIG_BASICAUTH_USERNAME`/`ME_CONFIG_BASICAUTH_PASSWORD`
+và chạy `docker compose -f docker-compose.yml -f docker-compose.tools.yml --profile tools up -d mongo-express`.
+Không có credential mặc định trong source.
 
 ---
 

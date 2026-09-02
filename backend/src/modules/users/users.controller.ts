@@ -37,7 +37,9 @@ export class UsersController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Lấy danh sách người dùng phân trang và lọc (Admin/SuperAdmin)' })
+  @ApiOperation({
+    summary: 'Lấy danh sách người dùng phân trang và lọc (Admin/SuperAdmin)',
+  })
   async findAllUsers(@Query() query: UserQueryDto) {
     return this.usersService.findAllUsers(query);
   }
@@ -46,7 +48,9 @@ export class UsersController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'Tạo tài khoản nhân viên hoặc quản trị viên (Admin/SuperAdmin)' })
+  @ApiOperation({
+    summary: 'Tạo tài khoản nhân viên hoặc quản trị viên (Admin/SuperAdmin)',
+  })
   async createStaff(@Body() dto: CreateStaffUserDto, @Request() req: any) {
     return this.usersService.createStaffOrAdmin(dto, req.user.role);
   }
@@ -66,14 +70,22 @@ export class UsersController {
   }
 
   @Post('wishlist/:productId')
-  @ApiOperation({ summary: 'Thêm / bớt sản phẩm vào danh sách yêu thích (toggle)' })
-  async toggleWishlist(@Request() req: any, @Param('productId') productId: string) {
+  @ApiOperation({
+    summary: 'Thêm / bớt sản phẩm vào danh sách yêu thích (toggle)',
+  })
+  async toggleWishlist(
+    @Request() req: any,
+    @Param('productId') productId: string,
+  ) {
     return this.usersService.toggleWishlist(req.user._id, productId);
   }
 
   @Delete('wishlist/:productId')
   @ApiOperation({ summary: 'Xóa sản phẩm khỏi danh sách yêu thích' })
-  async removeFromWishlist(@Request() req: any, @Param('productId') productId: string) {
+  async removeFromWishlist(
+    @Request() req: any,
+    @Param('productId') productId: string,
+  ) {
     return this.usersService.removeFromWishlist(req.user._id, productId);
   }
 
@@ -88,7 +100,9 @@ export class UsersController {
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Lấy thông tin chi tiết một người dùng bằng ID (Admin/SuperAdmin)' })
+  @ApiOperation({
+    summary: 'Lấy thông tin chi tiết một người dùng bằng ID (Admin/SuperAdmin)',
+  })
   async findById(@Param('id') id: string) {
     return this.usersService.findById(id);
   }
@@ -103,32 +117,50 @@ export class UsersController {
     @Body() dto: UpdateUserRoleDto,
     @Request() req: any,
   ) {
-    return this.usersService.updateRole(id, dto.role, req.user.role, req.user._id);
+    return this.usersService.updateRole(
+      id,
+      dto.role,
+      req.user.role,
+      req.user._id,
+    );
   }
 
   @Patch(':id/permissions')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Cập nhật quyền cho tài khoản nhân viên (Admin/SuperAdmin)' })
+  @ApiOperation({
+    summary: 'Cập nhật quyền cho tài khoản nhân viên (Admin/SuperAdmin)',
+  })
   async updatePermissions(
     @Param('id') id: string,
     @Body() dto: UpdateUserPermissionsDto,
     @Request() req: any,
   ) {
-    return this.usersService.updatePermissions(id, dto.permissions, req.user.role);
+    return this.usersService.updatePermissions(
+      id,
+      dto.permissions,
+      req.user.role,
+    );
   }
 
   @Patch(':id/status')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'Khóa hoặc mở khóa tài khoản người dùng (Admin/SuperAdmin)' })
+  @ApiOperation({
+    summary: 'Khóa hoặc mở khóa tài khoản người dùng (Admin/SuperAdmin)',
+  })
   async updateStatus(
     @Param('id') id: string,
     @Body() dto: UpdateUserStatusDto,
     @Request() req: any,
   ) {
-    return this.usersService.updateStatus(id, dto.status, req.user.role, req.user._id);
+    return this.usersService.updateStatus(
+      id,
+      dto.status,
+      req.user.role,
+      req.user._id,
+    );
   }
 
   @Delete(':id')

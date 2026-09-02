@@ -63,26 +63,26 @@ export function sanitizeForLogging(data: any, depth = 0): any {
  */
 export function getErrorCodeFromStatus(status: number): ErrorCode {
   switch (status) {
-    case HttpStatus.BAD_REQUEST:
+    case 400:
       return ErrorCode.ERR_BAD_REQUEST;
-    case HttpStatus.UNAUTHORIZED:
+    case 401:
       return ErrorCode.ERR_UNAUTHORIZED;
-    case HttpStatus.FORBIDDEN:
+    case 403:
       return ErrorCode.ERR_FORBIDDEN;
-    case HttpStatus.NOT_FOUND:
+    case 404:
       return ErrorCode.ERR_NOT_FOUND;
-    case HttpStatus.CONFLICT:
+    case 409:
       return ErrorCode.ERR_CONFLICT;
-    case HttpStatus.UNPROCESSABLE_ENTITY:
+    case 422:
       return ErrorCode.ERR_UNPROCESSABLE_ENTITY;
-    case HttpStatus.TOO_MANY_REQUESTS:
+    case 429:
       return ErrorCode.ERR_RATE_LIMIT_EXCEEDED;
-    case HttpStatus.PAYLOAD_TOO_LARGE:
+    case 413:
       return ErrorCode.ERR_PAYLOAD_TOO_LARGE;
-    case HttpStatus.SERVICE_UNAVAILABLE:
+    case 503:
       return ErrorCode.ERR_SERVICE_UNAVAILABLE;
     default:
-      return status >= 500
+      return Number(status) >= 500
         ? ErrorCode.ERR_INTERNAL_SERVER_ERROR
         : ErrorCode.ERR_UNKNOWN;
   }
@@ -134,7 +134,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       // Friendly message for Rate Limiting / ThrottlerException
       if (status === HttpStatus.TOO_MANY_REQUESTS) {
         errorCode = ErrorCode.ERR_RATE_LIMIT_EXCEEDED;
-        message = 'Bạn đã gửi quá nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau ít phút!';
+        message =
+          'Bạn đã gửi quá nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau ít phút!';
       }
     }
     // 2. Handle JWT errors
@@ -208,7 +209,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     // 5. Production Security & Masking for 5xx Internal Server Errors
-    if (status >= 500) {
+    if (Number(status) >= 500) {
       if (isProduction) {
         message = 'Đã có lỗi xảy ra từ hệ thống. Vui lòng thử lại sau.';
         details = {};
@@ -228,7 +229,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       request?.headers?.['x-forwarded-for'] ||
       request?.socket?.remoteAddress ||
       'UNKNOWN_IP';
-    const userId = (request as any)?.user?.id || (request as any)?.user?._id || 'ANONYMOUS';
+    const userId =
+      (request as any)?.user?.id || (request as any)?.user?._id || 'ANONYMOUS';
+    const logClientIp = Array.isArray(clientIp)
+      ? clientIp.join(', ')
+      : String(clientIp);
+    const logUserId = String(userId);
 
     const logPayload = {
       timestamp: new Date().toISOString(),
@@ -242,17 +248,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
       body: sanitizeForLogging(request?.body || {}),
     };
 
-    if (status >= 500) {
+    if (Number(status) >= 500) {
       const stack =
-        exception instanceof Error ? exception.stack : JSON.stringify(exception);
+        exception instanceof Error
+          ? exception.stack
+          : JSON.stringify(exception);
       this.logger.error(
-        `[${requestMethod}] ${request?.url} | Status: ${status} | Code: ${errorCode} | User: ${userId} | IP: ${clientIp}\n` +
+        `[${requestMethod}] ${request?.url} | Status: ${status} | Code: ${errorCode} | User: ${logUserId} | IP: ${logClientIp}\n` +
           `Context: ${JSON.stringify(logPayload)}\n` +
           `Stack: ${stack}`,
       );
     } else {
       this.logger.warn(
-        `[${requestMethod}] ${request?.url} | Status: ${status} | Code: ${errorCode} | Msg: ${message} | User: ${userId} | IP: ${clientIp}`,
+        `[${requestMethod}] ${request?.url} | Status: ${status} | Code: ${errorCode} | Msg: ${Array.isArray(message) ? message.join('; ') : message} | User: ${logUserId} | IP: ${logClientIp}`,
       );
     }
 

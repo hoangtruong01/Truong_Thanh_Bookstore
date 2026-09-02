@@ -9,12 +9,12 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Payment, PaymentDocument } from './schemas/payment.schema';
-import { CreatePaymentDto, PaymentCallbackDto, PaymentQueryDto } from './dto/payment.dto';
 import {
-  PaymentStatus,
-  StaffPermission,
-  UserRole,
-} from '../../common/enums';
+  CreatePaymentDto,
+  PaymentCallbackDto,
+  PaymentQueryDto,
+} from './dto/payment.dto';
+import { PaymentStatus, StaffPermission, UserRole } from '../../common/enums';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
 import { PaymentProviderRegistry } from './providers/payment.providers';
 import { PaymentInitiationResult } from './providers/payment-provider.interface';
@@ -31,16 +31,19 @@ export class PaymentsService {
     private readonly providers: PaymentProviderRegistry,
   ) {}
 
-  private normalizeActor(actor?: string | PaymentActor): PaymentActor | undefined {
+  private normalizeActor(
+    actor?: string | PaymentActor,
+  ): PaymentActor | undefined {
     return typeof actor === 'string' ? { _id: actor } : actor;
   }
 
   private canManage(actor?: PaymentActor): boolean {
-    return !!actor && (
-      actor.role === UserRole.SUPER_ADMIN ||
-      actor.role === UserRole.ADMIN ||
-      (actor.role === UserRole.STAFF &&
-        !!actor.permissions?.includes(StaffPermission.MANAGE_ORDERS))
+    return (
+      !!actor &&
+      (actor.role === UserRole.SUPER_ADMIN ||
+        actor.role === UserRole.ADMIN ||
+        (actor.role === UserRole.STAFF &&
+          !!actor.permissions?.includes(StaffPermission.MANAGE_ORDERS)))
     );
   }
 
@@ -50,7 +53,9 @@ export class PaymentsService {
       ? ((order.customer as any)._id || order.customer).toString()
       : undefined;
     if (!actor || !customerId || customerId !== actor._id.toString()) {
-      throw new ForbiddenException('Bạn không có quyền truy cập thanh toán của đơn hàng này');
+      throw new ForbiddenException(
+        'Bạn không có quyền truy cập thanh toán của đơn hàng này',
+      );
     }
   }
 
@@ -70,10 +75,14 @@ export class PaymentsService {
       throw new BadRequestException('Mã đơn hàng không khớp');
     }
     if (dto.amount !== undefined && dto.amount !== order.total) {
-      throw new BadRequestException('Số tiền thanh toán không khớp với đơn hàng');
+      throw new BadRequestException(
+        'Số tiền thanh toán không khớp với đơn hàng',
+      );
     }
     if (dto.provider !== order.paymentMethod) {
-      throw new BadRequestException('Phương thức thanh toán không khớp với đơn hàng');
+      throw new BadRequestException(
+        'Phương thức thanh toán không khớp với đơn hàng',
+      );
     }
 
     const provider = this.providers.get(dto.provider);
@@ -146,15 +155,20 @@ export class PaymentsService {
 
   async handleCallback(dto: PaymentCallbackDto): Promise<PaymentDocument> {
     this.logger.log(`Payment callback ${dto.provider}: ${dto.transactionId}`);
-    const payment = await this.paymentModel.findOne({
-      provider: dto.provider,
-      $or: [
-        ...(dto.providerReference ? [{ providerReference: dto.providerReference }] : []),
-        ...(dto.orderCode ? [{ orderCode: dto.orderCode }] : []),
-        { transactionId: dto.transactionId },
-      ],
-    }).exec();
-    if (!payment) throw new NotFoundException('Không tìm thấy giao dịch thanh toán');
+    const payment = await this.paymentModel
+      .findOne({
+        provider: dto.provider,
+        $or: [
+          ...(dto.providerReference
+            ? [{ providerReference: dto.providerReference }]
+            : []),
+          ...(dto.orderCode ? [{ orderCode: dto.orderCode }] : []),
+          { transactionId: dto.transactionId },
+        ],
+      })
+      .exec();
+    if (!payment)
+      throw new NotFoundException('Không tìm thấy giao dịch thanh toán');
 
     if (dto.amount !== undefined && dto.amount !== payment.amount) {
       throw new BadRequestException('Số tiền callback không khớp');
@@ -167,34 +181,40 @@ export class PaymentsService {
     }
     if (payment.callbackProcessedAt || payment.status === PaymentStatus.PAID) {
       if (payment.transactionId === dto.transactionId) return payment;
-      throw new ConflictException('Thanh toán đã nhận một callback khác trước đó');
+      throw new ConflictException(
+        'Thanh toán đã nhận một callback khác trước đó',
+      );
     }
 
     const result = await this.providers.get(dto.provider).verifyCallback(dto);
-    const updated = await this.paymentModel.findOneAndUpdate(
-      { _id: payment._id, callbackProcessedAt: { $exists: false } },
-      {
-        $set: {
-          status: result.status,
-          transactionId: dto.transactionId,
-          callbackProcessedAt: new Date(),
-          paidAt: result.success ? new Date() : undefined,
-          failureReason: result.failureReason,
-          gatewayResponse: dto.gatewayResponse || {},
+    const updated = await this.paymentModel
+      .findOneAndUpdate(
+        { _id: payment._id, callbackProcessedAt: { $exists: false } },
+        {
+          $set: {
+            status: result.status,
+            transactionId: dto.transactionId,
+            callbackProcessedAt: new Date(),
+            paidAt: result.success ? new Date() : undefined,
+            failureReason: result.failureReason,
+            gatewayResponse: dto.gatewayResponse || {},
+          },
         },
-      },
-      { returnDocument: 'after' },
-    ).exec();
+        { returnDocument: 'after' },
+      )
+      .exec();
     if (!updated) {
       const processed = await this.paymentModel.findById(payment._id).exec();
       if (processed?.transactionId === dto.transactionId) return processed;
       throw new ConflictException('Callback thanh toán trùng lặp');
     }
 
-    await this.orderModel.updateOne(
-      { _id: payment.order },
-      { $set: { paymentStatus: result.status } },
-    ).exec();
+    await this.orderModel
+      .updateOne(
+        { _id: payment.order },
+        { $set: { paymentStatus: result.status } },
+      )
+      .exec();
     return updated;
   }
 

@@ -1,7 +1,15 @@
 import { HttpException, HttpStatus, ArgumentsHost } from '@nestjs/common';
-import { HttpExceptionFilter, sanitizeForLogging, getErrorCodeFromStatus } from './http-exception.filter';
+import {
+  HttpExceptionFilter,
+  sanitizeForLogging,
+  getErrorCodeFromStatus,
+} from './http-exception.filter';
 import { ErrorCode } from '../enums/error-code.enum';
-import { AppException, BusinessException, InsufficientStockException } from '../exceptions/app.exception';
+import {
+  AppException,
+  BusinessException,
+  InsufficientStockException,
+} from '../exceptions/app.exception';
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;
@@ -77,23 +85,46 @@ describe('HttpExceptionFilter', () => {
 
   describe('getErrorCodeFromStatus', () => {
     it('should map HTTP status codes to corresponding ErrorCode enums', () => {
-      expect(getErrorCodeFromStatus(HttpStatus.BAD_REQUEST)).toBe(ErrorCode.ERR_BAD_REQUEST);
-      expect(getErrorCodeFromStatus(HttpStatus.UNAUTHORIZED)).toBe(ErrorCode.ERR_UNAUTHORIZED);
-      expect(getErrorCodeFromStatus(HttpStatus.FORBIDDEN)).toBe(ErrorCode.ERR_FORBIDDEN);
-      expect(getErrorCodeFromStatus(HttpStatus.NOT_FOUND)).toBe(ErrorCode.ERR_NOT_FOUND);
-      expect(getErrorCodeFromStatus(HttpStatus.CONFLICT)).toBe(ErrorCode.ERR_CONFLICT);
-      expect(getErrorCodeFromStatus(HttpStatus.UNPROCESSABLE_ENTITY)).toBe(ErrorCode.ERR_UNPROCESSABLE_ENTITY);
-      expect(getErrorCodeFromStatus(HttpStatus.TOO_MANY_REQUESTS)).toBe(ErrorCode.ERR_RATE_LIMIT_EXCEEDED);
-      expect(getErrorCodeFromStatus(HttpStatus.PAYLOAD_TOO_LARGE)).toBe(ErrorCode.ERR_PAYLOAD_TOO_LARGE);
-      expect(getErrorCodeFromStatus(HttpStatus.SERVICE_UNAVAILABLE)).toBe(ErrorCode.ERR_SERVICE_UNAVAILABLE);
-      expect(getErrorCodeFromStatus(500)).toBe(ErrorCode.ERR_INTERNAL_SERVER_ERROR);
+      expect(getErrorCodeFromStatus(HttpStatus.BAD_REQUEST)).toBe(
+        ErrorCode.ERR_BAD_REQUEST,
+      );
+      expect(getErrorCodeFromStatus(HttpStatus.UNAUTHORIZED)).toBe(
+        ErrorCode.ERR_UNAUTHORIZED,
+      );
+      expect(getErrorCodeFromStatus(HttpStatus.FORBIDDEN)).toBe(
+        ErrorCode.ERR_FORBIDDEN,
+      );
+      expect(getErrorCodeFromStatus(HttpStatus.NOT_FOUND)).toBe(
+        ErrorCode.ERR_NOT_FOUND,
+      );
+      expect(getErrorCodeFromStatus(HttpStatus.CONFLICT)).toBe(
+        ErrorCode.ERR_CONFLICT,
+      );
+      expect(getErrorCodeFromStatus(HttpStatus.UNPROCESSABLE_ENTITY)).toBe(
+        ErrorCode.ERR_UNPROCESSABLE_ENTITY,
+      );
+      expect(getErrorCodeFromStatus(HttpStatus.TOO_MANY_REQUESTS)).toBe(
+        ErrorCode.ERR_RATE_LIMIT_EXCEEDED,
+      );
+      expect(getErrorCodeFromStatus(HttpStatus.PAYLOAD_TOO_LARGE)).toBe(
+        ErrorCode.ERR_PAYLOAD_TOO_LARGE,
+      );
+      expect(getErrorCodeFromStatus(HttpStatus.SERVICE_UNAVAILABLE)).toBe(
+        ErrorCode.ERR_SERVICE_UNAVAILABLE,
+      );
+      expect(getErrorCodeFromStatus(500)).toBe(
+        ErrorCode.ERR_INTERNAL_SERVER_ERROR,
+      );
     });
   });
 
   describe('Exception Handling', () => {
     it('should handle standard HttpException with string response', () => {
       const { mockHost, mockStatus, mockJson } = createMockHost();
-      const exception = new HttpException('Forbidden Resource', HttpStatus.FORBIDDEN);
+      const exception = new HttpException(
+        'Forbidden Resource',
+        HttpStatus.FORBIDDEN,
+      );
 
       filter.catch(exception, mockHost);
 
@@ -111,11 +142,14 @@ describe('HttpExceptionFilter', () => {
 
     it('should handle custom AppException with custom errorCode and details', () => {
       const { mockHost, mockStatus, mockJson } = createMockHost();
-      const exception = new InsufficientStockException('Sản phẩm chỉ còn 2 chiếc', {
-        productId: 'prod_123',
-        requestedQuantity: 5,
-        availableStock: 2,
-      });
+      const exception = new InsufficientStockException(
+        'Sản phẩm chỉ còn 2 chiếc',
+        {
+          productId: 'prod_123',
+          requestedQuantity: 5,
+          availableStock: 2,
+        },
+      );
 
       filter.catch(exception, mockHost);
 
@@ -138,7 +172,9 @@ describe('HttpExceptionFilter', () => {
     it('should handle validation errors with array of messages', () => {
       const { mockHost, mockStatus, mockJson } = createMockHost();
       const exception = new HttpException(
-        { message: ['Email không đúng định dạng', 'Mật khẩu tối thiểu 6 ký tự'] },
+        {
+          message: ['Email không đúng định dạng', 'Mật khẩu tối thiểu 6 ký tự'],
+        },
         HttpStatus.BAD_REQUEST,
       );
 
@@ -190,7 +226,8 @@ describe('HttpExceptionFilter', () => {
         expect.objectContaining({
           success: false,
           errorCode: ErrorCode.ERR_DUPLICATE_KEY,
-          message: 'Dữ liệu hoặc đường dẫn đã tồn tại trên hệ thống (trùng lặp)',
+          message:
+            'Dữ liệu hoặc đường dẫn đã tồn tại trên hệ thống (trùng lặp)',
           details: { duplicateFields: ['email'] },
         }),
       );
@@ -213,7 +250,10 @@ describe('HttpExceptionFilter', () => {
         expect.objectContaining({
           success: false,
           errorCode: ErrorCode.ERR_DB_VALIDATION,
-          details: ['Path `title` is required.', 'Path `price` must be greater than 0.'],
+          details: [
+            'Path `title` is required.',
+            'Path `price` must be greater than 0.',
+          ],
         }),
       );
     });
@@ -276,7 +316,9 @@ describe('HttpExceptionFilter', () => {
 
     it('should handle malformed JSON SyntaxError in request body', () => {
       const { mockHost, mockStatus, mockJson } = createMockHost();
-      const syntaxError = new SyntaxError('Unexpected token in JSON at position 10');
+      const syntaxError = new SyntaxError(
+        'Unexpected token in JSON at position 10',
+      );
       (syntaxError as any).status = 400;
 
       filter.catch(syntaxError, mockHost);
@@ -294,7 +336,9 @@ describe('HttpExceptionFilter', () => {
     it('should mask stack traces and details in Production mode for 500 errors', () => {
       process.env.NODE_ENV = 'production';
       const { mockHost, mockStatus, mockJson } = createMockHost();
-      const internalError = new Error('Database password was incorrect in connection string');
+      const internalError = new Error(
+        'Database password was incorrect in connection string',
+      );
 
       filter.catch(internalError, mockHost);
 

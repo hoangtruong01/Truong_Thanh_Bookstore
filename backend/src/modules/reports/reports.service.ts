@@ -94,7 +94,9 @@ export class ReportsService {
         notifications.push({
           id: `stock-${item._id}`,
           type: isOutOfStock ? 'out_of_stock' : 'stock',
-          title: isOutOfStock ? 'Hết sạch hàng trong kho' : 'Cảnh báo sắp hết hàng',
+          title: isOutOfStock
+            ? 'Hết sạch hàng trong kho'
+            : 'Cảnh báo sắp hết hàng',
           message: isOutOfStock
             ? `Sản phẩm "${item.product.name}" đã hết hàng (Tồn kho: 0 ${item.product.unit || 'cái'}). Vui lòng nhập hàng bổ sung.`
             : `Sản phẩm "${item.product.name}" sắp hết hàng (chỉ còn ${item.currentStock} ${item.product.unit || 'cái'}).`,
@@ -107,8 +109,13 @@ export class ReportsService {
     // Map recent orders with smart alerts
     recentOrders.forEach((order: any) => {
       const isPending = order.orderStatus === OrderStatus.PENDING;
-      const isHighValueCod = order.paymentMethod === PaymentMethod.COD && order.total >= 1000000 && isPending;
-      const isDelayedPending = isPending && (now - new Date(order.createdAt).getTime()) > 12 * 3600 * 1000;
+      const isHighValueCod =
+        order.paymentMethod === PaymentMethod.COD &&
+        order.total >= 1000000 &&
+        isPending;
+      const isDelayedPending =
+        isPending &&
+        now - new Date(order.createdAt).getTime() > 12 * 3600 * 1000;
 
       if (isHighValueCod) {
         notifications.push({
@@ -153,7 +160,10 @@ export class ReportsService {
     });
 
     // Sort by date (newest first)
-    notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    notifications.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 
     return notifications;
   }
@@ -182,18 +192,14 @@ export class ReportsService {
     };
   }
 
-  async getSummary(range: 'day' | 'week' | 'month' | 'year' = 'month') {
-    const [
-      dashboard,
-      advanced,
-      orderStatusStats,
-      categoryRevenue,
-    ] = await Promise.all([
-      this.getDashboard(),
-      this.getAdvancedDashboard(),
-      this.getOrderStatusStats(),
-      this.getCategoryRevenue(),
-    ]);
+  async getSummary(_range: 'day' | 'week' | 'month' | 'year' = 'month') {
+    const [dashboard, advanced, orderStatusStats, categoryRevenue] =
+      await Promise.all([
+        this.getDashboard(),
+        this.getAdvancedDashboard(),
+        this.getOrderStatusStats(),
+        this.getCategoryRevenue(),
+      ]);
 
     // Calculate growth estimation based on recent performance
     const todayRev = dashboard.stats.todayRevenue || 0;
@@ -233,7 +239,9 @@ export class ReportsService {
 
       bestSelling.forEach((p: any) => {
         const catName = p.category?.name || 'Khác';
-        categoryMap[catName] = (categoryMap[catName] || 0) + (p.sold || 0) * (p.discountPrice || p.price || 0);
+        categoryMap[catName] =
+          (categoryMap[catName] || 0) +
+          (p.sold || 0) * (p.discountPrice || p.price || 0);
       });
 
       return Object.entries(categoryMap).map(([category, revenue]) => ({

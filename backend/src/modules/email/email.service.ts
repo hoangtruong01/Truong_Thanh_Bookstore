@@ -30,7 +30,10 @@ export class EmailService {
         });
         this.logger.log('📧 Nodemailer Transporter initialized successfully');
       } catch (err: any) {
-        this.logger.error('❌ Failed to initialize Nodemailer transporter:', err);
+        this.logger.error(
+          '❌ Failed to initialize Nodemailer transporter:',
+          err,
+        );
       }
     } else {
       this.logger.warn(
@@ -40,8 +43,10 @@ export class EmailService {
   }
 
   async sendMail(to: string, subject: string, html: string): Promise<boolean> {
-    const from = this.configService.get<string>('EMAIL_FROM') || '"Trường Thành Bookstore" <no-reply@truongthanh.vn>';
-    
+    const from =
+      this.configService.get<string>('EMAIL_FROM') ||
+      '"Trường Thành Bookstore" <no-reply@truongthanh.vn>';
+
     if (this.transporter) {
       try {
         await this.transporter.sendMail({
@@ -50,7 +55,9 @@ export class EmailService {
           subject,
           html,
         });
-        this.logger.log(`📧 Email sent successfully to ${to} (Subject: ${subject})`);
+        this.logger.log(
+          `📧 Email sent successfully to ${to} (Subject: ${subject})`,
+        );
         return true;
       } catch (err) {
         this.logger.error(`❌ Failed to send email to ${to}:`, err);
@@ -66,7 +73,11 @@ From: ${from}
 Subject: ${subject}
 Content:
 ------------------------------------------------------------------------
-${html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500)}...
+${html
+  .replace(/<[^>]*>/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .slice(0, 500)}...
 ========================================================================
     `);
     return true;
@@ -94,15 +105,19 @@ ${html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500)}...
 
   async sendOrderConfirmationEmail(to: string, order: any): Promise<boolean> {
     const subject = `Xác nhận đơn hàng #${order.orderCode} - Trường Thành Bookstore`;
-    
-    const itemsHtml = order.items.map((item: any) => `
+
+    const itemsHtml = order.items
+      .map(
+        (item: any) => `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${item.name}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">${item.quantity}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">${item.price.toLocaleString('vi-VN')}đ</td>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">${(item.price * item.quantity).toLocaleString('vi-VN')}đ</td>
       </tr>
-    `).join('');
+    `,
+      )
+      .join('');
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; background-color: #ffffff;">
@@ -153,12 +168,16 @@ ${html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500)}...
             <td style="text-align: right; padding: 5px 0;">Phí vận chuyển:</td>
             <td style="text-align: right; padding: 5px 0; font-weight: bold;">${order.shippingFee === 0 ? 'Miễn phí' : order.shippingFee.toLocaleString('vi-VN') + 'đ'}</td>
           </tr>
-          ${order.discount > 0 ? `
+          ${
+            order.discount > 0
+              ? `
           <tr>
             <td style="text-align: right; padding: 5px 0; color: #dc2626;">Giảm giá:</td>
             <td style="text-align: right; padding: 5px 0; font-weight: bold; color: #dc2626;">-${order.discount.toLocaleString('vi-VN')}đ</td>
           </tr>
-          ` : ''}
+          `
+              : ''
+          }
           <tr style="font-size: 16px; font-weight: bold; border-top: 2px solid #cbd5e1;">
             <td style="text-align: right; padding: 10px 0; color: #dc2626;">TỔNG CỘNG:</td>
             <td style="text-align: right; padding: 10px 0; color: #dc2626; font-size: 18px;">${order.total.toLocaleString('vi-VN')}đ</td>
@@ -174,7 +193,11 @@ ${html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500)}...
     return this.sendMail(to, subject, html);
   }
 
-  async sendOrderStatusEmail(to: string, order: any, statusText: string): Promise<boolean> {
+  async sendOrderStatusEmail(
+    to: string,
+    order: any,
+    statusText: string,
+  ): Promise<boolean> {
     const subject = `Cập nhật trạng thái đơn hàng #${order.orderCode} - Trường Thành Bookstore`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; background-color: #ffffff;">

@@ -10,6 +10,17 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
     FRONTEND_URL: 'http://localhost:5173',
   };
 
+  const validProductionConfig = {
+    ...validBaseConfig,
+    NODE_ENV: 'production',
+    JWT_SECRET:
+      'c8f490192e4ab349f872138902194aef12849012839401283940128340128340',
+    FRONTEND_URL: 'https://bookstore.example.com',
+    COOKIE_SECURE: 'true',
+    AUTO_SEED: 'false',
+    RESET_DATABASE_ON_SEED: 'false',
+  };
+
   describe('Valid Configuration', () => {
     it('should validate and transform a completely valid configuration', () => {
       const result = validateEnv(validBaseConfig);
@@ -17,7 +28,9 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
       expect(result.NODE_ENV).toBe(Environment.DEVELOPMENT);
       expect(result.PORT).toBe(3000);
       expect(typeof result.PORT).toBe('number');
-      expect(result.MONGODB_URI).toBe('mongodb://127.0.0.1:27017/truong-thanh-stationery');
+      expect(result.MONGODB_URI).toBe(
+        'mongodb://127.0.0.1:27017/truong-thanh-stationery',
+      );
       expect(result.JWT_SECRET).toBe('TruongThanhSuperSecretKey2026!');
       expect(result.JWT_EXPIRES_IN).toBe('7d');
       expect(result.FRONTEND_URL).toBe('http://localhost:5173');
@@ -31,7 +44,9 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
         JWT_EXPIRATION: '14d',
       };
       const result = validateEnv(configWithAliases);
-      expect(result.MONGODB_URI).toBe('mongodb://127.0.0.1:27017/truong-thanh-alias');
+      expect(result.MONGODB_URI).toBe(
+        'mongodb://127.0.0.1:27017/truong-thanh-alias',
+      );
       expect(result.JWT_EXPIRES_IN).toBe('14d');
       expect(result.PORT).toBe(8080);
     });
@@ -71,6 +86,20 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
       expect(result.GEMINI_API_KEY).toBe('gemini_test_key');
       expect(result.EMAIL_PORT).toBe(465);
     });
+
+    it('should parse the string "false" as boolean false', () => {
+      const result = validateEnv({
+        ...validBaseConfig,
+        COOKIE_SECURE: 'false',
+      });
+      expect(result.COOKIE_SECURE).toBe(false);
+    });
+
+    it('should reject an invalid boolean string', () => {
+      expect(() =>
+        validateEnv({ ...validBaseConfig, COOKIE_SECURE: 'yes' }),
+      ).toThrow(/COOKIE_SECURE/);
+    });
   });
 
   describe('Missing or Invalid Required Fields', () => {
@@ -86,7 +115,9 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
 
     it('should throw error when JWT_SECRET is shorter than 16 characters', () => {
       const config = { ...validBaseConfig, JWT_SECRET: 'short_secret' };
-      expect(() => validateEnv(config)).toThrow(/JWT_SECRET phải có độ dài tối thiểu ít nhất 16 ký tự/);
+      expect(() => validateEnv(config)).toThrow(
+        /JWT_SECRET phải có độ dài tối thiểu ít nhất 16 ký tự/,
+      );
     });
 
     it('should throw error when PORT is not a valid number', () => {
@@ -95,13 +126,19 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
     });
 
     it('should throw error when PORT is out of valid range (< 1000 or > 65535)', () => {
-      expect(() => validateEnv({ ...validBaseConfig, PORT: 80 })).toThrow(/PORT tối thiểu phải là 1000/);
-      expect(() => validateEnv({ ...validBaseConfig, PORT: 70000 })).toThrow(/PORT tối đa là 65535/);
+      expect(() => validateEnv({ ...validBaseConfig, PORT: 80 })).toThrow(
+        /PORT tối thiểu phải là 1000/,
+      );
+      expect(() => validateEnv({ ...validBaseConfig, PORT: 70000 })).toThrow(
+        /PORT tối đa là 65535/,
+      );
     });
 
     it('should throw error when NODE_ENV is not in enum', () => {
       const config = { ...validBaseConfig, NODE_ENV: 'invalid_env' };
-      expect(() => validateEnv(config)).toThrow(/NODE_ENV phải là một trong các giá trị/);
+      expect(() => validateEnv(config)).toThrow(
+        /NODE_ENV phải là một trong các giá trị/,
+      );
     });
   });
 
@@ -112,7 +149,9 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
         NODE_ENV: 'production',
         JWT_SECRET: 'TruongThanhDevDefaultSecretKey2026!',
       };
-      expect(() => validateEnv(prodConfigWithWeakSecret)).toThrow(/🚨 CẢNH BÁO BẢO MẬT NGHIÊM TRỌNG/);
+      expect(() => validateEnv(prodConfigWithWeakSecret)).toThrow(
+        /🚨 CẢNH BÁO BẢO MẬT NGHIÊM TRỌNG/,
+      );
     });
 
     it('should throw security error in production if JWT_SECRET is shorter than 32 characters', () => {
@@ -121,18 +160,61 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
         NODE_ENV: 'production',
         JWT_SECRET: 'ValidShortSecret20Chars!',
       };
-      expect(() => validateEnv(prodConfigWithShortSecret)).toThrow(/độ dài nhỏ hơn 32 ký tự/);
+      expect(() => validateEnv(prodConfigWithShortSecret)).toThrow(
+        /độ dài nhỏ hơn 32 ký tự/,
+      );
     });
 
     it('should pass in production with a strong random secret >= 32 characters', () => {
-      const prodConfigWithStrongSecret = {
-        ...validBaseConfig,
-        NODE_ENV: 'production',
-        JWT_SECRET: 'c8f490192e4ab349f872138902194aef12849012839401283940128340128340',
-      };
-      const result = validateEnv(prodConfigWithStrongSecret);
+      const result = validateEnv(validProductionConfig);
       expect(result.NODE_ENV).toBe(Environment.PRODUCTION);
-      expect(result.JWT_SECRET).toBe('c8f490192e4ab349f872138902194aef12849012839401283940128340128340');
+      expect(result.JWT_SECRET).toBe(
+        'c8f490192e4ab349f872138902194aef12849012839401283940128340128340',
+      );
+    });
+
+    it('should reject insecure cookie and frontend settings in production', () => {
+      expect(() =>
+        validateEnv({ ...validProductionConfig, COOKIE_SECURE: 'false' }),
+      ).toThrow(/COOKIE_SECURE=true/);
+      expect(() =>
+        validateEnv({
+          ...validProductionConfig,
+          FRONTEND_URL: 'http://bookstore.example.com',
+        }),
+      ).toThrow(/HTTPS URL/);
+    });
+
+    it('should reject automatic or destructive seeding in production', () => {
+      expect(() =>
+        validateEnv({ ...validProductionConfig, AUTO_SEED: 'true' }),
+      ).toThrow(/AUTO_SEED/);
+      expect(() =>
+        validateEnv({
+          ...validProductionConfig,
+          RESET_DATABASE_ON_SEED: 'true',
+        }),
+      ).toThrow(/RESET_DATABASE_ON_SEED/);
+    });
+  });
+
+  describe('Payment Configuration', () => {
+    it('should reject unsupported payment methods', () => {
+      expect(() =>
+        validateEnv({
+          ...validBaseConfig,
+          ENABLED_PAYMENT_METHODS: 'COD,FAKE',
+        }),
+      ).toThrow(/Unsupported ENABLED_PAYMENT_METHODS/);
+    });
+
+    it('should require bank details when bank transfer is enabled', () => {
+      expect(() =>
+        validateEnv({
+          ...validBaseConfig,
+          ENABLED_PAYMENT_METHODS: 'BANK_TRANSFER',
+        }),
+      ).toThrow(/BANK_NAME/);
     });
   });
 });

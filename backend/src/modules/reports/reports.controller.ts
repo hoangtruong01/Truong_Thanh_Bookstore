@@ -63,7 +63,11 @@ export class ReportsController {
 
   @Get('summary')
   @ApiOperation({ summary: 'Lấy báo cáo tổng hợp KPI và biểu đồ dashboard' })
-  @ApiQuery({ name: 'range', required: false, enum: ['day', 'week', 'month', 'year'] })
+  @ApiQuery({
+    name: 'range',
+    required: false,
+    enum: ['day', 'week', 'month', 'year'],
+  })
   getSummary(@Query('range') range?: 'day' | 'week' | 'month' | 'year') {
     return this.reportsService.getSummary(range);
   }

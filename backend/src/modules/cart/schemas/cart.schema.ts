@@ -52,11 +52,18 @@ export class AppliedVoucher {
   maxDiscount?: number;
 }
 
-export const AppliedVoucherSchema = SchemaFactory.createForClass(AppliedVoucher);
+export const AppliedVoucherSchema =
+  SchemaFactory.createForClass(AppliedVoucher);
 
 @Schema({ timestamps: true })
 export class Cart {
-  @Prop({ type: Types.ObjectId, ref: User.name, required: true, unique: true, index: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: User.name,
+    required: true,
+    unique: true,
+    index: true,
+  })
   user: Types.ObjectId;
 
   @Prop({ type: [CartItemSchema], default: [] })

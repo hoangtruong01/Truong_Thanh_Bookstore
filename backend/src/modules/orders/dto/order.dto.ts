@@ -19,7 +19,10 @@ import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { IsMongoObjectId, IsPhoneNumberVN } from '../../../common/validators';
 
 export class OrderItemDto {
-  @ApiProperty({ description: 'ID sản phẩm', example: '507f1f77bcf86cd799439011' })
+  @ApiProperty({
+    description: 'ID sản phẩm',
+    example: '507f1f77bcf86cd799439011',
+  })
   @IsNotEmpty({ message: 'product không được để trống' })
   @IsMongoObjectId({ message: 'product phải là ObjectId hợp lệ' })
   product: string;
@@ -90,7 +93,9 @@ export class CreateOrderDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   customerEmail?: string;
 
   @ApiPropertyOptional()
@@ -110,7 +115,9 @@ export class CreateOrderDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
   promotionCode?: string;
 
   @ApiPropertyOptional({
@@ -120,7 +127,8 @@ export class CreateOrderDto {
   @IsString()
   @MaxLength(128)
   @Matches(/^[A-Za-z0-9._:-]{16,128}$/, {
-    message: 'idempotencyKey phải dài từ 16 đến 128 ký tự gồm chữ, số hoặc . _ : -',
+    message:
+      'idempotencyKey phải dài từ 16 đến 128 ký tự gồm chữ, số hoặc . _ : -',
   })
   idempotencyKey?: string;
 }
@@ -131,7 +139,9 @@ export class UpdateOrderStatusDto {
   @IsEnum(OrderStatus, { message: 'Trạng thái đơn hàng không hợp lệ' })
   orderStatus: OrderStatus;
 
-  @ApiPropertyOptional({ description: 'Ghi chú nghiệp vụ cho lần chuyển trạng thái' })
+  @ApiPropertyOptional({
+    description: 'Ghi chú nghiệp vụ cho lần chuyển trạng thái',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)
@@ -179,13 +189,16 @@ export class CheckoutPreviewDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
   promotionCode?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   customerEmail?: string;
 }
-

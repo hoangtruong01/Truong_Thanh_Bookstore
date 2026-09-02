@@ -13,11 +13,14 @@ export class SecuritySanitizerMiddleware implements NestMiddleware {
   private readonly logger = new Logger(SecuritySanitizerMiddleware.name);
 
   use(req: Request, _res: Response, next: NextFunction) {
-    const unsafeMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+    const unsafeMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(
+      req.method,
+    );
     const cookieAuthenticated = Boolean(
       req.cookies?.access_token || req.cookies?.refresh_token,
     );
-    const bearerAuthenticated = req.headers?.authorization?.startsWith('Bearer ');
+    const bearerAuthenticated =
+      req.headers?.authorization?.startsWith('Bearer ');
 
     if (
       unsafeMethod &&

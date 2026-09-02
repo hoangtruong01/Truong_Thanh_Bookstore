@@ -9,7 +9,12 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomInt, randomUUID, timingSafeEqual } from 'crypto';
 import { UsersService } from '../users/users.service';
-import { RegisterDto, LoginDto, UpdateProfileDto, ResetPasswordDto } from './dto/auth.dto';
+import {
+  RegisterDto,
+  LoginDto,
+  UpdateProfileDto,
+  ResetPasswordDto,
+} from './dto/auth.dto';
 import { UserRole } from '../../common/enums';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import { CloudinaryService } from '../users/cloudinary.service';
@@ -38,7 +43,9 @@ export class AuthService {
     try {
       const expected = Buffer.from(storedHash, 'hex');
       const actual = Buffer.from(this.hashToken(token), 'hex');
-      return expected.length === actual.length && timingSafeEqual(expected, actual);
+      return (
+        expected.length === actual.length && timingSafeEqual(expected, actual)
+      );
     } catch {
       return false;
     }
@@ -52,7 +59,9 @@ export class AuthService {
     try {
       const expected = Buffer.from(storedHash, 'hex');
       const actual = Buffer.from(this.hashOtp(otp), 'hex');
-      return expected.length === actual.length && timingSafeEqual(expected, actual);
+      return (
+        expected.length === actual.length && timingSafeEqual(expected, actual)
+      );
     } catch {
       return false;
     }
@@ -61,11 +70,11 @@ export class AuthService {
   private sanitizeUser(user: any) {
     const userObj = user.toObject ? user.toObject() : user;
     const {
-      password,
-      resetOtp,
-      resetOtpExpiry,
-      resetOtpAttempts,
-      refreshTokenHash,
+      password: _password,
+      resetOtp: _resetOtp,
+      resetOtpExpiry: _resetOtpExpiry,
+      resetOtpAttempts: _resetOtpAttempts,
+      refreshTokenHash: _refreshTokenHash,
       ...safeUser
     } = userObj;
     return safeUser;
@@ -86,7 +95,7 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload);
-    
+
     const refreshExpiresIn =
       this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '30d';
 
@@ -199,13 +208,17 @@ export class AuthService {
       payload.tokenVersion < user.tokenVersion
     ) {
       throw new UnauthorizedException({
-        message: 'Phiên đăng nhập đã bị hủy do đổi mật khẩu hoặc đăng xuất toàn thiết bị',
+        message:
+          'Phiên đăng nhập đã bị hủy do đổi mật khẩu hoặc đăng xuất toàn thiết bị',
         errorCode: ErrorCode.ERR_TOKEN_REVOKED,
       });
     }
 
     // Token Reuse Detection: Check if the token hash matches the stored active hash
-    if (!user.refreshTokenHash || !this.isTokenHashValid(user.refreshTokenHash, refreshToken)) {
+    if (
+      !user.refreshTokenHash ||
+      !this.isTokenHashValid(user.refreshTokenHash, refreshToken)
+    ) {
       // SUSPECTED TOKEN REUSE ATTACK!
       // Invalidate all tokens for this user immediately for security
       user.refreshTokenHash = undefined;
@@ -213,11 +226,12 @@ export class AuthService {
       await user.save();
 
       this.logger.warn(
-        `[SECURITY WARNING] Refresh token reuse detected for user ${user.email} (ID: ${user._id}). All active sessions have been invalidated.`,
+        `[SECURITY WARNING] Refresh token reuse detected for user ${user.email} (ID: ${user._id.toString()}). All active sessions have been invalidated.`,
       );
 
       throw new UnauthorizedException({
-        message: 'Phát hiện Refresh Token đã qua sử dụng hoặc không hợp lệ (nguy cơ chiếm đoạt phiên). Tất cả phiên đăng nhập đã bị vô hiệu hóa vì lý do bảo mật!',
+        message:
+          'Phát hiện Refresh Token đã qua sử dụng hoặc không hợp lệ (nguy cơ chiếm đoạt phiên). Tất cả phiên đăng nhập đã bị vô hiệu hóa vì lý do bảo mật!',
         errorCode: ErrorCode.ERR_REFRESH_TOKEN_REUSE,
       });
     }
@@ -235,7 +249,11 @@ export class AuthService {
     };
   }
 
-  async logout(userId?: string, rawAccessToken?: string, rawRefreshToken?: string) {
+  async logout(
+    userId?: string,
+    rawAccessToken?: string,
+    rawRefreshToken?: string,
+  ) {
     // 1. Blacklist access token if provided
     if (rawAccessToken) {
       try {
@@ -255,7 +273,9 @@ export class AuthService {
       try {
         const decoded: any = this.jwtService.decode(rawRefreshToken);
         if (decoded?.sub) targetUserId = decoded.sub;
-      } catch {}
+      } catch {
+        // Invalid refresh tokens are handled by leaving targetUserId unset.
+      }
     }
 
     if (targetUserId) {
@@ -279,12 +299,16 @@ export class AuthService {
 
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
     const updateData: any = {};
-    if (updateProfileDto.fullName !== undefined) updateData.fullName = updateProfileDto.fullName;
-    if (updateProfileDto.phone !== undefined) updateData.phone = updateProfileDto.phone;
+    if (updateProfileDto.fullName !== undefined)
+      updateData.fullName = updateProfileDto.fullName;
+    if (updateProfileDto.phone !== undefined)
+      updateData.phone = updateProfileDto.phone;
 
     if (updateProfileDto.avatar) {
       if (updateProfileDto.avatar.startsWith('data:image')) {
-        const imageUrl = await this.cloudinaryService.uploadImage(updateProfileDto.avatar);
+        const imageUrl = await this.cloudinaryService.uploadImage(
+          updateProfileDto.avatar,
+        );
         updateData.avatar = imageUrl;
       } else {
         updateData.avatar = updateProfileDto.avatar;
@@ -323,7 +347,8 @@ export class AuthService {
     if (rawAccessToken) {
       try {
         const decoded: any = this.jwtService.decode(rawAccessToken);
-        if (decoded?.jti) this.tokenBlacklistService.blacklistJti(decoded.jti, decoded.exp);
+        if (decoded?.jti)
+          this.tokenBlacklistService.blacklistJti(decoded.jti, decoded.exp);
         this.tokenBlacklistService.blacklistToken(rawAccessToken, decoded?.exp);
       } catch {
         this.tokenBlacklistService.blacklistToken(rawAccessToken);
@@ -372,7 +397,9 @@ export class AuthService {
     }
 
     if (!user.resetOtp) {
-      throw new UnauthorizedException('Không tìm thấy mã OTP hoặc đã hết hạn. Vui lòng yêu cầu lại');
+      throw new UnauthorizedException(
+        'Không tìm thấy mã OTP hoặc đã hết hạn. Vui lòng yêu cầu lại',
+      );
     }
 
     const currentAttempts = user.resetOtpAttempts || 0;
@@ -381,7 +408,9 @@ export class AuthService {
       user.resetOtpExpiry = undefined;
       user.resetOtpAttempts = 0;
       await user.save();
-      throw new UnauthorizedException('Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới');
+      throw new UnauthorizedException(
+        'Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới',
+      );
     }
 
     if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
@@ -389,7 +418,9 @@ export class AuthService {
       user.resetOtpExpiry = undefined;
       user.resetOtpAttempts = 0;
       await user.save();
-      throw new UnauthorizedException('Mã OTP đã hết hạn. Vui lòng yêu cầu mã OTP mới');
+      throw new UnauthorizedException(
+        'Mã OTP đã hết hạn. Vui lòng yêu cầu mã OTP mới',
+      );
     }
 
     if (!this.isOtpHashValid(user.resetOtp, otp)) {
@@ -399,11 +430,15 @@ export class AuthService {
         user.resetOtpExpiry = undefined;
         user.resetOtpAttempts = 0;
         await user.save();
-        throw new UnauthorizedException('Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới');
+        throw new UnauthorizedException(
+          'Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới',
+        );
       }
       await user.save();
       const remaining = 5 - user.resetOtpAttempts;
-      throw new UnauthorizedException(`Mã OTP không đúng. Bạn còn ${remaining} lần thử`);
+      throw new UnauthorizedException(
+        `Mã OTP không đúng. Bạn còn ${remaining} lần thử`,
+      );
     }
 
     const resetToken = this.jwtService.sign(
@@ -426,11 +461,19 @@ export class AuthService {
       try {
         payload = await this.jwtService.verifyAsync(resetToken);
       } catch {
-        throw new UnauthorizedException('Mã token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn');
+        throw new UnauthorizedException(
+          'Mã token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn',
+        );
       }
 
-      if (!payload || payload.type !== 'RESET_PASSWORD' || payload.email !== email.toLowerCase()) {
-        throw new UnauthorizedException('Mã token đặt lại mật khẩu không hợp lệ');
+      if (
+        !payload ||
+        payload.type !== 'RESET_PASSWORD' ||
+        payload.email !== email.toLowerCase()
+      ) {
+        throw new UnauthorizedException(
+          'Mã token đặt lại mật khẩu không hợp lệ',
+        );
       }
     } else if (otp) {
       if (!user.resetOtp) {
@@ -443,7 +486,9 @@ export class AuthService {
         user.resetOtpExpiry = undefined;
         user.resetOtpAttempts = 0;
         await user.save();
-        throw new UnauthorizedException('Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới');
+        throw new UnauthorizedException(
+          'Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới',
+        );
       }
 
       if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
@@ -461,14 +506,20 @@ export class AuthService {
           user.resetOtpExpiry = undefined;
           user.resetOtpAttempts = 0;
           await user.save();
-          throw new UnauthorizedException('Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới');
+          throw new UnauthorizedException(
+            'Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới',
+          );
         }
         await user.save();
         const remaining = 5 - user.resetOtpAttempts;
-        throw new UnauthorizedException(`Mã OTP không đúng. Bạn còn ${remaining} lần thử`);
+        throw new UnauthorizedException(
+          `Mã OTP không đúng. Bạn còn ${remaining} lần thử`,
+        );
       }
     } else {
-      throw new UnauthorizedException('Vui lòng cung cấp mã OTP hoặc resetToken để đặt lại mật khẩu');
+      throw new UnauthorizedException(
+        'Vui lòng cung cấp mã OTP hoặc resetToken để đặt lại mật khẩu',
+      );
     }
 
     // Update password

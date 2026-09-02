@@ -9,7 +9,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AddressesService } from './addresses.service';
 import { CreateAddressDto, UpdateAddressDto } from './dto/address.dto';
@@ -25,14 +30,23 @@ export class AddressesController {
   @Post()
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({ summary: 'Tạo địa chỉ giao hàng mới' })
-  @ApiResponse({ status: 201, description: 'Địa chỉ giao hàng được tạo thành công' })
-  async create(@CurrentUser('_id') userId: string, @Body() dto: CreateAddressDto) {
+  @ApiResponse({
+    status: 201,
+    description: 'Địa chỉ giao hàng được tạo thành công',
+  })
+  async create(
+    @CurrentUser('_id') userId: string,
+    @Body() dto: CreateAddressDto,
+  ) {
     return this.addressesService.create(userId, dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách sổ địa chỉ của người dùng hiện tại' })
-  @ApiResponse({ status: 200, description: 'Danh sách địa chỉ giao hàng của người dùng' })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách địa chỉ giao hàng của người dùng',
+  })
   async findMyAddresses(@CurrentUser('_id') userId: string) {
     return this.addressesService.findByUser(userId);
   }
@@ -75,9 +89,14 @@ export class AddressesController {
   @Put(':id/default')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({ summary: 'Thiết lập địa chỉ làm mặc định' })
-  @ApiResponse({ status: 200, description: 'Thiết lập địa chỉ mặc định thành công' })
-  async setDefault(@CurrentUser('_id') userId: string, @Param('id') id: string) {
+  @ApiResponse({
+    status: 200,
+    description: 'Thiết lập địa chỉ mặc định thành công',
+  })
+  async setDefault(
+    @CurrentUser('_id') userId: string,
+    @Param('id') id: string,
+  ) {
     return this.addressesService.setDefault(id, userId);
   }
 }
-

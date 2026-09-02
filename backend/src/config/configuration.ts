@@ -6,7 +6,8 @@ export default () => ({
   },
   jwt: {
     secret: process.env.JWT_SECRET,
-    expiresIn: process.env.JWT_EXPIRES_IN || process.env.JWT_EXPIRATION || '15m',
+    expiresIn:
+      process.env.JWT_EXPIRES_IN || process.env.JWT_EXPIRATION || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
   },
   cors: {
@@ -14,7 +15,9 @@ export default () => ({
   },
   cookie: {
     sameSite: process.env.COOKIE_SAME_SITE || 'lax',
-    secure: process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production',
+    secure:
+      process.env.COOKIE_SECURE === 'true' ||
+      process.env.NODE_ENV === 'production',
   },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
@@ -32,6 +35,8 @@ export default () => ({
     port: parseInt(process.env.EMAIL_PORT || '587', 10),
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
-    from: process.env.EMAIL_FROM || '"Trường Thành Bookstore" <no-reply@truongthanh.vn>',
+    from:
+      process.env.EMAIL_FROM ||
+      '"Trường Thành Bookstore" <no-reply@truongthanh.vn>',
   },
 });

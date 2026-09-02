@@ -14,10 +14,9 @@ export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<(UserRole | string)[]>(
-      ROLES_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const requiredRoles = this.reflector.getAllAndOverride<
+      (UserRole | string)[]
+    >(ROLES_KEY, [context.getHandler(), context.getClass()]);
 
     // If no roles specified, allow access
     if (!requiredRoles || requiredRoles.length === 0) {
@@ -68,7 +67,7 @@ export class RolesGuard implements CanActivate {
     }
 
     // Direct match check (e.g. for CUSTOMER or exact match)
-    if (requiredRoles.some((role) => role === userRole)) {
+    if (requiredRoles.some((role) => String(role) === String(userRole))) {
       return true;
     }
 

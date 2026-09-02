@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { OrdersService } from '../src/modules/orders/orders.service';
 import { ProductsService } from '../src/modules/products/products.service';
 import { CategoriesService } from '../src/modules/categories/categories.service';
@@ -80,7 +84,11 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E INTEGRATION FLOW SUITE', (
     paymentStatus: PaymentStatus.PENDING,
     orderStatus: OrderStatus.PENDING,
     timeline: [
-      { status: OrderStatus.PENDING, note: 'Đơn hàng vừa được khởi tạo', createdAt: new Date() },
+      {
+        status: OrderStatus.PENDING,
+        note: 'Đơn hàng vừa được khởi tạo',
+        createdAt: new Date(),
+      },
     ],
   };
 
@@ -92,8 +100,18 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E INTEGRATION FLOW SUITE', (
     it('should maintain Default Address Invariant on creation, update and soft delete', () => {
       // 1. First address created is automatically default
       const addresses = [
-        { _id: 'addr-1', user: mockUser._id, isDefault: true, isDeleted: false },
-        { _id: 'addr-2', user: mockUser._id, isDefault: false, isDeleted: false },
+        {
+          _id: 'addr-1',
+          user: mockUser._id,
+          isDefault: true,
+          isDeleted: false,
+        },
+        {
+          _id: 'addr-2',
+          user: mockUser._id,
+          isDefault: false,
+          isDeleted: false,
+        },
       ];
 
       expect(addresses.filter((a) => a.isDefault).length).toBe(1);
@@ -200,7 +218,9 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E INTEGRATION FLOW SUITE', (
             for (const deducted of deductedItems) {
               stockDatabase[deducted.product] += deducted.quantity;
             }
-            throw new BadRequestException(`Sản phẩm ${item.product} không đủ tồn kho`);
+            throw new BadRequestException(
+              `Sản phẩm ${item.product} không đủ tồn kho`,
+            );
           }
         }
       };
@@ -216,7 +236,10 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E INTEGRATION FLOW SUITE', (
     it('should follow strict state machine: PENDING -> CONFIRMED -> PROCESSING -> SHIPPING -> DELIVERED', () => {
       const allowedTransitions: Partial<Record<OrderStatus, OrderStatus[]>> = {
         [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
-        [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
+        [OrderStatus.CONFIRMED]: [
+          OrderStatus.PROCESSING,
+          OrderStatus.CANCELLED,
+        ],
         [OrderStatus.PROCESSING]: [OrderStatus.SHIPPING, OrderStatus.CANCELLED],
         [OrderStatus.SHIPPING]: [OrderStatus.DELIVERED, OrderStatus.RETURNED],
         [OrderStatus.DELIVERED]: [OrderStatus.RETURNED],
@@ -229,19 +252,39 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E INTEGRATION FLOW SUITE', (
         return allowedTransitions[from]?.includes(to) ?? false;
       };
 
-      expect(isValidTransition(OrderStatus.PENDING, OrderStatus.CONFIRMED)).toBe(true);
-      expect(isValidTransition(OrderStatus.CONFIRMED, OrderStatus.PROCESSING)).toBe(true);
-      expect(isValidTransition(OrderStatus.PROCESSING, OrderStatus.SHIPPING)).toBe(true);
-      expect(isValidTransition(OrderStatus.SHIPPING, OrderStatus.DELIVERED)).toBe(true);
+      expect(
+        isValidTransition(OrderStatus.PENDING, OrderStatus.CONFIRMED),
+      ).toBe(true);
+      expect(
+        isValidTransition(OrderStatus.CONFIRMED, OrderStatus.PROCESSING),
+      ).toBe(true);
+      expect(
+        isValidTransition(OrderStatus.PROCESSING, OrderStatus.SHIPPING),
+      ).toBe(true);
+      expect(
+        isValidTransition(OrderStatus.SHIPPING, OrderStatus.DELIVERED),
+      ).toBe(true);
       // Illegal jumps
-      expect(isValidTransition(OrderStatus.PENDING, OrderStatus.DELIVERED)).toBe(false);
-      expect(isValidTransition(OrderStatus.DELIVERED, OrderStatus.PENDING)).toBe(false);
+      expect(
+        isValidTransition(OrderStatus.PENDING, OrderStatus.DELIVERED),
+      ).toBe(false);
+      expect(
+        isValidTransition(OrderStatus.DELIVERED, OrderStatus.PENDING),
+      ).toBe(false);
     });
 
     it('should allow verified purchase reviews only for delivered orders', () => {
       const userOrders = [
-        { customer: mockUser._id, orderStatus: OrderStatus.PENDING, items: [{ product: mockProduct._id }] },
-        { customer: mockUser._id, orderStatus: OrderStatus.DELIVERED, items: [{ product: 'prod-verified' }] },
+        {
+          customer: mockUser._id,
+          orderStatus: OrderStatus.PENDING,
+          items: [{ product: mockProduct._id }],
+        },
+        {
+          customer: mockUser._id,
+          orderStatus: OrderStatus.DELIVERED,
+          items: [{ product: 'prod-verified' }],
+        },
       ];
 
       const canReviewProduct = (userId: string, productId: string) => {

@@ -38,9 +38,17 @@ const INSECURE_DEFAULT_SECRETS = [
   'changeme',
 ];
 
+const SUPPORTED_PAYMENT_METHODS = new Set([
+  'COD',
+  'BANK_TRANSFER',
+  'VNPAY',
+  'MOMO',
+]);
+
 export class EnvironmentVariables {
   @IsEnum(Environment, {
-    message: 'NODE_ENV phải là một trong các giá trị: development, production, test, provision',
+    message:
+      'NODE_ENV phải là một trong các giá trị: development, production, test, provision',
   })
   @IsOptional()
   NODE_ENV: Environment = Environment.DEVELOPMENT;
@@ -53,15 +61,25 @@ export class EnvironmentVariables {
   PORT: number = 3000;
 
   @IsString({ message: 'MONGODB_URI phải là một chuỗi kết nối hợp lệ' })
-  @IsNotEmpty({ message: 'MONGODB_URI là biến môi trường bắt buộc (không được để trống)' })
+  @IsNotEmpty({
+    message: 'MONGODB_URI là biến môi trường bắt buộc (không được để trống)',
+  })
   MONGODB_URI: string;
 
   @IsString({ message: 'JWT_SECRET phải là một chuỗi ký tự hợp lệ' })
-  @IsNotEmpty({ message: 'JWT_SECRET là biến môi trường bắt buộc (không được để trống)' })
-  @MinLength(16, { message: 'JWT_SECRET phải có độ dài tối thiểu ít nhất 16 ký tự để đảm bảo an toàn' })
+  @IsNotEmpty({
+    message: 'JWT_SECRET là biến môi trường bắt buộc (không được để trống)',
+  })
+  @MinLength(16, {
+    message:
+      'JWT_SECRET phải có độ dài tối thiểu ít nhất 16 ký tự để đảm bảo an toàn',
+  })
   JWT_SECRET: string;
 
-  @IsString({ message: 'JWT_EXPIRES_IN phải là định dạng chuỗi thời gian hợp lệ (ví dụ: 7d, 24h, 3600s)' })
+  @IsString({
+    message:
+      'JWT_EXPIRES_IN phải là định dạng chuỗi thời gian hợp lệ (ví dụ: 7d, 24h, 3600s)',
+  })
   @IsOptional()
   JWT_EXPIRES_IN: string = '15m';
 
@@ -79,7 +97,6 @@ export class EnvironmentVariables {
   @IsOptional()
   COOKIE_SAME_SITE?: CookieSameSite = CookieSameSite.LAX;
 
-  @Type(() => Boolean)
   @IsBoolean({ message: 'COOKIE_SECURE phải là boolean (true/false)' })
   @IsOptional()
   COOKIE_SECURE?: boolean;
@@ -195,7 +212,9 @@ export class EnvironmentVariables {
  * Throws a formatted descriptive Error if validation fails or if insecure secrets
  * are detected in production environment.
  */
-export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {
+export function validateEnv(
+  config: Record<string, unknown>,
+): EnvironmentVariables {
   // Support aliases: e.g. MONGO_URI -> MONGODB_URI, JWT_EXPIRATION -> JWT_EXPIRES_IN
   const normalizedConfig: Record<string, unknown> = { ...config };
   if (!normalizedConfig.MONGODB_URI && normalizedConfig.MONGO_URI) {
@@ -205,12 +224,24 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
     normalizedConfig.JWT_EXPIRES_IN = normalizedConfig.JWT_EXPIRATION;
   }
   if (typeof normalizedConfig.COOKIE_SAME_SITE === 'string') {
-    normalizedConfig.COOKIE_SAME_SITE = (normalizedConfig.COOKIE_SAME_SITE as string).toLowerCase();
+    normalizedConfig.COOKIE_SAME_SITE =
+      normalizedConfig.COOKIE_SAME_SITE.toLowerCase();
+  }
+  if (typeof normalizedConfig.COOKIE_SECURE === 'string') {
+    const rawCookieSecure = normalizedConfig.COOKIE_SECURE.trim().toLowerCase();
+    if (rawCookieSecure !== 'true' && rawCookieSecure !== 'false') {
+      throw new Error('COOKIE_SECURE must be either true or false');
+    }
+    normalizedConfig.COOKIE_SECURE = rawCookieSecure === 'true';
   }
 
-  const validatedConfig = plainToInstance(EnvironmentVariables, normalizedConfig, {
-    enableImplicitConversion: true,
-  });
+  const validatedConfig = plainToInstance(
+    EnvironmentVariables,
+    normalizedConfig,
+    {
+      enableImplicitConversion: true,
+    },
+  );
 
   const errors = validateSync(validatedConfig, {
     skipMissingProperties: false,
@@ -220,18 +251,20 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
   if (errors.length > 0) {
     const errorDetails = errors
       .map((err) => {
-        const constraints = err.constraints ? Object.values(err.constraints).join(', ') : 'Giá trị không hợp lệ';
+        const constraints = err.constraints
+          ? Object.values(err.constraints).join(', ')
+          : 'Giá trị không hợp lệ';
         return `  - [${err.property}]: ${constraints} (Giá trị nhận được: "${err.value}")`;
       })
       .join('\n');
 
     throw new Error(
       `\n========================================================================\n` +
-      `❌ LỖI CẤU HÌNH BIẾN MÔI TRƯỜNG (.env):\n` +
-      `Ứng dụng không thể khởi động do các biến môi trường không thỏa mãn schema:\n\n` +
-      `${errorDetails}\n\n` +
-      `👉 Vui lòng kiểm tra file .env hoặc tham khảo .env.example để cấu hình đầy đủ!\n` +
-      `========================================================================\n`
+        `❌ LỖI CẤU HÌNH BIẾN MÔI TRƯỜNG (.env):\n` +
+        `Ứng dụng không thể khởi động do các biến môi trường không thỏa mãn schema:\n\n` +
+        `${errorDetails}\n\n` +
+        `👉 Vui lòng kiểm tra file .env hoặc tham khảo .env.example để cấu hình đầy đủ!\n` +
+        `========================================================================\n`,
     );
   }
 
@@ -239,33 +272,93 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
   if (validatedConfig.NODE_ENV === Environment.PRODUCTION) {
     const secret = validatedConfig.JWT_SECRET;
     const isWeakSecret = INSECURE_DEFAULT_SECRETS.some(
-      (insecure) => secret.toLowerCase() === insecure.toLowerCase()
+      (insecure) => secret.toLowerCase() === insecure.toLowerCase(),
     );
 
     if (isWeakSecret || secret.length < 32) {
       throw new Error(
         `\n========================================================================\n` +
-        `🚨 CẢNH BÁO BẢO MẬT NGHIÊM TRỌNG (PRODUCTION ENVIRONMENT):\n` +
-        `JWT_SECRET đang sử dụng giá trị mặc định không an toàn hoặc độ dài nhỏ hơn 32 ký tự!\n` +
-        `Ở môi trường Production, bắt buộc phải sinh một chuỗi ngẫu nhiên có độ dài >= 32 ký tự.\n` +
-        `Gợi ý tạo khóa an toàn trên terminal: openssl rand -base64 32\n` +
-        `========================================================================\n`
+          `🚨 CẢNH BÁO BẢO MẬT NGHIÊM TRỌNG (PRODUCTION ENVIRONMENT):\n` +
+          `JWT_SECRET đang sử dụng giá trị mặc định không an toàn hoặc độ dài nhỏ hơn 32 ký tự!\n` +
+          `Ở môi trường Production, bắt buộc phải sinh một chuỗi ngẫu nhiên có độ dài >= 32 ký tự.\n` +
+          `Gợi ý tạo khóa an toàn trên terminal: openssl rand -base64 32\n` +
+          `========================================================================\n`,
+      );
+    }
+
+    if (validatedConfig.COOKIE_SECURE !== true) {
+      throw new Error('COOKIE_SECURE=true is required in production');
+    }
+
+    const frontendUrls = validatedConfig.FRONTEND_URL.split(',').map((url) =>
+      url.trim(),
+    );
+    if (
+      frontendUrls.some((url) => {
+        try {
+          return new URL(url).protocol !== 'https:';
+        } catch {
+          return true;
+        }
+      })
+    ) {
+      throw new Error(
+        'Every FRONTEND_URL entry must be a valid HTTPS URL in production',
+      );
+    }
+
+    if (
+      validatedConfig.AUTO_SEED?.toLowerCase() === 'true' ||
+      validatedConfig.RESET_DATABASE_ON_SEED?.toLowerCase() === 'true'
+    ) {
+      throw new Error(
+        'AUTO_SEED and RESET_DATABASE_ON_SEED must be false in production',
       );
     }
   }
 
+  if (
+    validatedConfig.COOKIE_SAME_SITE === CookieSameSite.NONE &&
+    validatedConfig.COOKIE_SECURE !== true
+  ) {
+    throw new Error('COOKIE_SAME_SITE=none requires COOKIE_SECURE=true');
+  }
+
   const enabledPayments = (validatedConfig.ENABLED_PAYMENT_METHODS || 'COD')
     .split(',')
-    .map((value) => value.trim().toUpperCase());
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean);
   const paymentErrors: string[] = [];
-  if (enabledPayments.includes('VNPAY') && (!validatedConfig.VNPAY_PAYMENT_URL || !validatedConfig.VNPAY_HASH_SECRET)) {
+  const unsupportedPayments = enabledPayments.filter(
+    (method) => !SUPPORTED_PAYMENT_METHODS.has(method),
+  );
+  if (unsupportedPayments.length) {
+    throw new Error(
+      `Unsupported ENABLED_PAYMENT_METHODS value(s): ${unsupportedPayments.join(', ')}`,
+    );
+  }
+  if (
+    enabledPayments.includes('BANK_TRANSFER') &&
+    (!validatedConfig.BANK_NAME || !validatedConfig.BANK_ACCOUNT_NUMBER)
+  ) {
+    paymentErrors.push('BANK_NAME vÃ  BANK_ACCOUNT_NUMBER');
+  }
+  if (
+    enabledPayments.includes('VNPAY') &&
+    (!validatedConfig.VNPAY_PAYMENT_URL || !validatedConfig.VNPAY_HASH_SECRET)
+  ) {
     paymentErrors.push('VNPAY_PAYMENT_URL và VNPAY_HASH_SECRET');
   }
-  if (enabledPayments.includes('MOMO') && (!validatedConfig.MOMO_PAYMENT_URL || !validatedConfig.MOMO_SECRET_KEY)) {
+  if (
+    enabledPayments.includes('MOMO') &&
+    (!validatedConfig.MOMO_PAYMENT_URL || !validatedConfig.MOMO_SECRET_KEY)
+  ) {
     paymentErrors.push('MOMO_PAYMENT_URL và MOMO_SECRET_KEY');
   }
   if (paymentErrors.length) {
-    throw new Error(`Thiếu cấu hình cho cổng thanh toán đã bật: ${paymentErrors.join('; ')}`);
+    throw new Error(
+      `Thiếu cấu hình cho cổng thanh toán đã bật: ${paymentErrors.join('; ')}`,
+    );
   }
 
   return validatedConfig;

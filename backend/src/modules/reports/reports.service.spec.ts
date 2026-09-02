@@ -27,9 +27,11 @@ describe('ReportsService', () => {
           createdAt: new Date(),
         },
       ]),
-      getRevenueByDateRange: jest.fn().mockResolvedValue([
-        { _id: '2026-08-30', totalRevenue: 1500000, orderCount: 3 },
-      ]),
+      getRevenueByDateRange: jest
+        .fn()
+        .mockResolvedValue([
+          { _id: '2026-08-30', totalRevenue: 1500000, orderCount: 3 },
+        ]),
       getStatusDistribution: jest.fn().mockResolvedValue({
         [OrderStatus.PENDING]: 5,
         [OrderStatus.CONFIRMED]: 10,
@@ -74,9 +76,9 @@ describe('ReportsService', () => {
           createdAt: new Date(),
         },
       ]),
-      getCustomerGrowth: jest.fn().mockResolvedValue([
-        { _id: '2026-08-30', count: 5 },
-      ]),
+      getCustomerGrowth: jest
+        .fn()
+        .mockResolvedValue([{ _id: '2026-08-30', count: 5 }]),
     };
 
     const module: TestingModule = await Test.createTestingModule({

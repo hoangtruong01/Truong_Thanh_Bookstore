@@ -34,11 +34,21 @@ jobs:
       - name: 🔍 Lint & Code Style Check
         run: npm run lint
 
+      - name: Start MongoDB replica set for E2E
+        run: |
+          docker run --detach --name truongthanh-e2e-mongodb --publish 27017:27017 mongo:7.0-jammy mongod --replSet rs0 --bind_ip_all
+          until docker exec truongthanh-e2e-mongodb mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep -q 1; do sleep 2; done
+          docker exec truongthanh-e2e-mongodb mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+          until docker exec truongthanh-e2e-mongodb mongosh --quiet --eval 'db.hello().isWritablePrimary' | grep -q true; do sleep 2; done
+
       - name: 🧪 Run Unit & Integration Tests
         run: |
-          npm test
-          npx jest --rootDir . test/all-fixes.spec.ts
-          npx jest --rootDir . test/e2e-flow.spec.ts
+          npm test -- --runInBand
+          npx jest --rootDir . test/all-fixes.spec.ts test/e2e-flow.spec.ts test/critical-commerce-regression.spec.ts --runInBand --detectOpenHandles
+          npm run test:e2e -- --runInBand --detectOpenHandles
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/truongthanh_e2e?replicaSet=rs0&directConnection=true
+          JWT_SECRET: ci-only-jwt-secret-at-least-32-characters
 
       - name: 🏗️ Build Backend Production Bundle
         run: npm run build

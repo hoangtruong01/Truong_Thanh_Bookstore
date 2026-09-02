@@ -1,22 +1,36 @@
-import { IsNotEmpty, IsString, IsNumber, IsEnum, IsOptional, Min } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsNumber,
+  IsEnum,
+  IsOptional,
+  Min,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaymentMethod, PaymentStatus } from '../../../common/enums';
 import { IsMongoObjectId } from '../../../common/validators';
 
 export class CreatePaymentDto {
-  @ApiProperty({ description: 'ID đơn hàng', example: '507f1f77bcf86cd799439011' })
+  @ApiProperty({
+    description: 'ID đơn hàng',
+    example: '507f1f77bcf86cd799439011',
+  })
   @IsNotEmpty({ message: 'orderId không được để trống' })
   @IsMongoObjectId({ message: 'orderId phải là ObjectId hợp lệ' })
   orderId: string;
 
-  @ApiPropertyOptional({ description: 'Mã đơn hàng để đối chiếu; server vẫn lấy giá trị thật từ DB' })
+  @ApiPropertyOptional({
+    description: 'Mã đơn hàng để đối chiếu; server vẫn lấy giá trị thật từ DB',
+  })
   @IsOptional()
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   orderCode?: string;
 
-  @ApiPropertyOptional({ description: 'Số tiền để đối chiếu; server không tin cậy giá trị client' })
+  @ApiPropertyOptional({
+    description: 'Số tiền để đối chiếu; server không tin cậy giá trị client',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsNumber({}, { message: 'amount phải là số' })
@@ -46,7 +60,9 @@ export class PaymentCallbackDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   transactionId: string;
 
-  @ApiPropertyOptional({ description: 'Mã yêu cầu do hệ thống sinh khi khởi tạo thanh toán' })
+  @ApiPropertyOptional({
+    description: 'Mã yêu cầu do hệ thống sinh khi khởi tạo thanh toán',
+  })
   @IsOptional()
   @IsString()
   providerReference?: string;

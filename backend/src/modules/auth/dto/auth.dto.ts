@@ -20,7 +20,9 @@ export class RegisterDto {
   @ApiProperty({ example: 'user@example.com' })
   @IsNotEmpty({ message: 'Email không được để trống' })
   @IsEmail({}, { message: 'Email không đúng định dạng' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   email: string;
 
   @ApiProperty({ example: 'Password@123' })
@@ -42,7 +44,9 @@ export class LoginDto {
   @ApiProperty({ example: 'admin@truongthanh.vn' })
   @IsNotEmpty({ message: 'Email không được để trống' })
   @IsEmail({}, { message: 'Email không đúng định dạng' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   email: string;
 
   @ApiProperty({ example: 'Admin@123456' })
@@ -78,7 +82,8 @@ export class ChangePasswordDto {
   @IsNotEmpty({ message: 'Mật khẩu mới không được để trống' })
   @MinLength(8, { message: 'Mật khẩu mới phải có ít nhất 8 ký tự' })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
-    message: 'Mật khẩu mới phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số',
+    message:
+      'Mật khẩu mới phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số',
   })
   newPassword: string;
 }
@@ -87,7 +92,9 @@ export class ForgotPasswordDto {
   @ApiProperty({ example: 'user@example.com' })
   @IsNotEmpty({ message: 'Email không được để trống' })
   @IsEmail({}, { message: 'Email không đúng định dạng' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   email: string;
 }
 
@@ -95,7 +102,9 @@ export class VerifyOtpDto {
   @ApiProperty({ example: 'user@example.com' })
   @IsNotEmpty({ message: 'Email không được để trống' })
   @IsEmail({}, { message: 'Email không đúng định dạng' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   email: string;
 
   @ApiProperty({ example: '123456' })
@@ -115,7 +124,9 @@ export class ResetPasswordDto {
   @ApiProperty({ example: 'user@example.com' })
   @IsNotEmpty({ message: 'Email không được để trống' })
   @IsEmail({}, { message: 'Email không đúng định dạng' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   email: string;
 
   @ApiPropertyOptional({ example: '123456' })
@@ -132,7 +143,8 @@ export class ResetPasswordDto {
   @IsNotEmpty({ message: 'Mật khẩu mới không được để trống' })
   @MinLength(8, { message: 'Mật khẩu mới phải có ít nhất 8 ký tự' })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
-    message: 'Mật khẩu mới phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số',
+    message:
+      'Mật khẩu mới phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số',
   })
   newPassword: string;
 }

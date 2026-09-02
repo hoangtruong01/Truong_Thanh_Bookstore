@@ -29,7 +29,9 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
   const mockOrderModel = function (this: any, dto: any) {
     this.data = dto;
-    this.save = jest.fn().mockResolvedValue({ _id: 'order123', orderCode: 'TT123456', ...dto });
+    this.save = jest
+      .fn()
+      .mockResolvedValue({ _id: 'order123', orderCode: 'TT123456', ...dto });
   };
   mockOrderModel.find = jest.fn();
   mockOrderModel.findOne = jest.fn();
@@ -99,7 +101,9 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       );
 
       const createDto: any = {
-        items: [{ product: mockProduct._id, name: mockProduct.name, quantity: 5 }],
+        items: [
+          { product: mockProduct._id, name: mockProduct.name, quantity: 5 },
+        ],
         shippingAddress: '123 Nguyễn Huệ, Q1, HCM',
         phone: '0901234567',
         paymentMethod: 'COD',
@@ -107,8 +111,13 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
         customerEmail: 'a@example.com',
       };
 
-      await expect(ordersService.create(createDto)).rejects.toThrow(BadRequestException);
-      expect(mockProductsService.deductStock).toHaveBeenCalledWith(mockProduct._id, 5);
+      await expect(ordersService.create(createDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockProductsService.deductStock).toHaveBeenCalledWith(
+        mockProduct._id,
+        5,
+      );
     });
   });
 
@@ -118,7 +127,9 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       mockProductsService.incrementSold.mockResolvedValue(undefined);
 
       const createDto: any = {
-        items: [{ product: mockProduct._id, name: mockProduct.name, quantity: 10 }], // 50,000 VND
+        items: [
+          { product: mockProduct._id, name: mockProduct.name, quantity: 10 },
+        ], // 50,000 VND
         shippingAddress: '123 Nguyễn Huệ, Q1, HCM',
         phone: '0901234567',
         paymentMethod: 'COD',
@@ -140,7 +151,13 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       mockProductsService.findByIds.mockResolvedValueOnce([expensiveProduct]);
 
       const createDto: any = {
-        items: [{ product: expensiveProduct._id, name: expensiveProduct.name, quantity: 1 }], // 300,000 VND
+        items: [
+          {
+            product: expensiveProduct._id,
+            name: expensiveProduct.name,
+            quantity: 1,
+          },
+        ], // 300,000 VND
         shippingAddress: '123 Nguyễn Huệ, Q1, HCM',
         phone: '0901234567',
         paymentMethod: 'COD',
@@ -209,7 +226,9 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       mockProductsService.incrementSold.mockResolvedValue(undefined);
 
       const createDto: any = {
-        items: [{ product: mockProduct._id, name: mockProduct.name, quantity: 10 }], // 50,000 VND
+        items: [
+          { product: mockProduct._id, name: mockProduct.name, quantity: 10 },
+        ], // 50,000 VND
         shippingAddress: '123 Nguyễn Huệ, Q1, HCM',
         phone: '0901234567',
         paymentMethod: 'COD',
@@ -219,7 +238,10 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
       const result = await ordersService.create(createDto, 'user123'); // authenticated user
       expect(result.total).toBe(80000); // 50k + 30k ship
-      expect(mockUsersService.addLoyaltyPoints).toHaveBeenCalledWith('user123', 80);
+      expect(mockUsersService.addLoyaltyPoints).toHaveBeenCalledWith(
+        'user123',
+        80,
+      );
     });
 
     it('should deduct points when order status transitions to CANCELLED', async () => {
@@ -233,7 +255,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
         timeline: [],
         save: jest.fn().mockResolvedValue(true),
       };
-      
+
       mockOrderModel.findById = jest.fn().mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockOrder),
       });

@@ -10,8 +10,14 @@ import * as ExcelJS from 'exceljs';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { Review, ReviewDocument } from './schemas/review.schema';
 import { StockAlert, StockAlertDocument } from './schemas/stock-alert.schema';
-import { Category, CategoryDocument } from '../categories/schemas/category.schema';
-import { Inventory, InventoryDocument } from '../inventory/schemas/inventory.schema';
+import {
+  Category,
+  CategoryDocument,
+} from '../categories/schemas/category.schema';
+import {
+  Inventory,
+  InventoryDocument,
+} from '../inventory/schemas/inventory.schema';
 import { EmailService } from '../email/email.service';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -52,9 +58,11 @@ export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Review.name) private reviewModel: Model<ReviewDocument>,
-    @InjectModel(StockAlert.name) private stockAlertModel: Model<StockAlertDocument>,
+    @InjectModel(StockAlert.name)
+    private stockAlertModel: Model<StockAlertDocument>,
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
-    @InjectModel(Inventory.name) private inventoryModel: Model<InventoryDocument>,
+    @InjectModel(Inventory.name)
+    private inventoryModel: Model<InventoryDocument>,
     private emailService: EmailService,
     private configService: ConfigService,
   ) {}
@@ -79,7 +87,10 @@ export class ProductsService {
       if (cell.text !== undefined) return String(cell.text).trim();
       if (cell.result !== undefined) return String(cell.result).trim();
       if (cell.richText && Array.isArray(cell.richText)) {
-        return cell.richText.map((r: any) => r.text || '').join('').trim();
+        return cell.richText
+          .map((r: any) => r.text || '')
+          .join('')
+          .trim();
       }
       if (cell.hyperlink !== undefined) return String(cell.hyperlink).trim();
       if (cell.error !== undefined) return '';
@@ -112,7 +123,10 @@ export class ProductsService {
         lastUpdated: new Date(),
       });
     } catch (err) {
-      this.logger.error('Failed to auto-create inventory for new product:', err);
+      this.logger.error(
+        'Failed to auto-create inventory for new product:',
+        err,
+      );
     }
 
     return savedProduct;
@@ -168,7 +182,7 @@ export class ProductsService {
           ...subCategories.map((c) => c._id.toString()),
         ];
         filter.category = { $in: categoryIds };
-      } catch (err) {
+      } catch {
         filter.category = category;
       }
     }
@@ -202,7 +216,10 @@ export class ProductsService {
     }
 
     if (isbn) {
-      const safeIsbn = isbn.trim().substring(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const safeIsbn = isbn
+        .trim()
+        .substring(0, 50)
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.isbn = { $regex: safeIsbn, $options: 'i' };
     }
 
@@ -212,10 +229,18 @@ export class ProductsService {
 
     if (minPrice !== undefined || maxPrice !== undefined) {
       filter.price = {};
-      if (minPrice !== undefined && minPrice !== null && !isNaN(Number(minPrice))) {
+      if (
+        minPrice !== undefined &&
+        minPrice !== null &&
+        !isNaN(Number(minPrice))
+      ) {
         filter.price.$gte = Number(minPrice);
       }
-      if (maxPrice !== undefined && maxPrice !== null && !isNaN(Number(maxPrice))) {
+      if (
+        maxPrice !== undefined &&
+        maxPrice !== null &&
+        !isNaN(Number(maxPrice))
+      ) {
         filter.price.$lte = Number(maxPrice);
       }
     }
@@ -330,7 +355,9 @@ export class ProductsService {
 
   async findByIds(ids: string[]): Promise<ProductDocument[]> {
     const objectIds = ids.map((id) => new Types.ObjectId(id));
-    return this.productModel.find({ _id: { $in: objectIds }, isDeleted: false }).exec();
+    return this.productModel
+      .find({ _id: { $in: objectIds }, isDeleted: false })
+      .exec();
   }
 
   async getRelated(id: string, limit = 8): Promise<ProductDocument[]> {
@@ -348,7 +375,8 @@ export class ProductsService {
     const conditions: any[] = [];
     if (currentProduct.category) {
       const catId =
-        typeof currentProduct.category === 'object' && (currentProduct.category as any)._id
+        typeof currentProduct.category === 'object' &&
+        (currentProduct.category as any)._id
           ? (currentProduct.category as any)._id
           : currentProduct.category;
       conditions.push({ category: catId });
@@ -543,7 +571,11 @@ export class ProductsService {
     return this.productModel.countDocuments({ isDeleted: false }).exec();
   }
 
-  async updateStock(id: string, quantity: number, session?: ClientSession): Promise<void> {
+  async updateStock(
+    id: string,
+    quantity: number,
+    session?: ClientSession,
+  ): Promise<void> {
     const beforeQuery = this.productModel.findById(id);
     if (session) beforeQuery.session(session);
     const productBefore = await beforeQuery.exec();
@@ -572,7 +604,7 @@ export class ProductsService {
             { upsert: true, ...(session ? { session } : {}) },
           )
           .exec();
-      } catch (err) {
+      } catch {
         // Ignore if model not registered
       }
 
@@ -608,7 +640,7 @@ export class ProductsService {
             { upsert: true },
           )
           .exec();
-      } catch (err) {
+      } catch {
         // Ignore
       }
 
@@ -622,7 +654,11 @@ export class ProductsService {
   }
 
   // FIX-C04: Safe stock deduction with atomic check
-  async deductStock(id: string, quantity: number, session?: ClientSession): Promise<void> {
+  async deductStock(
+    id: string,
+    quantity: number,
+    session?: ClientSession,
+  ): Promise<void> {
     const updated = await this.productModel
       .findOneAndUpdate(
         { _id: id, stock: { $gte: quantity } },
@@ -651,12 +687,16 @@ export class ProductsService {
           { upsert: true, ...(session ? { session } : {}) },
         )
         .exec();
-    } catch (err) {
+    } catch {
       // Ignore if model not registered
     }
   }
 
-  async incrementSold(id: string, quantity: number, session?: ClientSession): Promise<void> {
+  async incrementSold(
+    id: string,
+    quantity: number,
+    session?: ClientSession,
+  ): Promise<void> {
     await this.productModel
       .findByIdAndUpdate(
         id,
@@ -677,17 +717,19 @@ export class ProductsService {
     productId: string,
     userId: string,
     userName: string,
-    dto: { rating: number; content: string }
+    dto: { rating: number; content: string },
   ): Promise<any> {
     const product = await this.productModel.findById(productId).exec();
     if (!product) {
       throw new NotFoundException('Không tìm thấy sản phẩm');
     }
 
-    const existing = await this.reviewModel.findOne({
-      product: new Types.ObjectId(productId),
-      user: new Types.ObjectId(userId),
-    }).exec();
+    const existing = await this.reviewModel
+      .findOne({
+        product: new Types.ObjectId(productId),
+        user: new Types.ObjectId(userId),
+      })
+      .exec();
 
     let savedReview;
     if (existing) {
@@ -713,7 +755,7 @@ export class ProductsService {
     productId: string,
     reviewId: string,
     userId: string,
-    dto: { rating?: number; content?: string }
+    dto: { rating?: number; content?: string },
   ): Promise<any> {
     const review = await this.reviewModel.findById(reviewId).exec();
     if (!review) {
@@ -732,13 +774,22 @@ export class ProductsService {
     return saved;
   }
 
-  async deleteReview(productId: string, reviewId: string, userId: string, userRole: string): Promise<any> {
+  async deleteReview(
+    productId: string,
+    reviewId: string,
+    userId: string,
+    userRole: string,
+  ): Promise<any> {
     const review = await this.reviewModel.findById(reviewId).exec();
     if (!review) {
       throw new NotFoundException('Không tìm thấy đánh giá');
     }
 
-    if (review.user.toString() !== userId && userRole !== 'ADMIN' && userRole !== 'STAFF') {
+    if (
+      review.user.toString() !== userId &&
+      userRole !== 'ADMIN' &&
+      userRole !== 'STAFF'
+    ) {
       throw new BadRequestException('Bạn không có quyền xóa đánh giá này');
     }
 
@@ -748,25 +799,37 @@ export class ProductsService {
   }
 
   private async recalculateProductRating(productId: string): Promise<void> {
-    const reviews = await this.reviewModel.find({ product: new Types.ObjectId(productId) }).exec();
+    const reviews = await this.reviewModel
+      .find({ product: new Types.ObjectId(productId) })
+      .exec();
     if (reviews.length === 0) {
-      await this.productModel.findByIdAndUpdate(productId, { rating: 5 }).exec();
+      await this.productModel
+        .findByIdAndUpdate(productId, { rating: 5 })
+        .exec();
       return;
     }
     const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
     const avgRating = Math.round((sum / reviews.length) * 10) / 10;
-    await this.productModel.findByIdAndUpdate(productId, { rating: avgRating }).exec();
+    await this.productModel
+      .findByIdAndUpdate(productId, { rating: avgRating })
+      .exec();
   }
 
-  async subscribeToStockAlert(productId: string, email: string, userId?: string): Promise<boolean> {
+  async subscribeToStockAlert(
+    productId: string,
+    email: string,
+    userId?: string,
+  ): Promise<boolean> {
     const product = await this.productModel.findById(productId).exec();
     if (!product) throw new NotFoundException('Sản phẩm không tồn tại');
 
     // Check if subscription already exists
-    const existing = await this.stockAlertModel.findOne({
-      product: new Types.ObjectId(productId),
-      email: email.toLowerCase().trim(),
-    }).exec();
+    const existing = await this.stockAlertModel
+      .findOne({
+        product: new Types.ObjectId(productId),
+        email: email.toLowerCase().trim(),
+      })
+      .exec();
 
     if (existing) {
       return true; // Already subscribed
@@ -781,17 +844,24 @@ export class ProductsService {
     return true;
   }
 
-  async checkAndTriggerStockAlerts(productId: string, newStock: number): Promise<void> {
+  async checkAndTriggerStockAlerts(
+    productId: string,
+    newStock: number,
+  ): Promise<void> {
     if (newStock <= 0) return;
 
     // Fetch all alerts for this product
-    const alerts = await this.stockAlertModel.find({ product: new Types.ObjectId(productId) }).exec();
+    const alerts = await this.stockAlertModel
+      .find({ product: new Types.ObjectId(productId) })
+      .exec();
     if (alerts.length === 0) return;
 
     const product = await this.productModel.findById(productId).exec();
     if (!product) return;
 
-    this.logger.log(`🔔 Triggering back-in-stock alerts for "${product.name}" to ${alerts.length} subscribers`);
+    this.logger.log(
+      `🔔 Triggering back-in-stock alerts for "${product.name}" to ${alerts.length} subscribers`,
+    );
 
     // Trigger emails async
     for (const alert of alerts) {
@@ -803,7 +873,7 @@ export class ProductsService {
           <p>Sản phẩm mà bạn đang quan tâm: <strong>"${product.name}"</strong> hiện đã có hàng trở lại tại <strong>Trường Thành Bookstore</strong>!</p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${this.configService.get('FRONTEND_URL') || 'http://localhost:5173'}/products/${product._id}" 
+             <a href="${this.configService.get('FRONTEND_URL') || 'http://localhost:5173'}/products/${product._id.toString()}"
                style="background-color: #dc2626; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
               Mua Ngay
             </a>
@@ -817,12 +887,17 @@ export class ProductsService {
       `;
 
       this.emailService.sendMail(alert.email, subject, html).catch((err) => {
-        this.logger.error(`Failed to send stock alert email to ${alert.email}:`, err);
+        this.logger.error(
+          `Failed to send stock alert email to ${alert.email}:`,
+          err,
+        );
       });
     }
 
     // Clear alerts
-    await this.stockAlertModel.deleteMany({ product: new Types.ObjectId(productId) }).exec();
+    await this.stockAlertModel
+      .deleteMany({ product: new Types.ObjectId(productId) })
+      .exec();
   }
 
   /**
@@ -869,7 +944,11 @@ export class ProductsService {
         color: { argb: 'FFFFFFFF' },
         size: 11,
       };
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: 'center',
+        wrapText: true,
+      };
       cell.border = {
         top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
         left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
@@ -895,8 +974,10 @@ export class ProductsService {
         brand: 'Thiên Long',
         status: 'Đang bán',
         isFeatured: 'Có',
-        images: 'https://res.cloudinary.com/truongthanh/image/upload/sample_but_tl027.jpg',
-        description: 'Bút bi đầu bấm 0.5mm êm trơn, mực đậm rõ nét, thích hợp học sinh và văn phòng.',
+        images:
+          'https://res.cloudinary.com/truongthanh/image/upload/sample_but_tl027.jpg',
+        description:
+          'Bút bi đầu bấm 0.5mm êm trơn, mực đậm rõ nét, thích hợp học sinh và văn phòng.',
       },
       {
         name: 'Sách Đắc Nhân Tâm (Khổ Lớn - Bìa Mềm)',
@@ -910,7 +991,8 @@ export class ProductsService {
         status: 'Đang bán',
         isFeatured: 'Có',
         images: '',
-        description: 'Cuốn sách nghệ thuật ứng xử kinh điển được hàng triệu độc giả yêu thích.',
+        description:
+          'Cuốn sách nghệ thuật ứng xử kinh điển được hàng triệu độc giả yêu thích.',
       },
     ];
 
@@ -951,7 +1033,12 @@ export class ProductsService {
         pattern: 'solid',
         fgColor: { argb: 'FF2563EB' }, // Màu xanh dương
       };
-      cell.font = { name: 'Segoe UI', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.font = {
+        name: 'Segoe UI',
+        bold: true,
+        color: { argb: 'FFFFFFFF' },
+        size: 11,
+      };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
 
@@ -995,7 +1082,12 @@ export class ProductsService {
         pattern: 'solid',
         fgColor: { argb: 'FF475569' }, // Màu Slate
       };
-      cell.font = { name: 'Segoe UI', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.font = {
+        name: 'Segoe UI',
+        bold: true,
+        color: { argb: 'FFFFFFFF' },
+        size: 11,
+      };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
 
@@ -1131,7 +1223,12 @@ export class ProductsService {
         pattern: 'solid',
         fgColor: { argb: 'FFDC2626' },
       };
-      cell.font = { name: 'Segoe UI', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.font = {
+        name: 'Segoe UI',
+        bold: true,
+        color: { argb: 'FFFFFFFF' },
+        size: 11,
+      };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
       cell.border = {
         top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
@@ -1154,12 +1251,16 @@ export class ProductsService {
           : 'Chưa phân loại';
 
       const statusText =
-        prod.status === ProductStatus.ACTIVE || prod.status === 'ACTIVE' || prod.status === 'active'
+        prod.status === ProductStatus.ACTIVE ||
+        prod.status === 'ACTIVE' ||
+        prod.status === 'active'
           ? 'Đang bán'
           : 'Ngừng bán';
 
       const isFeaturedText = prod.isFeatured ? 'Có' : 'Không';
-      const imagesText = Array.isArray(prod.images) ? prod.images.join(', ') : '';
+      const imagesText = Array.isArray(prod.images)
+        ? prod.images.join(', ')
+        : '';
       const createdDateText = prod.createdAt
         ? new Date(prod.createdAt).toLocaleString('vi-VN')
         : '';
@@ -1221,8 +1322,10 @@ export class ProductsService {
     const workbook = new ExcelJS.Workbook();
     try {
       await workbook.xlsx.load(buffer as any);
-    } catch (err) {
-      throw new BadRequestException('Định dạng file Excel không hợp lệ hoặc file bị hỏng.');
+    } catch {
+      throw new BadRequestException(
+        'Định dạng file Excel không hợp lệ hoặc file bị hỏng.',
+      );
     }
 
     const sheet =
@@ -1231,7 +1334,9 @@ export class ProductsService {
       workbook.worksheets[0];
 
     if (!sheet) {
-      throw new BadRequestException('Không tìm thấy Sheet dữ liệu trong file Excel.');
+      throw new BadRequestException(
+        'Không tìm thấy Sheet dữ liệu trong file Excel.',
+      );
     }
 
     const created: Array<{
@@ -1272,12 +1377,14 @@ export class ProductsService {
     }
 
     // Lấy toàn bộ danh mục hiện có
-    let existingCategories = await this.categoryModel.find().lean();
+    const existingCategories = await this.categoryModel.find().lean();
 
     // Duyệt qua từng dòng trong Excel (bắt đầu từ dòng 2 vì dòng 1 là Tiêu đề)
     const rowCount = sheet.rowCount;
     if (rowCount < 2) {
-      throw new BadRequestException('File Excel không có dòng dữ liệu sản phẩm nào.');
+      throw new BadRequestException(
+        'File Excel không có dòng dữ liệu sản phẩm nào.',
+      );
     }
 
     for (let r = 2; r <= rowCount; r++) {
@@ -1371,16 +1478,17 @@ export class ProductsService {
 
       if (categoryName) {
         const normalizedInputCat = categoryName.trim().toLowerCase();
-        let matched = existingCategories.find(
+        const matched = existingCategories.find(
           (c) =>
             c.name.trim().toLowerCase() === normalizedInputCat ||
             (c.slug && c.slug.toLowerCase() === normalizedInputCat) ||
             String(c._id) === categoryName.trim() ||
-            makeDiacriticRegex(c.name).toLowerCase() === makeDiacriticRegex(categoryName).toLowerCase()
+            makeDiacriticRegex(c.name).toLowerCase() ===
+              makeDiacriticRegex(categoryName).toLowerCase(),
         );
 
         if (matched) {
-          categoryId = matched._id as any;
+          categoryId = matched._id;
           matchedCategoryName = matched.name;
         } else {
           // Nếu danh mục chưa có trong DB, tạo danh mục mới tự động
@@ -1393,22 +1501,24 @@ export class ProductsService {
             });
             const savedCat = await newCat.save();
             existingCategories.push(savedCat.toObject());
-            categoryId = savedCat._id as any;
+            categoryId = savedCat._id;
             matchedCategoryName = savedCat.name;
           } catch {
             if (existingCategories.length > 0) {
-              categoryId = existingCategories[0]._id as any;
+              categoryId = existingCategories[0]._id;
               matchedCategoryName = existingCategories[0].name;
             }
           }
         }
       } else if (existingCategories.length > 0) {
-        categoryId = existingCategories[0]._id as any;
+        categoryId = existingCategories[0]._id;
         matchedCategoryName = existingCategories[0].name;
       }
 
       // Xử lý các trường phụ
-      const cleanDiscountStr = discountPriceRaw ? discountPriceRaw.replace(/[^0-9.-]+/g, '') : '0';
+      const cleanDiscountStr = discountPriceRaw
+        ? discountPriceRaw.replace(/[^0-9.-]+/g, '')
+        : '0';
       const discountPrice = Math.max(0, Number(cleanDiscountStr) || 0);
 
       const cleanStockStr = stockRaw ? stockRaw.replace(/[^0-9.-]+/g, '') : '0';
@@ -1484,7 +1594,10 @@ export class ProductsService {
             lastUpdated: new Date(),
           });
         } catch (invErr) {
-          this.logger.error('Lỗi khi tự động tạo kho cho sản phẩm import:', invErr);
+          this.logger.error(
+            'Lỗi khi tự động tạo kho cho sản phẩm import:',
+            invErr,
+          );
         }
 
         created.push({

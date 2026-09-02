@@ -38,7 +38,10 @@ export class CreateProductDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ description: 'Category ObjectId', example: '507f1f77bcf86cd799439011' })
+  @ApiProperty({
+    description: 'Category ObjectId',
+    example: '507f1f77bcf86cd799439011',
+  })
   @IsNotEmpty({ message: 'Danh mục không được để trống' })
   @IsMongoId({ message: 'Danh mục phải là ObjectId hợp lệ' })
   category: string;
@@ -255,17 +258,23 @@ export class ProductQueryDto extends PaginationDto {
   @IsString()
   category?: string;
 
-  @ApiPropertyOptional({ description: 'Brand filter or comma-separated list of brands' })
+  @ApiPropertyOptional({
+    description: 'Brand filter or comma-separated list of brands',
+  })
   @IsOptional()
   @IsString()
   brand?: string;
 
-  @ApiPropertyOptional({ description: 'Author filter or comma-separated list of authors' })
+  @ApiPropertyOptional({
+    description: 'Author filter or comma-separated list of authors',
+  })
   @IsOptional()
   @IsString()
   author?: string;
 
-  @ApiPropertyOptional({ description: 'Publisher filter or comma-separated list of publishers' })
+  @ApiPropertyOptional({
+    description: 'Publisher filter or comma-separated list of publishers',
+  })
   @IsOptional()
   @IsString()
   publisher?: string;
@@ -275,7 +284,9 @@ export class ProductQueryDto extends PaginationDto {
   @IsString()
   isbn?: string;
 
-  @ApiPropertyOptional({ description: 'Sub-option filter (e.g. Grade, Subject)' })
+  @ApiPropertyOptional({
+    description: 'Sub-option filter (e.g. Grade, Subject)',
+  })
   @IsOptional()
   @IsString()
   subOption?: string;
@@ -300,7 +311,8 @@ export class ProductQueryDto extends PaginationDto {
   status?: string;
 
   @ApiPropertyOptional({
-    description: 'Sorting: newest, price_asc, price_desc, best_selling, rating, name_asc, name_desc, discount_desc',
+    description:
+      'Sorting: newest, price_asc, price_desc, best_selling, rating, name_asc, name_desc, discount_desc',
   })
   @IsOptional()
   @IsString()
@@ -311,7 +323,10 @@ export class ProductQueryDto extends PaginationDto {
   @IsString()
   sortBy?: string;
 
-  @ApiPropertyOptional({ description: 'Search term for name, description, SKU, ISBN, author, publisher, brand' })
+  @ApiPropertyOptional({
+    description:
+      'Search term for name, description, SKU, ISBN, author, publisher, brand',
+  })
   @IsOptional()
   @IsString()
   q?: string;

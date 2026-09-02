@@ -20,12 +20,14 @@ async function bootstrap() {
   // Helmet HTTP security headers
   app.use(
     helmet({
-      contentSecurityPolicy: isProduction ? {
-        directives: {
-          defaultSrc: ["'none'"],
-          frameAncestors: ["'none'"],
-        },
-      } : undefined,
+      contentSecurityPolicy: isProduction
+        ? {
+            directives: {
+              defaultSrc: ["'none'"],
+              frameAncestors: ["'none'"],
+            },
+          }
+        : undefined,
       crossOriginEmbedderPolicy: false,
       crossOriginResourcePolicy: { policy: 'cross-origin' },
       hidePoweredBy: true,
@@ -40,9 +42,10 @@ async function bootstrap() {
   // Request Correlation ID Middleware (OBS-01)
   app.use((req: Request, res: Response, next: NextFunction) => {
     const suppliedId = req.get('X-Correlation-ID');
-    const correlationId = suppliedId && /^[a-zA-Z0-9._:-]{1,128}$/.test(suppliedId)
-      ? suppliedId
-      : randomUUID();
+    const correlationId =
+      suppliedId && /^[a-zA-Z0-9._:-]{1,128}$/.test(suppliedId)
+        ? suppliedId
+        : randomUUID();
     res.setHeader('X-Correlation-ID', correlationId);
     next();
   });
@@ -61,16 +64,19 @@ async function bootstrap() {
     .filter(Boolean);
 
   app.enableCors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       // Allow requests with no origin (server-to-server, curl, mobile apps)
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
-        (!isProduction && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))
+        (!isProduction &&
+          /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))
       ) {
         callback(null, true);
       } else {
-
         callback(new Error('Not allowed by CORS'));
       }
     },
@@ -106,14 +112,20 @@ async function bootstrap() {
             return {
               field: err.property,
               errors: err.constraints ? Object.values(err.constraints) : [],
-              children: err.children && err.children.length > 0 ? formatErrors(err.children) : undefined,
+              children:
+                err.children && err.children.length > 0
+                  ? formatErrors(err.children)
+                  : undefined,
             };
           });
         };
         const structuredDetails = formatErrors(errors);
 
         return new BadRequestException({
-          message: flatMessages.length > 0 ? flatMessages : 'Dữ liệu yêu cầu không hợp lệ',
+          message:
+            flatMessages.length > 0
+              ? flatMessages
+              : 'Dữ liệu yêu cầu không hợp lệ',
           errorCode: ErrorCode.ERR_VALIDATION,
           details: structuredDetails,
         });
@@ -128,29 +140,30 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor());
 
   // Keep the API explorer out of production unless explicitly enabled.
-  const enableSwagger = !isProduction || configService.get<string>('ENABLE_SWAGGER') === 'true';
+  const enableSwagger =
+    !isProduction || configService.get<string>('ENABLE_SWAGGER') === 'true';
   if (enableSwagger) {
-  const config = new DocumentBuilder()
-    .setTitle('Trường Thành Stationery API')
-    .setDescription('API documentation for Trường Thành Stationery Store')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .addTag('auth', 'Authentication endpoints')
-    .addTag('users', 'User profile and address management')
-    .addTag('products', 'Product management')
-    .addTag('categories', 'Category management')
-    .addTag('cart', 'Shopping cart management')
-    .addTag('orders', 'Order management')
-    .addTag('payments', 'Payment processing and gateways')
-    .addTag('inventory', 'Inventory management')
-    .addTag('reviews', 'Product reviews and ratings')
-    .addTag('promotions', 'Promotion and voucher management')
-    .addTag('notifications', 'Notification management')
-    .addTag('reports', 'Reports & analytics')
-    .build();
+    const config = new DocumentBuilder()
+      .setTitle('Trường Thành Stationery API')
+      .setDescription('API documentation for Trường Thành Stationery Store')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .addTag('auth', 'Authentication endpoints')
+      .addTag('users', 'User profile and address management')
+      .addTag('products', 'Product management')
+      .addTag('categories', 'Category management')
+      .addTag('cart', 'Shopping cart management')
+      .addTag('orders', 'Order management')
+      .addTag('payments', 'Payment processing and gateways')
+      .addTag('inventory', 'Inventory management')
+      .addTag('reviews', 'Product reviews and ratings')
+      .addTag('promotions', 'Promotion and voucher management')
+      .addTag('notifications', 'Notification management')
+      .addTag('reports', 'Reports & analytics')
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
   }
 
   app.enableShutdownHooks();
@@ -158,10 +171,11 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') || 3000;
   await app.listen(port, '0.0.0.0');
   const logger = new Logger('Bootstrap');
-  logger.log(`🚀 Server running on http://localhost:${port} [${nodeEnv.toUpperCase()}]`);
+  logger.log(
+    `🚀 Server running on http://localhost:${port} [${nodeEnv.toUpperCase()}]`,
+  );
   if (enableSwagger) {
     logger.log(`Swagger docs at http://localhost:${port}/api/docs`);
   }
 }
 bootstrap();
-

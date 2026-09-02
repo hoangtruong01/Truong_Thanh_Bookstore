@@ -41,7 +41,10 @@ export class CreateCategoryDto {
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
-  @IsMongoObjectId({ each: true, message: 'Mỗi sản phẩm trong mảng phải là ObjectId hợp lệ' })
+  @IsMongoObjectId({
+    each: true,
+    message: 'Mỗi sản phẩm trong mảng phải là ObjectId hợp lệ',
+  })
   products?: string[];
 
   @ApiPropertyOptional()
@@ -110,7 +113,10 @@ export class UpdateCategoryDto {
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
-  @IsMongoObjectId({ each: true, message: 'Mỗi sản phẩm trong mảng phải là ObjectId hợp lệ' })
+  @IsMongoObjectId({
+    each: true,
+    message: 'Mỗi sản phẩm trong mảng phải là ObjectId hợp lệ',
+  })
   products?: string[];
 
   @ApiPropertyOptional()

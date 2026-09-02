@@ -28,10 +28,11 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     images: ['https://example.com/pen.jpg'],
   };
 
-
   const mockOrderModel = function (dto: any) {
     this.data = dto;
-    this.save = jest.fn().mockResolvedValue({ _id: 'order123', orderCode: 'TT123456', ...dto });
+    this.save = jest
+      .fn()
+      .mockResolvedValue({ _id: 'order123', orderCode: 'TT123456', ...dto });
   };
   mockOrderModel.find = jest.fn();
   mockOrderModel.findOne = jest.fn();
@@ -99,7 +100,9 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       );
 
       const createDto: any = {
-        items: [{ product: mockProduct._id, name: mockProduct.name, quantity: 5 }],
+        items: [
+          { product: mockProduct._id, name: mockProduct.name, quantity: 5 },
+        ],
         shippingAddress: '123 Nguyễn Huệ, Q1, HCM',
         phone: '0901234567',
         paymentMethod: 'COD',
@@ -107,8 +110,13 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
         customerEmail: 'a@example.com',
       };
 
-      await expect(ordersService.create(createDto)).rejects.toThrow(BadRequestException);
-      expect(mockProductsService.deductStock).toHaveBeenCalledWith(mockProduct._id, 5);
+      await expect(ordersService.create(createDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockProductsService.deductStock).toHaveBeenCalledWith(
+        mockProduct._id,
+        5,
+      );
     });
   });
 
@@ -118,7 +126,9 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       mockProductsService.incrementSold.mockResolvedValue(undefined);
 
       const createDto: any = {
-        items: [{ product: mockProduct._id, name: mockProduct.name, quantity: 10 }], // 50,000 VND
+        items: [
+          { product: mockProduct._id, name: mockProduct.name, quantity: 10 },
+        ], // 50,000 VND
         shippingAddress: '123 Nguyễn Huệ, Q1, HCM',
         phone: '0901234567',
         paymentMethod: 'COD',
@@ -140,7 +150,13 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       mockProductsService.findByIds.mockResolvedValueOnce([expensiveProduct]);
 
       const createDto: any = {
-        items: [{ product: expensiveProduct._id, name: expensiveProduct.name, quantity: 1 }], // 300,000 VND
+        items: [
+          {
+            product: expensiveProduct._id,
+            name: expensiveProduct.name,
+            quantity: 1,
+          },
+        ], // 300,000 VND
         shippingAddress: '123 Nguyễn Huệ, Q1, HCM',
         phone: '0901234567',
         paymentMethod: 'COD',
@@ -177,7 +193,14 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       mockProductsService.findById.mockResolvedValueOnce(mockProduct);
 
       const previewDto: any = {
-        items: [{ product: mockProduct._id, name: mockProduct.name, quantity: 2, price: 5000 }],
+        items: [
+          {
+            product: mockProduct._id,
+            name: mockProduct.name,
+            quantity: 2,
+            price: 5000,
+          },
+        ],
       };
 
       const result = await ordersService.checkoutPreview(previewDto);
@@ -194,7 +217,14 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       mockProductsService.findById.mockResolvedValueOnce(expensiveProduct);
 
       const previewDto: any = {
-        items: [{ product: expensiveProduct._id, name: expensiveProduct.name, quantity: 1, price: 350000 }],
+        items: [
+          {
+            product: expensiveProduct._id,
+            name: expensiveProduct.name,
+            quantity: 1,
+            price: 350000,
+          },
+        ],
       };
 
       const result = await ordersService.checkoutPreview(previewDto);
@@ -210,7 +240,14 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       mockProductsService.findById.mockResolvedValueOnce(lowStockProduct);
 
       const previewDto: any = {
-        items: [{ product: lowStockProduct._id, name: lowStockProduct.name, quantity: 5, price: 5000 }],
+        items: [
+          {
+            product: lowStockProduct._id,
+            name: lowStockProduct.name,
+            quantity: 5,
+            price: 5000,
+          },
+        ],
       };
 
       const result = await ordersService.checkoutPreview(previewDto);
@@ -220,11 +257,22 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     });
 
     it('should apply valid voucher and deduct discount in checkout preview', async () => {
-      mockProductsService.findById.mockResolvedValueOnce({ ...mockProduct, price: 100000, stock: 10 });
+      mockProductsService.findById.mockResolvedValueOnce({
+        ...mockProduct,
+        price: 100000,
+        stock: 10,
+      });
       mockPromotionsService.apply.mockResolvedValueOnce({ discount: 20000 });
 
       const previewDto: any = {
-        items: [{ product: mockProduct._id, name: mockProduct.name, quantity: 1, price: 100000 }],
+        items: [
+          {
+            product: mockProduct._id,
+            name: mockProduct.name,
+            quantity: 1,
+            price: 100000,
+          },
+        ],
         promotionCode: 'SALE20K',
       };
 
@@ -309,4 +357,3 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     });
   });
 });
-

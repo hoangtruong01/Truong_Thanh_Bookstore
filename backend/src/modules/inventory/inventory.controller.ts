@@ -51,7 +51,9 @@ export class InventoryController {
   }
 
   @Post('transactions')
-  @ApiOperation({ summary: 'Create one of the five supported inventory movements' })
+  @ApiOperation({
+    summary: 'Create one of the five supported inventory movements',
+  })
   createTransaction(@Body() dto: InventoryTransactionDto, @Request() req: any) {
     return this.inventoryService.createTransaction(dto, req.user._id);
   }

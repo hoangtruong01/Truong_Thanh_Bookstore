@@ -3,7 +3,9 @@ import { SeedService } from './seed.service';
 describe('SeedService startup safety', () => {
   const makeService = (env: Record<string, string> = {}) => {
     const model = {
-      countDocuments: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(1) }),
+      countDocuments: jest
+        .fn()
+        .mockReturnValue({ exec: jest.fn().mockResolvedValue(1) }),
     };
     const models = Array.from({ length: 8 }, () => ({ ...model }));
     const config = { get: jest.fn((key: string) => env[key]) };
@@ -18,7 +20,8 @@ describe('SeedService startup safety', () => {
 
     await service.onModuleInit();
 
-    for (const model of models) expect(model.countDocuments).not.toHaveBeenCalled();
+    for (const model of models)
+      expect(model.countDocuments).not.toHaveBeenCalled();
     expect(clearSpy).not.toHaveBeenCalled();
     expect(seedSpy).not.toHaveBeenCalled();
   });
@@ -30,8 +33,11 @@ describe('SeedService startup safety', () => {
       NODE_ENV: 'production',
     });
 
-    await expect(service.onModuleInit()).rejects.toThrow('forbidden in production');
-    for (const model of models) expect(model.countDocuments).not.toHaveBeenCalled();
+    await expect(service.onModuleInit()).rejects.toThrow(
+      'forbidden in production',
+    );
+    for (const model of models)
+      expect(model.countDocuments).not.toHaveBeenCalled();
   });
 
   it('does not clear a partially populated database without an explicit reset', async () => {

@@ -147,7 +147,8 @@ Truong_Thanh_Bookstore/
 ├── docs/                       # 📖 TÀI LIỆU DỰ ÁN & AUDIT BACKLOG
 │   ├── PROJECT_OVERVIEW.md     # Tài liệu tổng quan này (Master Documentation)
 │   └── AUDIT_FIX_TASKS.md      # Danh sách backlog sửa lỗi & hardening kỹ thuật
-└── docker-compose.yml          # Docker Compose chạy toàn bộ hệ thống (DB, BE, FE, Mongo Express)
+├── docker-compose.yml          # Core stack: DB, BE, FE
+└── docker-compose.tools.yml    # Mongo Express tùy chọn, bắt buộc credential
 ```
 
 ### 3.2. Bản đồ 16 Module Nghiệp vụ Backend
@@ -274,14 +275,14 @@ flutter run
 
 ```bash
 # Tại thư mục gốc của dự án:
-# Cần khai báo JWT_SECRET; Mongo Express còn yêu cầu ME_CONFIG_BASICAUTH_*
+# Cần khai báo JWT_SECRET trong file .env ở thư mục gốc.
 docker compose up -d --build
 
 # Các dịch vụ được khởi chạy:
 # - Frontend:     http://localhost:80
 # - Backend API:  http://localhost:3000/api
 # - Swagger Docs: http://localhost:3000/api/docs
-# - Mongo Express: chỉ chạy khi thêm --profile tools và cung cấp credentials
+# - Mongo Express: dùng docker-compose.tools.yml, chỉ bật khi cần và có credentials
 ```
 
 #### 🔑 Seed dữ liệu an toàn

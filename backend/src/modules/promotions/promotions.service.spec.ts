@@ -26,12 +26,18 @@ describe('Task 19: Promotion usage limits', () => {
   function createService(trackedCount = 0) {
     const promotionModel: any = {
       findOne: jest.fn().mockReturnValue(query({ ...promo })),
-      findOneAndUpdate: jest.fn().mockReturnValue(query({ ...promo, usedCount: 1 })),
+      findOneAndUpdate: jest
+        .fn()
+        .mockReturnValue(query({ ...promo, usedCount: 1 })),
       updateOne: jest.fn().mockReturnValue(query({ acknowledged: true })),
     };
     const usageModel: any = {
-      findOne: jest.fn().mockReturnValue(query(trackedCount ? { count: trackedCount } : null)),
-      findOneAndUpdate: jest.fn().mockReturnValue(query({ count: trackedCount + 1 })),
+      findOne: jest
+        .fn()
+        .mockReturnValue(query(trackedCount ? { count: trackedCount } : null)),
+      findOneAndUpdate: jest
+        .fn()
+        .mockReturnValue(query({ count: trackedCount + 1 })),
       updateOne: jest.fn().mockReturnValue(query({ acknowledged: true })),
     };
     const orderModel: any = {

@@ -46,7 +46,7 @@ export class PermissionsGuard implements CanActivate {
     if (user.role === UserRole.STAFF || user.role === 'STAFF') {
       const userPermissions: string[] = user.permissions || [];
       const hasPermission = requiredPermissions.some((perm) =>
-        userPermissions.includes(perm as string),
+        userPermissions.includes(perm),
       );
       if (!hasPermission) {
         throw new ForbiddenException(

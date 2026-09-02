@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Types } from 'mongoose';
 import { UsersService } from './users.service';
 import { UserRole, StaffPermission } from '../../common/enums';
@@ -80,7 +84,12 @@ describe('UsersService RBAC', () => {
         exec: jest.fn().mockResolvedValue(2),
       });
 
-      const result = await service.findAllUsers({ page: 1, limit: 10, role: UserRole.STAFF, search: 'staff' });
+      const result = await service.findAllUsers({
+        page: 1,
+        limit: 10,
+        role: UserRole.STAFF,
+        search: 'staff',
+      });
       expect(result.data).toEqual(mockUsers);
       expect(result.total).toBe(2);
       expect(result.page).toBe(1);
@@ -99,13 +108,20 @@ describe('UsersService RBAC', () => {
         _id: validStaffId,
         email: 'newstaff@truongthanh.vn',
         role: UserRole.STAFF,
-        toObject: () => ({ _id: validStaffId, email: 'newstaff@truongthanh.vn', role: UserRole.STAFF }),
+        toObject: () => ({
+          _id: validStaffId,
+          email: 'newstaff@truongthanh.vn',
+          role: UserRole.STAFF,
+        }),
       };
 
       const userConstructorMock = jest.fn().mockReturnValue({
         save: jest.fn().mockResolvedValue(createdUserMock),
       });
-      (service as any).userModel = Object.assign(userConstructorMock, mockUserModel);
+      (service as any).userModel = Object.assign(
+        userConstructorMock,
+        mockUserModel,
+      );
 
       const dto = {
         email: 'newstaff@truongthanh.vn',
@@ -134,7 +150,9 @@ describe('UsersService RBAC', () => {
         role: UserRole.ADMIN,
       };
 
-      await expect(service.createStaffOrAdmin(dto, mockAdminUser)).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.createStaffOrAdmin(dto, mockAdminUser),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should reject duplicate email', async () => {
@@ -151,14 +169,20 @@ describe('UsersService RBAC', () => {
         role: UserRole.STAFF,
       };
 
-      await expect(service.createStaffOrAdmin(dto, mockSuperAdminUser)).rejects.toThrow(BadRequestException);
+      await expect(
+        service.createStaffOrAdmin(dto, mockSuperAdminUser),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('updateRole', () => {
     it('should prevent actor from modifying their own role', async () => {
       await expect(
-        service.updateRole(validAdminId, { role: UserRole.STAFF }, mockAdminUser),
+        service.updateRole(
+          validAdminId,
+          { role: UserRole.STAFF },
+          mockAdminUser,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -168,7 +192,11 @@ describe('UsersService RBAC', () => {
       });
 
       await expect(
-        service.updateRole(validStaffId, { role: UserRole.SUPER_ADMIN }, mockAdminUser),
+        service.updateRole(
+          validStaffId,
+          { role: UserRole.SUPER_ADMIN },
+          mockAdminUser,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -178,7 +206,11 @@ describe('UsersService RBAC', () => {
       });
 
       await expect(
-        service.updateRole(validSuperAdminId, { role: UserRole.ADMIN }, mockAdminUser),
+        service.updateRole(
+          validSuperAdminId,
+          { role: UserRole.ADMIN },
+          mockAdminUser,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -196,7 +228,11 @@ describe('UsersService RBAC', () => {
         exec: jest.fn().mockResolvedValue(targetUser),
       });
 
-      const result = await service.updateRole(validStaffId, { role: UserRole.ADMIN }, mockSuperAdminUser);
+      const result = await service.updateRole(
+        validStaffId,
+        { role: UserRole.ADMIN },
+        mockSuperAdminUser,
+      );
       expect(targetUser.role).toBe(UserRole.ADMIN);
       expect(result.role).toBe(UserRole.ADMIN);
     });
@@ -209,7 +245,11 @@ describe('UsersService RBAC', () => {
         role: UserRole.STAFF,
         permissions: [StaffPermission.MANAGE_ORDERS],
         toObject() {
-          return { _id: this._id, role: this.role, permissions: this.permissions };
+          return {
+            _id: this._id,
+            role: this.role,
+            permissions: this.permissions,
+          };
         },
       };
       targetUser.save = jest.fn().mockResolvedValue(targetUser);
@@ -219,7 +259,10 @@ describe('UsersService RBAC', () => {
       });
 
       const result = await service.updatePermissions(validStaffId, {
-        permissions: [StaffPermission.MANAGE_ORDERS, StaffPermission.MANAGE_PROMOTIONS],
+        permissions: [
+          StaffPermission.MANAGE_ORDERS,
+          StaffPermission.MANAGE_PROMOTIONS,
+        ],
       });
       expect(targetUser.permissions).toEqual([
         StaffPermission.MANAGE_ORDERS,
@@ -242,7 +285,11 @@ describe('UsersService RBAC', () => {
       });
 
       await expect(
-        service.updateStatus(validSuperAdminId, { status: false }, mockAdminUser),
+        service.updateStatus(
+          validSuperAdminId,
+          { status: false },
+          mockAdminUser,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -261,7 +308,11 @@ describe('UsersService RBAC', () => {
         exec: jest.fn().mockResolvedValue(targetUser),
       });
 
-      const result = await service.updateStatus(validStaffId, { status: false }, mockAdminUser);
+      const result = await service.updateStatus(
+        validStaffId,
+        { status: false },
+        mockAdminUser,
+      );
       expect(targetUser.status).toBe(false);
       expect(result.status).toBe(false);
     });
@@ -316,7 +367,10 @@ describe('UsersService RBAC', () => {
       const mockUserWithWishlist = {
         _id: validAdminId,
         wishlist: [
-          { _id: new Types.ObjectId(mockProductId), name: 'Sách giáo khoa Toán 1' },
+          {
+            _id: new Types.ObjectId(mockProductId),
+            name: 'Sách giáo khoa Toán 1',
+          },
           null, // Stale/deleted item
         ],
       };
@@ -381,7 +435,10 @@ describe('UsersService RBAC', () => {
 
       mockUserModel.findByIdAndUpdate.mockResolvedValue({});
 
-      const result = await service.removeFromWishlist(validAdminId, mockProductId);
+      const result = await service.removeFromWishlist(
+        validAdminId,
+        mockProductId,
+      );
       expect(result.isInWishlist).toBe(false);
       expect(result.wishlist.length).toBe(0);
     });

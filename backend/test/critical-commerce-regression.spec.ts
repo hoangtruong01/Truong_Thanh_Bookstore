@@ -20,7 +20,7 @@ describe('Critical Commerce Flow (e2e)', () => {
     app.setGlobalPrefix('api');
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
-    
+
     // Register/Login
     const registerRes = await request(app.getHttpServer())
       .post('/api/auth/register')
@@ -29,20 +29,22 @@ describe('Critical Commerce Flow (e2e)', () => {
         email: `test_e2e_${Date.now()}@test.com`,
         password: 'Password123!',
         fullName: 'E2E Test User',
-        phone: '0987654321'
+        phone: '0987654321',
       });
-      
+
     if (registerRes.status === 201) {
-      accessToken = registerRes.body.data?.accessToken ?? registerRes.body.accessToken;
+      accessToken =
+        registerRes.body.data?.accessToken ?? registerRes.body.accessToken;
     } else {
       const loginRes = await request(app.getHttpServer())
         .post('/api/auth/login')
         .set('x-client-platform', 'mobile')
         .send({
           email: 'admin@truongthanh.com',
-          password: 'Password123!'
+          password: 'Password123!',
         });
-      accessToken = loginRes.body.data?.accessToken ?? loginRes.body.accessToken;
+      accessToken =
+        loginRes.body.data?.accessToken ?? loginRes.body.accessToken;
     }
   });
 
@@ -63,22 +65,24 @@ describe('Critical Commerce Flow (e2e)', () => {
 
   it('should allow user to checkout if product exists', async () => {
     if (!productId) return; // Skip if no products
-    
+
     const res = await request(app.getHttpServer())
       .post('/api/orders/authenticated')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
-        items: [{
-          product: productId,
-          name: productName,
-          price: productPrice,
-          quantity: 1,
-        }],
+        items: [
+          {
+            product: productId,
+            name: productName,
+            price: productPrice,
+            quantity: 1,
+          },
+        ],
         shippingAddress: '123 Test St',
         phone: '0987654321',
-        paymentMethod: 'COD'
+        paymentMethod: 'COD',
       });
-      
+
     expect(res.status).toBe(201);
     expect(res.body.orderCode).toBeDefined();
     expect(res.body.total).toBeGreaterThan(0);

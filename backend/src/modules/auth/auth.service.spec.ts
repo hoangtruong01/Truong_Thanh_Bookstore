@@ -58,7 +58,9 @@ describe('AuthService (auth.service.spec.ts)', () => {
     };
 
     cloudinaryService = {
-      uploadImage: jest.fn().mockResolvedValue('https://cloudinary.com/avatar.jpg'),
+      uploadImage: jest
+        .fn()
+        .mockResolvedValue('https://cloudinary.com/avatar.jpg'),
     };
 
     configService = {
@@ -81,7 +83,9 @@ describe('AuthService (auth.service.spec.ts)', () => {
     }).compile();
 
     authService = module.get<AuthService>(AuthService);
-    tokenBlacklistService = module.get<TokenBlacklistService>(TokenBlacklistService);
+    tokenBlacklistService = module.get<TokenBlacklistService>(
+      TokenBlacklistService,
+    );
   });
 
   afterEach(() => {
@@ -191,7 +195,9 @@ describe('AuthService (auth.service.spec.ts)', () => {
   describe('Refresh Token Flow & Rotation', () => {
     it('should rotate tokens successfully with valid refresh token', async () => {
       const rawRefreshToken = 'valid.refresh.token';
-      const tokenHash = createHash('sha256').update(rawRefreshToken).digest('hex');
+      const tokenHash = createHash('sha256')
+        .update(rawRefreshToken)
+        .digest('hex');
 
       jwtService.verifyAsync.mockResolvedValue({
         sub: mockUser._id,
@@ -209,11 +215,16 @@ describe('AuthService (auth.service.spec.ts)', () => {
       };
       usersService.findByIdWithPassword.mockResolvedValue(user);
 
-      const result = await authService.refreshToken(rawRefreshToken, 'old.access.token');
+      const result = await authService.refreshToken(
+        rawRefreshToken,
+        'old.access.token',
+      );
       expect(result.accessToken).toBe('mock.jwt.token');
       expect(result.refreshToken).toBe('mock.jwt.token');
       expect(user.save).toHaveBeenCalled();
-      expect(tokenBlacklistService.isTokenBlacklisted('old.access.token')).toBe(true);
+      expect(tokenBlacklistService.isTokenBlacklisted('old.access.token')).toBe(
+        true,
+      );
     });
 
     it('should throw UnauthorizedException if refresh token is expired', async () => {
@@ -266,25 +277,34 @@ describe('AuthService (auth.service.spec.ts)', () => {
       };
       usersService.findByIdWithPassword.mockResolvedValue(user);
 
-      await expect(authService.refreshToken('outdated.version.token')).rejects.toThrow(
-        /Phiên đăng nhập đã bị hủy/,
-      );
+      await expect(
+        authService.refreshToken('outdated.version.token'),
+      ).rejects.toThrow(/Phiên đăng nhập đã bị hủy/);
     });
   });
 
   describe('Logout & Blacklist Flow', () => {
     it('should clear refresh token in database and blacklist access token on logout', async () => {
       const rawAccessToken = 'user.access.token';
-      jwtService.decode.mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 3600, jti: 'logout-jti-1' });
+      jwtService.decode.mockReturnValue({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        jti: 'logout-jti-1',
+      });
 
-      const user = { ...mockUser, refreshTokenHash: 'some_hash', save: jest.fn().mockResolvedValue(true) };
+      const user = {
+        ...mockUser,
+        refreshTokenHash: 'some_hash',
+        save: jest.fn().mockResolvedValue(true),
+      };
       usersService.findByIdWithPassword.mockResolvedValue(user);
 
       const result = await authService.logout(mockUser._id, rawAccessToken);
       expect(result.success).toBe(true);
       expect(user.refreshTokenHash).toBeUndefined();
       expect(user.save).toHaveBeenCalled();
-      expect(tokenBlacklistService.isTokenBlacklisted(rawAccessToken)).toBe(true);
+      expect(tokenBlacklistService.isTokenBlacklisted(rawAccessToken)).toBe(
+        true,
+      );
       expect(tokenBlacklistService.isJtiBlacklisted('logout-jti-1')).toBe(true);
     });
   });
@@ -293,7 +313,11 @@ describe('AuthService (auth.service.spec.ts)', () => {
     it('getProfile should exclude password, tokenVersion and secret fields', async () => {
       usersService.findById.mockResolvedValue({
         ...mockUser,
-        toObject: () => ({ ...mockUser, resetOtp: '123456', refreshTokenHash: 'hash' }),
+        toObject: () => ({
+          ...mockUser,
+          resetOtp: '123456',
+          refreshTokenHash: 'hash',
+        }),
       });
 
       const profile = await authService.getProfile(mockUser._id);
@@ -305,7 +329,10 @@ describe('AuthService (auth.service.spec.ts)', () => {
 
     it('changePassword should increment tokenVersion, clear refreshTokenHash and blacklist access token', async () => {
       const oldHashed = await bcrypt.hash('OldPassword@123', 10);
-      jwtService.decode.mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 3600, jti: 'change-pw-jti' });
+      jwtService.decode.mockReturnValue({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        jti: 'change-pw-jti',
+      });
 
       const user = {
         ...mockUser,
@@ -326,8 +353,12 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(user.tokenVersion).toBe(1);
       expect(user.refreshTokenHash).toBeUndefined();
       expect(user.save).toHaveBeenCalled();
-      expect(tokenBlacklistService.isTokenBlacklisted('current.access.token')).toBe(true);
-      expect(tokenBlacklistService.isJtiBlacklisted('change-pw-jti')).toBe(true);
+      expect(
+        tokenBlacklistService.isTokenBlacklisted('current.access.token'),
+      ).toBe(true);
+      expect(tokenBlacklistService.isJtiBlacklisted('change-pw-jti')).toBe(
+        true,
+      );
       const isNewMatch = await bcrypt.compare('NewPassword@456', user.password);
       expect(isNewMatch).toBe(true);
     });
@@ -349,7 +380,9 @@ describe('AuthService (auth.service.spec.ts)', () => {
     it('forgotPassword should not reveal if email does not exist (anti-enumeration)', async () => {
       usersService.findByEmail.mockResolvedValue(null);
 
-      const result = await authService.forgotPassword('nonexistent@truongthanh.vn');
+      const result = await authService.forgotPassword(
+        'nonexistent@truongthanh.vn',
+      );
       expect(result.success).toBe(true);
       expect(result.message).toContain('Mã OTP đã được gửi');
     });
@@ -387,9 +420,9 @@ describe('AuthService (auth.service.spec.ts)', () => {
       };
       usersService.findByEmail.mockResolvedValue(user);
 
-      await expect(authService.verifyOtp(mockUser.email, '999999')).rejects.toThrow(
-        /Mã OTP không đúng. Bạn còn 2 lần thử/,
-      );
+      await expect(
+        authService.verifyOtp(mockUser.email, '999999'),
+      ).rejects.toThrow(/Mã OTP không đúng. Bạn còn 2 lần thử/);
       expect(user.resetOtpAttempts).toBe(3);
       expect(user.save).toHaveBeenCalled();
     });
@@ -421,7 +454,10 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(user.resetOtp).toBeUndefined();
       expect(user.resetOtpExpiry).toBeUndefined();
       expect(user.save).toHaveBeenCalled();
-      const isMatch = await bcrypt.compare('BrandNewPassword@123', user.password);
+      const isMatch = await bcrypt.compare(
+        'BrandNewPassword@123',
+        user.password,
+      );
       expect(isMatch).toBe(true);
     });
   });

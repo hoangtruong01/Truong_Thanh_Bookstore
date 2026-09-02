@@ -18,8 +18,12 @@ export class CreatePromotionDto {
   @ApiProperty({ example: 'SUMMER2024' })
   @IsNotEmpty({ message: 'Mã khuyến mãi không được để trống' })
   @IsString()
-  @Matches(/^[A-Za-z0-9_-]+$/, { message: 'Mã khuyến mãi chỉ được chứa chữ cái, số, gạch nối hoặc gạch dưới' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
+  @Matches(/^[A-Za-z0-9_-]+$/, {
+    message: 'Mã khuyến mãi chỉ được chứa chữ cái, số, gạch nối hoặc gạch dưới',
+  })
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
   code: string;
 
   @ApiProperty({ example: 'Khuyến mãi mùa hè' })
@@ -36,7 +40,9 @@ export class CreatePromotionDto {
 
   @ApiProperty({ enum: DiscountType })
   @IsNotEmpty({ message: 'Loại giảm giá không được để trống' })
-  @IsEnum(DiscountType, { message: 'Loại giảm giá không hợp lệ (PERCENT hoặc FIXED)' })
+  @IsEnum(DiscountType, {
+    message: 'Loại giảm giá không hợp lệ (PERCENT hoặc FIXED)',
+  })
   discountType: DiscountType;
 
   @ApiProperty({ example: 10 })
@@ -77,7 +83,10 @@ export class CreatePromotionDto {
   @Min(1, { message: 'Giới hạn sử dụng tối thiểu là 1' })
   usageLimit?: number;
 
-  @ApiPropertyOptional({ example: 1, description: 'Số lượt tối đa cho mỗi tài khoản/khách' })
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Số lượt tối đa cho mỗi tài khoản/khách',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'Giới hạn theo người dùng phải là số nguyên' })
@@ -94,7 +103,9 @@ export class ApplyPromotionDto {
   @ApiProperty({ example: 'SUMMER2024' })
   @IsNotEmpty({ message: 'Mã khuyến mãi không được để trống' })
   @IsString()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
   code: string;
 
   @ApiProperty({ example: 500000 })

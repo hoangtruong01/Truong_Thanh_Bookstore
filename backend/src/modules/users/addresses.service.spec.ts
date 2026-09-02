@@ -152,7 +152,10 @@ describe('AddressesService', () => {
         user: new Types.ObjectId(mockUserId),
         isDeleted: false,
       });
-      expect(mockQuery.sort).toHaveBeenCalledWith({ isDefault: -1, createdAt: -1 });
+      expect(mockQuery.sort).toHaveBeenCalledWith({
+        isDefault: -1,
+        createdAt: -1,
+      });
     });
   });
 
@@ -180,7 +183,11 @@ describe('AddressesService', () => {
 
   describe('update', () => {
     it('should update address details successfully', async () => {
-      const existingAddr = { ...mockAddress, isDefault: false, save: jest.fn().mockResolvedValue(true) };
+      const existingAddr = {
+        ...mockAddress,
+        isDefault: false,
+        save: jest.fn().mockResolvedValue(true),
+      };
       mockAddressModel.findOne.mockReturnValue({
         exec: jest.fn().mockResolvedValue(existingAddr),
       });
@@ -193,7 +200,11 @@ describe('AddressesService', () => {
     });
 
     it('should reset other default addresses if address is updated to isDefault = true', async () => {
-      const existingAddr = { ...mockAddress, isDefault: false, save: jest.fn().mockResolvedValue(true) };
+      const existingAddr = {
+        ...mockAddress,
+        isDefault: false,
+        save: jest.fn().mockResolvedValue(true),
+      };
       mockAddressModel.findOne.mockReturnValue({
         exec: jest.fn().mockResolvedValue(existingAddr),
       });

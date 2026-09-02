@@ -1,8 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Notification, NotificationDocument } from './schemas/notification.schema';
-import { CreateNotificationDto, BroadcastNotificationDto, NotificationQueryDto } from './dto/create-notification.dto';
+import {
+  Notification,
+  NotificationDocument,
+} from './schemas/notification.schema';
+import {
+  CreateNotificationDto,
+  NotificationQueryDto,
+} from './dto/create-notification.dto';
 import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
@@ -38,7 +48,7 @@ export class NotificationsService {
       } else {
         this.gateway.broadcastNotification(savedNotification);
       }
-    } catch (e) {
+    } catch {
       // Ignore socket emit failures gracefully
     }
 
@@ -52,10 +62,7 @@ export class NotificationsService {
 
     const userObjectId = new Types.ObjectId(userId);
     const filter: any = {
-      $or: [
-        { userId: userObjectId },
-        { userId: null },
-      ],
+      $or: [{ userId: userObjectId }, { userId: null }],
     };
 
     if (query.type) {
@@ -132,7 +139,9 @@ export class NotificationsService {
 
     if (notif.userId) {
       if (notif.userId.toString() !== userId) {
-        throw new BadRequestException('Bạn không phải người nhận của thông báo này');
+        throw new BadRequestException(
+          'Bạn không phải người nhận của thông báo này',
+        );
       }
       notif.isRead = true;
       await notif.save();
@@ -172,7 +181,8 @@ export class NotificationsService {
     order: any,
     eventType: 'CREATED' | 'STATUS_UPDATED' | 'PAID' | 'CANCELLED',
   ) {
-    const orderCode = order.orderCode || (order._id ? order._id.toString().slice(-6) : '');
+    const orderCode =
+      order.orderCode || (order._id ? order._id.toString().slice(-6) : '');
     const userId = order.customer ? order.customer.toString() : null;
 
     let customerTitle = '';
@@ -235,7 +245,9 @@ export class NotificationsService {
 
   async sendLowStockAlert(product: any, currentStock: number) {
     const isOutOfStock = currentStock <= 0;
-    const title = isOutOfStock ? 'Cảnh báo hết sạch hàng' : 'Cảnh báo sắp hết hàng';
+    const title = isOutOfStock
+      ? 'Cảnh báo hết sạch hàng'
+      : 'Cảnh báo sắp hết hàng';
     const message = isOutOfStock
       ? `Sản phẩm "${product.name}" (SKU: ${product.sku || 'N/A'}) đã hết sạch hàng trong kho!`
       : `Sản phẩm "${product.name}" chỉ còn ${currentStock} cái trong kho (dưới mức an toàn).`;
@@ -265,7 +277,11 @@ export class NotificationsService {
     });
   }
 
-  async createGlobalPromo(code: string, name: string, description: string): Promise<NotificationDocument> {
+  async createGlobalPromo(
+    code: string,
+    name: string,
+    description: string,
+  ): Promise<NotificationDocument> {
     return this.broadcastPromotion(code, name, description);
   }
 }

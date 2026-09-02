@@ -1,11 +1,26 @@
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { IsMongoObjectId, IsPhoneNumberVN } from './custom-validators';
-import { RegisterDto, LoginDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from '../../modules/auth/dto/auth.dto';
-import { CreateAddressDto, UpdateAddressDto } from '../../modules/users/dto/address.dto';
-import { CreateProductDto, ProductQueryDto } from '../../modules/products/dto/product.dto';
+import {
+  RegisterDto,
+  LoginDto,
+  ForgotPasswordDto,
+  VerifyOtpDto,
+  ResetPasswordDto,
+} from '../../modules/auth/dto/auth.dto';
+import {
+  CreateAddressDto,
+  UpdateAddressDto,
+} from '../../modules/users/dto/address.dto';
+import {
+  CreateProductDto,
+  ProductQueryDto,
+} from '../../modules/products/dto/product.dto';
 import { AddToCartDto, SyncCartDto } from '../../modules/cart/dto/cart.dto';
-import { CreateOrderDto, OrderItemDto } from '../../modules/orders/dto/order.dto';
+import {
+  CreateOrderDto,
+  OrderItemDto,
+} from '../../modules/orders/dto/order.dto';
 import { CreatePromotionDto } from '../../modules/promotions/dto/promotion.dto';
 import { CreateReviewDto } from '../../modules/reviews/dto/review.dto';
 import { CreatePaymentDto } from '../../modules/payments/dto/payment.dto';
@@ -20,7 +35,9 @@ describe('Custom Validators & DTO Validation Suite', () => {
     }
 
     it('should validate valid 24-character hexadecimal MongoDB ObjectId', async () => {
-      const dto = plainToInstance(TestMongoDto, { id: '507f1f77bcf86cd799439011' });
+      const dto = plainToInstance(TestMongoDto, {
+        id: '507f1f77bcf86cd799439011',
+      });
       const errors = await validate(dto);
       expect(errors.length).toBe(0);
     });
@@ -42,7 +59,13 @@ describe('Custom Validators & DTO Validation Suite', () => {
     }
 
     it('should validate valid Vietnamese 10-digit mobile phone numbers', async () => {
-      const validPhones = ['0901234567', '0389123456', '0778889999', '0581234567', '0898765432'];
+      const validPhones = [
+        '0901234567',
+        '0389123456',
+        '0778889999',
+        '0581234567',
+        '0898765432',
+      ];
       for (const phone of validPhones) {
         const dto = plainToInstance(TestPhoneDto, { phone });
         const errors = await validate(dto);
@@ -51,7 +74,13 @@ describe('Custom Validators & DTO Validation Suite', () => {
     });
 
     it('should reject invalid Vietnamese phone numbers', async () => {
-      const invalidPhones = ['123456789', '0123456789', '0201234567', 'abcdefghij', '09012345678'];
+      const invalidPhones = [
+        '123456789',
+        '0123456789',
+        '0201234567',
+        'abcdefghij',
+        '09012345678',
+      ];
       for (const phone of invalidPhones) {
         const dto = plainToInstance(TestPhoneDto, { phone });
         const errors = await validate(dto);
@@ -83,10 +112,16 @@ describe('Custom Validators & DTO Validation Suite', () => {
     });
 
     it('VerifyOtpDto: should require 6-digit numeric OTP', async () => {
-      const valid = plainToInstance(VerifyOtpDto, { email: 'user@example.com', otp: '123456' });
+      const valid = plainToInstance(VerifyOtpDto, {
+        email: 'user@example.com',
+        otp: '123456',
+      });
       expect((await validate(valid)).length).toBe(0);
 
-      const invalid = plainToInstance(VerifyOtpDto, { email: 'user@example.com', otp: '1234' });
+      const invalid = plainToInstance(VerifyOtpDto, {
+        email: 'user@example.com',
+        otp: '1234',
+      });
       expect((await validate(invalid)).length).toBeGreaterThan(0);
     });
   });

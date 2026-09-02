@@ -4,6 +4,29 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+import { getModelToken } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import * as bcrypt from 'bcrypt';
+import { User, UserDocument } from '../src/modules/users/schemas/user.schema';
+import {
+  Product,
+  ProductDocument,
+} from '../src/modules/products/schemas/product.schema';
+import {
+  Order,
+  OrderDocument,
+} from '../src/modules/orders/schemas/order.schema';
+import {
+  Inventory,
+  InventoryDocument,
+} from '../src/modules/inventory/schemas/inventory.schema';
+import { ProductsService } from '../src/modules/products/products.service';
+import {
+  Category,
+  CategoryDocument,
+} from '../src/modules/categories/schemas/category.schema';
+import { CategoriesService } from '../src/modules/categories/categories.service';
+import { UserRole } from '../src/common/enums';
 
 jest.setTimeout(60000);
 
@@ -12,12 +35,23 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
   let customerToken: string;
   let adminToken: string;
   let testProductId: string;
+  let testCategoryId: string;
   let testOrderCode: string;
   let testOrderId: string;
+  let userModel: Model<UserDocument>;
+  let productModel: Model<ProductDocument>;
+  let orderModel: Model<OrderDocument>;
+  let inventoryModel: Model<InventoryDocument>;
+  let categoryModel: Model<CategoryDocument>;
+
+  const runId = Date.now();
+  const adminEmail = `e2e_admin_${runId}@example.com`;
+  const adminPassword = 'AdminE2E@123';
+  const guestEmail = `e2e_guest_${runId}@example.com`;
 
   const testUser = {
     fullName: 'E2E Tester',
-    email: `e2e_user_${Date.now()}@example.com`,
+    email: `e2e_user_${runId}@example.com`,
     password: 'Password@123',
     phone: '0912345678',
   };
@@ -40,6 +74,46 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
       }),
     );
     await app.init();
+
+    userModel = moduleFixture.get<Model<UserDocument>>(
+      getModelToken(User.name),
+    );
+    productModel = moduleFixture.get<Model<ProductDocument>>(
+      getModelToken(Product.name),
+    );
+    orderModel = moduleFixture.get<Model<OrderDocument>>(
+      getModelToken(Order.name),
+    );
+    inventoryModel = moduleFixture.get<Model<InventoryDocument>>(
+      getModelToken(Inventory.name),
+    );
+    categoryModel = moduleFixture.get<Model<CategoryDocument>>(
+      getModelToken(Category.name),
+    );
+
+    await userModel.create({
+      fullName: 'E2E Admin',
+      email: adminEmail,
+      password: await bcrypt.hash(adminPassword, 10),
+      role: UserRole.ADMIN,
+      status: true,
+    });
+
+    const createdCategory = await moduleFixture.get(CategoriesService).create({
+      name: `E2E Category ${runId}`,
+      slug: `e2e-category-${runId}`,
+    });
+    testCategoryId = createdCategory._id.toString();
+
+    const createdProduct = await moduleFixture.get(ProductsService).create({
+      name: `E2E Product ${runId}`,
+      slug: `e2e-product-${runId}`,
+      sku: `E2E-${runId}`,
+      category: testCategoryId,
+      price: 100000,
+      stock: 100,
+    });
+    testProductId = createdProduct._id.toString();
   }, 60000);
 
   // ==========================================
@@ -138,11 +212,17 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
         .expect(200);
 
       expect(res.body.success).toBe(true);
-      const items = Array.isArray(res.body.data) ? res.body.data : res.body.data.data;
+      const items = Array.isArray(res.body.data)
+        ? res.body.data
+        : res.body.data.data;
       expect(Array.isArray(items)).toBe(true);
-      expect(res.body.meta?.total !== undefined || res.body.data?.total !== undefined || items.length >= 0).toBe(true);
+      expect(
+        res.body.meta?.total !== undefined ||
+          res.body.data?.total !== undefined ||
+          items.length >= 0,
+      ).toBe(true);
 
-      if (items.length > 0) {
+      if (!testProductId && items.length > 0) {
         // Find a product with price < 299,000 to ensure shipping fee of 30,000 is triggered in guest checkout tests
         const cheapProduct = items.find((p: any) => {
           const actualPrice = p.discountPrice > 0 ? p.discountPrice : p.price;
@@ -158,7 +238,9 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
         .expect(200);
 
       expect(res.body.success).toBe(true);
-      const items = Array.isArray(res.body.data) ? res.body.data : res.body.data.data;
+      const items = Array.isArray(res.body.data)
+        ? res.body.data
+        : res.body.data.data;
       expect(Array.isArray(items)).toBe(true);
     });
 
@@ -188,12 +270,19 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
       if (!testProductId) return;
 
       const orderData = {
-        items: [{ product: testProductId, name: 'Sản phẩm E2E Test', price: 100000, quantity: 1 }],
+        items: [
+          {
+            product: testProductId,
+            name: 'Sản phẩm E2E Test',
+            price: 100000,
+            quantity: 1,
+          },
+        ],
         shippingAddress: '123 Đường ABC, Quận 1, TP.HCM',
         phone: '0901234567',
         paymentMethod: 'COD',
         customerName: 'Guest Tester',
-        customerEmail: 'guest@example.com',
+        customerEmail: guestEmail,
       };
 
       const res = await request(app.getHttpServer())
@@ -204,14 +293,23 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.orderCode).toBeDefined();
       expect(res.body.data.shippingFee).toBe(30000); // Threshold 299K check: < 299K -> ship 30K
-      expect(res.body.data.total).toBe(res.body.data.subtotal + res.body.data.shippingFee);
+      expect(res.body.data.total).toBe(
+        res.body.data.subtotal + res.body.data.shippingFee,
+      );
     });
 
     it('3.2 Should create order for authenticated user', async () => {
       if (!testProductId) return;
 
       const orderData = {
-        items: [{ product: testProductId, name: 'Sản phẩm E2E Test', price: 150000, quantity: 2 }],
+        items: [
+          {
+            product: testProductId,
+            name: 'Sản phẩm E2E Test',
+            price: 150000,
+            quantity: 2,
+          },
+        ],
         shippingAddress: '456 Đường XYZ, Quận 3, TP.HCM',
         phone: '0912345678',
         paymentMethod: 'COD',
@@ -238,7 +336,9 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
         .expect(200);
 
       expect(res.body.success).toBe(true);
-      const orders = Array.isArray(res.body.data) ? res.body.data : res.body.data.data;
+      const orders = Array.isArray(res.body.data)
+        ? res.body.data
+        : res.body.data.data;
       expect(Array.isArray(orders)).toBe(true);
       expect(orders.length).toBeGreaterThan(0);
     });
@@ -272,13 +372,13 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
   // 4. ADMIN & BACKOFFICE E2E FLOW
   // ==========================================
   describe('4. Admin & Backoffice E2E Flow', () => {
-    it('4.1 Should login as seed Admin', async () => {
+    it('4.1 Should login as the isolated E2E Admin', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/auth/login')
         .set('x-client-platform', 'mobile')
         .send({
-          email: 'admin@truongthanh.vn',
-          password: process.env.SEED_ADMIN_PASSWORD,
+          email: adminEmail,
+          password: adminPassword,
         })
         .expect(201);
 
@@ -323,6 +423,25 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
   });
 
   afterAll(async () => {
+    if (orderModel) {
+      await orderModel.deleteMany({
+        customerEmail: { $in: [testUser.email, guestEmail] },
+      });
+    }
+    if (inventoryModel && testProductId) {
+      await inventoryModel.deleteOne({ product: testProductId });
+    }
+    if (productModel && testProductId) {
+      await productModel.deleteOne({ _id: testProductId });
+    }
+    if (categoryModel && testCategoryId) {
+      await categoryModel.deleteOne({ _id: testCategoryId });
+    }
+    if (userModel) {
+      await userModel.deleteMany({
+        email: { $in: [testUser.email, adminEmail] },
+      });
+    }
     await app.close();
   });
 });
