@@ -94,9 +94,9 @@ Nếu các giá trị này từng được dùng ở production hoặc staging:
 
 ### Cần fix
 
-- [ ] Xóa toàn bộ JWT secret hard-code khỏi `docker-compose.yml`.
-- [ ] Xóa username/password Mongo Express hard-code khỏi source.
-- [ ] Chuyển sang environment variables.
+- [x] Xóa toàn bộ JWT secret hard-code khỏi `docker-compose.yml`.
+- [x] Xóa username/password Mongo Express hard-code khỏi source.
+- [x] Chuyển sang environment variables và fail-closed khi thiếu.
 - [ ] Tạo secret mới cho production.
 - [ ] Rotate JWT secret đang sử dụng.
 - [ ] Rotate Mongo Express password nếu credential này từng được deploy.
@@ -192,9 +192,9 @@ Code fail unit test hoặc E2E vẫn có thể được deploy production.
 
 ### Cần fix
 
-- [ ] Chỉ deploy sau khi CI thành công.
-- [ ] Backend CI phải pass.
-- [ ] Frontend build/test phải pass.
+- [x] Chỉ deploy sau khi CI thành công.
+- [x] Backend CI phải pass.
+- [x] Frontend build/test phải pass.
 - [ ] Nếu mobile liên quan release thì mobile CI cũng phải pass.
 - [ ] Enable branch protection cho `main`.
 - [ ] Không cho merge PR nếu required checks fail.
@@ -287,12 +287,12 @@ họ có thể lấy refresh token và hijack session trong thời gian dài.
 
 ### Cần fix
 
-- [ ] Không lưu refresh token trong `localStorage`.
-- [ ] Backend set refresh token bằng HttpOnly cookie.
-- [ ] Cookie production phải có `Secure`.
+- [x] Không lưu refresh token trong `localStorage`.
+- [x] Backend set refresh token bằng HttpOnly cookie.
+- [x] Cookie production phải có `Secure`.
 - [ ] Chọn `SameSite` phù hợp deployment.
-- [ ] Frontend dùng `withCredentials`.
-- [ ] Refresh endpoint đọc refresh token từ cookie.
+- [x] Frontend dùng `withCredentials`.
+- [x] Refresh endpoint đọc refresh token từ cookie.
 - [ ] Logout phải clear cookie.
 - [ ] Login/register phải không trả refresh token cho JS nếu không cần.
 - [ ] Kiểm tra CSRF model sau khi chuyển sang cookie.
@@ -356,10 +356,10 @@ Nếu server firewall/network configuration mở:
 
 ### Cần fix
 
-- [ ] Production MongoDB không expose `27017` ra Internet.
-- [ ] Backend kết nối Mongo qua private/internal network.
-- [ ] Mongo Express không chạy production nếu không thực sự cần.
-- [ ] Nếu buộc dùng Mongo Express, chỉ bind localhost/VPN/private network.
+- [x] Production MongoDB không expose `27017` ra Internet.
+- [x] Backend kết nối Mongo qua private/internal network.
+- [x] Mongo Express không chạy production nếu không thực sự cần.
+- [x] Nếu buộc dùng Mongo Express, chỉ bind localhost/VPN/private network.
 - [ ] Bật database authentication nếu self-host Mongo.
 - [ ] Nếu dùng Mongo Atlas, restrict network access.
 - [ ] Verify firewall/security group.
@@ -437,8 +437,8 @@ có thể xảy ra:
 
 - [ ] Xác nhận production Mongo hỗ trợ transaction.
 - [ ] Production phải chạy replica set hoặc Mongo Atlas transaction-compatible.
-- [ ] Gom order creation + stock update + promotion usage vào transaction phù hợp.
-- [ ] Dùng atomic stock condition:
+- [x] Gom order creation + stock update + promotion usage vào transaction phù hợp.
+- [x] Dùng atomic stock condition:
 
 ```text
 stock >= requestedQuantity
@@ -532,8 +532,8 @@ thì sẽ làm sai:
 
 ### Cần fix
 
-- [ ] BA define transition matrix chính thức.
-- [ ] Backend implement centralized transition validator.
+- [x] BA define transition matrix chính thức.
+- [x] Backend implement centralized transition validator.
 - [ ] Không duplicate transition logic ở nhiều controller/service.
 - [ ] Terminal states không được quay ngược nếu business không cho phép.
 - [ ] Cancel phải check payment/status.
@@ -738,8 +738,8 @@ backend/test/*
 
 ### Acceptance Criteria
 
-- [ ] Core E2E suite pass trong CI.
-- [ ] Test failure block deploy.
+- [x] Core E2E suite pass trong CI.
+- [x] Test failure block deploy.
 - [ ] Có ít nhất một concurrent inventory test.
 - [ ] Có negative authorization coverage.
 
@@ -778,13 +778,13 @@ Các lỗi sau dễ lọt production:
 
 ### Cần fix
 
-- [ ] Thêm test runner phù hợp Vue 3.
-- [ ] Test auth store.
+- [x] Thêm test runner phù hợp Vue 3.
+- [x] Test auth store.
 - [ ] Test axios refresh interceptor.
-- [ ] Test cart calculation.
+- [x] Test cart calculation.
 - [ ] Test checkout request.
 - [ ] Test admin route guard.
-- [ ] Test logout cleanup.
+- [x] Test logout cleanup.
 - [ ] Add test command vào CI.
 - [ ] Add lint/type-check nếu chưa có.
 

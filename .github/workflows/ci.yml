@@ -28,8 +28,11 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm ci
 
+      - name: 🛡️ Security Audit
+        run: npm audit --audit-level=high
+
       - name: 🔍 Lint & Code Style Check
-        run: npm run lint || true
+        run: npm run lint
 
       - name: 🧪 Run Unit & Integration Tests
         run: |
@@ -61,6 +64,12 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm ci
 
+      - name: 🛡️ Security Audit
+        run: npm audit --audit-level=high
+
+      - name: 🧪 Run Frontend Unit Tests
+        run: npm run test:unit
+
       - name: 🏗️ Type Check & Build Production Bundle
         run: npm run build
 
@@ -91,7 +100,7 @@ jobs:
         run: flutter pub get
 
       - name: 🔍 Analyze Dart Code
-        run: flutter analyze || true
+        run: flutter analyze
 
       - name: 🧪 Run Flutter Unit & Widget Tests
         run: flutter test

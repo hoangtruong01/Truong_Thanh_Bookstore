@@ -79,7 +79,7 @@ export class AuthController {
       secure: isProduction || sameSite === 'none',
       sameSite,
       path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 15 * 60 * 1000,
     });
 
     if (refreshToken) {
@@ -87,7 +87,7 @@ export class AuthController {
         httpOnly: true,
         secure: isProduction || sameSite === 'none',
         sameSite,
-        path: '/',
+        path: '/api/auth',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       });
     }
@@ -98,9 +98,16 @@ export class AuthController {
     response: Response,
     _clientPlatform?: string,
   ) {
+    const isMobile = _clientPlatform?.trim().toLowerCase() === 'mobile';
+    if (isMobile) {
+      // Native clients cannot rely on browser cookies and receive the bearer pair.
+      return result;
+    }
+
     this.setAuthCookies(response, result.accessToken, result.refreshToken);
-    // Return full result (user, accessToken, refreshToken) for hybrid cookie + bearer token auth across cross-origin deployments
-    return result;
+    // Browser tokens remain HttpOnly and are never exposed to JavaScript.
+    const { accessToken: _accessToken, refreshToken: _refreshToken, ...browserResult } = result;
+    return browserResult;
   }
 
 
@@ -164,7 +171,7 @@ export class AuthController {
 
     await this.authService.logout(userId, rawAccessToken, rawRefreshToken);
     response.clearCookie('access_token', { path: '/' });
-    response.clearCookie('refresh_token', { path: '/' });
+    response.clearCookie('refresh_token', { path: '/api/auth' });
     return { success: true, message: 'Đăng xuất thành công' };
   }
 

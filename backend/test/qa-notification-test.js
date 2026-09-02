@@ -1,4 +1,10 @@
 const API_BASE = 'http://localhost:3000/api';
+const ADMIN_PASSWORD = process.env.QA_ADMIN_PASSWORD;
+const CUSTOMER_PASSWORD = process.env.QA_CUSTOMER_PASSWORD;
+
+if (!ADMIN_PASSWORD || !CUSTOMER_PASSWORD) {
+  throw new Error('QA_ADMIN_PASSWORD and QA_CUSTOMER_PASSWORD are required');
+}
 
 const results = [];
 
@@ -32,7 +38,7 @@ async function runQA() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email: 'admin@truongthanh.vn',
-      password: 'Admin@123456',
+      password: ADMIN_PASSWORD,
     }),
   });
   const adminToken = extractToken(adminLoginRes);
@@ -72,7 +78,7 @@ async function runQA() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email: 'customer@truongthanh.vn',
-      password: 'Customer@123456',
+      password: CUSTOMER_PASSWORD,
     }),
   });
   const custToken = extractToken(custLoginRes);

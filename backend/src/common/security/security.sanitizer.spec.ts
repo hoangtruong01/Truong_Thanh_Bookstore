@@ -191,6 +191,46 @@ describe('Security Sanitizer & Middleware Spec', () => {
       expect(mockReq.params).toEqual({ id: '507f1f77bcf86cd799439011' });
       expect(nextFn).toHaveBeenCalled();
     });
+
+    it('should reject cookie-authenticated mutations without the CSRF header', () => {
+      const mockReq: any = {
+        method: 'POST',
+        headers: {},
+        cookies: { access_token: 'cookie-token' },
+        get: jest.fn().mockReturnValue(undefined),
+      };
+
+      expect(() => middleware.use(mockReq, {} as any, jest.fn())).toThrow(
+        'CSRF',
+      );
+    });
+
+    it('should allow cookie-authenticated mutations with the CSRF header', () => {
+      const nextFn = jest.fn();
+      const mockReq: any = {
+        method: 'POST',
+        headers: {},
+        cookies: { access_token: 'cookie-token' },
+        get: jest.fn().mockReturnValue('XMLHttpRequest'),
+      };
+
+      middleware.use(mockReq, {} as any, nextFn);
+      expect(nextFn).toHaveBeenCalledTimes(1);
+    });
+
+    it('should sanitize an Express 5 getter-only query without returning 400', () => {
+      const nextFn = jest.fn();
+      const mockReq: any = { method: 'GET', headers: {}, body: {}, params: {} };
+      Object.defineProperty(mockReq, 'query', {
+        get: () => ({ search: '<script>bad()</script>book', $where: 'evil' }),
+        configurable: true,
+      });
+
+      middleware.use(mockReq, {} as any, nextFn);
+
+      expect(mockReq.query).toEqual({ search: 'book' });
+      expect(nextFn).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('5. Rate Limiting Exception Handling in HttpExceptionFilter', () => {

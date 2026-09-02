@@ -328,6 +328,11 @@ export class ProductsService {
     return product;
   }
 
+  async findByIds(ids: string[]): Promise<ProductDocument[]> {
+    const objectIds = ids.map((id) => new Types.ObjectId(id));
+    return this.productModel.find({ _id: { $in: objectIds }, isDeleted: false }).exec();
+  }
+
   async getRelated(id: string, limit = 8): Promise<ProductDocument[]> {
     let currentProduct: ProductDocument | null = null;
     if (Types.ObjectId.isValid(id)) {

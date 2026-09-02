@@ -31,12 +31,6 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authService.login(email, password)
       const data = res.data?.data || res.data
       user.value = data.user
-      if (data.accessToken) {
-        localStorage.setItem('token', data.accessToken)
-      }
-      if (data.refreshToken) {
-        localStorage.setItem('refreshToken', data.refreshToken)
-      }
       localStorage.setItem('user', JSON.stringify(user.value))
       return data
     } finally {
@@ -50,12 +44,6 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authService.register(data)
       const responseData = res.data?.data || res.data
       user.value = responseData.user
-      if (responseData.accessToken) {
-        localStorage.setItem('token', responseData.accessToken)
-      }
-      if (responseData.refreshToken) {
-        localStorage.setItem('refreshToken', responseData.refreshToken)
-      }
       localStorage.setItem('user', JSON.stringify(user.value))
       return responseData
     } finally {
@@ -89,6 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
   // FIX-2.2: Use Vue Router instead of window.location to prevent full page reload
   function clearSession() {
     user.value = null
+    // Remove tokens left by releases before the HttpOnly-cookie migration.
     localStorage.removeItem('token')
     localStorage.removeItem('refreshToken')
     localStorage.removeItem('user')
@@ -96,8 +85,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout() {
     try {
-      const refreshToken = localStorage.getItem('refreshToken') || undefined
-      await authService.logout(refreshToken)
+      await authService.logout()
     } finally {
       clearSession()
     }

@@ -22,13 +22,13 @@ jobs:
         id: release_notes
         run: |
           echo "## Trường Thành Bookstore — Release ${{ github.ref_name }}" > release_notes.md
-          echo "Hệ thống thương mại điện tử đa kênh Sách & Văn phòng phẩm hoàn thiện 100% (30/30 Tasks)." >> release_notes.md
+          echo "Hệ thống thương mại điện tử đa kênh Sách & Văn phòng phẩm." >> release_notes.md
           echo "" >> release_notes.md
           echo "### 🌟 Các tính năng nổi bật:" >> release_notes.md
           echo "- **Backend NestJS**: Microservices-ready modular architecture, JWT rotation, Rate limiting, Atomic Stock, PDF Invoices, WebSocket alerts." >> release_notes.md
           echo "- **Frontend Web Vue 3**: Storefront, Admin CMS, Live Suggestions, Freeship 299K progress bar, Verified reviews." >> release_notes.md
           echo "- **Mobile Flutter App**: Multi-platform sync, Wishlist, Notifications, Address book, Shimmer skeletons, Offline resilience." >> release_notes.md
-          echo "- **DevOps & QA**: 100% automated tests, Docker Compose orchestration, GitHub Actions CI/CD." >> release_notes.md
+          echo "- **DevOps & QA**: Automated regression tests, Docker Compose orchestration, GitHub Actions CI/CD." >> release_notes.md
 
       - name: 🚀 Publish GitHub Release
         uses: softprops/action-gh-release@v2

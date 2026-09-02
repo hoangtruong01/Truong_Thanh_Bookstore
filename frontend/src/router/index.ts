@@ -48,31 +48,31 @@ const routes = [
       { path: '', name: 'Home', component: Home },
       { path: 'products', name: 'ProductList', component: ProductList },
       { path: 'products/:id', name: 'ProductDetail', component: ProductDetail },
-      { path: 'cart', name: 'Cart', component: Cart },
-      { path: 'checkout', name: 'Checkout', component: Checkout },
+      { path: 'cart', name: 'Cart', component: Cart, meta: { noIndex: true } },
+      { path: 'checkout', name: 'Checkout', component: Checkout, meta: { noIndex: true } },
       { path: 'deal-hot', name: 'DealHot', component: DealHot },
       { path: 't/:slug', name: 'LandingPageDetail', component: LandingPageDetail },
       { path: 'info', name: 'Info', component: Info },
-      { path: 'my-orders', name: 'MyOrders', component: MyOrders, meta: { requiresAuth: true } },
-      { path: 'my-orders/:id', name: 'OrderDetail', component: OrderDetail, meta: { requiresAuth: true } },
-      { path: 'guest-orders/:id', name: 'GuestOrderDetail', component: OrderDetail },
-      { path: 'addresses', name: 'Addresses', component: Addresses, meta: { requiresAuth: true } },
-      { path: 'wishlist', name: 'Wishlist', component: Wishlist, meta: { requiresAuth: true } },
+      { path: 'my-orders', name: 'MyOrders', component: MyOrders, meta: { requiresAuth: true, noIndex: true } },
+      { path: 'my-orders/:id', name: 'OrderDetail', component: OrderDetail, meta: { requiresAuth: true, noIndex: true } },
+      { path: 'guest-orders/:id', name: 'GuestOrderDetail', component: OrderDetail, meta: { noIndex: true } },
+      { path: 'addresses', name: 'Addresses', component: Addresses, meta: { requiresAuth: true, noIndex: true } },
+      { path: 'wishlist', name: 'Wishlist', component: Wishlist, meta: { requiresAuth: true, noIndex: true } },
     ],
   },
   {
     path: '/',
     component: AuthLayout,
     children: [
-      { path: 'login', name: 'Login', component: Login, meta: { guestOnly: true } },
-      { path: 'register', name: 'Register', component: Register, meta: { guestOnly: true } },
-      { path: 'forgot-password', name: 'ForgotPassword', component: ForgotPassword, meta: { guestOnly: true } },
+      { path: 'login', name: 'Login', component: Login, meta: { guestOnly: true, noIndex: true } },
+      { path: 'register', name: 'Register', component: Register, meta: { guestOnly: true, noIndex: true } },
+      { path: 'forgot-password', name: 'ForgotPassword', component: ForgotPassword, meta: { guestOnly: true, noIndex: true } },
     ],
   },
   {
     path: '/admin',
     component: AdminLayout,
-    meta: { requiresAdmin: true },
+    meta: { requiresAdmin: true, noIndex: true },
     children: [
       { path: '', redirect: { name: 'AdminDashboard' } },
       { path: 'dashboard', name: 'AdminDashboard', component: AdminDashboard },
@@ -136,6 +136,16 @@ router.beforeEach((to, _from, next) => {
 
 // FIX-3.1: Dynamic SEO Document Title update on route changes
 router.afterEach((to) => {
+  let robotsMeta = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+  if (!robotsMeta) {
+    robotsMeta = document.createElement('meta');
+    robotsMeta.name = 'robots';
+    document.head.appendChild(robotsMeta);
+  }
+  robotsMeta.content = to.matched.some((record) => record.meta.noIndex)
+    ? 'noindex, nofollow'
+    : 'index, follow';
+
   const titles: Record<string, string> = {
     Home: 'Trường Thành Stationery — Dụng Cụ Học Tập & Văn Phòng Phẩm Chính Hãng',
     ProductList: 'Danh Sách Sản Phẩm — Trường Thành Stationery',

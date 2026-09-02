@@ -38,6 +38,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
   const mockProductsService = {
     findById: jest.fn().mockResolvedValue(mockProduct),
+    findByIds: jest.fn().mockResolvedValue([mockProduct]),
     deductStock: jest.fn(),
     updateStock: jest.fn(),
     incrementSold: jest.fn(),
@@ -62,12 +63,17 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
   };
 
   const mockUsersService = {
-    addLoyaltyPoints: jest.fn().mockResolvedValue({}),
+    addLoyaltyPoints: jest.fn().mockResolvedValue({
+      user: { loyaltyPoints: 80 },
+      tierUpgraded: false,
+    }),
     deductLoyaltyPoints: jest.fn().mockResolvedValue({}),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockProductsService.findById.mockResolvedValue(mockProduct);
+    mockProductsService.findByIds.mockResolvedValue([mockProduct]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -131,7 +137,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       mockProductsService.incrementSold.mockResolvedValue(undefined);
 
       const expensiveProduct = { ...mockProduct, price: 300000 };
-      mockProductsService.findById.mockResolvedValueOnce(expensiveProduct);
+      mockProductsService.findByIds.mockResolvedValueOnce([expensiveProduct]);
 
       const createDto: any = {
         items: [{ product: expensiveProduct._id, name: expensiveProduct.name, quantity: 1 }], // 300,000 VND
@@ -238,7 +244,11 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       };
 
       await ordersService.updateStatus('order123', updateDto);
-      expect(mockUsersService.deductLoyaltyPoints).toHaveBeenCalledWith('user123', 80);
+      expect(mockUsersService.deductLoyaltyPoints).toHaveBeenCalledWith(
+        'user123',
+        80,
+        undefined,
+      );
     });
   });
 });

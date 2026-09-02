@@ -275,7 +275,11 @@ describe('TRƯỜNG THÀNH BOOKSTORE — COMPLETE E2E TEST SUITE', () => {
     it('4.1 Should login as seed Admin', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/auth/login')
-        .send({ email: 'admin@truongthanh.vn', password: 'Admin@123456' })
+        .set('x-client-platform', 'mobile')
+        .send({
+          email: 'admin@truongthanh.vn',
+          password: process.env.SEED_ADMIN_PASSWORD,
+        })
         .expect(201);
 
       expect(res.body.success).toBe(true);

@@ -90,7 +90,7 @@ flutter run
 ```bash
 cd backend
 
-# Chạy toàn bộ 21 test suites nghiệp vụ (246 unit tests)
+# Baseline audit 2026-09-02: 22 test suites / 252 tests
 npm test
 
 # Chạy test kiểm thử các ca sửa lỗi trọng yếu (Atomic rollback, Freeship 299K, Default Address, PDF)

@@ -9,7 +9,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from './schemas/user.schema';
 import { Product, ProductDocument } from '../products/schemas/product.schema';
@@ -478,11 +478,14 @@ export class UsersService {
   async deductLoyaltyPoints(
     userId: string,
     points: number,
+    session?: ClientSession,
   ): Promise<UserDocument | null> {
-    const user = await this.userModel.findById(userId).exec();
+    const query = this.userModel.findById(userId);
+    if (session) query.session(session);
+    const user = await query.exec();
     if (!user) return null;
     user.loyaltyPoints = Math.max(0, (user.loyaltyPoints || 0) - points);
-    return user.save();
+    return user.save(session ? { session } : undefined);
   }
 
   async getLoyaltyInfo(userId: string) {

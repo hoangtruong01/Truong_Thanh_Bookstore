@@ -40,6 +40,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
   const mockProductsService = {
     findById: jest.fn().mockResolvedValue(mockProduct),
+    findByIds: jest.fn().mockResolvedValue([mockProduct]),
     deductStock: jest.fn(),
     updateStock: jest.fn(),
     incrementSold: jest.fn(),
@@ -47,6 +48,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
   const mockPromotionsService = {
     apply: jest.fn(),
+    releaseUsage: jest.fn(),
   };
 
   const mockNotificationsService = {
@@ -70,6 +72,9 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    delete (mockOrderModel as any).db;
+    mockProductsService.findById.mockResolvedValue(mockProduct);
+    mockProductsService.findByIds.mockResolvedValue([mockProduct]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -132,7 +137,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       mockProductsService.incrementSold.mockResolvedValue(undefined);
 
       const expensiveProduct = { ...mockProduct, price: 300000 };
-      mockProductsService.findById.mockResolvedValueOnce(expensiveProduct);
+      mockProductsService.findByIds.mockResolvedValueOnce([expensiveProduct]);
 
       const createDto: any = {
         items: [{ product: expensiveProduct._id, name: expensiveProduct.name, quantity: 1 }], // 300,000 VND
@@ -266,6 +271,41 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       expect(result.timeline).toEqual([
         expect.objectContaining({ status: OrderStatus.PROCESSING }),
       ]);
+    });
+
+    it('commits a status transition in a MongoDB transaction when available', async () => {
+      const session = {
+        startTransaction: jest.fn(),
+        commitTransaction: jest.fn().mockResolvedValue(undefined),
+        abortTransaction: jest.fn().mockResolvedValue(undefined),
+        inTransaction: jest.fn().mockReturnValue(false),
+        endSession: jest.fn().mockResolvedValue(undefined),
+      };
+      (mockOrderModel as any).db = {
+        startSession: jest.fn().mockResolvedValue(session),
+      };
+      const order: any = {
+        _id: '507f1f77bcf86cd799439099',
+        orderStatus: OrderStatus.CONFIRMED,
+        paymentMethod: 'COD',
+        timeline: [],
+        items: [],
+        save: jest.fn().mockImplementation(async () => order),
+      };
+      const query = {
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(order),
+      };
+      mockOrderModel.findById.mockReturnValueOnce(query);
+
+      await ordersService.updateStatus(order._id, {
+        orderStatus: OrderStatus.PROCESSING,
+      });
+
+      expect(query.session).toHaveBeenCalledWith(session);
+      expect(order.save).toHaveBeenCalledWith({ session });
+      expect(session.commitTransaction).toHaveBeenCalledTimes(1);
+      expect(session.endSession).toHaveBeenCalledTimes(1);
     });
   });
 });

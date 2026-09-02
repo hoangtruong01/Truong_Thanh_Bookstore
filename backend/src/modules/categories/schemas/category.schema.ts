@@ -48,6 +48,5 @@ export class Category {
 export const CategorySchema = SchemaFactory.createForClass(Category);
 
 // Indexes for category tree & hierarchy performance
-CategorySchema.index({ slug: 1 }, { unique: true });
 CategorySchema.index({ parentId: 1, status: 1, sortOrder: 1 });
 CategorySchema.index({ status: 1, sortOrder: 1 });
