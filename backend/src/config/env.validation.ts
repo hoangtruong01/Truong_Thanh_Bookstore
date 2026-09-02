@@ -63,7 +63,11 @@ export class EnvironmentVariables {
 
   @IsString({ message: 'JWT_EXPIRES_IN phải là định dạng chuỗi thời gian hợp lệ (ví dụ: 7d, 24h, 3600s)' })
   @IsOptional()
-  JWT_EXPIRES_IN: string = '7d';
+  JWT_EXPIRES_IN: string = '15m';
+
+  @IsString()
+  @IsOptional()
+  JWT_REFRESH_EXPIRES_IN: string = '30d';
 
   @IsString({ message: 'FRONTEND_URL phải là một chuỗi URL hợp lệ' })
   @IsOptional()
@@ -79,6 +83,34 @@ export class EnvironmentVariables {
   @IsBoolean({ message: 'COOKIE_SECURE phải là boolean (true/false)' })
   @IsOptional()
   COOKIE_SECURE?: boolean;
+
+  @IsString()
+  @IsOptional()
+  ENABLE_SWAGGER?: string;
+
+  @IsString()
+  @IsOptional()
+  AUTO_SEED?: string = 'false';
+
+  @IsString()
+  @IsOptional()
+  RESET_DATABASE_ON_SEED?: string = 'false';
+
+  @IsString()
+  @IsOptional()
+  SEED_SUPER_ADMIN_PASSWORD?: string;
+
+  @IsString()
+  @IsOptional()
+  SEED_ADMIN_PASSWORD?: string;
+
+  @IsString()
+  @IsOptional()
+  SEED_STAFF_PASSWORD?: string;
+
+  @IsString()
+  @IsOptional()
+  SEED_CUSTOMER_PASSWORD?: string;
 
   // Cloudinary credentials (optional)
   @IsString()

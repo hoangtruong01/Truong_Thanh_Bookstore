@@ -44,7 +44,7 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
       const result = validateEnv(minimalConfig);
       expect(result.NODE_ENV).toBe(Environment.DEVELOPMENT);
       expect(result.PORT).toBe(3000);
-      expect(result.JWT_EXPIRES_IN).toBe('7d');
+      expect(result.JWT_EXPIRES_IN).toBe('15m');
       expect(result.FRONTEND_URL).toBe('http://localhost:5173');
     });
 

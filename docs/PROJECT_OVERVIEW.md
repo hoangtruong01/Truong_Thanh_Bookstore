@@ -29,7 +29,7 @@
 
 ### 1.2. Các kênh tương tác (Touchpoints)
 1. **Web Khách hàng (Storefront):** Khách hàng tìm kiếm sản phẩm, lọc theo giá/danh mục/thương hiệu, thêm giỏ hàng, áp mã khuyến mãi, đặt hàng (hỗ trợ cả tài khoản thành viên và khách vãng lai), theo dõi đơn hàng và đánh giá sản phẩm.
-2. **Web Quản trị (Admin Dashboard CMS):** Dành cho chủ cửa hàng và nhân viên quản lý sản phẩm, cây danh mục, kho hàng (phiếu nhập/xuất/điều chỉnh), đơn hàng, khuyến mãi, khách hàng, banner quảng cáo, báo cáo doanh thu tài chính và xuất/nhập danh sách sản phẩm bằng Excel.
+2. **Web Quản trị (Admin Dashboard CMS):** Dành cho quản trị viên (Admin) quản lý sản phẩm, cây danh mục, kho hàng (phiếu nhập/xuất/điều chỉnh), đơn hàng, khuyến mãi, khách hàng, banner quảng cáo, báo cáo doanh thu tài chính và xuất/nhập danh sách sản phẩm bằng Excel.
 3. **Ứng dụng Di động (Mobile App - iOS & Android):** Trải nghiệm mua sắm nhanh, nhận thông báo đẩy tức thì (thông báo đơn hàng, flash sale), đồng bộ giỏ hàng và danh sách yêu thích với Web.
 
 ---
@@ -102,12 +102,12 @@ Truong_Thanh_Bookstore/
 │   │   ├── main.ts             # Điểm khởi chạy API (CORS, Helmet, Pipes, Swagger)
 │   │   ├── app.module.ts       # Module gốc cấu hình DB, Config, Throttler
 │   │   ├── common/             # Middleware & Tiện ích dùng chung
-│   │   │   ├── decorators/     # @GetUser, @Roles, @Permissions, @Public...
+│   │   │   ├── decorators/     # @GetUser, @Roles, @Public...
 │   │   │   ├── dto/            # DTO dùng chung (PaginationDto, StandardResponse)
 │   │   │   ├── enums/          # Enum tập trung (ErrorCode, UserRole, OrderStatus...)
 │   │   │   ├── exceptions/     # AppException, BusinessException, ResourceNotFoundException...
 │   │   │   ├── filters/        # HttpExceptionFilter (Chuẩn hóa response lỗi toàn cục)
-│   │   │   ├── guards/         # JwtAuthGuard, RolesGuard, PermissionsGuard, OptionalJwtGuard
+│   │   │   ├── guards/         # JwtAuthGuard, RolesGuard, OptionalJwtGuard
 │   │   │   ├── interceptors/   # TransformInterceptor (Đóng gói { success, message, data, meta })
 │   │   │   └── validators/     # Custom validators (IsMongoObjectId, IsPhoneNumberVN)
 │   │   ├── config/             # Quản lý & Xác thực biến môi trường (.env)
@@ -244,14 +244,15 @@ VITE_APP_NAME="Trường Thành Bookstore"
 # -------------------------------------------------------------
 # 1. Khởi động Database MongoDB (nếu chạy Docker MongoDB)
 # -------------------------------------------------------------
-docker run -d --name mongodb-local -p 27017:27017 mongo:7.0
+docker compose up -d mongodb
 
 # -------------------------------------------------------------
 # 2. Khởi chạy Backend (Terminal 1)
 # -------------------------------------------------------------
 cd backend
 npm install
-npm run seed       # (Tùy chọn) Nạp dữ liệu mẫu ban đầu: Admin, Sản phẩm, Danh mục
+# Seed mặc định tắt. Chỉ bật AUTO_SEED=true và khai báo đủ SEED_*_PASSWORD
+# trong môi trường development khi chủ động cần dữ liệu mẫu.
 npm run start:dev  # API chạy tại: http://localhost:3000 | Swagger: http://localhost:3000/api/docs
 
 # -------------------------------------------------------------
@@ -273,19 +274,21 @@ flutter run
 
 ```bash
 # Tại thư mục gốc của dự án:
-docker-compose up -d --build
+# Cần khai báo JWT_SECRET; Mongo Express còn yêu cầu ME_CONFIG_BASICAUTH_*
+docker compose up -d --build
 
 # Các dịch vụ được khởi chạy:
 # - Frontend:     http://localhost:80
 # - Backend API:  http://localhost:3000/api
 # - Swagger Docs: http://localhost:3000/api/docs
-# - Mongo Express:http://localhost:8081 (Quản trị DB trực quan)
+# - Mongo Express: chỉ chạy khi thêm --profile tools và cung cấp credentials
 ```
 
-#### 🔑 Tài khoản Mặc định khi Seed Dữ liệu (`npm run seed`)
-- **Super Admin:** `admin@truongthanh.vn` / `Admin@123456`
-- **Nhân viên (Staff):** `staff@truongthanh.vn` / `Staff@123456`
-- **Khách hàng (Customer):** `customer@truongthanh.vn` / `Customer@123456`
+#### 🔑 Seed dữ liệu an toàn
+
+Không có mật khẩu seed mặc định trong source. Khi `AUTO_SEED=true`, phải cung cấp bốn biến
+`SEED_SUPER_ADMIN_PASSWORD`, `SEED_ADMIN_PASSWORD`, `SEED_STAFF_PASSWORD` và
+`SEED_CUSTOMER_PASSWORD` (tối thiểu 12 ký tự). `RESET_DATABASE_ON_SEED=true` bị cấm ở production.
 
 ---
 
@@ -299,30 +302,30 @@ docker-compose up -d --build
 5. **Token Blacklist Service:** Khi người dùng bấm Đăng xuất (Logout), JTI (JWT ID) và chuỗi băm của token được đưa vào `TokenBlacklistService` để vô hiệu hóa ngay lập tức.
 6. **Phiên đăng nhập toàn cục (`tokenVersion`):** Khi người dùng Đổi mật khẩu hoặc Đặt lại mật khẩu qua OTP, trường `tokenVersion` trên `UserSchema` tự động tăng lên (+1), làm vô hiệu hóa tức thì toàn bộ JWT cũ đang lưu trên mọi thiết bị khác.
 
-### 5.2. Ma trận Phân quyền (RBAC Matrix)
+### 5.2. Mô hình Vai trò & Quyền hạn (Role-Based Access Control)
 
-Hệ thống phân chia 4 cấp bậc vai trò (`UserRole`) với quyền hạn phân cấp nghiêm ngặt:
+Code hiện tại triển khai 4 vai trò (`UserRole`):
 
 ```text
 ┌─────────────────┐
-│   SUPER_ADMIN   │  (Toàn quyền hệ thống, quản lý tài khoản Admin & Staff)
-└────────┬────────┘
-         │ Kế thừa
-┌────────▼────────┐
-│      ADMIN      │  (Quản lý sản phẩm, kho, đơn hàng, khuyến mãi, báo cáo doanh thu)
-└────────┬────────┘
-         │ Kế thừa
-┌────────▼────────┐
-│      STAFF      │  (Xử lý đơn hàng, nhập/xuất kho theo Granular Permissions được cấp)
-└────────┬────────┘
-         │ Kế thừa
-┌────────▼────────┐
+│   SUPER_ADMIN   │  (Toàn quyền và quản trị tài khoản đặc quyền)
+├─────────────────┤
+│      ADMIN      │  (Quản trị nghiệp vụ)
+├─────────────────┤
+│      STAFF      │  (Quyền chi tiết theo permissions được cấp)
+└─────────────────┘
+
+┌─────────────────┐
 │    CUSTOMER     │  (Mua hàng, quản lý sổ địa chỉ, xem lịch sử đơn, đánh giá)
 └─────────────────┘
 ```
 
-**8 Quyền chi tiết dành cho Staff (`StaffPermission`):**
-`MANAGE_PRODUCTS`, `MANAGE_CATEGORIES`, `MANAGE_ORDERS`, `MANAGE_INVENTORY`, `MANAGE_PROMOTIONS`, `MANAGE_REVIEWS`, `MANAGE_CUSTOMERS`, `VIEW_REPORTS`.
+| Vai trò (`UserRole`) | Phạm vi quyền hạn | Mô tả chi tiết |
+| :--- | :--- | :--- |
+| **SUPER_ADMIN** | Toàn quyền | Quản trị tài khoản đặc quyền và toàn bộ nghiệp vụ. |
+| **ADMIN** | Toàn quyền hệ thống, quản lý | Quản trị toàn bộ sản phẩm, danh mục, kho hàng, đơn hàng, mã giảm giá/khuyến mãi, khách hàng, banner quảng cáo, báo cáo doanh thu tài chính. |
+| **STAFF** | Theo quyền được cấp | Thao tác theo `StaffPermission`; backend vẫn là nơi thực thi authorization cuối cùng. |
+| **CUSTOMER** | Mua sắm & Cá nhân hóa | Mua hàng, quản lý giỏ hàng, đặt hàng, quản lý sổ địa chỉ nhận hàng, xem lịch sử đơn hàng và gửi đánh giá sản phẩm. |
 
 ---
 
@@ -491,12 +494,13 @@ Mọi Pull Request hoặc thao tác Push vào nhánh `main` đều được ki�
 Dự án đã trải qua đợt đánh giá kỹ thuật toàn diện (**Technical Audit**). Tất cả 24 vấn đề phát hiện và kế hoạch nâng cấp đã được lập bảng chi tiết trong tệp:  
 👉 [`docs/AUDIT_FIX_TASKS.md`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/docs/AUDIT_FIX_TASKS.md)
 
-### 📌 Tóm tắt 5 Nhóm Task Cần Ưu Tiên Hàng Đầu:
-1. **[P0 - SEC-01] Xóa bỏ & Thay mới các Khóa Bí mật (Rotate Secrets):** Chuyển toàn bộ JWT Secret, Mongo Express Credentials, Cloudinary và Gemini Key khỏi mã nguồn sang biến môi trường bí mật; loại bỏ file `.env` chứa thông tin thật khỏi Git tracking.
-2. **[P0 - DEVOPS-01] Khóa Pipeline Triển khai (Deploy Gate by CI):** Cấu hình `deploy.yml` chỉ cho phép kích hoạt khi các bước CI Test (Backend, Frontend) đã vượt qua thành công 100%.
-3. **[P0 - SEC-02] Bảo vệ Token Phía Web (HttpOnly Cookie):** Chuyển `refreshToken` từ `localStorage` của trình duyệt sang lưu trữ bằng `HttpOnly, Secure, SameSite Cookie` để phòng chống triệt để tấn công XSS.
-4. **[P0 - DEVOPS-02] Đóng Cổng Database Công khai:** Không publish cổng MongoDB `27017` và Mongo Express `8081` ra Internet công cộng trên môi trường Production.
-5. **[P0 - BE-01] Đảm bảo Giao dịch Trừ Kho Nguyên tử (Atomic Transactions):** Cấu hình MongoDB Replica Set ở production để hỗ trợ triệt để multi-document transactions khi đặt hàng đồng thời nhiều người mua cùng 1 sản phẩm.
+### 📌 Trạng thái hardening sau audit ngày 2026-09-02
+
+1. **[P0 - DATA] Auto-seed:** ✅ mặc định tắt; reset chỉ bằng cờ tường minh và bị cấm ở production.
+2. **[P0 - SEC] Secrets & token web:** ⚠️ source đã fail-closed và web dùng HttpOnly cookie + CSRF header; rotation secret production vẫn là việc vận hành bắt buộc.
+3. **[P0 - DEVOPS] Deploy gate:** ✅ deploy chỉ chạy sau CI thành công; branch protection phải cấu hình trên GitHub.
+4. **[P0 - DB] Network/transaction:** ⚠️ Compose bind DB vào localhost và dùng replica set; production vẫn phải bật DB authentication, backup và kiểm chứng topology thực tế.
+5. **[P1/P2 - ORDER] Integrity:** ✅ tạo đơn và cập nhật trạng thái/tồn kho dùng transaction khi có Mongo replica set; môi trường standalone bị fail-closed cho chuyển trạng thái có side effect.
 
 ---
 

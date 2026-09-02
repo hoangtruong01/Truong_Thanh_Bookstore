@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import { ConfigService } from '@nestjs/config';
 import { User, UserDocument } from '../modules/users/schemas/user.schema';
 import {
   Category,
@@ -54,71 +55,51 @@ export class SeedService implements OnModuleInit {
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     @InjectModel(LandingPage.name)
     private landingPageModel: Model<LandingPageDocument>,
+    private readonly configService: ConfigService,
   ) {}
 
   async onModuleInit() {
+    const autoSeed = this.configService.get<string>('AUTO_SEED') === 'true';
+    if (!autoSeed) {
+      this.logger.log('Automatic database seeding is disabled (AUTO_SEED != true).');
+      return;
+    }
+
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
+    const resetDatabase =
+      this.configService.get<string>('RESET_DATABASE_ON_SEED') === 'true';
+    if (resetDatabase && nodeEnv === 'production') {
+      throw new Error(
+        'RESET_DATABASE_ON_SEED is forbidden in production to prevent data loss.',
+      );
+    }
+
     const hasUsers = await this.userModel.countDocuments({}).exec();
     const hasCategories = await this.categoryModel.countDocuments({}).exec();
-    const firstCategory = await this.categoryModel.findOne({ name: 'Sách giáo khoa' }).exec() as any;
     const productCount = await this.productModel.countDocuments({}).exec();
     const promotionCount = await this.promotionModel.countDocuments({}).exec();
-    const comboCat = await this.categoryModel.findOne({ name: 'Combo', parentId: null }).exec();
-    const mislinkedCombo = comboCat ? await this.categoryModel.findOne({ parentId: { $ne: comboCat._id, $exists: true } }).exec() : null;
 
-    if (hasUsers === 0 || hasCategories === 0 || !firstCategory || !firstCategory.optionsLabel || productCount === 0 || mislinkedCombo) {
-      this.logger.log(`Triggering clean reseed: users=${hasUsers}, categories=${hasCategories}, products=${productCount}`);
+    if (resetDatabase) {
+      this.logger.warn(
+        `Explicit development reset requested: users=${hasUsers}, categories=${hasCategories}, products=${productCount}`,
+      );
       await this.clearDatabase();
       await this.seed();
+    } else if (hasUsers === 0 && hasCategories === 0 && productCount === 0) {
+      this.logger.log('Database is empty; running the explicitly enabled seed.');
+      await this.seed();
     } else {
-      this.logger.log('Database already populated with 120 products. Skipping seed.');
-      if (promotionCount === 0) {
-        this.logger.log('No promotions found, seeding default promotions...');
-        const promotions = [
-          {
-            code: 'GIAM10K',
-            name: 'Voucher giảm 10K',
-            description: 'Giảm 10.000đ cho đơn hàng từ 50.000đ trở lên',
-            discountType: DiscountType.FIXED,
-            discountValue: 10000,
-            minOrderValue: 50000,
-            startDate: new Date(),
-            endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-            usageLimit: 1000,
-            usedCount: 0,
-            status: true,
-          },
-          {
-            code: 'HE2026',
-            name: 'Chào Hè Rực Rỡ',
-            description: 'Giảm 10% cho đơn hàng từ 100.000đ trở lên',
-            discountType: DiscountType.PERCENT,
-            discountValue: 10,
-            minOrderValue: 100000,
-            startDate: new Date(),
-            endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-            usageLimit: 500,
-            usedCount: 0,
-            status: true,
-          },
-          {
-            code: 'TRUONGTHANH50',
-            name: 'Tri ân khách hàng',
-            description: 'Giảm 50.000đ cho đơn hàng từ 300.000đ trở lên',
-            discountType: DiscountType.FIXED,
-            discountValue: 50000,
-            minOrderValue: 300000,
-            startDate: new Date(),
-            endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-            usageLimit: 100,
-            usedCount: 0,
-            status: true,
-          },
-        ];
-        await this.promotionModel.insertMany(promotions);
-        this.logger.log('Promotions seeded successfully');
+      this.logger.log('Database is already populated; destructive reseeding was skipped.');
+      if (hasUsers === 0 || hasCategories === 0 || productCount === 0) {
+        this.logger.warn(
+          'Database is only partially populated. Seed was skipped to avoid overwriting real data; repair it manually or use RESET_DATABASE_ON_SEED=true outside production.',
+        );
       }
     }
-    await this.seedDealHotLandingPage();
+
+    if (promotionCount === 0 && !resetDatabase && hasUsers > 0 && hasCategories > 0 && productCount > 0) {
+      this.logger.warn('No promotions found; automatic backfilling was skipped to preserve production data ownership.');
+    }
   }
 
   async clearDatabase() {
@@ -209,9 +190,25 @@ export class SeedService implements OnModuleInit {
   }
 
   async seed() {
-    const superAdminPassword = await bcrypt.hash('SuperAdmin@123456', 10);
-    const adminPassword = await bcrypt.hash('Admin@123456', 10);
-    const customerPassword = await bcrypt.hash('Customer@123456', 10);
+    const getSeedPassword = (key: string): string => {
+      const value = this.configService.get<string>(key);
+      if (!value || value.length < 12) {
+        throw new Error(`${key} is required and must contain at least 12 characters when AUTO_SEED=true.`);
+      }
+      return value;
+    };
+    const superAdminPassword = await bcrypt.hash(
+      getSeedPassword('SEED_SUPER_ADMIN_PASSWORD'),
+      10,
+    );
+    const adminPassword = await bcrypt.hash(
+      getSeedPassword('SEED_ADMIN_PASSWORD'),
+      10,
+    );
+    const customerPassword = await bcrypt.hash(
+      getSeedPassword('SEED_CUSTOMER_PASSWORD'),
+      10,
+    );
 
     const existingSuperAdmin = await this.userModel.findOne({ email: 'superadmin@truongthanh.vn' }).exec();
     if (!existingSuperAdmin) {
@@ -249,7 +246,10 @@ export class SeedService implements OnModuleInit {
       });
     }
 
-    const staffPassword = await bcrypt.hash('Staff@123456', 10);
+    const staffPassword = await bcrypt.hash(
+      getSeedPassword('SEED_STAFF_PASSWORD'),
+      10,
+    );
     const existingStaff = await this.userModel.findOne({ email: 'staff@truongthanh.vn' }).exec();
     if (!existingStaff) {
       await this.userModel.create({

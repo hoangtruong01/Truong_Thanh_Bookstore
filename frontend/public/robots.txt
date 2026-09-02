@@ -3,5 +3,12 @@ Allow: /
 Disallow: /admin/
 Disallow: /login
 Disallow: /register
+Disallow: /forgot-password
+Disallow: /cart
+Disallow: /checkout
+Disallow: /my-orders
+Disallow: /guest-orders
+Disallow: /addresses
+Disallow: /wishlist
 
 Sitemap: https://truong-thanh-store.vercel.app/sitemap.xml

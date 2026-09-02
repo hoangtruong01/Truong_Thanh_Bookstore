@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger, ForbiddenException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, ForbiddenException, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model } from 'mongoose';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
@@ -311,6 +311,10 @@ export class OrdersService {
       }
     }
 
+    const productIds = dto.items.map(item => item.product);
+    const products = await this.productsService.findByIds(productIds);
+    const productMap = new Map(products.map(p => [p._id.toString(), p]));
+
     const verifiedItems: Array<{
       product: string;
       name: string;
@@ -319,7 +323,10 @@ export class OrdersService {
       image: string;
     }> = [];
     for (const item of dto.items) {
-      const product = await this.productsService.findById(item.product);
+      const product = productMap.get(item.product);
+      if (!product) {
+        throw new BadRequestException(`Sản phẩm không tồn tại: ${item.product}`);
+      }
       if (product.stock < item.quantity) {
         throw new BadRequestException(
           `Sản phẩm "${product.name}" chỉ còn ${product.stock} sản phẩm trong kho`,
@@ -491,7 +498,7 @@ export class OrdersService {
 
       const points = Math.floor(savedOrder.total / 1000);
 
-      this.notificationsService.create({
+      await this.notificationsService.create({
         userId,
         title: 'Đặt hàng thành công',
         message: `Đơn hàng #${savedOrder.orderCode} trị giá ${savedOrder.total.toLocaleString('vi-VN')}đ đã được tiếp nhận.`,
@@ -506,10 +513,10 @@ export class OrdersService {
 
 
       if (points > 0) {
-        this.usersService.addLoyaltyPoints(userId, points).then((res) => {
+        await this.usersService.addLoyaltyPoints(userId, points).then(async (res) => {
           if (res) {
             // Loyalty points notification
-            this.notificationsService.create({
+            await this.notificationsService.create({
               userId,
               title: '🪙 Tích điểm thành công',
               message: `Bạn được cộng +${points.toLocaleString('vi-VN')} điểm từ đơn hàng #${savedOrder.orderCode}. Tổng tích lũy: ${res.user.loyaltyPoints} điểm.`,
@@ -526,7 +533,7 @@ export class OrdersService {
                 DIAMOND: 'KIM CƯƠNG',
               };
               const tierVN = tierNameMap[res.newTier] || res.newTier;
-              this.notificationsService.create({
+              await this.notificationsService.create({
                 userId,
                 title: `🏆 Chúc mừng nâng hạng ${tierVN}`,
                 message: `Chúc mừng bạn đã thăng hạng thành viên ${tierVN}! Mở khóa thêm nhiều quyền lợi và ưu đãi độc quyền.`,
@@ -684,7 +691,38 @@ export class OrdersService {
     id: string,
     dto: UpdateOrderStatusDto,
   ): Promise<OrderDocument> {
-    const order = await this.orderModel.findById(id).exec();
+    const database = this.orderModel.db;
+    if (!database?.startSession) {
+      return this.updateStatusInternal(id, dto);
+    }
+
+    const session = await database.startSession();
+    try {
+      session.startTransaction();
+      const result = await this.updateStatusInternal(id, dto, session);
+      await session.commitTransaction();
+      return result;
+    } catch (error) {
+      if (session.inTransaction()) await session.abortTransaction();
+      if (this.isTransactionUnsupported(error)) {
+        throw new ServiceUnavailableException(
+          'Cập nhật trạng thái đơn hàng yêu cầu MongoDB replica set để bảo đảm toàn vẹn dữ liệu',
+        );
+      }
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  private async updateStatusInternal(
+    id: string,
+    dto: UpdateOrderStatusDto,
+    session?: ClientSession,
+  ): Promise<OrderDocument> {
+    const orderQuery = this.orderModel.findById(id);
+    if (session) orderQuery.session(session);
+    const order = await orderQuery.exec();
     if (!order) throw new NotFoundException('Order not found');
 
     const oldStatus = order.orderStatus;
@@ -693,7 +731,7 @@ export class OrdersService {
       [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
       [OrderStatus.PROCESSING]: [OrderStatus.SHIPPING, OrderStatus.CANCELLED],
       [OrderStatus.SHIPPING]: [OrderStatus.DELIVERED],
-      [OrderStatus.DELIVERED]: [OrderStatus.RETURNED],
+      [OrderStatus.DELIVERED]: [OrderStatus.COMPLETED, OrderStatus.RETURNED],
       [OrderStatus.COMPLETED]: [OrderStatus.RETURNED],
       [OrderStatus.RETURNED]: [],
       [OrderStatus.CANCELLED]: [],
@@ -754,10 +792,12 @@ export class OrdersService {
           await this.productsService.updateStock(
             item.product.toString(),
             item.quantity,
+            session,
           );
           await this.productsService.incrementSold(
             item.product.toString(),
             -item.quantity,
+            session,
           );
           if (this.inventoryService) {
             await this.inventoryService.recordExternalMovement(
@@ -766,6 +806,7 @@ export class OrdersService {
               item.quantity,
               `${dto.orderStatus}:${order._id.toString()}`,
               order._id.toString(),
+              session,
             );
           }
         }
@@ -776,12 +817,20 @@ export class OrdersService {
       if (order.customer) {
         const points = Math.floor(order.total / 1000);
         if (points > 0) {
-          await this.usersService.deductLoyaltyPoints(
-            order.customer.toString(),
-            points,
-          ).catch((err: any) =>
-            this.logger.error(`Failed to deduct loyalty points for user ${order.customer}:`, err)
-          );
+          try {
+            await this.usersService.deductLoyaltyPoints(
+              order.customer.toString(),
+              points,
+              session,
+            );
+          } catch (error) {
+            // A transactional status update must roll back as one unit.
+            if (session) throw error;
+            this.logger.error(
+              `Failed to deduct loyalty points for user ${order.customer}`,
+              error,
+            );
+          }
         }
       }
     }
@@ -796,6 +845,7 @@ export class OrdersService {
         order.customer?.toString(),
         order.customerEmail,
         order.phone,
+        session,
       );
       order.promotionUsageReleasedAt = new Date();
     }
@@ -809,7 +859,7 @@ export class OrdersService {
       order.paymentStatus = PaymentStatus.PAID;
     }
 
-    const savedOrder = await order.save();
+    const savedOrder = await order.save(session ? { session } : undefined);
 
     // Sync to Google Sheet (async)
     this.syncToGoogleSheet(savedOrder).catch((err) => this.logger.error('Sheet sync failed', err));

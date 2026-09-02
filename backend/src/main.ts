@@ -3,36 +3,29 @@ import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
+import * as cookieParser from 'cookie-parser';
+import { randomUUID } from 'crypto';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { ErrorCode } from './common/enums';
-import { json, urlencoded } from 'express';
+import { json, urlencoded, Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+  const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
+  const isProduction = nodeEnv === 'production';
 
   // Helmet HTTP security headers
   app.use(
     helmet({
-      contentSecurityPolicy: {
+      contentSecurityPolicy: isProduction ? {
         directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.jsdelivr.net'],
-          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-          fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-          imgSrc: [
-            "'self'",
-            'data:',
-            'blob:',
-            'https://res.cloudinary.com',
-            'https://*.cloudinary.com',
-            'https://validator.swagger.io',
-          ],
-          connectSrc: ["'self'", '*'],
+          defaultSrc: ["'none'"],
+          frameAncestors: ["'none'"],
         },
-      },
+      } : undefined,
       crossOriginEmbedderPolicy: false,
       crossOriginResourcePolicy: { policy: 'cross-origin' },
       hidePoweredBy: true,
@@ -42,12 +35,27 @@ async function bootstrap() {
   // Restrict payload limit for image uploads to a safe 10mb
   app.use(json({ limit: '10mb' }));
   app.use(urlencoded({ limit: '10mb', extended: true }));
+  app.use(cookieParser());
+
+  // Request Correlation ID Middleware (OBS-01)
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const suppliedId = req.get('X-Correlation-ID');
+    const correlationId = suppliedId && /^[a-zA-Z0-9._:-]{1,128}$/.test(suppliedId)
+      ? suppliedId
+      : randomUUID();
+    res.setHeader('X-Correlation-ID', correlationId);
+    next();
+  });
 
   // Global prefix
   app.setGlobalPrefix('api');
 
   // CORS — strict whitelist configuration supporting multiple origins, mobile apps and preflight caching
-  const allowedOrigins = (configService.get<string>('FRONTEND_URL') || 'http://localhost:5173')
+  const configuredOrigins = configService.get<string>('FRONTEND_URL');
+  if (isProduction && !configuredOrigins) {
+    throw new Error('FRONTEND_URL is required in production');
+  }
+  const allowedOrigins = (configuredOrigins || 'http://localhost:5173')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
@@ -58,9 +66,7 @@ async function bootstrap() {
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
-        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
-        /\.vercel\.app$/.test(origin) ||
-        /\.onrender\.com$/.test(origin)
+        (!isProduction && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))
       ) {
         callback(null, true);
       } else {
@@ -77,8 +83,9 @@ async function bootstrap() {
       'X-Client-Platform',
       'x-client-platform',
       'X-Requested-With',
+      'X-Correlation-ID',
     ],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Correlation-ID'],
     maxAge: 86400, // 24 hours preflight cache
   });
 
@@ -120,7 +127,9 @@ async function bootstrap() {
   // Global interceptors
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  // Swagger
+  // Keep the API explorer out of production unless explicitly enabled.
+  const enableSwagger = !isProduction || configService.get<string>('ENABLE_SWAGGER') === 'true';
+  if (enableSwagger) {
   const config = new DocumentBuilder()
     .setTitle('Trường Thành Stationery API')
     .setDescription('API documentation for Trường Thành Stationery Store')
@@ -142,15 +151,17 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
+  }
 
   app.enableShutdownHooks();
 
   const port = configService.get<number>('PORT') || 3000;
-  const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
   await app.listen(port, '0.0.0.0');
   const logger = new Logger('Bootstrap');
   logger.log(`🚀 Server running on http://localhost:${port} [${nodeEnv.toUpperCase()}]`);
-  logger.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);
+  if (enableSwagger) {
+    logger.log(`Swagger docs at http://localhost:${port}/api/docs`);
+  }
 }
 bootstrap();
 

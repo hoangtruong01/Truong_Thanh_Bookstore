@@ -10,16 +10,8 @@ const api = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   },
-})
-
-// Attach Bearer token if stored in localStorage (optional fallback for non-cookie auth)
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem('token')
-  if (token && config.headers && !config.headers.Authorization) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
 })
 
 // Variables for Silent Token Refresh queue
@@ -95,39 +87,23 @@ api.interceptors.response.use(
         isRefreshing = true
 
         try {
-          const storedRefreshToken = localStorage.getItem('refreshToken') || undefined
-          const storedAccessToken = localStorage.getItem('token') || undefined
-          // Call refresh token endpoint with credentials (cookie) and body payload
-          const refreshRes = await axios.post(
+          // Browser refresh tokens are read exclusively from the HttpOnly cookie.
+          await axios.post(
             `${baseURL}/auth/refresh`,
-            { refreshToken: storedRefreshToken },
+            {},
             {
               withCredentials: true,
               headers: {
                 'Content-Type': 'application/json',
-                ...(storedAccessToken ? { Authorization: `Bearer ${storedAccessToken}` } : {}),
+                'X-Requested-With': 'XMLHttpRequest',
               },
             }
           )
-
-          const newAccessToken =
-            refreshRes.data?.data?.accessToken || refreshRes.data?.accessToken
-          const newRefreshToken =
-            refreshRes.data?.data?.refreshToken || refreshRes.data?.refreshToken
-
-          if (newAccessToken) {
-            localStorage.setItem('token', newAccessToken)
-          }
-          if (newRefreshToken) {
-            localStorage.setItem('refreshToken', newRefreshToken)
-          }
 
           processQueue(null)
           return api(originalRequest)
         } catch (refreshErr) {
           processQueue(refreshErr)
-          localStorage.removeItem('token')
-          localStorage.removeItem('refreshToken')
           localStorage.removeItem('user')
           window.dispatchEvent(new CustomEvent('auth-session-expired'))
 

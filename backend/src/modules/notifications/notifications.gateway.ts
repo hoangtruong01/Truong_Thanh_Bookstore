@@ -8,6 +8,7 @@ import { Server, Socket } from 'socket.io';
 import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { TokenBlacklistService } from '../auth/token-blacklist.service';
 
 @WebSocketGateway({
   cors: {
@@ -18,7 +19,8 @@ import { UsersService } from '../users/users.service';
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
-        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+        (process.env.NODE_ENV !== 'production' &&
+          /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))
       ) {
         callback(null, true);
       } else {
@@ -38,6 +40,7 @@ export class NotificationsGateway
   constructor(
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
+    private readonly tokenBlacklistService: TokenBlacklistService,
   ) {}
 
   @WebSocketServer()
@@ -66,9 +69,26 @@ export class NotificationsGateway
     try {
       const token = this.extractToken(client);
       if (!token) throw new Error('Missing token');
-      const payload = await this.jwtService.verifyAsync<{ sub: string }>(token);
+      const payload = await this.jwtService.verifyAsync<{
+        sub: string;
+        jti?: string;
+        tokenVersion?: number;
+      }>(token);
+      if (
+        (payload.jti && this.tokenBlacklistService.isJtiBlacklisted(payload.jti)) ||
+        this.tokenBlacklistService.isTokenBlacklisted(token)
+      ) {
+        throw new Error('Revoked token');
+      }
       const user = await this.usersService.findById(payload.sub);
       if (!user?.status) throw new Error('Inactive user');
+      if (
+        payload.tokenVersion !== undefined &&
+        user.tokenVersion !== undefined &&
+        payload.tokenVersion < user.tokenVersion
+      ) {
+        throw new Error('Stale token version');
+      }
 
       const userId = user._id.toString();
       client.data.userId = userId;

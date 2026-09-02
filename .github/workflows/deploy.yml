@@ -1,13 +1,17 @@
 name: CD Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI Pipeline — Trường Thành Bookstore"]
+    types:
+      - completed
     branches:
       - main
 
 jobs:
   deploy-backend:
     name: Deploy Backend to Render
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
     runs-on: ubuntu-latest
     steps:
       - name: Check secret existence
@@ -27,10 +31,13 @@ jobs:
 
   deploy-frontend:
     name: Deploy Frontend to Vercel
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -49,7 +56,7 @@ jobs:
 
       - name: Install Vercel CLI
         if: steps.check-token.outputs.has_token == 'true'
-        run: npm install --global vercel@latest
+        run: npm install --global vercel@33
 
       - name: Pull Vercel Environment Information
         if: steps.check-token.outputs.has_token == 'true'

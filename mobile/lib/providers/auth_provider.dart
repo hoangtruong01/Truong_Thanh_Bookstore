@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/constants/api_constants.dart';
 import '../models/user_model.dart';
 
 class AuthProvider with ChangeNotifier {
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
   UserModel? _user;
   String? _token;
   String? _refreshToken;
@@ -23,8 +25,18 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _loadStoredSession() async {
     final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('token');
-    _refreshToken = prefs.getString('refreshToken');
+    _token = await _secureStorage.read(key: 'token');
+    _refreshToken = await _secureStorage.read(key: 'refreshToken');
+
+    // One-time migration from plaintext storage used by earlier app versions.
+    _token ??= prefs.getString('token');
+    _refreshToken ??= prefs.getString('refreshToken');
+    if (_token != null) await _secureStorage.write(key: 'token', value: _token);
+    if (_refreshToken != null) {
+      await _secureStorage.write(key: 'refreshToken', value: _refreshToken);
+    }
+    await prefs.remove('token');
+    await prefs.remove('refreshToken');
     final userJsonStr = prefs.getString('user');
 
     if (userJsonStr != null) {
@@ -33,6 +45,15 @@ class AuthProvider with ChangeNotifier {
       } catch (_) {}
     }
     notifyListeners();
+  }
+
+  Future<void> _persistSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_token != null) await _secureStorage.write(key: 'token', value: _token);
+    if (_refreshToken != null) {
+      await _secureStorage.write(key: 'refreshToken', value: _refreshToken);
+    }
+    if (_user != null) await prefs.setString('user', jsonEncode(_user!.toJson()));
   }
 
   Future<bool> login(String email, String password) async {
@@ -56,10 +77,7 @@ class AuthProvider with ChangeNotifier {
         _refreshToken = data['refreshToken'];
         _user = UserModel.fromJson(data['user']);
 
-        final prefs = await SharedPreferences.getInstance();
-        if (_token != null) await prefs.setString('token', _token!);
-        if (_refreshToken != null) await prefs.setString('refreshToken', _refreshToken!);
-        await prefs.setString('user', jsonEncode(_user!.toJson()));
+        await _persistSession();
 
         _isLoading = false;
         notifyListeners();
@@ -100,10 +118,7 @@ class AuthProvider with ChangeNotifier {
         _refreshToken = data['refreshToken'];
         _user = UserModel.fromJson(data['user']);
 
-        final prefs = await SharedPreferences.getInstance();
-        if (_token != null) await prefs.setString('token', _token!);
-        if (_refreshToken != null) await prefs.setString('refreshToken', _refreshToken!);
-        await prefs.setString('user', jsonEncode(_user!.toJson()));
+        await _persistSession();
 
         _isLoading = false;
         notifyListeners();
@@ -141,10 +156,7 @@ class AuthProvider with ChangeNotifier {
           _user = UserModel.fromJson(data['user']);
         }
 
-        final prefs = await SharedPreferences.getInstance();
-        if (_token != null) await prefs.setString('token', _token!);
-        if (_refreshToken != null) await prefs.setString('refreshToken', _refreshToken!);
-        if (_user != null) await prefs.setString('user', jsonEncode(_user!.toJson()));
+        await _persistSession();
 
         notifyListeners();
         return true;
@@ -209,8 +221,10 @@ class AuthProvider with ChangeNotifier {
     _token = null;
     _refreshToken = null;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-    await prefs.remove('refreshToken');
+    await _secureStorage.delete(key: 'token');
+    await _secureStorage.delete(key: 'refreshToken');
+    await prefs.remove('token'); // legacy cleanup
+    await prefs.remove('refreshToken'); // legacy cleanup
     await prefs.remove('user');
     notifyListeners();
   }

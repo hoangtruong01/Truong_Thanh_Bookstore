@@ -20,7 +20,7 @@ function connectSocket() {
     socket.disconnect()
   }
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+  const apiBase = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
   const socketUrl = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase
   socket = io(`${socketUrl}/notifications`, {
     transports: ['websocket'],

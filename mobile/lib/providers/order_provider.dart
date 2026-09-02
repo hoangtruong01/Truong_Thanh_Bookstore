@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants/api_constants.dart';
@@ -9,10 +10,16 @@ class OrderProvider with ChangeNotifier {
   List<OrderModel> _myOrders = [];
   bool _isLoading = false;
   Map<String, dynamic>? _lastPaymentAction;
+  String? _pendingIdempotencyKey;
 
   List<OrderModel> get myOrders => _myOrders;
   bool get isLoading => _isLoading;
   Map<String, dynamic>? get lastPaymentAction => _lastPaymentAction;
+
+  String _newIdempotencyKey() {
+    final random = Random.secure();
+    return List.generate(24, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+  }
 
   Future<OrderModel?> placeOrder({
     required List<CartItemModel> items,
@@ -29,6 +36,7 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      _pendingIdempotencyKey ??= _newIdempotencyKey();
       final orderItems = items.map((i) => {
         'product': i.product.id,
         'name': i.product.name,
@@ -46,6 +54,7 @@ class OrderProvider with ChangeNotifier {
         if (promotionCode != null && promotionCode.isNotEmpty) 'promotionCode': promotionCode,
         'customerName': fullName,
         'customerEmail': email,
+        'idempotencyKey': _pendingIdempotencyKey,
       };
 
       final isAuth = token != null && token.isNotEmpty;
@@ -66,6 +75,7 @@ class OrderProvider with ChangeNotifier {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final order = OrderModel.fromJson(body['data']);
+        _pendingIdempotencyKey = null;
         _lastPaymentAction = null;
         if (isAuth && paymentMethod != 'COD') {
           try {
