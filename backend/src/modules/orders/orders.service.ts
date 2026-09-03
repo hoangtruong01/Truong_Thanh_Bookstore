@@ -1200,6 +1200,176 @@ export class OrdersService {
     ]);
   }
 
+  async getCategoryRevenue(): Promise<{ category: string; revenue: number }[]> {
+    const result = await this.orderModel.aggregate([
+      {
+        $match: {
+          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+        },
+      },
+      { $unwind: '$items' },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'items.product',
+          foreignField: '_id',
+          as: 'productDoc',
+        },
+      },
+      {
+        $unwind: {
+          path: '$productDoc',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'productDoc.category',
+          foreignField: '_id',
+          as: 'categoryDoc',
+        },
+      },
+      {
+        $unwind: {
+          path: '$categoryDoc',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $group: {
+          _id: { $ifNull: ['$categoryDoc.name', 'Khác'] },
+          revenue: {
+            $sum: { $multiply: ['$items.price', '$items.quantity'] },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          category: '$_id',
+          revenue: '$revenue',
+        },
+      },
+      { $sort: { revenue: -1 } },
+    ]);
+
+    return result;
+  }
+
+  async getGrowthStats(
+    range: 'day' | 'week' | 'month' | 'year' = 'month',
+  ): Promise<{
+    currentRevenue: number;
+    previousRevenue: number;
+    revenueGrowthRate: number;
+    currentOrders: number;
+    previousOrders: number;
+    ordersGrowthRate: number;
+  }> {
+    const now = new Date();
+    let currentStart: Date;
+    const currentEnd: Date = new Date(now);
+    let prevStart: Date;
+    let prevEnd: Date;
+
+    if (range === 'day') {
+      currentStart = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        0,
+        0,
+        0,
+        0,
+      );
+      prevStart = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - 1,
+        0,
+        0,
+        0,
+        0,
+      );
+      prevEnd = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - 1,
+        23,
+        59,
+        59,
+        999,
+      );
+    } else if (range === 'week') {
+      const durationMs = 7 * 24 * 60 * 60 * 1000;
+      currentStart = new Date(now.getTime() - durationMs);
+      prevStart = new Date(now.getTime() - 2 * durationMs);
+      prevEnd = new Date(currentStart.getTime());
+    } else if (range === 'year') {
+      const durationMs = 365 * 24 * 60 * 60 * 1000;
+      currentStart = new Date(now.getTime() - durationMs);
+      prevStart = new Date(now.getTime() - 2 * durationMs);
+      prevEnd = new Date(currentStart.getTime());
+    } else {
+      // Default: 'month' (last 30 days)
+      const durationMs = 30 * 24 * 60 * 60 * 1000;
+      currentStart = new Date(now.getTime() - durationMs);
+      prevStart = new Date(now.getTime() - 2 * durationMs);
+      prevEnd = new Date(currentStart.getTime());
+    }
+
+    const [currentMetrics, prevMetrics] = await Promise.all([
+      this.getMetricsBetween(currentStart, currentEnd),
+      this.getMetricsBetween(prevStart, prevEnd),
+    ]);
+
+    const currentRevenue = currentMetrics.totalRevenue;
+    const previousRevenue = prevMetrics.totalRevenue;
+    const currentOrders = currentMetrics.totalOrders;
+    const previousOrders = prevMetrics.totalOrders;
+
+    const calcGrowth = (curr: number, prev: number): number => {
+      if (prev === 0) return curr > 0 ? 100 : 0;
+      return Math.round(((curr - prev) / prev) * 1000) / 10;
+    };
+
+    return {
+      currentRevenue,
+      previousRevenue,
+      revenueGrowthRate: calcGrowth(currentRevenue, previousRevenue),
+      currentOrders,
+      previousOrders,
+      ordersGrowthRate: calcGrowth(currentOrders, previousOrders),
+    };
+  }
+
+  private async getMetricsBetween(
+    start: Date,
+    end: Date,
+  ): Promise<{ totalRevenue: number; totalOrders: number }> {
+    const result = await this.orderModel.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: start, $lte: end },
+          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$total' },
+          totalOrders: { $sum: 1 },
+        },
+      },
+    ]);
+
+    return {
+      totalRevenue: result[0]?.totalRevenue || 0,
+      totalOrders: result[0]?.totalOrders || 0,
+    };
+  }
+
   async generateInvoicePdf(order: any): Promise<any> {
     const doc = new PDFDocument({ margin: 50 });
     const winFont = 'C:\\Windows\\Fonts\\Arial.ttf';

@@ -38,6 +38,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
   mockOrderModel.findOne = jest.fn();
   mockOrderModel.findById = jest.fn();
   mockOrderModel.countDocuments = jest.fn();
+  mockOrderModel.aggregate = jest.fn();
 
   const mockProductsService = {
     findById: jest.fn().mockResolvedValue(mockProduct),
@@ -354,6 +355,54 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       expect(order.save).toHaveBeenCalledWith({ session });
       expect(session.commitTransaction).toHaveBeenCalledTimes(1);
       expect(session.endSession).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('BE-09: Category Revenue & Growth Analytics', () => {
+    it('should aggregate category revenue excluding cancelled/returned orders', async () => {
+      const mockCategoryData = [
+        { category: 'Sách Kỹ Năng', revenue: 15000000 },
+        { category: 'Văn Phòng Phẩm', revenue: 8500000 },
+      ];
+      mockOrderModel.aggregate.mockResolvedValueOnce(mockCategoryData);
+
+      const result = await ordersService.getCategoryRevenue();
+      expect(result).toEqual(mockCategoryData);
+      expect(mockOrderModel.aggregate).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            $match: expect.objectContaining({
+              orderStatus: {
+                $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED],
+              },
+            }),
+          }),
+        ]),
+      );
+    });
+
+    it('should compute real growth rates dynamically between two periods', async () => {
+      mockOrderModel.aggregate
+        .mockResolvedValueOnce([{ totalRevenue: 20000000, totalOrders: 100 }])
+        .mockResolvedValueOnce([{ totalRevenue: 10000000, totalOrders: 80 }]);
+
+      const growth = await ordersService.getGrowthStats('month');
+      expect(growth.currentRevenue).toBe(20000000);
+      expect(growth.previousRevenue).toBe(10000000);
+      expect(growth.revenueGrowthRate).toBe(100);
+      expect(growth.currentOrders).toBe(100);
+      expect(growth.previousOrders).toBe(80);
+      expect(growth.ordersGrowthRate).toBe(25);
+    });
+
+    it('should handle zero previous period values gracefully without NaN', async () => {
+      mockOrderModel.aggregate
+        .mockResolvedValueOnce([{ totalRevenue: 5000000, totalOrders: 15 }])
+        .mockResolvedValueOnce([{ totalRevenue: 0, totalOrders: 0 }]);
+
+      const growth = await ordersService.getGrowthStats('day');
+      expect(growth.revenueGrowthRate).toBe(100);
+      expect(growth.ordersGrowthRate).toBe(100);
     });
   });
 });

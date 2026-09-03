@@ -387,6 +387,30 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(result.message).toContain('Mã OTP đã được gửi');
     });
 
+    it('verifyOtp should not reveal if email does not exist (anti-enumeration)', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+
+      await expect(
+        authService.verifyOtp('nonexistent@truongthanh.vn', '123456'),
+      ).rejects.toThrow(
+        /Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu lại mã OTP mới/,
+      );
+    });
+
+    it('resetPassword should not reveal if email does not exist (anti-enumeration)', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+
+      await expect(
+        authService.resetPassword({
+          email: 'nonexistent@truongthanh.vn',
+          resetToken: 'some.token',
+          newPassword: 'Password@123',
+        }),
+      ).rejects.toThrow(
+        /Mã xác thực hoặc thông tin đặt lại mật khẩu không hợp lệ/,
+      );
+    });
+
     it('verifyOtp should succeed with valid OTP and return signed resetToken', async () => {
       const rawOtp = '123456';
       const otpHash = createHash('sha256').update(rawOtp).digest('hex');

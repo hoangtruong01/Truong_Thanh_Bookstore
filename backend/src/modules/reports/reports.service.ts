@@ -192,16 +192,16 @@ export class ReportsService {
     };
   }
 
-  async getSummary(_range: 'day' | 'week' | 'month' | 'year' = 'month') {
-    const [dashboard, advanced, orderStatusStats, categoryRevenue] =
+  async getSummary(range: 'day' | 'week' | 'month' | 'year' = 'month') {
+    const [dashboard, advanced, orderStatusStats, categoryRevenue, growth] =
       await Promise.all([
         this.getDashboard(),
         this.getAdvancedDashboard(),
         this.getOrderStatusStats(),
         this.getCategoryRevenue(),
+        this.ordersService.getGrowthStats(range),
       ]);
 
-    // Calculate growth estimation based on recent performance
     const todayRev = dashboard.stats.todayRevenue || 0;
     const aov = advanced.aov || 0;
     const totalOrders = dashboard.stats.totalOrders || 0;
@@ -214,8 +214,8 @@ export class ReportsService {
         lowStockCount: dashboard.stats.lowStockCount,
         newCustomers: dashboard.stats.newCustomers,
         aov: aov,
-        revenueGrowthRate: 12.5, // Percent growth indicator
-        ordersGrowthRate: 8.3,
+        revenueGrowthRate: growth.revenueGrowthRate,
+        ordersGrowthRate: growth.ordersGrowthRate,
       },
       orderStatusStats,
       categoryRevenue,
@@ -231,25 +231,7 @@ export class ReportsService {
     return distribution;
   }
 
-  async getCategoryRevenue() {
-    // Aggregation of orders grouped by product categories or fallback category distribution
-    try {
-      const bestSelling = await this.productsService.getBestSelling(20);
-      const categoryMap: Record<string, number> = {};
-
-      bestSelling.forEach((p: any) => {
-        const catName = p.category?.name || 'Khác';
-        categoryMap[catName] =
-          (categoryMap[catName] || 0) +
-          (p.sold || 0) * (p.discountPrice || p.price || 0);
-      });
-
-      return Object.entries(categoryMap).map(([category, revenue]) => ({
-        category,
-        revenue,
-      }));
-    } catch {
-      return [];
-    }
+  async getCategoryRevenue(): Promise<{ category: string; revenue: number }[]> {
+    return this.ordersService.getCategoryRevenue();
   }
 }

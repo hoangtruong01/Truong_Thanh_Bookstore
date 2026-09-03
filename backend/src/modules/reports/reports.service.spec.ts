@@ -39,6 +39,17 @@ describe('ReportsService', () => {
       }),
       getAov: jest.fn().mockResolvedValue(250000),
       getVoucherEffectiveness: jest.fn().mockResolvedValue({}),
+      getCategoryRevenue: jest
+        .fn()
+        .mockResolvedValue([{ category: 'Sách Kỹ Năng', revenue: 12750000 }]),
+      getGrowthStats: jest.fn().mockResolvedValue({
+        currentRevenue: 25000000,
+        previousRevenue: 20000000,
+        revenueGrowthRate: 25.0,
+        currentOrders: 150,
+        previousOrders: 120,
+        ordersGrowthRate: 25.0,
+      }),
     };
 
     mockProductsService = {
@@ -120,13 +131,24 @@ describe('ReportsService', () => {
   });
 
   describe('getSummary & getCategoryRevenue', () => {
-    it('should compute comprehensive KPIs and category distribution', async () => {
+    it('should compute comprehensive KPIs and category distribution with dynamic growth stats', async () => {
       const result = await service.getSummary('month');
       expect(result.kpis.todayRevenue).toBe(1500000);
       expect(result.kpis.totalOrders).toBe(120);
       expect(result.kpis.aov).toBe(250000);
+      expect(result.kpis.revenueGrowthRate).toBe(25.0);
+      expect(result.kpis.ordersGrowthRate).toBe(25.0);
+      expect(mockOrdersService.getGrowthStats).toHaveBeenCalledWith('month');
       expect(result.categoryRevenue.length).toBe(1);
       expect(result.categoryRevenue[0].category).toBe('Sách Kỹ Năng');
+      expect(result.categoryRevenue[0].revenue).toBe(12750000);
+    });
+
+    it('should delegate getCategoryRevenue to ordersService directly', async () => {
+      const result = await service.getCategoryRevenue();
+      expect(mockOrdersService.getCategoryRevenue).toHaveBeenCalled();
+      expect(result.length).toBe(1);
+      expect(result[0].category).toBe('Sách Kỹ Năng');
     });
   });
 
