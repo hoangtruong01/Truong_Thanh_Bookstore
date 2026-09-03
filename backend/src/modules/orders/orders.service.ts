@@ -71,6 +71,26 @@ export class OrdersService {
     return createHash('sha256').update(value).digest('hex');
   }
 
+  private isTransientTransactionError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    const hasLabel =
+      typeof (error as { hasErrorLabel?: unknown })?.hasErrorLabel ===
+        'function' &&
+      Boolean(
+        (error as { hasErrorLabel: (label: string) => boolean }).hasErrorLabel(
+          'TransientTransactionError',
+        ),
+      );
+    const code = (error as { code?: unknown })?.code;
+    const codeName = (error as { codeName?: unknown })?.codeName;
+    return (
+      hasLabel ||
+      /Unable to acquire|WriteConflict/i.test(message) ||
+      code === 112 ||
+      codeName === 'WriteConflict'
+    );
+  }
+
   private isTransactionUnsupported(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
     return /Transaction numbers are only allowed|replica set|mongos|retryable writes|retryWrites|standalone/i.test(
@@ -767,23 +787,34 @@ export class OrdersService {
       return this.updateStatusInternal(id, dto);
     }
 
-    const session = await database.startSession();
-    try {
-      session.startTransaction();
-      const result = await this.updateStatusInternal(id, dto, session);
-      await session.commitTransaction();
-      return result;
-    } catch (error) {
-      if (session.inTransaction()) await session.abortTransaction();
-      if (this.isTransactionUnsupported(error)) {
-        throw new ServiceUnavailableException(
-          'Cập nhật trạng thái đơn hàng yêu cầu MongoDB replica set để bảo đảm toàn vẹn dữ liệu',
-        );
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const session = await database.startSession();
+      try {
+        session.startTransaction();
+        const result = await this.updateStatusInternal(id, dto, session);
+        await session.commitTransaction();
+        return result;
+      } catch (error: unknown) {
+        if (session.inTransaction()) await session.abortTransaction();
+        if (this.isTransactionUnsupported(error)) {
+          throw new ServiceUnavailableException(
+            'Cập nhật trạng thái đơn hàng yêu cầu MongoDB replica set để bảo đảm toàn vẹn dữ liệu',
+          );
+        }
+
+        if (this.isTransientTransactionError(error) && attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
+          continue;
+        }
+        throw error;
+      } finally {
+        await session.endSession();
       }
-      throw error;
-    } finally {
-      await session.endSession();
     }
+    throw new ServiceUnavailableException(
+      'Không thể hoàn tất cập nhật trạng thái đơn hàng do xung đột dữ liệu',
+    );
   }
 
   private async updateStatusInternal(

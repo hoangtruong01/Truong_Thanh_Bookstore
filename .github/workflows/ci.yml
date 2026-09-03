@@ -36,7 +36,7 @@ jobs:
 
       - name: Start MongoDB replica set for E2E
         run: |
-          docker run --detach --name truongthanh-e2e-mongodb --publish 27017:27017 mongo:7.0-jammy mongod --replSet rs0 --bind_ip_all
+          docker run --detach --name truongthanh-e2e-mongodb --publish 27017:27017 mongo:7.0-jammy mongod --replSet rs0 --bind_ip_all --setParameter maxTransactionLockRequestTimeoutMillis=5000
           until docker exec truongthanh-e2e-mongodb mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep -q 1; do sleep 2; done
           docker exec truongthanh-e2e-mongodb mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
           until docker exec truongthanh-e2e-mongodb mongosh --quiet --eval 'db.hello().isWritablePrimary' | grep -q true; do sleep 2; done
@@ -49,6 +49,8 @@ jobs:
         env:
           MONGODB_URI: mongodb://127.0.0.1:27017/truongthanh_e2e?replicaSet=rs0&directConnection=true
           JWT_SECRET: ci-only-jwt-secret-at-least-32-characters
+          JWT_REFRESH_SECRET: ci-only-jwt-refresh-secret-at-least-32-chars
+          JWT_RESET_SECRET: ci-only-jwt-reset-secret-at-least-32-chars
 
       - name: 🏗️ Build Backend Production Bundle
         run: npm run build

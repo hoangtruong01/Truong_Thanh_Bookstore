@@ -576,11 +576,6 @@ export class ProductsService {
     quantity: number,
     session?: ClientSession,
   ): Promise<void> {
-    const beforeQuery = this.productModel.findById(id);
-    if (session) beforeQuery.session(session);
-    const productBefore = await beforeQuery.exec();
-    const oldStock = productBefore?.stock || 0;
-
     const updated = await this.productModel
       .findByIdAndUpdate(
         id,
@@ -589,6 +584,7 @@ export class ProductsService {
       )
       .exec();
     if (updated) {
+      const oldStock = updated.stock - quantity;
       try {
         const minStock = 10;
         let status = InventoryStatus.IN_STOCK;
