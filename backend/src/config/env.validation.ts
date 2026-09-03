@@ -251,7 +251,7 @@ export function validateEnv(
   }
   if (typeof normalizedConfig.COOKIE_SAME_SITE === 'string') {
     normalizedConfig.COOKIE_SAME_SITE =
-      normalizedConfig.COOKIE_SAME_SITE.toLowerCase();
+      normalizedConfig.COOKIE_SAME_SITE.trim().toLowerCase();
   }
   if (typeof normalizedConfig.COOKIE_SECURE === 'string') {
     const rawCookieSecure = normalizedConfig.COOKIE_SECURE.trim().toLowerCase();
