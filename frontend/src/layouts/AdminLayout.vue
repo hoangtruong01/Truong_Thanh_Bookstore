@@ -296,14 +296,17 @@ function saveReadIds() {
 }
 
 const unreadCount = computed(() => {
-  return notifications.value.filter(n => !readIds.value.includes(n.id)).length
+  if (!Array.isArray(notifications.value)) return 0
+  return notifications.value.filter(n => n && !readIds.value.includes(n.id)).length
 })
 
 async function fetchNotifications() {
   try {
-    const res = await reportService.getNotifications()
-    notifications.value = res.data || []
+    const res: any = await reportService.getNotifications()
+    const raw = res.data?.data || res.data
+    notifications.value = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : [])
   } catch (err) {
+    notifications.value = []
     console.error('Failed to fetch notifications:', err)
   }
 }
@@ -317,8 +320,9 @@ function toggleNotifications(event: Event) {
 }
 
 function markAllAsRead() {
+  if (!Array.isArray(notifications.value)) return
   notifications.value.forEach(n => {
-    if (!readIds.value.includes(n.id)) {
+    if (n && n.id && !readIds.value.includes(n.id)) {
       readIds.value.push(n.id)
     }
   })
