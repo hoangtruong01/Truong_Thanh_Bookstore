@@ -43,7 +43,7 @@
     <!-- Products grid -->
     <div v-else class="responsive-flex-grid">
       <ProductCard
-        v-for="(prod, idx) in products.slice(0, 10)"
+        v-for="(prod, idx) in safeProducts.slice(0, 10)"
         :key="prod._id"
         :product="prod"
         :class="['reveal-scale', `delay-${(idx % 5) * 100}`]"
@@ -64,10 +64,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import ProductCard from '@/components/ProductCard.vue'
 import type { Product } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   title: string
   subtitle: string
   products: Product[]
@@ -75,6 +76,14 @@ defineProps<{
   viewAllLink: string
   buttonLabel: string
 }>()
+
+const safeProducts = computed<Product[]>(() => {
+  if (Array.isArray(props.products)) return props.products
+  if (props.products && Array.isArray((props.products as any).data)) {
+    return (props.products as any).data
+  }
+  return []
+})
 
 defineEmits<{
   'add-to-cart': [product: Product]

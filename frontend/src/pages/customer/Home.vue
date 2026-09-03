@@ -1616,8 +1616,10 @@ onMounted(() => {
 
   productService
     .getBestSelling(10)
-    .then((bestRes) => {
-      bestSelling.value = bestRes.data;
+    .then((bestRes: any) => {
+      bestSelling.value = Array.isArray(bestRes.data)
+        ? bestRes.data
+        : bestRes.data?.data || [];
     })
     .catch((err) => {
       console.error("Error loading best sellers", err);
@@ -1628,8 +1630,10 @@ onMounted(() => {
 
   productService
     .getDiscounted(50)
-    .then((discRes) => {
-      discounted.value = discRes.data;
+    .then((discRes: any) => {
+      discounted.value = Array.isArray(discRes.data)
+        ? discRes.data
+        : discRes.data?.data || [];
     })
     .catch((err) => {
       console.error("Error loading discounted products", err);
@@ -1641,7 +1645,9 @@ onMounted(() => {
   productService
     .getNew(10)
     .then((newRes: any) => {
-      newProducts.value = newRes.data;
+      newProducts.value = Array.isArray(newRes.data)
+        ? newRes.data
+        : newRes.data?.data || [];
     })
     .catch((err: any) => {
       console.error("Error loading new products", err);
