@@ -76,36 +76,50 @@ export class AuthController {
     return undefined;
   }
 
-  private setAuthCookies(
-    response: Response,
-    accessToken: string,
-    refreshToken?: string,
-  ) {
+  private getCookieOptions(): {
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: 'lax' | 'strict' | 'none';
+  } {
     const isProduction =
       this.configService.get<string>('NODE_ENV') === 'production';
     const configuredSameSite = this.configService
       .get<string>('COOKIE_SAME_SITE')
       ?.toLowerCase();
-    const sameSite =
-      configuredSameSite === 'none' || (isProduction && !configuredSameSite)
+    const sameSite: 'lax' | 'strict' | 'none' =
+      configuredSameSite === 'none'
         ? 'none'
         : configuredSameSite === 'strict'
           ? 'strict'
           : 'lax';
 
-    response.cookie('access_token', accessToken, {
+    const configuredSecure = this.configService.get<boolean>('COOKIE_SECURE');
+    const secure =
+      sameSite === 'none' ? true : (configuredSecure ?? isProduction);
+
+    return {
       httpOnly: true,
-      secure: isProduction || sameSite === 'none',
+      secure,
       sameSite,
+    };
+  }
+
+  private setAuthCookies(
+    response: Response,
+    accessToken: string,
+    refreshToken?: string,
+  ) {
+    const baseOptions = this.getCookieOptions();
+
+    response.cookie('access_token', accessToken, {
+      ...baseOptions,
       path: '/',
       maxAge: 15 * 60 * 1000,
     });
 
     if (refreshToken) {
       response.cookie('refresh_token', refreshToken, {
-        httpOnly: true,
-        secure: isProduction || sameSite === 'none',
-        sameSite,
+        ...baseOptions,
         path: '/api/auth',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       });
@@ -202,8 +216,13 @@ export class AuthController {
     const userId = req.user?._id?.toString();
 
     await this.authService.logout(userId, rawAccessToken, rawRefreshToken);
-    response.clearCookie('access_token', { path: '/' });
-    response.clearCookie('refresh_token', { path: '/api/auth' });
+
+    const cookieOptions = this.getCookieOptions();
+    response.clearCookie('access_token', { ...cookieOptions, path: '/' });
+    response.clearCookie('refresh_token', {
+      ...cookieOptions,
+      path: '/api/auth',
+    });
     return { success: true, message: 'Đăng xuất thành công' };
   }
 

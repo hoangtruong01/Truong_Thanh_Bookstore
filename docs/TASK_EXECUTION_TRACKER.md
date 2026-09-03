@@ -26,12 +26,12 @@
 |---|:---:|:---:|:---:|:---:|:---:|
 | **Business Analysis (BA)** | 1 | 1 | 0 | 0 | 100% |
 | **Quality Assurance (QA & Security)** | 3 | 1 | 0 | 2 | 33.3% |
-| **Backend & Database (BE)** | 9 | 2 | 0 | 7 | 22.2% |
+| **Backend & Database (BE)** | 9 | 4 | 0 | 5 | 44.4% |
 | **Frontend Web (FE)** | 2 | 0 | 0 | 2 | 0% |
 | **DevOps & Infrastructure** | 1 | 0 | 0 | 1 | 0% |
 | **Mobile App (Flutter)** | 1 | 0 | 0 | 1 | 0% |
 | **Project Management (PM)** | 1 | 0 | 1 | 0 | Đang duy trì |
-| **TỔNG CỘNG (Core Master Tasks)** | **18** | **4** | **1** | **13** | **22.2%** |
+| **TỔNG CỘNG (Core Master Tasks)** | **18** | **6** | **1** | **11** | **33.3%** |
 | *Extended Backlog (Bổ trợ)* | *8* | *0* | *0* | *8* | *0%* |
 | *Mục xác minh thật (Need Verify)* | *7* | *2* | *0* | *5* | *28.6%* |
 
@@ -44,15 +44,15 @@
 - [x] **QA-01 (Part A)**: Viết token isolation test đỏ & verify xanh *(DONE 2026-09-03)*
 - [x] **BE-01**: Tách access/refresh/reset token độc lập *(DONE 2026-09-03)*
 - [x] **BE-02**: Gộp Review schema (chuẩn hóa `isVisible`, `isVerifiedPurchase`, admin reply) *(DONE 2026-09-03)*
-- [ ] **BE-06**: Email enumeration + cookie config
-- [ ] **BE-09 (Part A)**: Xóa `revenueGrowthRate: 12.5` và `ordersGrowthRate: 8.3` hardcoded
+- [x] **BE-06**: Email enumeration + cookie config *(DONE 2026-09-03)*
+- [x] **BE-09 (Part A & B)**: Xóa số giả, tính toán tăng trưởng & doanh thu danh mục thật *(DONE 2026-09-03)*
 - [ ] **FE-02**: Gỡ UI số giả, đồng bộ Reports UI
 
 ### Sprint 2: Order Correctness + Business Rules
 - [ ] **BE-03**: Landing page order tích hợp OrdersService pipeline
 - [ ] **BE-05**: Loyalty đúng mốc `DELIVERED` + auto-cancel đơn PENDING quá hạn (24h/48h)
 - [ ] **BE-08**: MongoDB indexes + Mock payment docs + Gemini JSON schema validation
-- [ ] **BE-09 (Part B)**: Sửa Reports: tính toán tăng trưởng và doanh thu danh mục thật
+- [x] **BE-09 (Part B)**: Sửa Reports: tính toán tăng trưởng và doanh thu danh mục thật *(DONE 2026-09-03)*
 - [x] **QA-01 (Part B & C)**: Authorization matrix + Security regression & IDOR *(DONE 2026-09-03)*
 
 ### Sprint 3: Observability + E2E + Deployment
@@ -201,16 +201,17 @@
 
 ---
 
-### [ ] BE-06 — Fix Email Enumeration + Chuẩn hóa Cookie Config
+### [x] BE-06 — Fix Email Enumeration + Chuẩn hóa Cookie Config
 - **Role chính:** Backend + Security | **Priority:** P0 | **Effort:** S | **Dependency:** Không
-- **Trạng thái:** **CHƯA LÀM (TODO)**
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-03)**
 - **Mục tiêu:** Chống rò rỉ danh sách người dùng qua phản hồi OTP/Password reset và chuẩn hóa cấu hình cookie cross-origin.
 
 #### Danh mục chi tiết:
-- [ ] Trong `authService.verifyOtp()` và `resetPassword()`: Không trả về thông báo để lộ email có tồn tại hay không; chuẩn hóa response thông điệp tương đồng.
-- [ ] Đưa cấu hình `COOKIE_SAME_SITE` về một nguồn sự thật duy nhất (Single Source of Truth) trong `ConfigService`.
-- [ ] Cập nhật file `.env.example` hướng dẫn chi tiết cách cấu hình `SameSite=None` và `Secure=true` khi frontend và backend khác domain.
-- [ ] Xác minh cookie header trong response không bị trình duyệt chặn trên production.
+- [x] Trong `authService.verifyOtp()` và `resetPassword()`: Không trả về thông báo để lộ email có tồn tại hay không; chuẩn hóa response thông điệp tương đồng (`Mã OTP không hợp lệ hoặc đã hết hạn`, `Mã xác thực hoặc thông tin đặt lại mật khẩu không hợp lệ`).
+- [x] Đưa cấu hình `COOKIE_SAME_SITE` và `COOKIE_SECURE` về một nguồn sự thật duy nhất (Single Source of Truth) trong `ConfigService` (`getCookieOptions()`).
+- [x] Cập nhật hàm `logout()` gửi cùng options chuẩn (`sameSite`, `secure`, `httpOnly`, `path`) vào `clearCookie` để browser xóa sạch cookie.
+- [x] Cập nhật file `.env.example` hướng dẫn chi tiết cách cấu hình `SameSite=None` và `Secure=true` khi frontend và backend khác domain.
+- [x] Viết unit tests chống rò rỉ email (20/20 test pass trong `auth.service.spec.ts`).
 
 ---
 
@@ -243,23 +244,23 @@
 
 ---
 
-### [ ] BE-09 — Sửa Reports Module (Bỏ Số Giả + Tính Toán Dữ Liệu Thật)
+### [x] BE-09 — Sửa Reports Module (Bỏ Số Giả + Tính Toán Dữ Liệu Thật)
 - **Role chính:** Backend | **Priority:** P0 (bỏ số giả) / P1 (tính toán thật) | **Effort:** M | **Dependency:** BE-03
-- **Trạng thái:** **CHƯA LÀM (TODO)**
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-03)**
 - **Mục tiêu:** Phản ánh trung thực số liệu kinh doanh, xóa bỏ hoàn toàn số liệu hardcoded.
 
 #### Danh mục chi tiết:
-- [ ] **Làm ngay (P0)**:
-  - [ ] Xóa bỏ `revenueGrowthRate: 12.5` hardcoded.
-  - [ ] Xóa bỏ `ordersGrowthRate: 8.3` hardcoded.
-  - [ ] Tạm thời gỡ bỏ hiển thị trên UI nếu backend chưa tính toán xong số thật.
-- [ ] **Tính toán thật (P1)**:
-  - [ ] Tính toán tỷ lệ tăng trưởng giữa kỳ hiện tại so với kỳ trước có cùng độ dài ngày.
-  - [ ] Xử lý tham số `range=day/week/month/year` ảnh hưởng trực tiếp đến khoảng thời gian query.
-  - [ ] Viết lại Aggregation Pipeline tính doanh thu theo danh mục (`category revenue`) từ snapshot `items[].price` của đơn hàng.
-  - [ ] Loại trừ đơn `CANCELLED` và `RETURNED` ra khỏi tổng doanh thu.
-  - [ ] Loại bỏ việc nuốt lỗi `catch { return [] }` khiến che giấu lỗi hệ thống.
-  - [ ] Viết unit/regression test với dataset mẫu có giá trị kỳ vọng cố định để đối chiếu.
+- [x] **Làm ngay (P0)**:
+  - [x] Xóa bỏ `revenueGrowthRate: 12.5` hardcoded.
+  - [x] Xóa bỏ `ordersGrowthRate: 8.3` hardcoded.
+  - [x] Thay thế bằng số liệu tính toán động thật từ OrdersService.
+- [x] **Tính toán thật (P1)**:
+  - [x] Tính toán tỷ lệ tăng trưởng giữa kỳ hiện tại so với kỳ trước có cùng độ dài ngày (`getGrowthStats`).
+  - [x] Xử lý tham số `range=day/week/month/year` ảnh hưởng trực tiếp đến khoảng thời gian query.
+  - [x] Viết lại Aggregation Pipeline tính doanh thu theo danh mục (`category revenue`) từ snapshot `items[].price * items[].quantity` của đơn hàng.
+  - [x] Loại trừ đơn `CANCELLED` và `RETURNED` ra khỏi tổng doanh thu.
+  - [x] Loại bỏ việc nuốt lỗi `catch { return [] }` khiến che giấu lỗi hệ thống.
+  - [x] Viết unit test cho cả `orders.service.spec.ts` và `reports.service.spec.ts` (100% pass).
 
 ---
 

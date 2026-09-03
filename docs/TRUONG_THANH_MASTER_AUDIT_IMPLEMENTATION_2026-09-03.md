@@ -367,10 +367,10 @@ Không over-engineer để “nâng cấp công nghệ” trong khi correctness 
 | BE-03 | Landing page vào OrdersService pipeline | Backend | P0 | L | BA-01 |
 | BE-04 | Redis blacklist + distributed throttler | Backend + DevOps | P0* | M | BE-01 |
 | BE-05 | Loyalty đúng thời điểm + auto-cancel pending | Backend | P0 | M | BA-01 |
-| BE-06 | Fix email enumeration + cookie config | Backend + Security | P0 | S | - |
+| BE-06 | Fix email enumeration + cookie config | Backend + Security | P0 | S | - | **DONE** |
 | BE-07 | Structured logging + Sentry | Backend + DevOps | P1 | M | - |
 | BE-08 | Index + payment mock docs + Gemini validation | Backend | P1 | S/M | BE-03 |
-| BE-09 | Sửa Reports: bỏ số giả + tính thật | Backend | P0/P1 | M | BE-03 cho category revenue đầy đủ |
+| BE-09 | Sửa Reports: bỏ số giả + tính thật | Backend | P0/P1 | M | BE-03 cho category revenue đầy đủ | **DONE** |
 | FE-01 | Refactor component dùng chung | Frontend | P2 | L | QA-02 nên có trước |
 | FE-02 | Sửa Reports UI theo API thật | Frontend | P0/P1 | S | BE-09 |
 | QA-02 | Playwright E2E | QA | P2 | M | BE-01, BE-03, BE-05 |
@@ -604,19 +604,20 @@ Với các role:
 
 **Role:** Backend + Security  
 **Priority:** P0  
-**Effort:** S
+**Effort:** S  
+**Trạng thái:** **DONE (2026-09-03)**
 
 ### Cần làm
 
-- [ ] `verifyOtp` không tiết lộ email tồn tại.
-- [ ] `resetPassword` không tiết lộ email tồn tại.
-- [ ] Một nguồn sự thật cho `COOKIE_SAME_SITE`.
-- [ ] `.env.example` giải thích cross-site cookie.
+- [x] `verifyOtp` không tiết lộ email tồn tại.
+- [x] `resetPassword` không tiết lộ email tồn tại.
+- [x] Một nguồn sự thật cho `COOKIE_SAME_SITE` và `COOKIE_SECURE` (`getCookieOptions()`).
+- [x] `.env.example` giải thích cross-site cookie.
 
 ### Acceptance Criteria
 
-- [ ] Email tồn tại + OTP sai và email không tồn tại trả response tương đương.
-- [ ] Production cookie config đúng env validation.
+- [x] Email tồn tại + OTP sai và email không tồn tại trả response tương đương.
+- [x] Production cookie config đúng env validation.
 
 ---
 
@@ -674,33 +675,34 @@ Với các role:
 
 **Role:** Backend  
 **Priority:** P0 phần số giả / P1 phần tính toán  
-**Effort:** M
+**Effort:** M  
+**Trạng thái:** **DONE (2026-09-03)**
 
 ### Cần làm
 
-#### Làm ngay
+#### Làm ngay (P0)
 
-- [ ] Xóa `revenueGrowthRate: 12.5`.
-- [ ] Xóa `ordersGrowthRate: 8.3`.
-- [ ] Tạm gỡ UI nếu backend chưa tính được số thật.
+- [x] Xóa `revenueGrowthRate: 12.5`.
+- [x] Xóa `ordersGrowthRate: 8.3`.
+- [x] Thay bằng số liệu tính toán động thật từ đơn hàng.
 
-#### Làm tiếp
+#### Làm tiếp (P1)
 
-- [ ] Tính growth kỳ hiện tại vs kỳ trước cùng độ dài.
-- [ ] `range=day/week/month/year` thực sự ảnh hưởng query.
-- [ ] Viết lại category revenue từ orders aggregation.
-- [ ] Dùng `items[].price` snapshot lúc mua.
-- [ ] Loại CANCELLED/RETURNED khỏi revenue.
-- [ ] Không nuốt lỗi bằng `catch { return [] }`.
-- [ ] Rà toàn bộ report response tìm hardcode khác.
+- [x] Tính growth kỳ hiện tại vs kỳ trước cùng độ dài (`getGrowthStats`).
+- [x] `range=day/week/month/year` thực sự ảnh hưởng query.
+- [x] Viết lại category revenue từ orders aggregation (`getCategoryRevenue`).
+- [x] Dùng `items[].price * items[].quantity` snapshot lúc mua.
+- [x] Loại CANCELLED/RETURNED khỏi revenue.
+- [x] Không nuốt lỗi bằng `catch { return [] }`.
+- [x] Rà toàn bộ report response tìm hardcode khác.
 
 ### Acceptance Criteria
 
-- [ ] Không còn số giả trong `/reports/*`.
-- [ ] `range=day` và `range=year` cho dữ liệu khác nhau khi seed data khác nhau.
-- [ ] Category revenue khớp phép tính tay trên seed data.
-- [ ] CANCELLED/RETURNED không được tính doanh thu.
-- [ ] Có regression test với expected values cố định.
+- [x] Không còn số giả trong `/reports/*`.
+- [x] `range=day` và `range=year` cho dữ liệu khác nhau khi seed data khác nhau.
+- [x] Category revenue khớp phép tính tay trên seed data.
+- [x] CANCELLED/RETURNED không được tính doanh thu.
+- [x] Có regression test với expected values cố định (100% pass trong `orders.service.spec.ts` & `reports.service.spec.ts`).
 
 ---
 

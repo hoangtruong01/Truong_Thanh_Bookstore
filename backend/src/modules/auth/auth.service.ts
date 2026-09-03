@@ -422,13 +422,9 @@ export class AuthService {
 
   async verifyOtp(email: string, otp: string) {
     const user = await this.usersService.findByEmail(email);
-    if (!user) {
-      throw new UnauthorizedException('Email không tồn tại trên hệ thống');
-    }
-
-    if (!user.resetOtp) {
+    if (!user || !user.resetOtp) {
       throw new UnauthorizedException(
-        'Không tìm thấy mã OTP hoặc đã hết hạn. Vui lòng yêu cầu lại',
+        'Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu lại mã OTP mới',
       );
     }
 
@@ -483,7 +479,9 @@ export class AuthService {
     const { email, otp, resetToken, newPassword } = dto;
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      throw new UnauthorizedException('Email không tồn tại trên hệ thống');
+      throw new UnauthorizedException(
+        'Mã xác thực hoặc thông tin đặt lại mật khẩu không hợp lệ',
+      );
     }
 
     if (resetToken) {
