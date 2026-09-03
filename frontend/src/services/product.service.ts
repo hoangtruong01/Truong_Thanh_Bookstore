@@ -6,7 +6,7 @@ export const productService = {
   getBySlug: (slug: string) => api.get(`/products/slug/${slug}`),
   getRelated: (id: string, limit = 8) => api.get(`/products/${id}/related`, { params: { limit } }),
   getFeatured: () => api.get('/products/featured'),
-  getNew: (limit = 10) => api.get('/products', { params: { limit, sort: 'newest' } }),
+  getNew: (limit = 10) => api.get('/products/new', { params: { limit } }),
   getBestSelling: (limit = 10) => api.get('/products/best-selling', { params: { limit } }),
   getDiscounted: (limit = 10) => api.get('/products/discounted', { params: { limit } }),
   search: (q: string) => api.get('/products/search', { params: { q } }),
