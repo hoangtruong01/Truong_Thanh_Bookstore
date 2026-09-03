@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return */
+import * as crypto from 'crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   ExecutionContext,
@@ -20,8 +22,6 @@ import { ProductsService } from '../../modules/products/products.service';
 import { PromotionsService } from '../../modules/promotions/promotions.service';
 import { NotificationsService } from '../../modules/notifications/notifications.service';
 import { EmailService } from '../../modules/email/email.service';
-import { PaymentsService } from '../../modules/payments/payments.service';
-import { ReportsService } from '../../modules/reports/reports.service';
 import { Order } from '../../modules/orders/schemas/order.schema';
 
 describe('QA-01: Authorization Matrix & Security Regression Suite', () => {
@@ -88,7 +88,7 @@ describe('QA-01: Authorization Matrix & Security Regression Suite', () => {
 
   const createMockContext = (
     user: any,
-    targetHandler: Function,
+    targetHandler: (...args: unknown[]) => unknown,
     targetClass: any,
   ): ExecutionContext => {
     return {
@@ -362,7 +362,6 @@ describe('QA-01: Authorization Matrix & Security Regression Suite', () => {
     });
 
     it('Guest Order Security: Accessing guest order with WRONG token must throw 403', async () => {
-      const crypto = require('crypto');
       const correctSecret = 'super_secret_guest_token_123';
       const wrongSecret = 'hacker_guessed_token_999';
       const hashedSecret = crypto
