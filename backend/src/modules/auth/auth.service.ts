@@ -80,6 +80,30 @@ export class AuthService {
     return safeUser;
   }
 
+  private getJwtSecret(): string {
+    return (
+      this.configService.get<string>('JWT_SECRET') ||
+      this.configService.get<string>('jwt.secret') ||
+      'TruongThanhSuperSecretKey2026!'
+    );
+  }
+
+  private getRefreshSecret(): string {
+    return (
+      this.configService.get<string>('JWT_REFRESH_SECRET') ||
+      this.configService.get<string>('jwt.refreshSecret') ||
+      `${this.getJwtSecret()}_refresh_secret`
+    );
+  }
+
+  private getResetSecret(): string {
+    return (
+      this.configService.get<string>('JWT_RESET_SECRET') ||
+      this.configService.get<string>('jwt.resetSecret') ||
+      `${this.getJwtSecret()}_reset_secret`
+    );
+  }
+
   private async generateTokens(user: UserDocument) {
     const tokenVersion = user.tokenVersion ?? 0;
     const accessJti = randomUUID();
@@ -108,7 +132,10 @@ export class AuthService {
         tokenVersion,
         jti: refreshJti,
       },
-      { expiresIn: refreshExpiresIn as any },
+      {
+        secret: this.getRefreshSecret(),
+        expiresIn: refreshExpiresIn as any,
+      },
     );
 
     user.refreshTokenHash = this.hashToken(refreshToken);
@@ -173,7 +200,9 @@ export class AuthService {
 
     let payload: any;
     try {
-      payload = await this.jwtService.verifyAsync(refreshToken);
+      payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.getRefreshSecret(),
+      });
     } catch (err: any) {
       if (err.name === 'TokenExpiredError') {
         throw new UnauthorizedException({
@@ -444,7 +473,7 @@ export class AuthService {
 
     const resetToken = this.jwtService.sign(
       { sub: user._id.toString(), email: user.email, type: 'RESET_PASSWORD' },
-      { expiresIn: '15m' },
+      { secret: this.getResetSecret(), expiresIn: '15m' },
     );
 
     return { success: true, message: 'Xác thực OTP thành công', resetToken };
@@ -460,7 +489,9 @@ export class AuthService {
     if (resetToken) {
       let payload: any;
       try {
-        payload = await this.jwtService.verifyAsync(resetToken);
+        payload = await this.jwtService.verifyAsync(resetToken, {
+          secret: this.getResetSecret(),
+        });
       } catch {
         throw new UnauthorizedException(
           'Mã token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn',

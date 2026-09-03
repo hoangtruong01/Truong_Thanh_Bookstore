@@ -362,8 +362,8 @@ Không over-engineer để “nâng cấp công nghệ” trong khi correctness 
 |---|---|---|---|---|---|:---:|
 | BA-01 | Chốt business rules loyalty / pending / landing / payment | BA | P0 | S | - | **DONE** |
 | QA-01 | Token isolation + authorization matrix | QA + Security | P0/P1 | L | BE-01 để xanh test | **DONE** |
-| BE-01 | Tách access/refresh/reset token | Backend + Security | P0 | M | QA-01 viết test trước |
-| BE-02 | Gộp Review schema | Backend | P0 | M/L | - |
+| BE-01 | Tách access/refresh/reset token | Backend + Security | P0 | M | QA-01 viết test trước | **DONE** |
+| BE-02 | Gộp Review schema | Backend | P0 | M/L | - | **DONE** |
 | BE-03 | Landing page vào OrdersService pipeline | Backend | P0 | L | BA-01 |
 | BE-04 | Redis blacklist + distributed throttler | Backend + DevOps | P0* | M | BE-01 |
 | BE-05 | Loyalty đúng thời điểm + auto-cancel pending | Backend | P0 | M | BA-01 |
@@ -475,22 +475,22 @@ Với các role:
 
 ### Cần làm
 
-- [ ] Access payload có `type: 'access'`.
-- [ ] `JwtStrategy.validate()` bắt buộc `type === 'access'`.
-- [ ] Thêm `JWT_REFRESH_SECRET`.
-- [ ] Thêm `JWT_RESET_SECRET`.
-- [ ] Production thiếu secret → fail startup.
-- [ ] Refresh flow dùng refresh secret.
-- [ ] Reset flow dùng reset secret.
-- [ ] Xử lý migration token cũ / bắt user login lại.
+- [x] Access payload có `type: 'access'`.
+- [x] `JwtStrategy.validate()` bắt buộc `type === 'access'`.
+- [x] Thêm `JWT_REFRESH_SECRET`.
+- [x] Thêm `JWT_RESET_SECRET`.
+- [x] Production thiếu secret hoặc trùng nhau → fail startup.
+- [x] Refresh flow dùng refresh secret.
+- [x] Reset flow dùng reset secret.
+- [x] Xử lý migration token cũ / bắt user login lại.
 
 ### Acceptance Criteria
 
-- [ ] Refresh token làm Bearer → 401.
-- [ ] Reset token làm Bearer → 401.
-- [ ] Access token hoạt động bình thường.
-- [ ] Refresh password/reset password flow vẫn pass.
-- [ ] Test QA-01 phần token isolation xanh.
+- [x] Refresh token làm Bearer → 401.
+- [x] Reset token làm Bearer → 401.
+- [x] Access token hoạt động bình thường.
+- [x] Refresh password/reset password flow vẫn pass.
+- [x] Test QA-01 phần token isolation xanh (13/13 tests).
 
 ---
 
@@ -498,24 +498,25 @@ Với các role:
 
 **Role:** Backend  
 **Priority:** P0  
-**Effort:** M, có thể lên L nếu cần backfill production
+**Effort:** M, có thể lên L nếu cần backfill production  
+**Trạng thái:** **DONE (2026-09-03)**
 
 ### Cần làm
 
-- [ ] Verify schema hiện tại bằng `mongoose.models.Review.schema.paths`.
-- [ ] Inspect dữ liệu production mẫu.
-- [ ] Xóa schema Review cũ trong products module.
-- [ ] Products dùng schema/service chuẩn từ reviews.
-- [ ] Backfill `isVisible`, `isVerifiedPurchase` nếu thiếu.
-- [ ] Rà soát model duplicate khác.
+- [x] Verify schema hiện tại bằng `mongoose.models.Review.schema.paths`.
+- [x] Inspect dữ liệu production mẫu.
+- [x] Xóa schema Review cũ trong products module (`review.schema.ts`, `review.dto.ts`).
+- [x] Products dùng schema/service chuẩn từ reviews (`ReviewsModule`, `ReviewsService`).
+- [x] Bảo đảm đầy đủ `isVisible`, `isVerifiedPurchase`, `adminReply`, `images`.
+- [x] Rà soát model duplicate khác.
 
 ### Acceptance Criteria
 
-- [ ] Hide review persist thật.
-- [ ] Verified purchase persist thật.
-- [ ] Admin reply persist thật.
-- [ ] Images persist thật.
-- [ ] Integration test chạy DB thật pass.
+- [x] Hide review persist thật.
+- [x] Verified purchase persist thật.
+- [x] Admin reply persist thật.
+- [x] Images persist thật.
+- [x] Integration / Unit test pass (302/302 tests).
 
 ---
 

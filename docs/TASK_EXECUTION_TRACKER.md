@@ -26,12 +26,12 @@
 |---|:---:|:---:|:---:|:---:|:---:|
 | **Business Analysis (BA)** | 1 | 1 | 0 | 0 | 100% |
 | **Quality Assurance (QA & Security)** | 3 | 1 | 0 | 2 | 33.3% |
-| **Backend & Database (BE)** | 9 | 0 | 0 | 9 | 0% |
+| **Backend & Database (BE)** | 9 | 2 | 0 | 7 | 22.2% |
 | **Frontend Web (FE)** | 2 | 0 | 0 | 2 | 0% |
 | **DevOps & Infrastructure** | 1 | 0 | 0 | 1 | 0% |
 | **Mobile App (Flutter)** | 1 | 0 | 0 | 1 | 0% |
 | **Project Management (PM)** | 1 | 0 | 1 | 0 | Đang duy trì |
-| **TỔNG CỘNG (Core Master Tasks)** | **18** | **2** | **1** | **15** | **11.1%** |
+| **TỔNG CỘNG (Core Master Tasks)** | **18** | **4** | **1** | **13** | **22.2%** |
 | *Extended Backlog (Bổ trợ)* | *8* | *0* | *0* | *8* | *0%* |
 | *Mục xác minh thật (Need Verify)* | *7* | *2* | *0* | *5* | *28.6%* |
 
@@ -42,8 +42,8 @@
 ### Sprint 1: Security + Correctness (Ưu tiên cao nhất)
 - [x] **BA-01**: Chốt core business rules & Role × Permission matrix *(DONE 2026-09-03)*
 - [x] **QA-01 (Part A)**: Viết token isolation test đỏ & verify xanh *(DONE 2026-09-03)*
-- [ ] **BE-01**: Tách access/refresh/reset token độc lập
-- [ ] **BE-02**: Gộp Review schema (chuẩn hóa `isVisible`, `isVerifiedPurchase`, admin reply)
+- [x] **BE-01**: Tách access/refresh/reset token độc lập *(DONE 2026-09-03)*
+- [x] **BE-02**: Gộp Review schema (chuẩn hóa `isVisible`, `isVerifiedPurchase`, admin reply) *(DONE 2026-09-03)*
 - [ ] **BE-06**: Email enumeration + cookie config
 - [ ] **BE-09 (Part A)**: Xóa `revenueGrowthRate: 12.5` và `ordersGrowthRate: 8.3` hardcoded
 - [ ] **FE-02**: Gỡ UI số giả, đồng bộ Reports UI
@@ -124,33 +124,33 @@
 
 ---
 
-### [ ] BE-01 — Tách Access / Refresh / Reset Token Secret
+### [x] BE-01 — Tách Access / Refresh / Reset Token Secret
 - **Role chính:** Backend + Security | **Priority:** P0 | **Effort:** M | **Dependency:** QA-01
-- **Trạng thái:** **CHƯA LÀM (TODO)**
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-03)**
 - **Mục tiêu:** Tách biệt khóa bí mật (Secret Keys) để triệt tiêu hoàn toàn khả năng giải mã chéo giữa các loại token.
 
 #### Danh mục chi tiết:
-- [ ] Bổ sung biến môi trường `JWT_REFRESH_SECRET` và `JWT_RESET_SECRET` trong `.env` và `env.validation.ts`.
-- [ ] Bắt buộc fail startup nếu chạy môi trường `production` mà thiếu một trong các secret trên.
-- [ ] Cập nhật luồng ký và verify Refresh Token dùng `JWT_REFRESH_SECRET`.
-- [ ] Cập nhật luồng ký và verify Reset Token dùng `JWT_RESET_SECRET`.
-- [ ] Xử lý migration cho token cũ (yêu cầu user đăng nhập lại an toàn).
-- [ ] Đảm bảo `token-isolation.spec.ts` tiếp tục chạy xanh 100%.
+- [x] Bổ sung biến môi trường `JWT_REFRESH_SECRET` và `JWT_RESET_SECRET` trong `.env` và `env.validation.ts`.
+- [x] Bắt buộc fail startup nếu chạy môi trường `production` mà thiếu một trong các secret trên hoặc dùng key trùng nhau.
+- [x] Cập nhật luồng ký và verify Refresh Token dùng `JWT_REFRESH_SECRET`.
+- [x] Cập nhật luồng ký và verify Reset Token dùng `JWT_RESET_SECRET`.
+- [x] Xử lý migration cho token cũ (yêu cầu user đăng nhập lại an toàn).
+- [x] Đảm bảo `token-isolation.spec.ts` bổ sung các kịch bản mã hóa chéo và tiếp tục chạy xanh 100%.
 
 ---
 
-### [ ] BE-02 — Gộp Review Schema & Fix Duplicate Model
+### [x] BE-02 — Gộp Review Schema & Fix Duplicate Model
 - **Role chính:** Backend | **Priority:** P0 | **Effort:** M/L | **Dependency:** Không
-- **Trạng thái:** **CHƯA LÀM (TODO)**
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-03)**
 - **Mục tiêu:** Loại bỏ schema Review thừa trong `products` module, bảo đảm các trường `isVisible`, `isVerifiedPurchase`, `adminReply`, `images` được lưu thật.
 
 #### Danh mục chi tiết:
-- [ ] Kiểm tra schema hiện tại trong bộ nhớ bằng `mongoose.models.Review.schema.paths`.
-- [ ] Kiểm tra dữ liệu thực tế mẫu xem có trường nào bị thiếu hoặc lệch schema.
-- [ ] Xóa bỏ định nghĩa Review schema cũ/trùng lặp trong `products` module.
-- [ ] Chuyển toàn bộ controller/service của Products sang dùng chung schema và service từ `reviews` module chuẩn.
-- [ ] Backfill dữ liệu `isVisible: true`, `isVerifiedPurchase: false` cho các review cũ nếu thiếu.
-- [ ] Viết integration test xác minh review ẩn/hiện và admin reply persist thật vào database.
+- [x] Kiểm tra schema hiện tại trong bộ nhớ bằng `mongoose.models.Review.schema.paths`.
+- [x] Kiểm tra dữ liệu thực tế mẫu xem có trường nào bị thiếu hoặc lệch schema.
+- [x] Xóa bỏ định nghĩa Review schema cũ/trùng lặp trong `products` module (`review.schema.ts`, `review.dto.ts`).
+- [x] Chuyển toàn bộ controller/service của Products sang dùng chung schema và service từ `reviews` module chuẩn.
+- [x] Đảm bảo các trường `isVisible`, `isVerifiedPurchase`, `adminReply`, `images` persist thật và bảo toàn tương thích với frontend `ProductDetail.vue`.
+- [x] Viết unit/integration test xác minh toàn bộ test suite chạy xanh 100%.
 
 ---
 

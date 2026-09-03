@@ -15,6 +15,10 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
     NODE_ENV: 'production',
     JWT_SECRET:
       'c8f490192e4ab349f872138902194aef12849012839401283940128340128340',
+    JWT_REFRESH_SECRET:
+      'd9e5a1203f5bc45af983249013205bff23950123940512940512940512945129',
+    JWT_RESET_SECRET:
+      'ea16b2314a6cd56ba094350124316caa34061234051623051623051623056230',
     FRONTEND_URL: 'https://bookstore.example.com',
     COOKIE_SECURE: 'true',
     AUTO_SEED: 'false',
@@ -170,6 +174,62 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
       expect(result.NODE_ENV).toBe(Environment.PRODUCTION);
       expect(result.JWT_SECRET).toBe(
         'c8f490192e4ab349f872138902194aef12849012839401283940128340128340',
+      );
+      expect(result.JWT_REFRESH_SECRET).toBe(
+        'd9e5a1203f5bc45af983249013205bff23950123940512940512940512945129',
+      );
+      expect(result.JWT_RESET_SECRET).toBe(
+        'ea16b2314a6cd56ba094350124316caa34061234051623051623051623056230',
+      );
+    });
+
+    it('should throw security error in production if JWT_REFRESH_SECRET is missing', () => {
+      const prodConfigWithoutRefresh = {
+        ...validProductionConfig,
+        JWT_REFRESH_SECRET: undefined,
+      };
+      expect(() => validateEnv(prodConfigWithoutRefresh)).toThrow(
+        /JWT_REFRESH_SECRET is required in production/,
+      );
+    });
+
+    it('should throw security error in production if JWT_REFRESH_SECRET is shorter than 32 characters', () => {
+      const prodConfigWithShortRefresh = {
+        ...validProductionConfig,
+        JWT_REFRESH_SECRET: 'ShortRefreshSecretOnly24Chars!',
+      };
+      expect(() => validateEnv(prodConfigWithShortRefresh)).toThrow(
+        /JWT_REFRESH_SECRET must be at least 32 characters/,
+      );
+    });
+
+    it('should throw security error in production if JWT_RESET_SECRET is missing', () => {
+      const prodConfigWithoutReset = {
+        ...validProductionConfig,
+        JWT_RESET_SECRET: undefined,
+      };
+      expect(() => validateEnv(prodConfigWithoutReset)).toThrow(
+        /JWT_RESET_SECRET is required in production/,
+      );
+    });
+
+    it('should throw security error in production if JWT_RESET_SECRET is shorter than 32 characters', () => {
+      const prodConfigWithShortReset = {
+        ...validProductionConfig,
+        JWT_RESET_SECRET: 'ShortResetSecretOnly22Chars!',
+      };
+      expect(() => validateEnv(prodConfigWithShortReset)).toThrow(
+        /JWT_RESET_SECRET must be at least 32 characters/,
+      );
+    });
+
+    it('should throw security error in production if any secrets are identical', () => {
+      const prodConfigWithSameSecrets = {
+        ...validProductionConfig,
+        JWT_REFRESH_SECRET: validProductionConfig.JWT_SECRET,
+      };
+      expect(() => validateEnv(prodConfigWithSameSecrets)).toThrow(
+        /distinct keys in production/,
       );
     });
 

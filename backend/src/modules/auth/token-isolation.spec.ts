@@ -22,6 +22,10 @@ describe('QA-01: Token Isolation Test Suite', () => {
   let configService: jest.Mocked<any>;
 
   const JWT_SECRET = 'super-secret-key-for-token-isolation-testing-12345';
+  const JWT_REFRESH_SECRET =
+    'refresh-secret-key-for-token-isolation-testing-67890';
+  const JWT_RESET_SECRET =
+    'reset-pwd-secret-key-for-token-isolation-testing-99999';
   const MOCK_USER_ID = '507f1f77bcf86cd799439011';
 
   const mockUser: any = {
@@ -49,11 +53,15 @@ describe('QA-01: Token Isolation Test Suite', () => {
     configService = {
       get: jest.fn().mockImplementation((key: string) => {
         if (key === 'JWT_SECRET') return JWT_SECRET;
+        if (key === 'JWT_REFRESH_SECRET') return JWT_REFRESH_SECRET;
+        if (key === 'JWT_RESET_SECRET') return JWT_RESET_SECRET;
         if (key === 'JWT_REFRESH_EXPIRES_IN') return '30d';
         return undefined;
       }),
       getOrThrow: jest.fn().mockImplementation((key: string) => {
         if (key === 'JWT_SECRET') return JWT_SECRET;
+        if (key === 'JWT_REFRESH_SECRET') return JWT_REFRESH_SECRET;
+        if (key === 'JWT_RESET_SECRET') return JWT_RESET_SECRET;
         throw new Error(`Config ${key} not found`);
       }),
     };
@@ -205,7 +213,7 @@ describe('QA-01: Token Isolation Test Suite', () => {
           tokenVersion: 2,
           jti: randomUUID(),
         },
-        { expiresIn: '-1s' }, // Expired 1 second ago
+        { secret: JWT_REFRESH_SECRET, expiresIn: '-1s' }, // Expired 1 second ago
       );
 
       try {
@@ -280,13 +288,16 @@ describe('QA-01: Token Isolation Test Suite', () => {
 
     it('Scenario 10: Refresh Token Reuse detection must revoke all sessions and increment tokenVersion', async () => {
       const validJti = randomUUID();
-      const legitimateRefreshToken = jwtService.sign({
-        sub: MOCK_USER_ID,
-        email: 'test@truongthanh.vn',
-        type: 'refresh',
-        tokenVersion: 2,
-        jti: validJti,
-      });
+      const legitimateRefreshToken = jwtService.sign(
+        {
+          sub: MOCK_USER_ID,
+          email: 'test@truongthanh.vn',
+          type: 'refresh',
+          tokenVersion: 2,
+          jti: validJti,
+        },
+        { secret: JWT_REFRESH_SECRET },
+      );
 
       // User has a DIFFERENT stored hash in DB (simulating an old/reused token)
       const userWithOldSession = {
@@ -310,6 +321,63 @@ describe('QA-01: Token Isolation Test Suite', () => {
         expect(userWithOldSession.refreshTokenHash).toBeUndefined();
         expect(userWithOldSession.save).toHaveBeenCalled();
       }
+    });
+  });
+
+  describe('Part A.4: BE-01 Cryptographic Secret Separation Tests', () => {
+    it('Scenario 11: Reset Token signed with JWT_RESET_SECRET cannot be used to refresh tokens', async () => {
+      const resetToken = jwtService.sign(
+        {
+          sub: MOCK_USER_ID,
+          email: 'test@truongthanh.vn',
+          type: 'RESET_PASSWORD',
+        },
+        { secret: JWT_RESET_SECRET, expiresIn: '15m' },
+      );
+
+      // Attempting to refresh with resetToken should fail signature check (signed with reset secret, verified with refresh secret)
+      await expect(authService.refreshToken(resetToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('Scenario 12: Refresh Token signed with JWT_REFRESH_SECRET cannot be used to reset password', async () => {
+      const refreshToken = jwtService.sign(
+        {
+          sub: MOCK_USER_ID,
+          email: 'test@truongthanh.vn',
+          type: 'refresh',
+        },
+        { secret: JWT_REFRESH_SECRET, expiresIn: '30d' },
+      );
+
+      // Attempting to reset password with refreshToken should fail signature check (signed with refresh secret, verified with reset secret)
+      await expect(
+        authService.resetPassword({
+          email: 'test@truongthanh.vn',
+          resetToken: refreshToken,
+          newPassword: 'NewPassword123!',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('Scenario 13: Access Token signed with JWT_SECRET cannot be used to reset password', async () => {
+      const accessToken = jwtService.sign(
+        {
+          sub: MOCK_USER_ID,
+          email: 'test@truongthanh.vn',
+          type: 'access',
+        },
+        { secret: JWT_SECRET, expiresIn: '15m' },
+      );
+
+      await expect(
+        authService.resetPassword({
+          email: 'test@truongthanh.vn',
+          resetToken: accessToken,
+          newPassword: 'NewPassword123!',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 });
