@@ -1561,8 +1561,8 @@ function saveCustomerReadIds() {
 }
 
 const customerUnreadCount = computed(() => {
-  if (!authStore.isAuthenticated) return 0;
-  return customerNotifications.value.filter(n => !customerReadIds.value.includes(n._id)).length;
+  if (!authStore.isAuthenticated || !Array.isArray(customerNotifications.value)) return 0;
+  return customerNotifications.value.filter(n => n && !customerReadIds.value.includes(n._id)).length;
 });
 
 async function fetchCustomerNotifications() {
@@ -1571,9 +1571,17 @@ async function fetchCustomerNotifications() {
     return;
   }
   try {
-    const res = await notificationService.getMyNotifications();
-    customerNotifications.value = res.data?.data || res.data || [];
+    const res: any = await notificationService.getMyNotifications();
+    const raw = res.data?.data || res.data;
+    if (Array.isArray(raw)) {
+      customerNotifications.value = raw;
+    } else if (raw && Array.isArray(raw.items)) {
+      customerNotifications.value = raw.items;
+    } else {
+      customerNotifications.value = [];
+    }
   } catch (err) {
+    customerNotifications.value = [];
     console.error("Failed to fetch customer notifications:", err);
   }
 }
@@ -1587,8 +1595,9 @@ function toggleCustomerNotifications(event: Event) {
 }
 
 function markAllCustomerAsRead() {
+  if (!Array.isArray(customerNotifications.value)) return;
   customerNotifications.value.forEach(n => {
-    if (!customerReadIds.value.includes(n._id)) {
+    if (n && n._id && !customerReadIds.value.includes(n._id)) {
       customerReadIds.value.push(n._id);
     }
   });
@@ -1871,12 +1880,14 @@ function selectProduct(productId: string) {
 }
 
 const parentCategories = computed(() => {
+  if (!Array.isArray(allCategories.value)) return [];
   return allCategories.value.filter((c) => !c.parentId);
 });
 
 const getSubcategoriesForActiveParent = computed(() => {
   if (!activeParent.value) return [];
   if (activeParent.value.slug === 'combo') return [];
+  if (!Array.isArray(allCategories.value)) return [];
   return allCategories.value.filter((c) => {
     if (!c.parentId) return false;
     const pId = typeof c.parentId === "object" ? c.parentId._id : c.parentId;
@@ -1916,13 +1927,14 @@ onMounted(async () => {
   flashSaleInterval = setInterval(updateFlashSaleTimer, 1000);
 
   try {
-    const res = await categoryService.getAll();
-    allCategories.value = res.data;
+    const res: any = await categoryService.getAll();
+    const raw = res.data?.data || res.data;
+    allCategories.value = Array.isArray(raw) ? raw : [];
     if (parentCategories.value.length > 0) {
       activeParent.value = parentCategories.value[0];
     }
   } catch (error) {
-    // FIX-2.3: silent fail for categories
+    allCategories.value = [];
   }
 
   // Initialize theme & language states from localStorage on mount
