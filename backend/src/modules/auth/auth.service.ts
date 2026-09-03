@@ -91,6 +91,7 @@ export class AuthService {
       role: user.role,
       permissions: user.permissions || [],
       tokenVersion,
+      type: 'access',
       jti: accessJti,
     };
 

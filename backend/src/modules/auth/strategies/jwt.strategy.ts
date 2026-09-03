@@ -6,6 +6,16 @@ import { UsersService } from '../../users/users.service';
 import { TokenBlacklistService } from '../token-blacklist.service';
 import { ErrorCode } from '../../../common/enums/error-code.enum';
 
+interface JwtAccessPayload {
+  type?: string;
+  sub: string;
+  email?: string;
+  role?: string;
+  tokenVersion?: number;
+  jti?: string;
+  exp?: number;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -34,7 +44,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(request: any, payload: any) {
+  async validate(request: any, payload: JwtAccessPayload) {
+    // 0. Enforce Token Isolation: only access tokens are permitted for API access
+    if (payload?.type !== 'access') {
+      throw new UnauthorizedException({
+        message: 'Loại mã xác thực không hợp lệ. Chỉ chấp nhận Access Token.',
+        errorCode: ErrorCode.ERR_INVALID_TOKEN,
+      });
+    }
+
     // 1. Check if token JTI is blacklisted
     if (
       payload?.jti &&
