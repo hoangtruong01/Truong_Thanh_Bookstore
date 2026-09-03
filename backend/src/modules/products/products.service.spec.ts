@@ -5,10 +5,10 @@ import { Types } from 'mongoose';
 import * as ExcelJS from 'exceljs';
 import { ProductsService } from './products.service';
 import { Product } from './schemas/product.schema';
-import { Review } from './schemas/review.schema';
 import { StockAlert } from './schemas/stock-alert.schema';
 import { Category } from '../categories/schemas/category.schema';
 import { Inventory } from '../inventory/schemas/inventory.schema';
+import { ReviewsService } from '../reviews/reviews.service';
 import { EmailService } from '../email/email.service';
 import { ConfigService } from '@nestjs/config';
 import { ProductStatus } from '../../common/enums';
@@ -130,7 +130,15 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       providers: [
         ProductsService,
         { provide: getModelToken(Product.name), useValue: mockProductModel },
-        { provide: getModelToken(Review.name), useValue: {} },
+        {
+          provide: ReviewsService,
+          useValue: {
+            findByProduct: jest.fn(),
+            create: jest.fn(),
+            update: jest.fn(),
+            delete: jest.fn(),
+          },
+        },
         { provide: getModelToken(StockAlert.name), useValue: {} },
         { provide: getModelToken(Category.name), useValue: mockCategoryModel },
         {

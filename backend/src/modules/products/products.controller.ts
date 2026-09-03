@@ -30,7 +30,7 @@ import {
   UpdateProductDto,
   ProductQueryDto,
 } from './dto/product.dto';
-import { CreateReviewDto, UpdateReviewDto } from './dto/review.dto';
+import { CreateReviewDto, UpdateReviewDto } from '../reviews/dto/review.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { StaffPermission } from '../../common/enums';

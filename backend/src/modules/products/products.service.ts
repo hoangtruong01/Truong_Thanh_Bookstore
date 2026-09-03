@@ -8,7 +8,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
 import * as ExcelJS from 'exceljs';
 import { Product, ProductDocument } from './schemas/product.schema';
-import { Review, ReviewDocument } from './schemas/review.schema';
 import { StockAlert, StockAlertDocument } from './schemas/stock-alert.schema';
 import {
   Category,
@@ -18,6 +17,7 @@ import {
   Inventory,
   InventoryDocument,
 } from '../inventory/schemas/inventory.schema';
+import { ReviewsService } from '../reviews/reviews.service';
 import { EmailService } from '../email/email.service';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -57,7 +57,7 @@ export class ProductsService {
 
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
-    @InjectModel(Review.name) private reviewModel: Model<ReviewDocument>,
+    private reviewsService: ReviewsService,
     @InjectModel(StockAlert.name)
     private stockAlertModel: Model<StockAlertDocument>,
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
@@ -707,71 +707,25 @@ export class ProductsService {
   }
 
   async getReviews(productId: string): Promise<any[]> {
-    return this.reviewModel
-      .find({ product: new Types.ObjectId(productId) })
-      .sort({ createdAt: -1 })
-      .exec();
+    return this.reviewsService.findByProduct(productId);
   }
 
   async addReview(
     productId: string,
     userId: string,
     userName: string,
-    dto: { rating: number; content: string },
+    dto: any,
   ): Promise<any> {
-    const product = await this.productModel.findById(productId).exec();
-    if (!product) {
-      throw new NotFoundException('Không tìm thấy sản phẩm');
-    }
-
-    const existing = await this.reviewModel
-      .findOne({
-        product: new Types.ObjectId(productId),
-        user: new Types.ObjectId(userId),
-      })
-      .exec();
-
-    let savedReview;
-    if (existing) {
-      existing.rating = dto.rating;
-      existing.content = dto.content;
-      existing.name = userName;
-      savedReview = await existing.save();
-    } else {
-      savedReview = await this.reviewModel.create({
-        product: new Types.ObjectId(productId),
-        user: new Types.ObjectId(userId),
-        name: userName,
-        rating: dto.rating,
-        content: dto.content,
-      });
-    }
-
-    await this.recalculateProductRating(productId);
-    return savedReview;
+    return this.reviewsService.create(productId, userId, userName, dto);
   }
 
   async updateReview(
     productId: string,
     reviewId: string,
     userId: string,
-    dto: { rating?: number; content?: string },
+    dto: any,
   ): Promise<any> {
-    const review = await this.reviewModel.findById(reviewId).exec();
-    if (!review) {
-      throw new NotFoundException('Không tìm thấy đánh giá');
-    }
-
-    if (review.user.toString() !== userId) {
-      throw new BadRequestException('Bạn không có quyền sửa đánh giá này');
-    }
-
-    if (dto.rating !== undefined) review.rating = dto.rating;
-    if (dto.content !== undefined) review.content = dto.content;
-
-    const saved = await review.save();
-    await this.recalculateProductRating(productId);
-    return saved;
+    return this.reviewsService.update(productId, reviewId, userId, dto);
   }
 
   async deleteReview(
@@ -780,39 +734,7 @@ export class ProductsService {
     userId: string,
     userRole: string,
   ): Promise<any> {
-    const review = await this.reviewModel.findById(reviewId).exec();
-    if (!review) {
-      throw new NotFoundException('Không tìm thấy đánh giá');
-    }
-
-    if (
-      review.user.toString() !== userId &&
-      userRole !== 'ADMIN' &&
-      userRole !== 'STAFF'
-    ) {
-      throw new BadRequestException('Bạn không có quyền xóa đánh giá này');
-    }
-
-    await this.reviewModel.findByIdAndDelete(reviewId).exec();
-    await this.recalculateProductRating(productId);
-    return { success: true };
-  }
-
-  private async recalculateProductRating(productId: string): Promise<void> {
-    const reviews = await this.reviewModel
-      .find({ product: new Types.ObjectId(productId) })
-      .exec();
-    if (reviews.length === 0) {
-      await this.productModel
-        .findByIdAndUpdate(productId, { rating: 5 })
-        .exec();
-      return;
-    }
-    const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
-    const avgRating = Math.round((sum / reviews.length) * 10) / 10;
-    await this.productModel
-      .findByIdAndUpdate(productId, { rating: avgRating })
-      .exec();
+    return this.reviewsService.delete(productId, reviewId, userId, userRole);
   }
 
   async subscribeToStockAlert(

@@ -76,6 +76,22 @@ export class EnvironmentVariables {
   })
   JWT_SECRET: string;
 
+  @IsString({ message: 'JWT_REFRESH_SECRET phải là một chuỗi ký tự hợp lệ' })
+  @IsOptional()
+  @MinLength(16, {
+    message:
+      'JWT_REFRESH_SECRET phải có độ dài tối thiểu ít nhất 16 ký tự để đảm bảo an toàn',
+  })
+  JWT_REFRESH_SECRET?: string;
+
+  @IsString({ message: 'JWT_RESET_SECRET phải là một chuỗi ký tự hợp lệ' })
+  @IsOptional()
+  @MinLength(16, {
+    message:
+      'JWT_RESET_SECRET phải có độ dài tối thiểu ít nhất 16 ký tự để đảm bảo an toàn',
+  })
+  JWT_RESET_SECRET?: string;
+
   @IsString({
     message:
       'JWT_EXPIRES_IN phải là định dạng chuỗi thời gian hợp lệ (ví dụ: 7d, 24h, 3600s)',
@@ -223,6 +239,16 @@ export function validateEnv(
   if (!normalizedConfig.JWT_EXPIRES_IN && normalizedConfig.JWT_EXPIRATION) {
     normalizedConfig.JWT_EXPIRES_IN = normalizedConfig.JWT_EXPIRATION;
   }
+  const baseSecret =
+    typeof normalizedConfig.JWT_SECRET === 'string'
+      ? normalizedConfig.JWT_SECRET
+      : '';
+  if (!normalizedConfig.JWT_REFRESH_SECRET && baseSecret) {
+    normalizedConfig.JWT_REFRESH_SECRET = `${baseSecret}_refresh_secret`;
+  }
+  if (!normalizedConfig.JWT_RESET_SECRET && baseSecret) {
+    normalizedConfig.JWT_RESET_SECRET = `${baseSecret}_reset_secret`;
+  }
   if (typeof normalizedConfig.COOKIE_SAME_SITE === 'string') {
     normalizedConfig.COOKIE_SAME_SITE =
       normalizedConfig.COOKIE_SAME_SITE.toLowerCase();
@@ -283,6 +309,46 @@ export function validateEnv(
           `Ở môi trường Production, bắt buộc phải sinh một chuỗi ngẫu nhiên có độ dài >= 32 ký tự.\n` +
           `Gợi ý tạo khóa an toàn trên terminal: openssl rand -base64 32\n` +
           `========================================================================\n`,
+      );
+    }
+
+    const rawRefreshSecret = config.JWT_REFRESH_SECRET as string | undefined;
+    if (!rawRefreshSecret || typeof rawRefreshSecret !== 'string') {
+      throw new Error(
+        'JWT_REFRESH_SECRET is required in production and cannot be empty',
+      );
+    }
+    const isWeakRefresh = INSECURE_DEFAULT_SECRETS.some(
+      (insecure) => rawRefreshSecret.toLowerCase() === insecure.toLowerCase(),
+    );
+    if (isWeakRefresh || rawRefreshSecret.length < 32) {
+      throw new Error(
+        'JWT_REFRESH_SECRET must be at least 32 characters and not use insecure defaults in production',
+      );
+    }
+
+    const rawResetSecret = config.JWT_RESET_SECRET as string | undefined;
+    if (!rawResetSecret || typeof rawResetSecret !== 'string') {
+      throw new Error(
+        'JWT_RESET_SECRET is required in production and cannot be empty',
+      );
+    }
+    const isWeakReset = INSECURE_DEFAULT_SECRETS.some(
+      (insecure) => rawResetSecret.toLowerCase() === insecure.toLowerCase(),
+    );
+    if (isWeakReset || rawResetSecret.length < 32) {
+      throw new Error(
+        'JWT_RESET_SECRET must be at least 32 characters and not use insecure defaults in production',
+      );
+    }
+
+    if (
+      secret === rawRefreshSecret ||
+      secret === rawResetSecret ||
+      rawRefreshSecret === rawResetSecret
+    ) {
+      throw new Error(
+        'JWT_SECRET, JWT_REFRESH_SECRET, and JWT_RESET_SECRET must all be distinct keys in production',
       );
     }
 
