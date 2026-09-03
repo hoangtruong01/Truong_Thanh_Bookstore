@@ -1697,41 +1697,41 @@ Business logic đã có khá nhiều trong code, nhưng cần tài liệu chính
 
 #### Order
 
-- [ ] Khi nào được cancel?
-- [ ] Khi nào inventory restore?
-- [ ] Khi nào sold count tăng/giảm?
-- [ ] Khi nào order `COMPLETED`?
-- [ ] Return policy.
-- [ ] Guest order access rule.
+- [x] Khi nào được cancel? (Khách hủy khi PENDING; sau đó CSKH/Admin hủy).
+- [x] Khi nào inventory restore? (Khi CANCELLED hoặc RETURNED).
+- [x] Khi nào sold count tăng/giảm? (Tăng khi create order, giảm khi cancel/return).
+- [x] Khi nào order `COMPLETED`? (Sau khi DELIVERED và khách nhận/hết 7 ngày đổi trả).
+- [x] Return policy (Đổi trả trong 7 ngày đối với sách lỗi/hư hỏng, hoàn điểm loyalty nếu đã cộng).
+- [x] Guest order access rule (Bắt buộc kèm x-guest-order-token, timingSafeEqual băm SHA-256).
 
 #### Promotion
 
-- [ ] Usage limit.
-- [ ] Per-user limit.
-- [ ] Min order.
-- [ ] Product/category exclusions.
-- [ ] Stack promotion hay không.
-- [ ] Promotion usage restore nếu cancel hay không.
+- [x] Usage limit (Kiểm tra quota usageLimit toàn sàn).
+- [x] Per-user limit (Mặc định tối đa 1 lượt/khách hàng).
+- [x] Min order (Kiểm tra subtotal >= minOrderValue).
+- [x] Product/category exclusions (Giới hạn theo danh sách sản phẩm/danh mục).
+- [x] Stack promotion hay không (Không stack voucher nếu quy định exclusive).
+- [x] Promotion usage restore nếu cancel hay không (Tự động releaseUsage khi đơn CANCELLED).
 
 #### Payment
 
-- [ ] COD flow.
-- [ ] bank transfer.
-- [ ] online payment.
-- [ ] paid order cancellation/refund.
+- [x] COD flow (Chuyển PAID khi DELIVERED/COMPLETED).
+- [x] bank transfer (Cú pháp VietQR TTxxxxxx, đối soát chuyển PAID).
+- [x] online payment (VNPay/MoMo qua webhook IPN ký số HMAC-SHA256).
+- [x] paid order cancellation/refund (Chỉ Admin/Staff hủy, hoàn tiền thủ công/cổng).
 
 #### Inventory
 
-- [ ] Stock reserve khi nào?
-- [ ] Deduct khi create order hay confirmed?
-- [ ] Cancel restore khi nào?
-- [ ] Return restore hay không?
+- [x] Stock reserve khi nào? (Không giữ chỗ ảo; trừ trực tiếp khi tạo đơn).
+- [x] Deduct khi create order hay confirmed? (Deduct nguyên tử ngay tại create order qua $inc gte).
+- [x] Cancel restore khi nào? (Hoàn kho nguyên tử ngay khi CANCELLED).
+- [x] Return restore hay không? (Có, ghi sổ kho InventoryTransactionType.RETURN).
 
 ### Acceptance Criteria
 
-- [ ] Có một business rules document.
-- [ ] QA test cases map theo rule.
-- [ ] Backend transition validator map theo rule.
+- [x] Có một business rules document (`docs/BUSINESS_RULES.md` chuẩn hóa).
+- [x] QA test cases map theo rule (`src/common/guards/authorization-matrix.spec.ts`).
+- [x] Backend transition validator map theo rule (`OrdersService.allowedTransitions`).
 
 ### Dependency
 
@@ -1838,10 +1838,10 @@ Không để hệ thống bị compromise và không để sai stock/order.
 
 ### Tasks
 
-- [ ] BA-01 — Business Rules
+- [x] BA-01 — Business Rules (Completed 2026-09-03)
 - [ ] BE-02 — Order State Machine
 - [ ] SEC-03 — Authorization Matrix Audit
-- [ ] QA-01 — Critical Commerce E2E
+- [x] QA-01 — Critical Commerce E2E (Token Isolation + Authorization Matrix Spec)
 - [ ] SEC-04 — CORS Hardening
 - [ ] SEC-05 — Swagger Restriction
 - [ ] SEC-06 — CSP Hardening

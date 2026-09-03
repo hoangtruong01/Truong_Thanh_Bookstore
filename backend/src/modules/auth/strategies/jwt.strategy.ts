@@ -35,6 +35,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(request: any, payload: any) {
+    // 0. Enforce Token Isolation: only access tokens are permitted for API access
+    if (payload?.type !== 'access') {
+      throw new UnauthorizedException({
+        message:
+          'Loại mã xác thực không hợp lệ. Chỉ chấp nhận Access Token.',
+        errorCode: ErrorCode.ERR_INVALID_TOKEN,
+      });
+    }
+
     // 1. Check if token JTI is blacklisted
     if (
       payload?.jti &&
