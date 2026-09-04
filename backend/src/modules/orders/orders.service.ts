@@ -789,7 +789,9 @@ export class OrdersService {
         if (session.inTransaction()) await session.abortTransaction();
         if (this.isTransactionUnsupported(error)) {
           const errorMessage =
-            error instanceof Error ? error.message : 'Unknown transaction error';
+            error instanceof Error
+              ? error.message
+              : 'Unknown transaction error';
           this.logger.error(
             `Order status transaction is unavailable: ${errorMessage}`,
             error instanceof Error ? error.stack : undefined,
