@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types, SchemaTypes } from 'mongoose';
 
 export type LandingPageDocument = LandingPage & Document;
 
@@ -17,6 +17,9 @@ export class BenefitItem {
 
 @Schema({ _id: false })
 export class PackageItem {
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: false })
+  productId?: Types.ObjectId;
+
   @Prop({ required: true })
   name: string;
 
@@ -73,6 +76,9 @@ export class LandingPage {
 
   @Prop({ default: 0 })
   originalPrice: number;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: false })
+  productId?: Types.ObjectId;
 
   @Prop()
   badgeText: string;

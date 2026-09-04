@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument */
 import * as crypto from 'crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
@@ -15,6 +15,8 @@ import { UserRole, StaffPermission } from '../enums';
 import { OrdersController } from '../../modules/orders/orders.controller';
 import { UsersController } from '../../modules/users/users.controller';
 import { PaymentsController } from '../../modules/payments/payments.controller';
+import { PaymentsService } from '../../modules/payments/payments.service';
+import { PaymentProviderRegistry } from '../../modules/payments/providers/payment.providers';
 import { ReportsController } from '../../modules/reports/reports.controller';
 import { OrdersService } from '../../modules/orders/orders.service';
 import { UsersService } from '../../modules/users/users.service';
@@ -23,6 +25,7 @@ import { PromotionsService } from '../../modules/promotions/promotions.service';
 import { NotificationsService } from '../../modules/notifications/notifications.service';
 import { EmailService } from '../../modules/email/email.service';
 import { Order } from '../../modules/orders/schemas/order.schema';
+import { Payment } from '../../modules/payments/schemas/payment.schema';
 
 describe('QA-01: Authorization Matrix & Security Regression Suite', () => {
   let reflector: Reflector;
@@ -273,6 +276,7 @@ describe('QA-01: Authorization Matrix & Security Regression Suite', () => {
 
   describe('Part C: Security Regression & IDOR Protection', () => {
     let ordersService: OrdersService;
+    let paymentsService: PaymentsService;
     let mockOrderModel: any;
 
     const mockOrderCustomerB = {
@@ -304,6 +308,9 @@ describe('QA-01: Authorization Matrix & Security Regression Suite', () => {
         providers: [
           OrdersService,
           { provide: getModelToken(Order.name), useValue: mockOrderModel },
+          { provide: getModelToken(Payment.name), useValue: {} },
+          { provide: PaymentProviderRegistry, useValue: {} },
+          PaymentsService,
           { provide: ProductsService, useValue: {} },
           { provide: ConfigService, useValue: { get: jest.fn() } },
           { provide: PromotionsService, useValue: {} },
@@ -314,6 +321,7 @@ describe('QA-01: Authorization Matrix & Security Regression Suite', () => {
       }).compile();
 
       ordersService = module.get<OrdersService>(OrdersService);
+      paymentsService = module.get<PaymentsService>(PaymentsService);
     });
 
     it('IDOR 1: Customer A MUST NOT be able to view Order of Customer B (403 Forbidden)', async () => {
@@ -352,6 +360,26 @@ describe('QA-01: Authorization Matrix & Security Regression Suite', () => {
     it('IDOR 4: Customer A MUST NOT be able to cancel Order of Customer B (403 Forbidden)', async () => {
       await expect(
         ordersService.cancelForActor(mockOrderCustomerB._id, customerA),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('IDOR 5: invoice endpoint must reject Customer A before generating Customer B PDF', async () => {
+      const controller = new OrdersController(ordersService);
+      const pdfSpy = jest.spyOn(ordersService, 'generateInvoicePdf');
+
+      await expect(
+        controller.getInvoice(
+          mockOrderCustomerB._id,
+          { user: customerA },
+          {} as any,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+      expect(pdfSpy).not.toHaveBeenCalled();
+    });
+
+    it('IDOR 6: payment lookup must reject Customer A before returning Customer B payment', async () => {
+      await expect(
+        paymentsService.findByOrderId(mockOrderCustomerB._id, customerA),
       ).rejects.toThrow(ForbiddenException);
     });
 

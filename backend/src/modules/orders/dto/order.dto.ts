@@ -131,6 +131,21 @@ export class CreateOrderDto {
       'idempotencyKey phải dài từ 16 đến 128 ký tự gồm chữ, số hoặc . _ : -',
   })
   idempotencyKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'Nguồn phát sinh đơn hàng (WEB, MOBILE, LANDING_PAGE)',
+    default: 'WEB',
+  })
+  @IsOptional()
+  @IsString()
+  orderSource?: string;
+
+  @ApiPropertyOptional({
+    description: 'ID trang landing page nếu đơn hàng từ landing page',
+  })
+  @IsOptional()
+  @IsMongoObjectId({ message: 'landingPageId phải là ObjectId hợp lệ' })
+  landingPageId?: string;
 }
 
 export class UpdateOrderStatusDto {

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -11,7 +11,7 @@ import { CloudinaryService } from '../users/cloudinary.service';
 import { EmailService } from '../email/email.service';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import { UserRole } from '../../common/enums';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 
 describe('QA-01: Token Isolation Test Suite', () => {
   let jwtStrategy: JwtStrategy;
@@ -179,10 +179,23 @@ describe('QA-01: Token Isolation Test Suite', () => {
         jwtStrategy.validate(mockRequest, legacyPayloadWithoutType),
       ).rejects.toThrow(UnauthorizedException);
     });
+
+    it('Scenario 5: Legacy access token missing tokenVersion/JTI must be rejected with 401', async () => {
+      const legacyPayload = {
+        sub: MOCK_USER_ID,
+        email: 'test@truongthanh.vn',
+        role: UserRole.CUSTOMER,
+        type: 'access',
+      };
+
+      await expect(
+        jwtStrategy.validate({ headers: {} }, legacyPayload),
+      ).rejects.toThrow(UnauthorizedException);
+    });
   });
 
   describe('Part A.2: Cross-Flow Protection in AuthService', () => {
-    it('Scenario 5: Access Token sent to refresh token flow must be rejected', async () => {
+    it('Scenario 6: Access Token sent to refresh token flow must be rejected', async () => {
       // Sign an access token
       const accessToken = jwtService.sign({
         sub: MOCK_USER_ID,
@@ -204,7 +217,7 @@ describe('QA-01: Token Isolation Test Suite', () => {
       }
     });
 
-    it('Scenario 6: Expired Refresh Token must return ERR_REFRESH_TOKEN_EXPIRED (401)', async () => {
+    it('Scenario 7: Expired Refresh Token must return ERR_REFRESH_TOKEN_EXPIRED (401)', async () => {
       const expiredToken = jwtService.sign(
         {
           sub: MOCK_USER_ID,
@@ -227,7 +240,7 @@ describe('QA-01: Token Isolation Test Suite', () => {
       }
     });
 
-    it('Scenario 7: Token with invalid secret must throw 401 ERR_INVALID_TOKEN', async () => {
+    it('Scenario 8: Token with invalid secret must throw 401 ERR_INVALID_TOKEN', async () => {
       const forgedToken = new JwtService({
         secret: 'attacker-fake-secret',
       }).sign({
@@ -240,10 +253,25 @@ describe('QA-01: Token Isolation Test Suite', () => {
         UnauthorizedException,
       );
     });
+
+    it('Scenario 9: Legacy refresh token missing tokenVersion/JTI must be rejected', async () => {
+      const legacyRefreshToken = jwtService.sign(
+        {
+          sub: MOCK_USER_ID,
+          email: 'test@truongthanh.vn',
+          type: 'refresh',
+        },
+        { secret: JWT_REFRESH_SECRET },
+      );
+
+      await expect(
+        authService.refreshToken(legacyRefreshToken),
+      ).rejects.toThrow(UnauthorizedException);
+    });
   });
 
   describe('Part A.3: Revocation & Security Invalidation (tokenVersion, JTI, Reuse)', () => {
-    it('Scenario 8: Token with outdated tokenVersion (e.g. after password change) must throw 401 ERR_TOKEN_REVOKED', async () => {
+    it('Scenario 10: Token with outdated tokenVersion (e.g. after password change) must throw 401 ERR_TOKEN_REVOKED', async () => {
       const outdatedPayload = {
         sub: MOCK_USER_ID,
         email: 'test@truongthanh.vn',
@@ -263,9 +291,12 @@ describe('QA-01: Token Isolation Test Suite', () => {
       }
     });
 
-    it('Scenario 9: Token with blacklisted JTI must be immediately rejected with 401 ERR_TOKEN_REVOKED', async () => {
+    it('Scenario 11: Token with blacklisted JTI must be immediately rejected with 401 ERR_TOKEN_REVOKED', async () => {
       const testJti = randomUUID();
-      tokenBlacklistService.blacklistJti(testJti, Date.now() + 60000);
+      tokenBlacklistService.blacklistJti(
+        testJti,
+        Math.floor(Date.now() / 1000) + 60,
+      );
 
       const blacklistedPayload = {
         sub: MOCK_USER_ID,
@@ -286,7 +317,7 @@ describe('QA-01: Token Isolation Test Suite', () => {
       }
     });
 
-    it('Scenario 10: Refresh Token Reuse detection must revoke all sessions and increment tokenVersion', async () => {
+    it('Scenario 12: Refresh Token Reuse detection must revoke all sessions and increment tokenVersion', async () => {
       const validJti = randomUUID();
       const legitimateRefreshToken = jwtService.sign(
         {
@@ -325,7 +356,7 @@ describe('QA-01: Token Isolation Test Suite', () => {
   });
 
   describe('Part A.4: BE-01 Cryptographic Secret Separation Tests', () => {
-    it('Scenario 11: Reset Token signed with JWT_RESET_SECRET cannot be used to refresh tokens', async () => {
+    it('Scenario 13: Reset Token signed with JWT_RESET_SECRET cannot be used to refresh tokens', async () => {
       const resetToken = jwtService.sign(
         {
           sub: MOCK_USER_ID,
@@ -341,7 +372,7 @@ describe('QA-01: Token Isolation Test Suite', () => {
       );
     });
 
-    it('Scenario 12: Refresh Token signed with JWT_REFRESH_SECRET cannot be used to reset password', async () => {
+    it('Scenario 14: Refresh Token signed with JWT_REFRESH_SECRET cannot be used to reset password', async () => {
       const refreshToken = jwtService.sign(
         {
           sub: MOCK_USER_ID,
@@ -361,7 +392,7 @@ describe('QA-01: Token Isolation Test Suite', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it('Scenario 13: Access Token signed with JWT_SECRET cannot be used to reset password', async () => {
+    it('Scenario 15: Access Token signed with JWT_SECRET cannot be used to reset password', async () => {
       const accessToken = jwtService.sign(
         {
           sub: MOCK_USER_ID,
@@ -378,6 +409,36 @@ describe('QA-01: Token Isolation Test Suite', () => {
           newPassword: 'NewPassword123!',
         }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('Scenario 16: A reset token is rejected after it has changed the password once', async () => {
+      const otp = '123456';
+      const resetUser = {
+        ...mockUser,
+        password: 'old-hash',
+        tokenVersion: 2,
+        resetOtp: createHash('sha256').update(otp).digest('hex'),
+        resetOtpExpiry: new Date(Date.now() + 600000),
+        resetOtpAttempts: 0,
+        refreshTokenHash: undefined,
+        save: jest.fn().mockResolvedValue(true),
+      };
+      usersService.findByEmail.mockResolvedValue(resetUser);
+
+      const verified = await authService.verifyOtp(resetUser.email, otp);
+      const dto = {
+        email: resetUser.email,
+        resetToken: verified.resetToken,
+        newPassword: 'NewPassword123!',
+      };
+
+      await expect(authService.resetPassword(dto)).resolves.toMatchObject({
+        success: true,
+      });
+      await expect(authService.resetPassword(dto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(resetUser.tokenVersion).toBe(3);
     });
   });
 });

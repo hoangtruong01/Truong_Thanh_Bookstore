@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
@@ -7,6 +8,7 @@ import { Review } from './schemas/review.schema';
 import { Product } from '../products/schemas/product.schema';
 import { Order } from '../orders/schemas/order.schema';
 import { OrderStatus } from '../../common/enums';
+import { ReviewSchema } from './schemas/review.schema';
 
 describe('ReviewsService', () => {
   let service: ReviewsService;
@@ -51,6 +53,27 @@ describe('ReviewsService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('BE-02 unified Review schema contract', () => {
+    it('keeps every frontend/admin field in the canonical schema', () => {
+      const paths = ReviewSchema.paths;
+      expect(paths.isVisible).toBeDefined();
+      expect(paths.isVerifiedPurchase).toBeDefined();
+      expect(paths.adminReply).toBeDefined();
+      expect(paths.adminReplyAt).toBeDefined();
+      expect(paths.images).toBeDefined();
+    });
+
+    it('verifies that active Review model registered has all core relational and moderation paths', () => {
+      const paths = ReviewSchema.paths;
+      expect(paths.product).toBeDefined();
+      expect(paths.user).toBeDefined();
+      expect(paths.rating).toBeDefined();
+      expect(paths.content).toBeDefined();
+      expect(paths.createdAt).toBeDefined();
+      expect(paths.updatedAt).toBeDefined();
+    });
   });
 
   describe('findByProduct', () => {
@@ -214,10 +237,18 @@ describe('ReviewsService', () => {
         {
           rating: 5,
           content: 'Rất hài lòng',
+          images: ['https://cdn.example.com/review.jpg'],
         },
       );
 
       expect(result).toEqual(createdReview);
+      expect(mockReviewModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          images: ['https://cdn.example.com/review.jpg'],
+          isVisible: true,
+          isVerifiedPurchase: true,
+        }),
+      );
       expect(mockProductModel.findByIdAndUpdate).toHaveBeenCalledWith(
         mockProductId,
         { rating: 5 },

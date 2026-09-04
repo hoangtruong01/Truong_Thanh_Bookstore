@@ -10,7 +10,7 @@
   [![Backend CI](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/backend-ci.yml)
   [![Frontend CI](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/frontend-ci.yml)
   [![Mobile CI/CD](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/mobile-ci.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/mobile-ci.yml)
-  [![Test Suite](https://img.shields.io/badge/Tests-308%20Passed%20(100%25)-brightgreen.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore)
+  [![Test Suite](https://img.shields.io/badge/Tests-322%20Passed%20Local-brightgreen.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore)
   [![Security Audit](https://img.shields.io/badge/Audit-Sprint%201%20Hardened-blue.svg)](docs/TASK_EXECUTION_TRACKER.md)
 
 </div>
@@ -40,7 +40,7 @@ Truong_Thanh_Bookstore/
 | **Frontend Web & Admin** | Vue 3 (Composition API), TypeScript, Pinia, Tailwind CSS, Vite | Vercel |
 | **Mobile Application** | Flutter (Dart), Provider Pattern, Material Design 3 | Android APK & iOS |
 | **Cơ Sở Dữ Liệu & Cache** | MongoDB Replica Set, In-Memory Blacklist (chuẩn bị Redis) | Atlas / Managed Mongo |
-| **Hạ Tầng & CI/CD** | GitHub Actions, Docker Compose, Jest (308 unit & integration tests) | GitHub Cloud |
+| **Hạ Tầng & CI/CD** | GitHub Actions, Docker Compose, Jest (322 tests local, 25 suites — 2026-09-03) | GitHub Cloud |
 
 ---
 
@@ -55,7 +55,7 @@ Hệ thống đã trải qua đợt rà soát và khắc phục toàn diện the
 
 2. **⭐ Hợp nhất Review Schema (BE-02):**
    - Loại bỏ triệt để schema thừa trong `products` module, quy tụ về một model `Review` duy nhất trong `reviews` module.
-   - Đảm bảo lưu trữ và phản hồi dữ liệu thật: `isVisible` (kiểm duyệt ẩn/hiện), `isVerifiedPurchase` (xác thực đã mua hàng), `adminReply` (phản hồi của quản trị viên), `images` (ảnh đính kèm).
+   - Schema/service chuẩn hỗ trợ `isVisible`, `isVerifiedPurchase`, `adminReply`, `images` và đã có unit regression; việc xác minh/backfill dữ liệu Production vẫn là mục Need Verify.
 
 3. **🛡️ Chống Rò Rỉ Email & Chuẩn hóa Cookie (BE-06):**
    - Loại bỏ lỗ hổng dò quét email người dùng (Anti-Email Enumeration) tại các luồng `forgotPassword`, `verifyOtp` và `resetPassword` bằng cách trả về thông báo bảo mật thống nhất.
@@ -97,7 +97,10 @@ Tạo file `backend/.env` dựa trên `backend/.env.example`:
 
 ### 🐳 Cách 1: Khởi Chạy Toàn Bộ Bằng Docker Compose (Khuyến nghị)
 ```bash
-# Tạo file .env và khởi chạy toàn bộ stack:
+# Tạo file .env ở thư mục gốc (khác backend/.env) với ba secret riêng biệt:
+# JWT_SECRET=... (>=32 ký tự)
+# JWT_REFRESH_SECRET=... (>=32 ký tự, khác JWT_SECRET)
+# JWT_RESET_SECRET=... (>=32 ký tự, khác hai key trên)
 docker compose up -d --build
 ```
 - **Web Storefront & Admin CMS**: `http://localhost` (Port 80)
@@ -141,7 +144,7 @@ flutter run
 ```bash
 cd backend
 
-# Chạy toàn bộ 24 test suites / 308 unit & integration tests
+# Chạy toàn bộ 25 test suites / 322 tests (mốc local 2026-09-03)
 npm test
 
 # Kiểm tra chất lượng mã nguồn bằng ESLint (Ratchet budget limit)

@@ -22,6 +22,10 @@ import { EmailService } from '../email/email.service';
 import { UserDocument } from '../users/schemas/user.schema';
 import { TokenBlacklistService } from './token-blacklist.service';
 
+const INVALID_OTP_MESSAGE = 'Mã OTP không hợp lệ hoặc đã hết hạn';
+const INVALID_PASSWORD_RESET_MESSAGE =
+  'Mã xác thực hoặc thông tin đặt lại mật khẩu không hợp lệ';
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -80,28 +84,12 @@ export class AuthService {
     return safeUser;
   }
 
-  private getJwtSecret(): string {
-    return (
-      this.configService.get<string>('JWT_SECRET') ||
-      this.configService.get<string>('jwt.secret') ||
-      'TruongThanhSuperSecretKey2026!'
-    );
-  }
-
   private getRefreshSecret(): string {
-    return (
-      this.configService.get<string>('JWT_REFRESH_SECRET') ||
-      this.configService.get<string>('jwt.refreshSecret') ||
-      `${this.getJwtSecret()}_refresh_secret`
-    );
+    return this.configService.getOrThrow<string>('JWT_REFRESH_SECRET');
   }
 
   private getResetSecret(): string {
-    return (
-      this.configService.get<string>('JWT_RESET_SECRET') ||
-      this.configService.get<string>('jwt.resetSecret') ||
-      `${this.getJwtSecret()}_reset_secret`
-    );
+    return this.configService.getOrThrow<string>('JWT_RESET_SECRET');
   }
 
   private async generateTokens(user: UserDocument) {
@@ -216,7 +204,14 @@ export class AuthService {
       });
     }
 
-    if (!payload || payload.type !== 'refresh' || !payload.sub) {
+    if (
+      !payload ||
+      payload.type !== 'refresh' ||
+      !payload.sub ||
+      typeof payload.tokenVersion !== 'number' ||
+      typeof payload.jti !== 'string' ||
+      !payload.jti
+    ) {
       throw new UnauthorizedException({
         message: 'Refresh token không hợp lệ',
         errorCode: ErrorCode.ERR_INVALID_TOKEN,
@@ -232,11 +227,7 @@ export class AuthService {
     }
 
     // Check token version
-    if (
-      payload.tokenVersion !== undefined &&
-      user.tokenVersion !== undefined &&
-      payload.tokenVersion < user.tokenVersion
-    ) {
+    if (payload.tokenVersion !== (user.tokenVersion ?? 0)) {
       throw new UnauthorizedException({
         message:
           'Phiên đăng nhập đã bị hủy do đổi mật khẩu hoặc đăng xuất toàn thiết bị',
@@ -423,9 +414,7 @@ export class AuthService {
   async verifyOtp(email: string, otp: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user || !user.resetOtp) {
-      throw new UnauthorizedException(
-        'Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu lại mã OTP mới',
-      );
+      throw new UnauthorizedException(INVALID_OTP_MESSAGE);
     }
 
     const currentAttempts = user.resetOtpAttempts || 0;
@@ -434,9 +423,7 @@ export class AuthService {
       user.resetOtpExpiry = undefined;
       user.resetOtpAttempts = 0;
       await user.save();
-      throw new UnauthorizedException(
-        'Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới',
-      );
+      throw new UnauthorizedException(INVALID_OTP_MESSAGE);
     }
 
     if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
@@ -444,9 +431,7 @@ export class AuthService {
       user.resetOtpExpiry = undefined;
       user.resetOtpAttempts = 0;
       await user.save();
-      throw new UnauthorizedException(
-        'Mã OTP đã hết hạn. Vui lòng yêu cầu mã OTP mới',
-      );
+      throw new UnauthorizedException(INVALID_OTP_MESSAGE);
     }
 
     if (!this.isOtpHashValid(user.resetOtp, otp)) {
@@ -456,19 +441,20 @@ export class AuthService {
         user.resetOtpExpiry = undefined;
         user.resetOtpAttempts = 0;
         await user.save();
-        throw new UnauthorizedException(
-          'Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới',
-        );
+        throw new UnauthorizedException(INVALID_OTP_MESSAGE);
       }
       await user.save();
-      const remaining = 5 - user.resetOtpAttempts;
-      throw new UnauthorizedException(
-        `Mã OTP không đúng. Bạn còn ${remaining} lần thử`,
-      );
+      throw new UnauthorizedException(INVALID_OTP_MESSAGE);
     }
 
     const resetToken = this.jwtService.sign(
-      { sub: user._id.toString(), email: user.email, type: 'RESET_PASSWORD' },
+      {
+        sub: user._id.toString(),
+        email: user.email.trim().toLowerCase(),
+        type: 'RESET_PASSWORD',
+        tokenVersion: user.tokenVersion ?? 0,
+        jti: randomUUID(),
+      },
       { secret: this.getResetSecret(), expiresIn: '15m' },
     );
 
@@ -479,9 +465,7 @@ export class AuthService {
     const { email, otp, resetToken, newPassword } = dto;
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      throw new UnauthorizedException(
-        'Mã xác thực hoặc thông tin đặt lại mật khẩu không hợp lệ',
-      );
+      throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
     }
 
     if (resetToken) {
@@ -491,23 +475,24 @@ export class AuthService {
           secret: this.getResetSecret(),
         });
       } catch {
-        throw new UnauthorizedException(
-          'Mã token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn',
-        );
+        throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
       }
 
       if (
         !payload ||
         payload.type !== 'RESET_PASSWORD' ||
-        payload.email !== email.toLowerCase()
+        payload.sub !== user._id.toString() ||
+        payload.email !== email.trim().toLowerCase() ||
+        typeof payload.tokenVersion !== 'number' ||
+        payload.tokenVersion !== (user.tokenVersion ?? 0) ||
+        typeof payload.jti !== 'string' ||
+        !payload.jti
       ) {
-        throw new UnauthorizedException(
-          'Mã token đặt lại mật khẩu không hợp lệ',
-        );
+        throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
       }
     } else if (otp) {
       if (!user.resetOtp) {
-        throw new UnauthorizedException('Mã OTP không hợp lệ hoặc đã hết hạn');
+        throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
       }
 
       const currentAttempts = user.resetOtpAttempts || 0;
@@ -516,9 +501,7 @@ export class AuthService {
         user.resetOtpExpiry = undefined;
         user.resetOtpAttempts = 0;
         await user.save();
-        throw new UnauthorizedException(
-          'Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới',
-        );
+        throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
       }
 
       if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
@@ -526,7 +509,7 @@ export class AuthService {
         user.resetOtpExpiry = undefined;
         user.resetOtpAttempts = 0;
         await user.save();
-        throw new UnauthorizedException('Mã OTP đã hết hạn');
+        throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
       }
 
       if (!this.isOtpHashValid(user.resetOtp, otp)) {
@@ -536,20 +519,13 @@ export class AuthService {
           user.resetOtpExpiry = undefined;
           user.resetOtpAttempts = 0;
           await user.save();
-          throw new UnauthorizedException(
-            'Mã OTP đã bị hủy do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới',
-          );
+          throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
         }
         await user.save();
-        const remaining = 5 - user.resetOtpAttempts;
-        throw new UnauthorizedException(
-          `Mã OTP không đúng. Bạn còn ${remaining} lần thử`,
-        );
+        throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
       }
     } else {
-      throw new UnauthorizedException(
-        'Vui lòng cung cấp mã OTP hoặc resetToken để đặt lại mật khẩu',
-      );
+      throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
     }
 
     // Update password

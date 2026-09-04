@@ -103,6 +103,12 @@ export class Order {
   @Prop()
   promotionCode: string;
 
+  @Prop({ default: 'WEB' })
+  orderSource?: string;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'LandingPage' })
+  landingPageId?: Types.ObjectId;
+
   @Prop({ type: [OrderTimelineItemSchema], default: [] })
   timeline: OrderTimelineItem[];
 

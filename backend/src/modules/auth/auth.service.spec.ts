@@ -38,6 +38,12 @@ describe('AuthService (auth.service.spec.ts)', () => {
     },
   };
 
+  const jwtSecrets: Record<string, string> = {
+    JWT_SECRET: 'test-access-secret-at-least-32-characters-long',
+    JWT_REFRESH_SECRET: 'test-refresh-secret-at-least-32-characters-long',
+    JWT_RESET_SECRET: 'test-reset-secret-at-least-32-characters-long',
+  };
+
   beforeEach(async () => {
     usersService = {
       findByEmail: jest.fn(),
@@ -66,7 +72,12 @@ describe('AuthService (auth.service.spec.ts)', () => {
     configService = {
       get: jest.fn().mockImplementation((key: string) => {
         if (key === 'JWT_REFRESH_EXPIRES_IN') return '30d';
-        return undefined;
+        return jwtSecrets[key];
+      }),
+      getOrThrow: jest.fn().mockImplementation((key: string) => {
+        const value = jwtSecrets[key];
+        if (!value) throw new Error(`Missing test config: ${key}`);
+        return value;
       }),
     };
 
@@ -204,6 +215,7 @@ describe('AuthService (auth.service.spec.ts)', () => {
         email: mockUser.email,
         type: 'refresh',
         tokenVersion: 0,
+        jti: 'valid-refresh-jti',
       });
 
       const user = {
@@ -243,6 +255,7 @@ describe('AuthService (auth.service.spec.ts)', () => {
         email: mockUser.email,
         type: 'refresh',
         tokenVersion: 0,
+        jti: 'reused-refresh-jti',
       });
 
       const user = {
@@ -267,6 +280,7 @@ describe('AuthService (auth.service.spec.ts)', () => {
         email: mockUser.email,
         type: 'refresh',
         tokenVersion: 0, // Old version
+        jti: 'outdated-refresh-jti',
       });
 
       const user = {
@@ -392,9 +406,7 @@ describe('AuthService (auth.service.spec.ts)', () => {
 
       await expect(
         authService.verifyOtp('nonexistent@truongthanh.vn', '123456'),
-      ).rejects.toThrow(
-        /Mã OTP không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu lại mã OTP mới/,
-      );
+      ).rejects.toThrow('Mã OTP không hợp lệ hoặc đã hết hạn');
     });
 
     it('resetPassword should not reveal if email does not exist (anti-enumeration)', async () => {
@@ -428,6 +440,19 @@ describe('AuthService (auth.service.spec.ts)', () => {
       const result = await authService.verifyOtp(mockUser.email, rawOtp);
       expect(result.success).toBe(true);
       expect(result.resetToken).toBe('mock.jwt.token');
+      expect(jwtService.sign).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sub: mockUser._id,
+          email: mockUser.email,
+          type: 'RESET_PASSWORD',
+          tokenVersion: 0,
+          jti: expect.any(String),
+        }),
+        expect.objectContaining({
+          secret: jwtSecrets.JWT_RESET_SECRET,
+          expiresIn: '15m',
+        }),
+      );
     });
 
     it('verifyOtp should throw error and increment attempts on wrong OTP', async () => {
@@ -446,9 +471,61 @@ describe('AuthService (auth.service.spec.ts)', () => {
 
       await expect(
         authService.verifyOtp(mockUser.email, '999999'),
-      ).rejects.toThrow(/Mã OTP không đúng. Bạn còn 2 lần thử/);
+      ).rejects.toThrow('Mã OTP không hợp lệ hoặc đã hết hạn');
       expect(user.resetOtpAttempts).toBe(3);
       expect(user.save).toHaveBeenCalled();
+    });
+
+    it('verifyOtp returns the same public error for unknown and existing emails', async () => {
+      const existingUser = {
+        ...mockUser,
+        resetOtp: createHash('sha256').update('123456').digest('hex'),
+        resetOtpExpiry: new Date(Date.now() + 600000),
+        resetOtpAttempts: 0,
+        save: jest.fn().mockResolvedValue(true),
+      };
+      usersService.findByEmail
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(existingUser);
+
+      const messages: string[] = [];
+      for (const email of ['unknown@example.com', mockUser.email]) {
+        try {
+          await authService.verifyOtp(email, '999999');
+        } catch (error) {
+          messages.push((error as UnauthorizedException).message);
+        }
+      }
+
+      expect(messages).toEqual([
+        'Mã OTP không hợp lệ hoặc đã hết hạn',
+        'Mã OTP không hợp lệ hoặc đã hết hạn',
+      ]);
+    });
+
+    it('resetPassword returns the same public error for unknown and existing emails', async () => {
+      usersService.findByEmail
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ ...mockUser });
+      jwtService.verifyAsync.mockRejectedValue(new Error('invalid signature'));
+
+      const messages: string[] = [];
+      for (const email of ['unknown@example.com', mockUser.email]) {
+        try {
+          await authService.resetPassword({
+            email,
+            resetToken: 'invalid.reset.token',
+            newPassword: 'Password@123',
+          });
+        } catch (error) {
+          messages.push((error as UnauthorizedException).message);
+        }
+      }
+
+      expect(messages).toEqual([
+        'Mã xác thực hoặc thông tin đặt lại mật khẩu không hợp lệ',
+        'Mã xác thực hoặc thông tin đặt lại mật khẩu không hợp lệ',
+      ]);
     });
 
     it('resetPassword should succeed with resetToken, increment tokenVersion and clear OTP fields', async () => {
@@ -456,6 +533,8 @@ describe('AuthService (auth.service.spec.ts)', () => {
         sub: mockUser._id,
         email: mockUser.email,
         type: 'RESET_PASSWORD',
+        tokenVersion: 0,
+        jti: 'reset-jti-1',
       });
 
       const user = {
@@ -483,6 +562,35 @@ describe('AuthService (auth.service.spec.ts)', () => {
         user.password,
       );
       expect(isMatch).toBe(true);
+    });
+
+    it('rejects replay of a reset token after the first password reset', async () => {
+      jwtService.verifyAsync.mockResolvedValue({
+        sub: mockUser._id,
+        email: mockUser.email,
+        type: 'RESET_PASSWORD',
+        tokenVersion: 0,
+        jti: 'single-use-reset-jti',
+      });
+      const user = {
+        ...mockUser,
+        tokenVersion: 0,
+        save: jest.fn().mockResolvedValue(true),
+      };
+      usersService.findByEmail.mockResolvedValue(user);
+      const dto = {
+        email: mockUser.email,
+        resetToken: 'valid.reset.token',
+        newPassword: 'BrandNewPassword@123',
+      };
+
+      await expect(authService.resetPassword(dto)).resolves.toMatchObject({
+        success: true,
+      });
+      await expect(authService.resetPassword(dto)).rejects.toThrow(
+        'Mã xác thực hoặc thông tin đặt lại mật khẩu không hợp lệ',
+      );
+      expect(user.tokenVersion).toBe(1);
     });
   });
 });

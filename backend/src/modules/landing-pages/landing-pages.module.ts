@@ -5,6 +5,7 @@ import { LandingPageService } from './landing-page.service';
 import { LandingPageController } from './landing-page.controller';
 import { Order, OrderSchema } from '../orders/schemas/order.schema';
 import { OrdersModule } from '../orders/orders.module';
+import { ProductsModule } from '../products/products.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { OrdersModule } from '../orders/orders.module';
       { name: Order.name, schema: OrderSchema },
     ]),
     OrdersModule,
+    ProductsModule,
   ],
   controllers: [LandingPageController],
   providers: [LandingPageService],

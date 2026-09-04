@@ -199,6 +199,8 @@ MONGODB_URI=mongodb://127.0.0.1:27017/truong_thanh_bookstore
 
 # 3. Security & JWT (BẮT BUỘC: Thay đổi chuỗi bí mật ngẫu nhiên >= 32 ký tự ở Production)
 JWT_SECRET=ThayTheBangChuoiBiMatNgauNhienItNhat32KyTu!2026
+JWT_REFRESH_SECRET=ThayTheBangChuoiRefreshNgauNhienItNhat32KyTu!2026
+JWT_RESET_SECRET=ThayTheBangChuoiResetNgauNhienItNhat32KyTu!2026
 JWT_EXPIRES_IN=7d
 
 # 4. CORS Whitelist
@@ -275,7 +277,8 @@ flutter run
 
 ```bash
 # Tại thư mục gốc của dự án:
-# Cần khai báo JWT_SECRET trong file .env ở thư mục gốc.
+# Cần khai báo JWT_SECRET, JWT_REFRESH_SECRET và JWT_RESET_SECRET riêng biệt
+# trong file .env ở thư mục gốc (không phải backend/.env).
 docker compose up -d --build
 
 # Các dịch vụ được khởi chạy:

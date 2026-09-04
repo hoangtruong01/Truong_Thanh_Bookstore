@@ -463,10 +463,15 @@ export class OrdersService {
           discount,
           total: Math.max(0, subtotal + shippingFee - discount),
           promotionCode: dto.promotionCode?.toUpperCase(),
+          orderSource: dto.orderSource || 'WEB',
+          landingPageId: dto.landingPageId || undefined,
           timeline: [
             {
               status: OrderStatus.PENDING,
-              note: 'Đơn hàng được tạo thành công, chờ xác nhận.',
+              note:
+                dto.orderSource === 'LANDING_PAGE'
+                  ? 'Đơn hàng được tạo từ Landing Page, chờ xác nhận.'
+                  : 'Đơn hàng được tạo thành công, chờ xác nhận.',
               createdAt: new Date(),
             },
           ],
@@ -1140,7 +1145,7 @@ export class OrdersService {
       {
         $match: {
           createdAt: { $gte: startOfTodayVN },
-          orderStatus: { $ne: OrderStatus.CANCELLED },
+          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
         },
       },
       { $group: { _id: null, total: { $sum: '$total' } } },
@@ -1153,7 +1158,7 @@ export class OrdersService {
       {
         $match: {
           createdAt: { $gte: startDate, $lte: endDate },
-          orderStatus: { $ne: OrderStatus.CANCELLED },
+          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
         },
       },
       {
@@ -1199,7 +1204,7 @@ export class OrdersService {
     const result = await this.orderModel.aggregate([
       {
         $match: {
-          orderStatus: { $ne: OrderStatus.CANCELLED },
+          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
         },
       },
       {
@@ -1217,7 +1222,7 @@ export class OrdersService {
       {
         $match: {
           promotionCode: { $exists: true, $ne: null },
-          orderStatus: { $ne: OrderStatus.CANCELLED },
+          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
         },
       },
       {
@@ -1336,18 +1341,18 @@ export class OrdersService {
       const durationMs = 7 * 24 * 60 * 60 * 1000;
       currentStart = new Date(now.getTime() - durationMs);
       prevStart = new Date(now.getTime() - 2 * durationMs);
-      prevEnd = new Date(currentStart.getTime());
+      prevEnd = new Date(currentStart.getTime() - 1);
     } else if (range === 'year') {
       const durationMs = 365 * 24 * 60 * 60 * 1000;
       currentStart = new Date(now.getTime() - durationMs);
       prevStart = new Date(now.getTime() - 2 * durationMs);
-      prevEnd = new Date(currentStart.getTime());
+      prevEnd = new Date(currentStart.getTime() - 1);
     } else {
       // Default: 'month' (last 30 days)
       const durationMs = 30 * 24 * 60 * 60 * 1000;
       currentStart = new Date(now.getTime() - durationMs);
       prevStart = new Date(now.getTime() - 2 * durationMs);
-      prevEnd = new Date(currentStart.getTime());
+      prevEnd = new Date(currentStart.getTime() - 1);
     }
 
     const [currentMetrics, prevMetrics] = await Promise.all([

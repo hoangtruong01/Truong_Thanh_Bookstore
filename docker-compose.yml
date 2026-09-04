@@ -36,6 +36,8 @@ services:
       PORT: 3000
       MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/truong_thanh_bookstore?replicaSet=rs0}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      JWT_RESET_SECRET: ${JWT_RESET_SECRET:?JWT_RESET_SECRET is required}
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 30d
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
