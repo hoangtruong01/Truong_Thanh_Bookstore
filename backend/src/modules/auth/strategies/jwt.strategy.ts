@@ -88,7 +88,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           )
         : null);
 
-    if (rawToken && (await this.tokenBlacklistService.isTokenBlacklisted(rawToken))) {
+    if (
+      rawToken &&
+      (await this.tokenBlacklistService.isTokenBlacklisted(rawToken))
+    ) {
       throw new UnauthorizedException({
         message:
           'Mã xác thực đã bị thu hồi (đã đăng xuất). Vui lòng đăng nhập lại.',

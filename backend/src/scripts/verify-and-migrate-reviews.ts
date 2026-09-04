@@ -23,7 +23,9 @@ async function runReviewAuditAndMigration() {
   console.log('  KIỂM TRA & DI TRÚ CSDL: REVIEW SCHEMA CONTRACT (BE-02)   ');
   console.log('===========================================================');
   console.log(`URI: ${MONGODB_URI.replace(/:([^:@]+)@/, ':****@')}`);
-  console.log(`Chế độ: ${isExecute ? 'THỰC THI (MIGRATE DATA)' : 'CHẨN ĐOÁN (DRY RUN)'}\n`);
+  console.log(
+    `Chế độ: ${isExecute ? 'THỰC THI (MIGRATE DATA)' : 'CHẨN ĐOÁN (DRY RUN)'}\n`,
+  );
 
   let client: MongoClient | null = null;
   try {
@@ -60,15 +62,18 @@ async function runReviewAuditAndMigration() {
 
     console.log('\n--- KẾT QUẢ PHÂN TÍCH SCHEMA TRƯỜNG DỮ LIỆU ---');
     console.log(`- Số review thiếu trường 'isVisible': ${missingIsVisible}`);
-    console.log(`- Số review thiếu trường 'isVerifiedPurchase': ${missingVerified}`);
+    console.log(
+      `- Số review thiếu trường 'isVerifiedPurchase': ${missingVerified}`,
+    );
     console.log(`- Số review thiếu trường 'images': ${missingImages}`);
     console.log(`- Số review đã có 'adminReply': ${hasAdminReply}`);
 
     // 3. Kiểm tra chỉ mục (Indexes)
     const indexes = await collection.indexes();
-    const indexNames = indexes.map((i) => i.name);
     console.log('\n--- DANH SÁCH CHỈ MỤC (INDEXES) HIỆN HỮU ---');
-    indexes.forEach((idx) => console.log(`  • [${idx.name}]: ${JSON.stringify(idx.key)}`));
+    indexes.forEach((idx) =>
+      console.log(`  • [${idx.name}]: ${JSON.stringify(idx.key)}`),
+    );
 
     // 4. Thực thi backfill nếu có cờ --execute
     if (isExecute) {
@@ -80,7 +85,9 @@ async function runReviewAuditAndMigration() {
           { isVisible: { $type: ['null', 'missing'] } },
           { $set: { isVisible: true } },
         );
-        console.log(`✓ Đã cập nhật isVisible = true cho ${res.modifiedCount} bản ghi.`);
+        console.log(
+          `✓ Đã cập nhật isVisible = true cho ${res.modifiedCount} bản ghi.`,
+        );
         updatedCount += res.modifiedCount;
       }
 
@@ -89,7 +96,9 @@ async function runReviewAuditAndMigration() {
           { isVerifiedPurchase: { $type: ['null', 'missing'] } },
           { $set: { isVerifiedPurchase: false } },
         );
-        console.log(`✓ Đã cập nhật isVerifiedPurchase = false cho ${res.modifiedCount} bản ghi.`);
+        console.log(
+          `✓ Đã cập nhật isVerifiedPurchase = false cho ${res.modifiedCount} bản ghi.`,
+        );
         updatedCount += res.modifiedCount;
       }
 
@@ -98,21 +107,31 @@ async function runReviewAuditAndMigration() {
           { images: { $type: ['null', 'missing'] } },
           { $set: { images: [] } },
         );
-        console.log(`✓ Đã cập nhật images = [] cho ${res.modifiedCount} bản ghi.`);
+        console.log(
+          `✓ Đã cập nhật images = [] cho ${res.modifiedCount} bản ghi.`,
+        );
         updatedCount += res.modifiedCount;
       }
 
-      console.log(`\n✓ Hoàn tất di trú dữ liệu: Cập nhật tổng cộng ${updatedCount} lượt trường.`);
+      console.log(
+        `\n✓ Hoàn tất di trú dữ liệu: Cập nhật tổng cộng ${updatedCount} lượt trường.`,
+      );
     } else {
       if (missingIsVisible > 0 || missingVerified > 0 || missingImages > 0) {
         console.log('\n⚠ Phát hiện một số trường cũ chưa có giá trị mặc định.');
-        console.log('  Khuyến nghị chạy: npx ts-node src/scripts/verify-and-migrate-reviews.ts --execute');
+        console.log(
+          '  Khuyến nghị chạy: npx ts-node src/scripts/verify-and-migrate-reviews.ts --execute',
+        );
       } else {
-        console.log('\n✓ Toàn bộ dữ liệu reviews đã đồng nhất 100% với Canonical Schema!');
+        console.log(
+          '\n✓ Toàn bộ dữ liệu reviews đã đồng nhất 100% với Canonical Schema!',
+        );
       }
     }
 
-    console.log('\n===========================================================');
+    console.log(
+      '\n===========================================================',
+    );
     console.log('✓ XÁC MINH HOÀN TẤT: BE-02 REVIEW SCHEMA CONTRACT SẴN SÀNG');
     console.log('===========================================================');
   } catch (error: any) {

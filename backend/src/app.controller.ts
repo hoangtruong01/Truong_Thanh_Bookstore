@@ -1,4 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
@@ -18,7 +19,7 @@ export class AppController {
       'Health check endpoint — kiểm tra trạng thái hoạt động của hệ thống và CSDL',
   })
   @ApiResponse({ status: 200, description: 'Hệ thống hoạt động bình thường' })
-  getHealth() {
+  getHealth(@Res({ passthrough: true }) response: Response) {
     const isDbConnected = Number(this.connection.readyState) === 1;
     const dbStateMap: Record<number, string> = {
       0: 'DISCONNECTED',
@@ -28,6 +29,7 @@ export class AppController {
     };
 
     const memoryUsage = process.memoryUsage();
+    response.status(isDbConnected ? 200 : 503);
 
     return {
       status: isDbConnected ? 'UP' : 'DEGRADED',
@@ -45,6 +47,8 @@ export class AppController {
           heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024),
         },
       },
+      release:
+        process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || 'unknown',
       timestamp: new Date().toISOString(),
     };
   }

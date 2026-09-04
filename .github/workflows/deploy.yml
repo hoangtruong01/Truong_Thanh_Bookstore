@@ -19,9 +19,19 @@ jobs:
         run: |
           test -n "${{ secrets.RENDER_DEPLOY_HOOK }}" || { echo "RENDER_DEPLOY_HOOK is required"; exit 1; }
 
+      - name: Checkout Code for Smoke Testing
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
       - name: Trigger Render Deploy Hook
         run: |
           curl --fail --show-error --silent -X GET "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+      - name: 🩺 Run Automated Smoke Test
+        run: |
+          chmod +x ./scripts/smoke-test.sh
+          MAX_ATTEMPTS=60 WAIT_SECONDS=10 ./scripts/smoke-test.sh "${{ secrets.BACKEND_PRODUCTION_URL || 'https://truongthanh-backend.onrender.com' }}" "${{ github.event.workflow_run.head_sha }}"
 
   deploy-frontend:
     name: Deploy Frontend to Vercel
@@ -61,7 +71,13 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        id: deploy
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --yes --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=${DEPLOYMENT_URL}" >> "$GITHUB_OUTPUT"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Smoke Test Frontend Deployment
+        run: curl --fail --show-error --silent --retry 12 --retry-all-errors --retry-delay 5 "${{ steps.deploy.outputs.url }}" > /dev/null

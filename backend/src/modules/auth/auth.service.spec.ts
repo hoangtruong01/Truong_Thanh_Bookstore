@@ -234,9 +234,9 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(result.accessToken).toBe('mock.jwt.token');
       expect(result.refreshToken).toBe('mock.jwt.token');
       expect(user.save).toHaveBeenCalled();
-      expect(await tokenBlacklistService.isTokenBlacklisted('old.access.token')).toBe(
-        true,
-      );
+      expect(
+        await tokenBlacklistService.isTokenBlacklisted('old.access.token'),
+      ).toBe(true);
     });
 
     it('should throw UnauthorizedException if refresh token is expired', async () => {
@@ -316,10 +316,12 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(result.success).toBe(true);
       expect(user.refreshTokenHash).toBeUndefined();
       expect(user.save).toHaveBeenCalled();
-      expect(await tokenBlacklistService.isTokenBlacklisted(rawAccessToken)).toBe(
+      expect(
+        await tokenBlacklistService.isTokenBlacklisted(rawAccessToken),
+      ).toBe(true);
+      expect(await tokenBlacklistService.isJtiBlacklisted('logout-jti-1')).toBe(
         true,
       );
-      expect(await tokenBlacklistService.isJtiBlacklisted('logout-jti-1')).toBe(true);
     });
   });
 
@@ -370,9 +372,9 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(
         await tokenBlacklistService.isTokenBlacklisted('current.access.token'),
       ).toBe(true);
-      expect(await tokenBlacklistService.isJtiBlacklisted('change-pw-jti')).toBe(
-        true,
-      );
+      expect(
+        await tokenBlacklistService.isJtiBlacklisted('change-pw-jti'),
+      ).toBe(true);
       const isNewMatch = await bcrypt.compare('NewPassword@456', user.password);
       expect(isNewMatch).toBe(true);
     });

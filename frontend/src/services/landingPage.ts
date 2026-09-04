@@ -40,6 +40,7 @@ export const landingPageService = {
     address: string;
     packageName: string;
     note?: string;
+    idempotencyKey: string;
   }) {
     const response = await api.post('/landing-pages/submit-order', data);
     return response;

@@ -145,11 +145,6 @@ export class SubmitOrderDto {
   @IsMongoObjectId({ message: 'landingPageId phải là ObjectId hợp lệ' })
   landingPageId: string;
 
-  @ApiPropertyOptional({ description: 'Tùy chọn ghi đè productId của gói hàng' })
-  @IsOptional()
-  @IsMongoObjectId({ message: 'productId phải là ObjectId hợp lệ' })
-  productId?: string;
-
   @ApiProperty()
   @IsNotEmpty({ message: 'Họ và tên không được để trống' })
   @IsString()

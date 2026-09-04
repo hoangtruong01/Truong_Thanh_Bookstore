@@ -8,6 +8,7 @@
     "build": "vue-tsc -b && vite build",
     "typecheck": "vue-tsc -b",
     "test:unit": "vitest run",
+    "test:e2e": "playwright test",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "vue-toastification": "^2.0.0-rc.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.50.0",
     "@tailwindcss/vite": "^4.3.1",
     "@types/node": "^24.12.3",
     "@vitejs/plugin-vue": "^6.0.6",

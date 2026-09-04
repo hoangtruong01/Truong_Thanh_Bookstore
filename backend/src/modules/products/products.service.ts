@@ -357,6 +357,7 @@ export class ProductsService {
     const objectIds = ids.map((id) => new Types.ObjectId(id));
     return this.productModel
       .find({ _id: { $in: objectIds }, isDeleted: false })
+      .populate('category', 'name')
       .exec();
   }
 

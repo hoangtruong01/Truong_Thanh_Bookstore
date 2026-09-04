@@ -23,6 +23,7 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
     COOKIE_SECURE: 'true',
     AUTO_SEED: 'false',
     RESET_DATABASE_ON_SEED: 'false',
+    REDIS_URL: 'rediss://redis.example.com:6380',
   };
 
   describe('Valid Configuration', () => {
@@ -181,6 +182,7 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
       expect(result.JWT_RESET_SECRET).toBe(
         'ea16b2314a6cd56ba094350124316caa34061234051623051623051623056230',
       );
+      expect(result.REDIS_URL).toBe('rediss://redis.example.com:6380');
     });
 
     it('should throw security error in production if JWT_REFRESH_SECRET is missing', () => {
@@ -255,6 +257,18 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
           RESET_DATABASE_ON_SEED: 'true',
         }),
       ).toThrow(/RESET_DATABASE_ON_SEED/);
+    });
+
+    it('should require a valid Redis URL in production', () => {
+      expect(() =>
+        validateEnv({ ...validProductionConfig, REDIS_URL: undefined }),
+      ).toThrow(/REDIS_URL is required in production/);
+      expect(() =>
+        validateEnv({
+          ...validProductionConfig,
+          REDIS_URL: 'https://redis.example.com',
+        }),
+      ).toThrow(/redis:\/\/ or rediss:\/\//);
     });
   });
 

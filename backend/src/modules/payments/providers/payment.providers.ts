@@ -76,7 +76,7 @@ export class BankTransferPaymentProvider implements PaymentProvider {
 /**
  * BE-08: MockSignedPaymentProvider simulates online signed payments (VNPay, MoMo)
  * with internal HMAC SHA256 signatures for development and staging environments only.
- * 
+ *
  * IMPORTANT: Mock online payment providers are strictly forbidden in production (NODE_ENV === 'production').
  * Production environments must configure and integrate direct merchant bank APIs.
  */
@@ -90,7 +90,8 @@ export abstract class MockSignedPaymentProvider implements PaymentProvider {
   async initiate(
     context: PaymentInitiationContext,
   ): Promise<PaymentInitiationResult> {
-    const nodeEnv = this.configService.get<string>('NODE_ENV') || process.env.NODE_ENV;
+    const nodeEnv =
+      this.configService.get<string>('NODE_ENV') || process.env.NODE_ENV;
     if (nodeEnv === 'production') {
       throw new ServiceUnavailableException(
         `Cổng thanh toán giả lập (${this.method}) bị nghiêm cấm trong môi trường production`,
@@ -130,7 +131,8 @@ export abstract class MockSignedPaymentProvider implements PaymentProvider {
   async verifyCallback(
     payload: PaymentCallbackPayload,
   ): Promise<PaymentCallbackResult> {
-    const nodeEnv = this.configService.get<string>('NODE_ENV') || process.env.NODE_ENV;
+    const nodeEnv =
+      this.configService.get<string>('NODE_ENV') || process.env.NODE_ENV;
     if (nodeEnv === 'production') {
       throw new ServiceUnavailableException(
         `Cổng thanh toán giả lập (${this.method}) bị nghiêm cấm trong môi trường production`,

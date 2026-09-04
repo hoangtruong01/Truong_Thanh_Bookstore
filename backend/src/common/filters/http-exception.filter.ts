@@ -8,54 +8,34 @@ import {
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { ErrorCode } from '../enums/error-code.enum';
+import { SentryService } from '../sentry/sentry.service';
+import { sanitizeForLogging } from '../logger/log-sanitizer';
 
-const SENSITIVE_KEYS = new Set([
-  'password',
-  'newpassword',
-  'oldpassword',
-  'confirmpassword',
-  'token',
-  'accesstoken',
-  'refreshtoken',
-  'authorization',
-  'cookie',
-  'otp',
-  'resetotp',
-  'secret',
-  'apikey',
-  'creditcard',
-  'cvv',
-  'cardnumber',
-]);
+export { sanitizeForLogging } from '../logger/log-sanitizer';
 
-/**
- * Recursively sanitize an object by masking sensitive keys
- */
-export function sanitizeForLogging(data: any, depth = 0): any {
-  if (depth > 5 || data === null || data === undefined) {
-    return data;
+type UnknownRecord = Record<string, unknown>;
+type RequestWithContext = Request & {
+  correlationId?: string;
+  user?: { id?: unknown; _id?: unknown };
+};
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === 'object' && value !== null;
+}
+
+function stringField(record: UnknownRecord, key: string): string | undefined {
+  const value = record[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function printable(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value instanceof Error) return value.message;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return 'Unknown error';
   }
-
-  if (typeof data !== 'object') {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.map((item) => sanitizeForLogging(item, depth + 1));
-  }
-
-  const sanitized: Record<string, any> = {};
-  for (const [key, value] of Object.entries(data)) {
-    const lowerKey = key.toLowerCase();
-    if (SENSITIVE_KEYS.has(lowerKey)) {
-      sanitized[key] = '***REDACTED***';
-    } else if (typeof value === 'object' && value !== null) {
-      sanitized[key] = sanitizeForLogging(value, depth + 1);
-    } else {
-      sanitized[key] = value;
-    }
-  }
-  return sanitized;
 }
 
 /**
@@ -92,19 +72,22 @@ export function getErrorCodeFromStatus(status: number): ErrorCode {
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
 
-  catch(exception: unknown, host: ArgumentsHost) {
+  constructor(private readonly sentryService?: SentryService) {}
+
+  catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+    const request = ctx.getRequest<RequestWithContext>();
 
     const isProduction = process.env.NODE_ENV === 'production';
     const requestPath = request?.url ? request.url.split('?')[0] : '/';
     const requestMethod = request?.method || 'UNKNOWN';
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = 'Đã có lỗi xảy ra từ hệ thống. Vui lòng thử lại sau.';
+    let message: string | string[] =
+      'Đã có lỗi xảy ra từ hệ thống. Vui lòng thử lại sau.';
     let errorCode: string = ErrorCode.ERR_INTERNAL_SERVER_ERROR;
-    let details: any = {};
+    let details: unknown = {};
 
     // 1. Handle NestJS HttpException and subclasses (e.g. AppException, BadRequestException)
     if (exception instanceof HttpException) {
@@ -118,10 +101,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
         typeof exceptionResponse === 'object' &&
         exceptionResponse !== null
       ) {
-        const res = exceptionResponse as Record<string, any>;
-        message = res.message || exception.message || 'Lỗi yêu cầu';
-        errorCode = res.errorCode || res.code || errorCode;
-        details = res.details || res.errors || {};
+        const res = exceptionResponse as UnknownRecord;
+        const responseMessage = res.message;
+        message =
+          typeof responseMessage === 'string' ||
+          (Array.isArray(responseMessage) &&
+            responseMessage.every((item) => typeof item === 'string'))
+            ? responseMessage
+            : exception.message || 'Lỗi yêu cầu';
+        errorCode =
+          stringField(res, 'errorCode') ||
+          stringField(res, 'code') ||
+          errorCode;
+        details = res.details ?? res.errors ?? {};
 
         // If message is an array from ValidationPipe
         if (Array.isArray(message)) {
@@ -140,25 +132,22 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
     // 2. Handle JWT errors
     else if (
-      exception &&
-      typeof exception === 'object' &&
-      (exception as any).name === 'JsonWebTokenError'
+      isRecord(exception) &&
+      stringField(exception, 'name') === 'JsonWebTokenError'
     ) {
       status = HttpStatus.UNAUTHORIZED;
       errorCode = ErrorCode.ERR_INVALID_TOKEN;
       message = 'Mã xác thực không hợp lệ hoặc đã bị chỉnh sửa';
     } else if (
-      exception &&
-      typeof exception === 'object' &&
-      (exception as any).name === 'TokenExpiredError'
+      isRecord(exception) &&
+      stringField(exception, 'name') === 'TokenExpiredError'
     ) {
       status = HttpStatus.UNAUTHORIZED;
       errorCode = ErrorCode.ERR_TOKEN_EXPIRED;
       message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại';
     } else if (
-      exception &&
-      typeof exception === 'object' &&
-      (exception as any).name === 'NotBeforeError'
+      isRecord(exception) &&
+      stringField(exception, 'name') === 'NotBeforeError'
     ) {
       status = HttpStatus.UNAUTHORIZED;
       errorCode = ErrorCode.ERR_INVALID_TOKEN;
@@ -168,43 +157,48 @@ export class HttpExceptionFilter implements ExceptionFilter {
     else if (
       exception instanceof SyntaxError &&
       'status' in exception &&
-      (exception as any).status === 400
+      (exception as SyntaxError & { status?: unknown }).status === 400
     ) {
       status = HttpStatus.BAD_REQUEST;
       errorCode = ErrorCode.ERR_BAD_REQUEST;
       message = 'Định dạng dữ liệu JSON gửi lên không hợp lệ';
     }
     // 4. Handle MongoDB / Mongoose / Database errors
-    else if (exception && typeof exception === 'object') {
-      const err = exception as any;
-      const errMsg = err.message || '';
+    else if (isRecord(exception)) {
+      const err = exception;
+      const errName = stringField(err, 'name');
+      const errMsg = stringField(err, 'message') || '';
 
       if (
-        err.name === 'RangeError' ||
-        (err.name === 'MongoServerError' && errMsg.includes('too large')) ||
+        errName === 'RangeError' ||
+        (errName === 'MongoServerError' && errMsg.includes('too large')) ||
         errMsg.includes('OUT_OF_RANGE')
       ) {
         status = HttpStatus.BAD_REQUEST;
         errorCode = ErrorCode.ERR_PAYLOAD_TOO_LARGE;
         message =
           'Dung lượng dữ liệu hoặc hình ảnh quá lớn (vượt quá giới hạn của CSDL). Vui lòng giảm kích thước ảnh trước khi tải lên!';
-      } else if (err.name === 'ValidationError' && err.errors) {
+      } else if (errName === 'ValidationError' && isRecord(err.errors)) {
         status = HttpStatus.BAD_REQUEST;
         errorCode = ErrorCode.ERR_DB_VALIDATION;
-        const msgList = Object.values(err.errors).map((e: any) => e.message);
+        const msgList = Object.values(err.errors).map((value) =>
+          isRecord(value)
+            ? stringField(value, 'message') || printable(value)
+            : printable(value),
+        );
         message = `Dữ liệu không hợp lệ: ${msgList.join('; ')}`;
         details = msgList;
       } else if (err.code === 11000) {
         status = HttpStatus.CONFLICT;
         errorCode = ErrorCode.ERR_DUPLICATE_KEY;
         message = 'Dữ liệu hoặc đường dẫn đã tồn tại trên hệ thống (trùng lặp)';
-        if (err.keyValue) {
+        if (isRecord(err.keyValue)) {
           details = { duplicateFields: Object.keys(err.keyValue) };
         }
-      } else if (err.name === 'CastError') {
+      } else if (errName === 'CastError') {
         status = HttpStatus.BAD_REQUEST;
         errorCode = ErrorCode.ERR_INVALID_ID;
-        message = `Giá trị trường '${err.path}' không đúng định dạng ID hợp lệ`;
+        message = `Giá trị trường '${stringField(err, 'path') || 'unknown'}' không đúng định dạng ID hợp lệ`;
       }
     }
 
@@ -214,53 +208,79 @@ export class HttpExceptionFilter implements ExceptionFilter {
         message = 'Đã có lỗi xảy ra từ hệ thống. Vui lòng thử lại sau.';
         details = {};
       } else {
-        const rawErr = exception as any;
-        if (rawErr && typeof rawErr === 'object' && !details.error) {
+        const currentDetails = isRecord(details) ? details : {};
+        if (isRecord(exception) && !currentDetails.error) {
           details = {
-            error: rawErr.message || String(exception),
-            stack: rawErr.stack,
+            error: stringField(exception, 'message') || printable(exception),
+            stack: stringField(exception, 'stack'),
           };
         }
       }
     }
 
-    // 6. Structured Logging with Credential Redaction
+    // 6. Structured Logging with Credential Redaction & Correlation ID
+    const rawCorrelationId =
+      request?.correlationId ||
+      request?.headers?.['x-correlation-id'] ||
+      request?.headers?.['x-request-id'];
+    const correlationId =
+      typeof rawCorrelationId === 'string' && rawCorrelationId.trim()
+        ? rawCorrelationId.trim()
+        : undefined;
+
     const clientIp =
       request?.headers?.['x-forwarded-for'] ||
       request?.socket?.remoteAddress ||
       'UNKNOWN_IP';
-    const userId =
-      (request as any)?.user?.id || (request as any)?.user?._id || 'ANONYMOUS';
+    const userId = request?.user?.id || request?.user?._id || 'ANONYMOUS';
     const logClientIp = Array.isArray(clientIp)
       ? clientIp.join(', ')
       : String(clientIp);
-    const logUserId = String(userId);
+    const logUserId = printable(userId);
 
     const logPayload = {
       timestamp: new Date().toISOString(),
+      correlationId,
       method: requestMethod,
       path: request?.url || requestPath,
       statusCode: status,
       errorCode,
-      clientIp,
-      userId,
+      clientIp: logClientIp,
+      userId: logUserId,
       query: sanitizeForLogging(request?.query || {}),
-      body: sanitizeForLogging(request?.body || {}),
+      body: sanitizeForLogging((request?.body as unknown) || {}),
     };
 
     if (Number(status) >= 500) {
+      // Forward 5xx errors to Sentry if available
+      if (this.sentryService) {
+        try {
+          this.sentryService.captureException(exception, {
+            correlationId,
+            path: request?.url || requestPath,
+            method: requestMethod,
+            statusCode: status,
+            errorCode,
+            userId: logUserId,
+            clientIp: logClientIp,
+          });
+        } catch {
+          // Ignore Sentry dispatch failures
+        }
+      }
+
       const stack =
         exception instanceof Error
           ? exception.stack
           : JSON.stringify(exception);
       this.logger.error(
-        `[${requestMethod}] ${request?.url} | Status: ${status} | Code: ${errorCode} | User: ${logUserId} | IP: ${logClientIp}\n` +
+        `[${requestMethod}] ${request?.url} | Status: ${status} | Code: ${errorCode} | User: ${logUserId} | IP: ${logClientIp} | CID: ${correlationId || 'N/A'}\n` +
           `Context: ${JSON.stringify(logPayload)}\n` +
           `Stack: ${stack}`,
       );
     } else {
       this.logger.warn(
-        `[${requestMethod}] ${request?.url} | Status: ${status} | Code: ${errorCode} | Msg: ${Array.isArray(message) ? message.join('; ') : message} | User: ${logUserId} | IP: ${logClientIp}`,
+        `[${requestMethod}] ${request?.url} | Status: ${status} | Code: ${errorCode} | Msg: ${Array.isArray(message) ? message.join('; ') : message} | User: ${logUserId} | IP: ${logClientIp} | CID: ${correlationId || 'N/A'}`,
       );
     }
 
@@ -273,6 +293,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: requestPath,
+      correlationId,
     });
   }
 }

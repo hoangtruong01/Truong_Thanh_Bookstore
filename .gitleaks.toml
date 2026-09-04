@@ -1,0 +1,19 @@
+# Gitleaks Configuration for Trường Thành Bookstore
+title = "Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Narrow allowlist for generated dependency metadata and explicit dummy values"
+paths = [
+  '''package-lock\.json$''',
+]
+regexes = [
+  '''ci-only-jwt-secret-at-least-32-characters''',
+  '''ci-only-jwt-refresh-secret-at-least-32-chars''',
+  '''ci-only-jwt-reset-secret-at-least-32-chars''',
+  '''TruongThanhDevDefaultSecretKey2026!''',
+  '''changeMeInProduction123!''',
+  '''super-secret-production-jwt-at-least-32-chars-ok''',
+]

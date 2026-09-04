@@ -86,6 +86,3 @@ export class Cart {
 }
 
 export const CartSchema = SchemaFactory.createForClass(Cart);
-
-// BE-08: Explicit unique index for user cart lookups
-CartSchema.index({ user: 1 }, { unique: true });

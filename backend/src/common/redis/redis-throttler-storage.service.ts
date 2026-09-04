@@ -1,8 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import {
-  ThrottlerStorage,
-  ThrottlerStorageService,
-} from '@nestjs/throttler';
+import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 
 export interface ThrottlerStorageRecord {
   totalHits: number;

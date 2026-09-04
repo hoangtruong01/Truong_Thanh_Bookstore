@@ -131,7 +131,8 @@ describe('TokenBlacklistService (BE-04)', () => {
       const remoteJti = 'remote-node-jti';
       mockRedisService.get.mockResolvedValueOnce('1');
 
-      const isBlacklisted = await redisBackedService.isJtiBlacklisted(remoteJti);
+      const isBlacklisted =
+        await redisBackedService.isJtiBlacklisted(remoteJti);
 
       expect(isBlacklisted).toBe(true);
       expect(mockRedisService.get).toHaveBeenCalledWith(`bl:jti:${remoteJti}`);
@@ -139,7 +140,9 @@ describe('TokenBlacklistService (BE-04)', () => {
 
     it('should fail-open gracefully when Redis errors occur', async () => {
       const errJti = 'error-case-jti';
-      mockRedisService.get.mockRejectedValueOnce(new Error('Redis connection timeout'));
+      mockRedisService.get.mockRejectedValueOnce(
+        new Error('Redis connection timeout'),
+      );
 
       const isBlacklisted = await redisBackedService.isJtiBlacklisted(errJti);
 

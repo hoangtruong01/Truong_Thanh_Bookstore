@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   ConflictException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -21,6 +22,7 @@ import { CloudinaryService } from '../users/cloudinary.service';
 import { EmailService } from '../email/email.service';
 import { UserDocument } from '../users/schemas/user.schema';
 import { TokenBlacklistService } from './token-blacklist.service';
+import { SecurityAuditService } from '../../common/audit/security-audit.service';
 
 const INVALID_OTP_MESSAGE = 'Mã OTP không hợp lệ hoặc đã hết hạn';
 const INVALID_PASSWORD_RESET_MESSAGE =
@@ -37,6 +39,8 @@ export class AuthService {
     private emailService: EmailService,
     private tokenBlacklistService: TokenBlacklistService,
     private configService: ConfigService,
+    @Optional()
+    private securityAuditService?: SecurityAuditService,
   ) {}
 
   private hashToken(token: string): string {
@@ -157,9 +161,17 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
+      this.securityAuditService?.logAuthFailure({
+        email: loginDto.email,
+        reason: 'USER_NOT_FOUND',
+      });
       throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
     }
     if (!user.status) {
+      this.securityAuditService?.logAuthFailure({
+        email: loginDto.email,
+        reason: 'ACCOUNT_LOCKED',
+      });
       throw new UnauthorizedException('Tài khoản đã bị khóa');
     }
 
@@ -168,6 +180,10 @@ export class AuthService {
       user.password,
     );
     if (!isPasswordValid) {
+      this.securityAuditService?.logAuthFailure({
+        email: loginDto.email,
+        reason: 'INVALID_PASSWORD',
+      });
       throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
     }
 
@@ -365,12 +381,23 @@ export class AuthService {
     user.tokenVersion = (user.tokenVersion || 0) + 1; // Invalidate all prior tokens across all devices
     await user.save();
 
+    this.securityAuditService?.logPasswordChanged({
+      userId,
+      email: user.email,
+    });
+
     if (rawAccessToken) {
       try {
         const decoded: any = this.jwtService.decode(rawAccessToken);
         if (decoded?.jti)
-          await this.tokenBlacklistService.blacklistJti(decoded.jti, decoded.exp);
-        await this.tokenBlacklistService.blacklistToken(rawAccessToken, decoded?.exp);
+          await this.tokenBlacklistService.blacklistJti(
+            decoded.jti,
+            decoded.exp,
+          );
+        await this.tokenBlacklistService.blacklistToken(
+          rawAccessToken,
+          decoded?.exp,
+        );
       } catch {
         await this.tokenBlacklistService.blacklistToken(rawAccessToken);
       }
@@ -537,6 +564,11 @@ export class AuthService {
     user.refreshTokenHash = undefined; // Invalidate active sessions
     user.tokenVersion = (user.tokenVersion || 0) + 1; // Invalidate all prior tokens across all devices
     await user.save();
+
+    this.securityAuditService?.logPasswordChanged({
+      userId: user._id.toString(),
+      email: user.email,
+    });
 
     return { success: true, message: 'Đặt lại mật khẩu thành công' };
   }
