@@ -293,7 +293,7 @@ describe('QA-01: Token Isolation Test Suite', () => {
 
     it('Scenario 11: Token with blacklisted JTI must be immediately rejected with 401 ERR_TOKEN_REVOKED', async () => {
       const testJti = randomUUID();
-      tokenBlacklistService.blacklistJti(
+      await tokenBlacklistService.blacklistJti(
         testJti,
         Math.floor(Date.now() / 1000) + 60,
       );

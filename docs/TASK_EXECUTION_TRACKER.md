@@ -3,8 +3,8 @@
 > **Nguồn đặc tả**: `docs/TRUONG_THANH_MASTER_AUDIT_IMPLEMENTATION_2026-09-03.md`  
 > **Cập nhật lần cuối**: 2026-09-04  
 > **Trạng thái tổng thể**: Đang triển khai (In Progress)  
-> **Tỷ lệ hoàn thành Core Tasks đã xác minh**: 8 / 18 tasks (44.4%); Toàn bộ P0 Sprint 1 đã HOÀN THÀNH  
-> **Test Suite Status (local 2026-09-04)**: 26/26 Suites PASS — 328/328 Tests Green; coverage lines ~55%
+> **Tỷ lệ hoàn thành Core Tasks đã xác minh**: 11 / 18 tasks (61.1%); Toàn bộ Sprint 1 & Sprint 2 đã HOÀN THÀNH 100%  
+> **Test Suite Status (local 2026-09-04)**: 28/28 Suites PASS — 347/347 Tests Green; coverage lines ~58%
 
 ---
 
@@ -26,12 +26,12 @@
 |---|:---:|:---:|:---:|:---:|:---:|
 | **Business Analysis (BA)** | 1 | 1 | 0 | 0 | 100% |
 | **Quality Assurance (QA & Security)** | 3 | 1 | 0 | 2 | 33.3% |
-| **Backend & Database (BE)** | 9 | 5 | 0 | 4 | 55.6% |
+| **Backend & Database (BE)** | 9 | 8 | 0 | 1 | 88.9% |
 | **Frontend Web (FE)** | 2 | 1 | 0 | 1 | 50% |
 | **DevOps & Infrastructure** | 1 | 0 | 0 | 1 | 0% |
 | **Mobile App (Flutter)** | 1 | 0 | 0 | 1 | 0% |
 | **Project Management (PM)** | 1 | 0 | 1 | 0 | Đang duy trì |
-| **TỔNG CỘNG (Core Master Tasks)** | **18** | **8** | **1** | **9** | **44.4%** |
+| **TỔNG CỘNG (Core Master Tasks)** | **18** | **11** | **1** | **6** | **61.1%** |
 | *Extended Backlog (Bổ trợ)* | *8* | *0* | *0* | *8* | *0%* |
 | *Mục xác minh thật (Need Verify)* | *7* | *4* | *0* | *3* | *57.1%* |
 
@@ -48,15 +48,15 @@
 - [x] **BE-09 (Part A & B)**: Xóa số giả, tính toán tăng trưởng & doanh thu danh mục thật *(DONE 2026-09-03)*
 - [x] **FE-02**: Gỡ UI số giả, bộ lọc Range API thật, doanh thu danh mục & UX loading/empty/error *(DONE 2026-09-04)*
 
-### Sprint 2: Order Correctness + Business Rules
+### Sprint 2: Order Correctness + Business Rules (HOÀN THÀNH 100%)
 - [x] **BE-03**: Landing page order tích hợp OrdersService pipeline, trừ kho nguyên tử, sổ cái SALE, idempotency *(DONE 2026-09-04)*
-- [ ] **BE-05**: Loyalty đúng mốc `DELIVERED` + auto-cancel đơn PENDING quá hạn (24h/48h)
-- [ ] **BE-08**: MongoDB indexes + Mock payment docs + Gemini JSON schema validation
+- [x] **BE-05**: Loyalty đúng mốc `DELIVERED` + auto-cancel đơn PENDING quá hạn (24h/48h) *(DONE 2026-09-04)*
+- [x] **BE-08**: MongoDB indexes + Mock payment docs/restriction + Gemini JSON schema validation *(DONE 2026-09-04)*
 - [x] **BE-09 (Part B)**: Sửa Reports: tính toán tăng trưởng và doanh thu danh mục thật *(DONE 2026-09-03)*
 - [x] **QA-01 (Part B & C)**: Matrix critical routes + IDOR đã xanh 27/27 tests + Protected inventory *(DONE 2026-09-04)*
 
 ### Sprint 3: Observability + E2E + Deployment
-- [ ] **BE-04**: Redis blacklist + distributed throttler
+- [x] **BE-04**: Redis blacklist + distributed throttler *(DONE 2026-09-04)*
 - [ ] **BE-07**: Structured JSON logging + Sentry error tracking
 - [ ] **QA-02**: Playwright E2E toàn trình các flow mua hàng cốt lõi
 - [ ] **DEVOPS-01**: CI/CD pipeline cleanup, Docker Compose Mongo auth, smoke tests
@@ -181,33 +181,45 @@
 
 ---
 
-### [ ] BE-04 — Redis Blacklist + Distributed Throttler
+### [x] BE-04 — Redis Blacklist + Distributed Throttler
 - **Role chính:** Backend + DevOps | **Priority:** P0* (Blocker nếu chạy >1 node) | **Effort:** M | **Dependency:** BE-01
-- **Trạng thái:** **CHƯA LÀM (TODO)**
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-04)**
 - **Mục tiêu:** Chia sẻ danh sách đen token và giới hạn tần suất (Rate Limiting) giữa nhiều instance backend.
+- **Bằng chứng & Mã nguồn:**
+  - [`backend/src/common/redis/redis.service.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/common/redis/redis.service.ts)
+  - [`backend/src/common/redis/redis-throttler-storage.service.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/common/redis/redis-throttler-storage.service.ts)
+  - [`backend/src/common/redis/redis-throttler-storage.service.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/common/redis/redis-throttler-storage.service.spec.ts) (5/5 tests PASS)
+  - [`backend/src/modules/auth/token-blacklist.service.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/auth/token-blacklist.service.ts)
+  - [`backend/src/modules/auth/token-blacklist.service.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/auth/token-blacklist.service.spec.ts) (11/11 tests PASS)
 
 #### Danh mục chi tiết:
-- [ ] Cấu hình Redis Service cho môi trường production (`REDIS_URL`).
-- [ ] Chuyển `TokenBlacklistService` từ bộ nhớ trong (In-Memory Map) sang Redis `SETEX` (với TTL bằng thời hạn còn lại của JWT).
-- [ ] Cấu hình `@nestjs/throttler` sử dụng Redis storage provider.
-- [ ] Xử lý fallback an toàn khi Redis gặp sự cố (fail-open có logging hoặc alert).
-- [ ] Xác minh: Đăng xuất tại instance A -> token bị từ chối ngay lập tức tại instance B.
+- [x] Cấu hình Redis Service cho môi trường production (`REDIS_URL`) với ioredis.
+- [x] Chuyển `TokenBlacklistService` sang Redis `SETEX` (với TTL bằng thời hạn còn lại của JWT) kèm in-memory L1 cache.
+- [x] Cấu hình `@nestjs/throttler` sử dụng `RedisThrottlerStorageService` phân tán.
+- [x] Xử lý fallback an toàn khi Redis gặp sự cố (fail-open có logging cảnh báo, fallback về `ThrottlerStorageService` in-memory).
+- [x] Xác minh: Đăng xuất tại instance A -> token bị từ chối ngay lập tức tại instance B qua đồng bộ Redis key `bl:jti:{jti}` và `bl:tok:{hash}`.
 
 ---
 
-### [ ] BE-05 — Loyalty Đúng Thời Điểm + Auto-Cancel Đơn PENDING
+### [x] BE-05 — Loyalty Đúng Thời Điểm + Auto-Cancel Đơn PENDING
 - **Role chính:** Backend | **Priority:** P0 | **Effort:** M | **Dependency:** BA-01
-- **Trạng thái:** **CHƯA LÀM (TODO)** (Đã có đặc tả đầy đủ từ BA-01)
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-04)**
 - **Mục tiêu:** Không cộng điểm khi tạo đơn `PENDING`; chuyển mốc cộng điểm sang `DELIVERED`; xây dựng Cron Job tự hủy đơn quá hạn và hoàn kho.
+- **Bằng chứng & Mã nguồn:**
+  - [`backend/src/modules/orders/schemas/order.schema.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/orders/schemas/order.schema.ts) (Thêm `loyaltyAwarded: boolean`, `autoCancelWarningSentAt?: Date`)
+  - [`backend/src/modules/orders/orders.service.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/orders/orders.service.ts) (Xóa cộng điểm ở create; cộng điểm ở DELIVERED; thu hồi ở RETURNED guarded; handleAutoCancelOrders & handleAutoCancelWarnings)
+  - [`backend/src/modules/orders/order-schedule.service.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/orders/order-schedule.service.ts) (Cron job 15 phút)
+  - [`backend/src/modules/orders/orders.service.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/orders/orders.service.spec.ts) (24/24 tests PASS)
+  - [`backend/src/modules/orders/order-schedule.service.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/orders/order-schedule.service.spec.ts) (2/2 tests PASS)
 
 #### Danh mục chi tiết:
-- [ ] Xóa bỏ hàm cộng loyalty points tại thời điểm `OrdersService.create()`.
-- [ ] Bổ sung trường `loyaltyAwarded: { type: Boolean, default: false }` vào `OrderSchema`.
-- [ ] Trong `OrdersService.updateStatusInternal()`: Khi trạng thái đạt `DELIVERED` (hoặc `COMPLETED`) và `!order.loyaltyAwarded` -> tiến hành cộng điểm và set `loyaltyAwarded = true`.
-- [ ] Khi đơn chuyển sang `RETURNED`: Nếu `order.loyaltyAwarded === true` -> tự động thu hồi đúng số điểm đã cộng.
-- [ ] Xây dựng Cron Job định kỳ (mỗi 15 phút): Quét và tự động hủy đơn `PENDING` quá 24h (chuyển khoản/online) hoặc 48h (COD).
-- [ ] Tự động hoàn kho nguyên tử, hoàn số lượng đã bán (`sold`), giải phóng voucher (`promotionsService.releaseUsage()`), ghi log timeline khi auto-cancel.
-- [ ] Gửi thông báo nhắc nhở trước khi hủy đơn 2 giờ.
+- [x] Xóa bỏ hàm cộng loyalty points tại thời điểm `OrdersService.create()`.
+- [x] Bổ sung trường `loyaltyAwarded: { type: Boolean, default: false }` và `autoCancelWarningSentAt?: Date` vào `OrderSchema`.
+- [x] Trong `OrdersService.updateStatusInternal()`: Khi trạng thái đạt `DELIVERED` (hoặc `COMPLETED`) và `!order.loyaltyAwarded` -> tiến hành cộng điểm và set `loyaltyAwarded = true`.
+- [x] Khi đơn chuyển sang `RETURNED`: Nếu `order.loyaltyAwarded === true` -> tự động thu hồi đúng số điểm đã cộng và set `loyaltyAwarded = false`.
+- [x] Xây dựng Cron Job định kỳ (mỗi 15 phút): Quét và tự động hủy đơn `PENDING` quá 24h (chuyển khoản/online) hoặc 48h (COD).
+- [x] Tự động hoàn kho nguyên tử, hoàn số lượng đã bán (`sold`), giải phóng voucher (`promotionsService.releaseUsage()`), ghi log timeline khi auto-cancel.
+- [x] Gửi thông báo nhắc nhở trước khi hủy đơn 2 giờ (lưu mốc `autoCancelWarningSentAt`).
 
 ---
 
@@ -239,18 +251,28 @@
 
 ---
 
-### [ ] BE-08 — MongoDB Index + Mock Payment Documentation + Gemini Validation
+### [x] BE-08 — MongoDB Index + Mock Payment Documentation + Gemini Validation
 - **Role chính:** Backend | **Priority:** P1 | **Effort:** S/M | **Dependency:** BE-03
-- **Trạng thái:** **CHƯA LÀM (TODO)**
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-04)**
 - **Mục tiêu:** Tối ưu hóa hiệu năng truy vấn CSDL, tài liệu hóa cổng thanh toán và xác thực dữ liệu AI trả về.
+- **Bằng chứng & Mã nguồn:**
+  - [`backend/src/modules/users/schemas/user.schema.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/users/schemas/user.schema.ts) (Compound index `{ role: 1, status: 1 }`)
+  - [`backend/src/modules/orders/schemas/order.schema.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/orders/schemas/order.schema.ts) (Unique index `{ orderCode: 1 }`)
+  - [`backend/src/modules/landing-pages/schemas/landing-page.schema.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/landing-pages/schemas/landing-page.schema.ts) (Unique index `{ slug: 1 }`)
+  - [`backend/src/modules/cart/schemas/cart.schema.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/cart/schemas/cart.schema.ts) (Unique index `{ user: 1 }`)
+  - [`backend/src/modules/payments/providers/payment.providers.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/payments/providers/payment.providers.ts) (Đổi tên `MockSignedPaymentProvider`, chặn ném lỗi `ServiceUnavailableException` ở production)
+  - [`backend/src/modules/payments/providers/payment.providers.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/payments/providers/payment.providers.spec.ts) (Pass 100%)
+  - [`backend/src/modules/landing-pages/dto/landing-page-ai.dto.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/landing-pages/dto/landing-page-ai.dto.ts) (DTO validate Gemini response)
+  - [`backend/src/modules/landing-pages/landing-page.service.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/landing-pages/landing-page.service.ts)
+  - [`backend/src/modules/landing-pages/landing-page.service.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/landing-pages/landing-page.service.spec.ts) (7/7 tests PASS)
 
 #### Danh mục chi tiết:
-- [ ] Bổ sung chỉ mục hợp chất MongoDB: User `{ role: 1, status: 1 }`.
-- [ ] Đặt unique index cho `landingPages.slug` và `orders.orderCode`.
-- [ ] Đặt chỉ mục cho `cart.user` để tăng tốc truy vấn giỏ hàng.
-- [ ] Đổi tên `SignedOnlinePaymentProvider` thành `MockSignedPaymentProvider`.
-- [ ] Cập nhật tài liệu: Ghi chú rõ mock payment chỉ phục vụ dev/staging, cấm bật ở production.
-- [ ] Viết bộ validate schema (sử dụng DTO / `class-validator`) cho kết quả JSON trả về từ Gemini AI trước khi lưu vào DB.
+- [x] Bổ sung chỉ mục hợp chất MongoDB: User `{ role: 1, status: 1 }`.
+- [x] Đặt unique index cho `landingPages.slug` và `orders.orderCode`.
+- [x] Đặt chỉ mục cho `cart.user` để tăng tốc truy vấn giỏ hàng.
+- [x] Đổi tên `SignedOnlinePaymentProvider` thành `MockSignedPaymentProvider`.
+- [x] Cập nhật tài liệu: Ghi chú rõ mock payment chỉ phục vụ dev/staging, cấm bật ở production (`NODE_ENV === 'production'`).
+- [x] Viết bộ validate schema (sử dụng DTO / `class-validator`) cho kết quả JSON trả về từ Gemini AI trước khi lưu vào DB.
 
 ---
 

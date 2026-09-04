@@ -15,6 +15,9 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { SeedModule } from './seeds/seed.module';
 import { LandingPagesModule } from './modules/landing-pages/landing-pages.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
+import { RedisModule } from './common/redis/redis.module';
+import { RedisThrottlerStorageService } from './common/redis/redis-throttler-storage.service';
 import { APP_GUARD } from '@nestjs/core';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { BannersModule } from './modules/banners/banners.module';
@@ -34,6 +37,8 @@ import { SecuritySanitizerMiddleware } from './common/middleware/security-saniti
       validate: validateEnv,
       envFilePath: ['.env.local', '.env'],
     }),
+    ScheduleModule.forRoot(),
+    RedisModule,
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -51,13 +56,20 @@ import { SecuritySanitizerMiddleware } from './common/middleware/security-saniti
       }),
       inject: [ConfigService],
     }),
-    ThrottlerModule.forRoot([
-      {
-        name: 'default',
-        ttl: 60000,
-        limit: 100, // 100 requests per minute
-      },
-    ]),
+    ThrottlerModule.forRootAsync({
+      imports: [RedisModule],
+      inject: [RedisThrottlerStorageService],
+      useFactory: (redisStorage: RedisThrottlerStorageService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: 60000,
+            limit: 100, // 100 requests per minute
+          },
+        ],
+        storage: redisStorage,
+      }),
+    }),
     AuthModule,
     UsersModule,
     ProductsModule,

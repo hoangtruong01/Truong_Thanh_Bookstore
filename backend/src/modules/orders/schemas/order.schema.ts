@@ -118,13 +118,20 @@ export class Order {
   @Prop()
   promotionUsageReleasedAt?: Date;
 
+  @Prop({ type: Boolean, default: false })
+  loyaltyAwarded: boolean;
+
+  @Prop()
+  autoCancelWarningSentAt?: Date;
+
   createdAt: Date;
   updatedAt: Date;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
 
-// FIX-2.4: Indexes for order queries
+// BE-08 & FIX-2.4: Indexes for order queries
+OrderSchema.index({ orderCode: 1 }, { unique: true });
 OrderSchema.index({ customer: 1, createdAt: -1 });
 OrderSchema.index({ orderStatus: 1 });
 OrderSchema.index({ createdAt: -1 });

@@ -62,4 +62,27 @@ describe('Task 18: Payment provider abstraction', () => {
       provider.verifyCallback({ ...callback, signature: '00' }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('BE-08: rejects mock signed payment initiation and callback in production', async () => {
+    const prodConfig = new ConfigService({
+      NODE_ENV: 'production',
+      VNPAY_HASH_SECRET: 'test-secret',
+      VNPAY_PAYMENT_URL: 'https://sandbox.example/pay',
+    });
+    const provider = new VnPayPaymentProvider(prodConfig);
+
+    await expect(provider.initiate(context)).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+    await expect(
+      provider.verifyCallback({
+        provider: PaymentMethod.VNPAY,
+        providerReference: 'VNPAY-REF-1',
+        transactionId: 'TXN-1',
+        amount: 100000,
+        status: 'SUCCESS',
+        signature: 'mock-sig',
+      }),
+    ).rejects.toThrow(ServiceUnavailableException);
+  });
 });

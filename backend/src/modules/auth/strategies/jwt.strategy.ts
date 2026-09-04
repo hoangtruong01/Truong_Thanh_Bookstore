@@ -62,7 +62,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // 1. Check if token JTI is blacklisted
     if (
       payload?.jti &&
-      this.tokenBlacklistService.isJtiBlacklisted(payload.jti)
+      (await this.tokenBlacklistService.isJtiBlacklisted(payload.jti))
     ) {
       throw new UnauthorizedException({
         message:
@@ -88,7 +88,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           )
         : null);
 
-    if (rawToken && this.tokenBlacklistService.isTokenBlacklisted(rawToken)) {
+    if (rawToken && (await this.tokenBlacklistService.isTokenBlacklisted(rawToken))) {
       throw new UnauthorizedException({
         message:
           'Mã xác thực đã bị thu hồi (đã đăng xuất). Vui lòng đăng nhập lại.',

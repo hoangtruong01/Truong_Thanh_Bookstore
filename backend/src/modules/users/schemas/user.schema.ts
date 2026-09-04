@@ -59,3 +59,6 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+// BE-08: Compound index for role-based user management queries
+UserSchema.index({ role: 1, status: 1 });

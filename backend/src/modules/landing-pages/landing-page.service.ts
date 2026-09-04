@@ -20,6 +20,9 @@ import { PaymentMethod } from '../../common/enums';
 import { ConfigService } from '@nestjs/config';
 import { OrdersService } from '../orders/orders.service';
 import { ProductsService } from '../products/products.service';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { GeneratedLandingPageResponseDto } from './dto/landing-page-ai.dto';
 
 @Injectable()
 export class LandingPageService {
@@ -419,7 +422,19 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
       // Robust JSON extraction using regex matching for JSON objects
       const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
       const cleanJson = jsonMatch ? jsonMatch[0] : generatedText;
-      return JSON.parse(cleanJson);
+      const parsed = JSON.parse(cleanJson);
+
+      // BE-08: Validate AI output schema with class-validator
+      const dtoInstance = plainToInstance(GeneratedLandingPageResponseDto, parsed);
+      const validationErrors = await validate(dtoInstance);
+      if (validationErrors.length > 0) {
+        this.logger.warn(
+          `Gemini AI output failed schema validation: ${validationErrors.map((e) => e.toString()).join('; ')}. Falling back to template.`,
+        );
+        return this.generateFallbackTemplate(dto);
+      }
+
+      return parsed;
     } catch (error) {
       this.logger.warn(
         `Gemini API error (${error.message}). Falling back to template...`,

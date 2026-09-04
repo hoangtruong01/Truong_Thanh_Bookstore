@@ -572,62 +572,8 @@ export class OrdersService {
         .catch((error) =>
           this.logger.error('Failed to create order notification', error),
         );
-
-      if (points > 0) {
-        await this.usersService
-          .addLoyaltyPoints(userId, points)
-          .then(async (res) => {
-            if (res) {
-              // Loyalty points notification
-              await this.notificationsService
-                .create({
-                  userId,
-                  title: '🪙 Tích điểm thành công',
-                  message: `Bạn được cộng +${points.toLocaleString('vi-VN')} điểm từ đơn hàng #${savedOrder.orderCode}. Tổng tích lũy: ${res.user.loyaltyPoints} điểm.`,
-                  type: 'loyalty',
-                  meta: {
-                    points,
-                    totalPoints: res.user.loyaltyPoints,
-                    orderCode: savedOrder.orderCode,
-                  },
-                })
-                .catch((err) =>
-                  this.logger.error(
-                    'Failed to create loyalty notification',
-                    err,
-                  ),
-                );
-
-              // Tier upgrade notification
-              if (res.tierUpgraded) {
-                const tierNameMap: any = {
-                  BRONZE: 'ĐỒNG',
-                  SILVER: 'BẠC',
-                  GOLD: 'VÀNG',
-                  DIAMOND: 'KIM CƯƠNG',
-                };
-                const tierVN = tierNameMap[res.newTier] || res.newTier;
-                await this.notificationsService
-                  .create({
-                    userId,
-                    title: `🏆 Chúc mừng nâng hạng ${tierVN}`,
-                    message: `Chúc mừng bạn đã thăng hạng thành viên ${tierVN}! Mở khóa thêm nhiều quyền lợi và ưu đãi độc quyền.`,
-                    type: 'tier',
-                    meta: { newTier: res.newTier, oldTier: res.oldTier },
-                  })
-                  .catch((err) =>
-                    this.logger.error(
-                      'Failed to create tier notification',
-                      err,
-                    ),
-                  );
-              }
-            }
-          })
-          .catch((error) =>
-            this.logger.error('Failed to add loyalty points', error),
-          );
-      }
+      // BE-05: Loyalty points are NOT awarded on order creation (PENDING).
+      // Points will be awarded when the order reaches DELIVERED or COMPLETED status.
     }
 
     this.syncToGoogleSheet(savedOrder).catch((error) =>
@@ -920,8 +866,8 @@ export class OrdersService {
       }
       order.inventoryRestoredAt = new Date();
 
-      // Deduct loyalty points if order was placed by a registered user
-      if (order.customer) {
+      // BE-05: Deduct loyalty points ONLY if loyalty points were already awarded
+      if (order.customer && order.loyaltyAwarded) {
         const points = Math.floor(order.total / 1000);
         if (points > 0) {
           try {
@@ -930,6 +876,7 @@ export class OrdersService {
               points,
               session,
             );
+            order.loyaltyAwarded = false;
           } catch (error) {
             // A transactional status update must roll back as one unit.
             if (session) throw error;
@@ -938,6 +885,75 @@ export class OrdersService {
               error,
             );
           }
+        }
+      }
+    }
+
+    // BE-05: Award loyalty points only when order is DELIVERED or COMPLETED
+    if (
+      (dto.orderStatus === OrderStatus.DELIVERED ||
+        dto.orderStatus === OrderStatus.COMPLETED) &&
+      order.customer &&
+      !order.loyaltyAwarded
+    ) {
+      const points = Math.floor(order.total / 1000);
+      if (points > 0) {
+        const customerId = order.customer.toString();
+        try {
+          const res = await this.usersService.addLoyaltyPoints(
+            customerId,
+            points,
+            session,
+          );
+          order.loyaltyAwarded = true;
+
+          if (res) {
+            // Loyalty points notification
+            const totalUserPoints = res.user?.loyaltyPoints ?? points;
+            this.notificationsService
+              .create({
+                userId: customerId,
+                title: '🪙 Tích điểm thành công',
+                message: `Bạn được cộng +${points.toLocaleString('vi-VN')} điểm từ đơn hàng #${order.orderCode}. Tổng tích lũy: ${totalUserPoints} điểm.`,
+                type: 'loyalty',
+                meta: {
+                  points,
+                  totalPoints: totalUserPoints,
+                  orderCode: order.orderCode,
+                },
+              })
+              .catch((err) =>
+                this.logger.error('Failed to create loyalty notification', err),
+              );
+
+            // Tier upgrade notification
+            if (res.tierUpgraded) {
+              const tierNameMap: any = {
+                BRONZE: 'ĐỒNG',
+                SILVER: 'BẠC',
+                GOLD: 'VÀNG',
+                DIAMOND: 'KIM CƯƠNG',
+              };
+              const tierVN = tierNameMap[res.newTier] || res.newTier;
+              this.notificationsService
+                .create({
+                  userId: customerId,
+                  title: `🏆 Chúc mừng nâng hạng ${tierVN}`,
+                  message: `Chúc mừng bạn đã thăng hạng thành viên ${tierVN}! Mở khóa thêm nhiều quyền lợi và ưu đãi độc quyền.`,
+                  type: 'tier',
+                  meta: { newTier: res.newTier, oldTier: res.oldTier },
+                })
+                .catch((err) =>
+                  this.logger.error('Failed to create tier notification', err),
+                );
+            }
+          }
+        } catch (error) {
+          if (session) throw error;
+          this.logger.error(
+            `Failed to award loyalty points for user ${customerId}`,
+            error,
+          );
         }
       }
     }
@@ -1576,5 +1592,118 @@ export class OrdersService {
       );
 
     return doc;
+  }
+
+  /**
+   * BE-05: Auto-cancels PENDING orders exceeding their deadline
+   * - COD orders: deadline 48 hours
+   * - Online/Bank Transfer orders: deadline 24 hours
+   * Restores inventory atomically, rolls back sold count, releases voucher usage,
+   * updates timeline, and notifies the customer.
+   */
+  async handleAutoCancelOrders(): Promise<number> {
+    const now = Date.now();
+    const pendingOrders = await this.orderModel
+      .find({
+        orderStatus: OrderStatus.PENDING,
+      })
+      .exec();
+
+    let cancelledCount = 0;
+
+    for (const order of pendingOrders) {
+      const createdAtMs = new Date(order.createdAt).getTime();
+      const isCod = order.paymentMethod === PaymentMethod.COD;
+      const timeoutMs = isCod ? 48 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+
+      if (now - createdAtMs >= timeoutMs) {
+        try {
+          await this.updateStatus(order._id.toString(), {
+            orderStatus: OrderStatus.CANCELLED,
+            note: 'Đơn hàng tự động hủy do quá hạn thanh toán/xác nhận',
+          });
+          cancelledCount++;
+          this.logger.log(
+            `Đã tự động hủy đơn hàng #${order.orderCode} do quá hạn (${isCod ? '48h COD' : '24h Online'})`,
+          );
+        } catch (error: any) {
+          this.logger.error(
+            `Lỗi khi tự động hủy đơn hàng #${order.orderCode}: ${error.message || error}`,
+          );
+        }
+      }
+    }
+
+    return cancelledCount;
+  }
+
+  /**
+   * BE-05: Sends a warning notification 2 hours prior to auto-cancellation
+   * for PENDING orders that have not yet received a warning.
+   */
+  async handleAutoCancelWarnings(): Promise<number> {
+    const now = Date.now();
+    const pendingOrders = await this.orderModel
+      .find({
+        orderStatus: OrderStatus.PENDING,
+        autoCancelWarningSentAt: { $exists: false },
+      })
+      .exec();
+
+    let warningsCount = 0;
+
+    for (const order of pendingOrders) {
+      const createdAtMs = new Date(order.createdAt).getTime();
+      const isCod = order.paymentMethod === PaymentMethod.COD;
+      const timeoutMs = isCod ? 48 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+      const warningThresholdMs = timeoutMs - 2 * 60 * 60 * 1000; // 2 hours before expiration
+      const elapsedMs = now - createdAtMs;
+
+      if (elapsedMs >= warningThresholdMs && elapsedMs < timeoutMs) {
+        try {
+          if (order.customer) {
+            await this.notificationsService
+              .create({
+                userId: order.customer.toString(),
+                title: `⚠️ Nhắc nhở đơn hàng #${order.orderCode} sắp hết hạn`,
+                message: `Đơn hàng #${order.orderCode} của bạn sẽ tự động bị hủy sau 2 giờ nữa nếu chưa được hoàn tất thanh toán hoặc xác nhận.`,
+                type: 'order',
+                meta: {
+                  orderId: order._id.toString(),
+                  orderCode: order.orderCode,
+                },
+              })
+              .catch((err) =>
+                this.logger.error('Lỗi khi gửi thông báo cảnh báo đơn hàng', err),
+              );
+          }
+
+          if (order.customerEmail) {
+            await this.emailService
+              .sendMail(
+                order.customerEmail,
+                `[Trường Thành Bookstore] Nhắc nhở: Đơn hàng #${order.orderCode} sắp hết hạn`,
+                `<p>Xin chào ${order.customerName || 'Quý khách'},</p>` +
+                  `<p>Đơn hàng <strong>#${order.orderCode}</strong> trị giá <strong>${order.total.toLocaleString('vi-VN')}đ</strong> sắp hết thời hạn thanh toán/xác nhận.</p>` +
+                  `<p>Đơn hàng sẽ tự động bị hủy sau <strong>2 giờ nữa</strong> nếu chưa được thanh toán hoặc xác nhận.</p>` +
+                  `<p>Trân trọng,<br/>Trường Thành Bookstore</p>`,
+              )
+              .catch((err) =>
+                this.logger.error('Lỗi khi gửi email cảnh báo đơn hàng', err),
+              );
+          }
+
+          order.autoCancelWarningSentAt = new Date();
+          await order.save();
+          warningsCount++;
+        } catch (error: any) {
+          this.logger.error(
+            `Lỗi khi xử lý cảnh báo đơn hàng #${order.orderCode}: ${error.message || error}`,
+          );
+        }
+      }
+    }
+
+    return warningsCount;
   }
 }

@@ -491,13 +491,16 @@ export class UsersService {
   async addLoyaltyPoints(
     userId: string,
     points: number,
+    session?: ClientSession,
   ): Promise<{
     user: UserDocument;
     tierUpgraded: boolean;
     newTier: string;
     oldTier: string;
   } | null> {
-    const user = await this.userModel.findById(userId).exec();
+    const query = this.userModel.findById(userId);
+    if (session) query.session(session);
+    const user = await query.exec();
     if (!user) return null;
 
     const oldTier = user.loyaltyTier || LoyaltyTier.BRONZE;
@@ -522,7 +525,7 @@ export class UsersService {
 
     user.loyaltyPoints = newPoints;
     user.loyaltyTier = newTier;
-    const savedUser = await user.save();
+    const savedUser = await user.save(session ? { session } : undefined);
 
     return {
       user: savedUser,

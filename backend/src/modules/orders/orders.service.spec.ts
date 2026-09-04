@@ -12,10 +12,11 @@ import { OrderSchema } from './schemas/order.schema';
 import { InventorySchema } from '../inventory/schemas/inventory.schema';
 import { BadRequestException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
-import { OrderStatus } from '../../common/enums';
+import { OrderStatus, PaymentMethod } from '../../common/enums';
 
 describe('ALL QA FIXES VERIFICATION SUITE', () => {
   let ordersService: OrdersService;
+  const mockUserId = '507f1f77bcf86cd799439099';
 
   const mockProduct = {
     _id: '507f1f77bcf86cd799439011',
@@ -30,9 +31,12 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
   const mockOrderModel = function (dto: any) {
     this.data = dto;
-    this.save = jest
-      .fn()
-      .mockResolvedValue({ _id: 'order123', orderCode: 'TT123456', ...dto });
+    this.save = jest.fn().mockResolvedValue({
+      _id: 'order123',
+      orderCode: 'TT123456',
+      orderStatus: dto?.orderStatus || OrderStatus.PENDING,
+      ...dto,
+    });
   };
   mockOrderModel.find = jest.fn();
   mockOrderModel.findOne = jest.fn();
@@ -68,7 +72,11 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
   };
 
   const mockUsersService = {
-    addLoyaltyPoints: jest.fn().mockResolvedValue({}),
+    findById: jest.fn().mockResolvedValue({ email: 'test@example.com' }),
+    addLoyaltyPoints: jest.fn().mockResolvedValue({
+      user: { loyaltyPoints: 200 },
+      tierUpgraded: false,
+    }),
     deductLoyaltyPoints: jest.fn().mockResolvedValue({}),
   };
 
@@ -453,4 +461,209 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       expect(growth.ordersGrowthRate).toBe(100);
     });
   });
+
+  describe('BE-05: Loyalty Timing & Auto-Cancel', () => {
+    it('should NOT award loyalty points when creating order in PENDING status', async () => {
+      const orderDto = {
+        items: [
+          {
+            product: mockProduct._id,
+            name: mockProduct.name,
+            quantity: 2,
+            price: 100000,
+          },
+        ],
+        shippingAddress: '456 Tran Hung Dao, Q5',
+        phone: '0987654321',
+        paymentMethod: PaymentMethod.COD,
+      };
+
+      const created = await ordersService.create(orderDto as any, mockUserId);
+
+      expect(mockUsersService.addLoyaltyPoints).not.toHaveBeenCalled();
+      expect(created.orderStatus).toBe(OrderStatus.PENDING);
+    });
+
+    it('should award loyalty points when order status transitions to DELIVERED', async () => {
+      const pendingOrder = {
+        _id: '507f1f77bcf86cd799439011',
+        orderCode: 'TT100001',
+        orderStatus: OrderStatus.SHIPPING,
+        total: 200000,
+        customer: mockUserId,
+        loyaltyAwarded: false,
+        timeline: [],
+        items: [{ product: mockProduct._id, quantity: 2 }],
+        save: jest.fn().mockImplementation(function () {
+          return Promise.resolve(this);
+        }),
+      };
+
+      mockOrderModel.findById = jest.fn().mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(pendingOrder),
+      });
+
+      await ordersService.updateStatus(pendingOrder._id, {
+        orderStatus: OrderStatus.DELIVERED,
+      });
+
+      expect(mockUsersService.addLoyaltyPoints).toHaveBeenCalledWith(
+        mockUserId,
+        200, // 200,000 / 1,000
+        undefined,
+      );
+      expect(pendingOrder.loyaltyAwarded).toBe(true);
+    });
+
+    it('should deduct loyalty points when order status transitions to RETURNED and loyaltyAwarded is true', async () => {
+      const deliveredOrder = {
+        _id: '507f1f77bcf86cd799439012',
+        orderCode: 'TT100002',
+        orderStatus: OrderStatus.DELIVERED,
+        total: 300000,
+        customer: mockUserId,
+        loyaltyAwarded: true,
+        timeline: [],
+        items: [{ product: mockProduct._id, quantity: 3 }],
+        save: jest.fn().mockImplementation(function () {
+          return Promise.resolve(this);
+        }),
+      };
+
+      mockOrderModel.findById = jest.fn().mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(deliveredOrder),
+      });
+
+      await ordersService.updateStatus(deliveredOrder._id, {
+        orderStatus: OrderStatus.RETURNED,
+      });
+
+      expect(mockUsersService.deductLoyaltyPoints).toHaveBeenCalledWith(
+        mockUserId,
+        300,
+        undefined,
+      );
+      expect(deliveredOrder.loyaltyAwarded).toBe(false);
+    });
+
+    it('should NOT deduct loyalty points when CANCELLED order never had loyalty awarded', async () => {
+      const pendingOrder = {
+        _id: '507f1f77bcf86cd799439013',
+        orderCode: 'TT100003',
+        orderStatus: OrderStatus.PENDING,
+        total: 500000,
+        customer: mockUserId,
+        loyaltyAwarded: false,
+        timeline: [],
+        items: [{ product: mockProduct._id, quantity: 5 }],
+        save: jest.fn().mockImplementation(function () {
+          return Promise.resolve(this);
+        }),
+      };
+
+      mockOrderModel.findById = jest.fn().mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(pendingOrder),
+      });
+
+      await ordersService.updateStatus(pendingOrder._id, {
+        orderStatus: OrderStatus.CANCELLED,
+      });
+
+      expect(mockUsersService.deductLoyaltyPoints).not.toHaveBeenCalled();
+    });
+
+    it('handleAutoCancelOrders should cancel online orders >24h and COD >48h', async () => {
+      const now = Date.now();
+      const expiredOnlineOrder = {
+        _id: '507f1f77bcf86cd799439021',
+        orderCode: 'TT_EXPIRED_ONLINE',
+        orderStatus: OrderStatus.PENDING,
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        createdAt: new Date(now - 25 * 60 * 60 * 1000), // 25 hours ago
+        total: 100000,
+        items: [],
+      };
+
+      const nonExpiredOnlineOrder = {
+        _id: '507f1f77bcf86cd799439022',
+        orderCode: 'TT_FRESH_ONLINE',
+        orderStatus: OrderStatus.PENDING,
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        createdAt: new Date(now - 10 * 60 * 60 * 1000), // 10 hours ago
+        total: 100000,
+        items: [],
+      };
+
+      const expiredCodOrder = {
+        _id: '507f1f77bcf86cd799439023',
+        orderCode: 'TT_EXPIRED_COD',
+        orderStatus: OrderStatus.PENDING,
+        paymentMethod: PaymentMethod.COD,
+        createdAt: new Date(now - 49 * 60 * 60 * 1000), // 49 hours ago
+        total: 100000,
+        items: [],
+      };
+
+      mockOrderModel.find = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue([
+          expiredOnlineOrder,
+          nonExpiredOnlineOrder,
+          expiredCodOrder,
+        ]),
+      });
+
+      const updateStatusSpy = jest
+        .spyOn(ordersService, 'updateStatus')
+        .mockResolvedValue({} as any);
+
+      const count = await ordersService.handleAutoCancelOrders();
+
+      expect(count).toBe(2);
+      expect(updateStatusSpy).toHaveBeenCalledWith(
+        expiredOnlineOrder._id,
+        expect.objectContaining({ orderStatus: OrderStatus.CANCELLED }),
+      );
+      expect(updateStatusSpy).toHaveBeenCalledWith(
+        expiredCodOrder._id,
+        expect.objectContaining({ orderStatus: OrderStatus.CANCELLED }),
+      );
+      expect(updateStatusSpy).not.toHaveBeenCalledWith(
+        nonExpiredOnlineOrder._id,
+        expect.anything(),
+      );
+    });
+
+    it('handleAutoCancelWarnings should send warnings 2h before deadline and save timestamp', async () => {
+      const now = Date.now();
+      const warningOnlineOrder = {
+        _id: '507f1f77bcf86cd799439031',
+        orderCode: 'TT_WARN_ONLINE',
+        orderStatus: OrderStatus.PENDING,
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        createdAt: new Date(now - 22.5 * 60 * 60 * 1000), // 22.5h (within 22h-24h window)
+        total: 150000,
+        customer: mockUserId,
+        save: jest.fn().mockResolvedValue(true),
+      };
+
+      mockOrderModel.find = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue([warningOnlineOrder]),
+      });
+
+      const warningsSent = await ordersService.handleAutoCancelWarnings();
+
+      expect(warningsSent).toBe(1);
+      expect(mockNotificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: mockUserId,
+          title: expect.stringContaining('sắp hết hạn'),
+        }),
+      );
+      expect(warningOnlineOrder.save).toHaveBeenCalled();
+    });
+  });
 });
+
