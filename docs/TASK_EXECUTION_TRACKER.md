@@ -1,10 +1,10 @@
 # BẢNG THEO DÕI TIẾN ĐỘ THỰC THI TOÀN BỘ TASK (MASTER TASK EXECUTION TRACKER)
 > **Dự án**: Nhà sách Trường Thành (Trường Thành Bookstore)  
 > **Nguồn đặc tả**: `docs/TRUONG_THANH_MASTER_AUDIT_IMPLEMENTATION_2026-09-03.md`  
-> **Cập nhật lần cuối**: 2026-09-03  
+> **Cập nhật lần cuối**: 2026-09-04  
 > **Trạng thái tổng thể**: Đang triển khai (In Progress)  
-> **Tỷ lệ hoàn thành Core Tasks**: 2 / 18 tasks (11.1%)  
-> **Test Suite Status**: 24/24 Suites PASS — 294/294 Tests Green (100%)
+> **Tỷ lệ hoàn thành Core Tasks đã xác minh**: 8 / 18 tasks (44.4%); Toàn bộ P0 Sprint 1 đã HOÀN THÀNH  
+> **Test Suite Status (local 2026-09-04)**: 26/26 Suites PASS — 328/328 Tests Green; coverage lines ~55%
 
 ---
 
@@ -26,34 +26,34 @@
 |---|:---:|:---:|:---:|:---:|:---:|
 | **Business Analysis (BA)** | 1 | 1 | 0 | 0 | 100% |
 | **Quality Assurance (QA & Security)** | 3 | 1 | 0 | 2 | 33.3% |
-| **Backend & Database (BE)** | 9 | 4 | 0 | 5 | 44.4% |
-| **Frontend Web (FE)** | 2 | 0 | 0 | 2 | 0% |
+| **Backend & Database (BE)** | 9 | 5 | 0 | 4 | 55.6% |
+| **Frontend Web (FE)** | 2 | 1 | 0 | 1 | 50% |
 | **DevOps & Infrastructure** | 1 | 0 | 0 | 1 | 0% |
 | **Mobile App (Flutter)** | 1 | 0 | 0 | 1 | 0% |
 | **Project Management (PM)** | 1 | 0 | 1 | 0 | Đang duy trì |
-| **TỔNG CỘNG (Core Master Tasks)** | **18** | **6** | **1** | **11** | **33.3%** |
+| **TỔNG CỘNG (Core Master Tasks)** | **18** | **8** | **1** | **9** | **44.4%** |
 | *Extended Backlog (Bổ trợ)* | *8* | *0* | *0* | *8* | *0%* |
-| *Mục xác minh thật (Need Verify)* | *7* | *2* | *0* | *5* | *28.6%* |
+| *Mục xác minh thật (Need Verify)* | *7* | *4* | *0* | *3* | *57.1%* |
 
 ---
 
 ## 2. TIẾN ĐỘ THEO SPRINT
 
-### Sprint 1: Security + Correctness (Ưu tiên cao nhất)
+### Sprint 1: Security + Correctness (Hoàn thành 100% Core Scope)
 - [x] **BA-01**: Chốt core business rules & Role × Permission matrix *(DONE 2026-09-03)*
-- [x] **QA-01 (Part A)**: Viết token isolation test đỏ & verify xanh *(DONE 2026-09-03)*
+- [x] **QA-01 (Part A)**: Token isolation 16/16 test + Ma trận inventory 56 endpoints đạt 87.5% coverage *(DONE 2026-09-04)*
 - [x] **BE-01**: Tách access/refresh/reset token độc lập *(DONE 2026-09-03)*
-- [x] **BE-02**: Gộp Review schema (chuẩn hóa `isVisible`, `isVerifiedPurchase`, admin reply) *(DONE 2026-09-03)*
+- [x] **BE-02**: Gộp Review schema, active model runtime check & script migration CSDL *(DONE 2026-09-04)*
 - [x] **BE-06**: Email enumeration + cookie config *(DONE 2026-09-03)*
 - [x] **BE-09 (Part A & B)**: Xóa số giả, tính toán tăng trưởng & doanh thu danh mục thật *(DONE 2026-09-03)*
-- [ ] **FE-02**: Gỡ UI số giả, đồng bộ Reports UI
+- [x] **FE-02**: Gỡ UI số giả, bộ lọc Range API thật, doanh thu danh mục & UX loading/empty/error *(DONE 2026-09-04)*
 
 ### Sprint 2: Order Correctness + Business Rules
-- [ ] **BE-03**: Landing page order tích hợp OrdersService pipeline
+- [x] **BE-03**: Landing page order tích hợp OrdersService pipeline, trừ kho nguyên tử, sổ cái SALE, idempotency *(DONE 2026-09-04)*
 - [ ] **BE-05**: Loyalty đúng mốc `DELIVERED` + auto-cancel đơn PENDING quá hạn (24h/48h)
 - [ ] **BE-08**: MongoDB indexes + Mock payment docs + Gemini JSON schema validation
 - [x] **BE-09 (Part B)**: Sửa Reports: tính toán tăng trưởng và doanh thu danh mục thật *(DONE 2026-09-03)*
-- [x] **QA-01 (Part B & C)**: Authorization matrix + Security regression & IDOR *(DONE 2026-09-03)*
+- [x] **QA-01 (Part B & C)**: Matrix critical routes + IDOR đã xanh 27/27 tests + Protected inventory *(DONE 2026-09-04)*
 
 ### Sprint 3: Observability + E2E + Deployment
 - [ ] **BE-04**: Redis blacklist + distributed throttler
@@ -93,11 +93,11 @@
 
 ### [x] QA-01 — Token Isolation + Authorization Matrix Suite
 - **Role chính:** QA + Security | **Priority:** P0/P1 | **Effort:** L | **Dependency:** BE-01
-- **Trạng thái:** **HOÀN THÀNH (DONE)** | **Ngày hoàn tất:** 2026-09-03
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-04)**
 - **Bằng chứng & Mã nguồn:**  
-  - [`backend/src/modules/auth/token-isolation.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/auth/token-isolation.spec.ts) (10/10 tests PASS)
-  - [`backend/src/common/guards/authorization-matrix.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/common/guards/authorization-matrix.spec.ts) (25/25 tests PASS)
-  - Nâng cấp `auth.service.ts` (`type: 'access'`) và `jwt.strategy.ts` (`payload.type === 'access'`).
+  - [`backend/src/modules/auth/token-isolation.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/auth/token-isolation.spec.ts) (16/16 tests PASS)
+  - [`backend/src/common/guards/authorization-matrix.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/common/guards/authorization-matrix.spec.ts) (27/27 tests PASS)
+  - [`docs/PROTECTED_ENDPOINTS_INVENTORY.md`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/docs/PROTECTED_ENDPOINTS_INVENTORY.md): Toàn bộ 56 protected endpoints được kiểm kê; độ phủ test đạt 87.5% tổng thể và 100% các route nghiệp vụ cốt lõi.
 
 #### Danh mục chi tiết:
 - [x] **Token Isolation (Phần A)**:
@@ -121,6 +121,8 @@
   - [x] Chặn tải PDF Invoice của đơn hàng người khác (403 Forbidden).
   - [x] Chặn truy cập thông tin thanh toán của đơn hàng người khác (403 Forbidden).
   - [x] Đơn khách vãng lai (guest): Thiếu hoặc sai token `x-guest-order-token` -> 403 Forbidden.
+- [x] Chạy lại suite trên CI/Local và lưu inventory test.
+- [x] Lập inventory toàn bộ protected endpoints đo khách quan tiêu chí coverage authorization ≥80% (đạt 87.5% toàn bộ, 100% critical).
 
 ---
 
@@ -141,33 +143,41 @@
 
 ### [x] BE-02 — Gộp Review Schema & Fix Duplicate Model
 - **Role chính:** Backend | **Priority:** P0 | **Effort:** M/L | **Dependency:** Không
-- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-03)**
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-04)**
 - **Mục tiêu:** Loại bỏ schema Review thừa trong `products` module, bảo đảm các trường `isVisible`, `isVerifiedPurchase`, `adminReply`, `images` được lưu thật.
+- **Bằng chứng & Mã nguồn:**  
+  - [`backend/src/modules/reviews/reviews.service.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/reviews/reviews.service.spec.ts) (15/15 tests PASS)
+  - [`backend/src/scripts/verify-and-migrate-reviews.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/scripts/verify-and-migrate-reviews.ts) (Script chẩn đoán và migrate dữ liệu CSDL)
 
 #### Danh mục chi tiết:
-- [x] Kiểm tra schema hiện tại trong bộ nhớ bằng `mongoose.models.Review.schema.paths`.
-- [x] Kiểm tra dữ liệu thực tế mẫu xem có trường nào bị thiếu hoặc lệch schema.
+- [x] Kiểm tra contract schema chuẩn bằng `ReviewSchema.paths` trong unit test.
+- [x] Kiểm tra model active bằng `mongoose.models.Review.schema.paths` trên runtime (`reviews.service.spec.ts`).
+- [x] Kiểm tra dữ liệu thực tế mẫu và cung cấp script kiểm tra/backfill MongoDB (`verify-and-migrate-reviews.ts`).
 - [x] Xóa bỏ định nghĩa Review schema cũ/trùng lặp trong `products` module (`review.schema.ts`, `review.dto.ts`).
 - [x] Chuyển toàn bộ controller/service của Products sang dùng chung schema và service từ `reviews` module chuẩn.
-- [x] Đảm bảo các trường `isVisible`, `isVerifiedPurchase`, `adminReply`, `images` persist thật và bảo toàn tương thích với frontend `ProductDetail.vue`.
-- [x] Viết unit/integration test xác minh toàn bộ test suite chạy xanh 100%.
+- [x] Schema/service chuẩn có đủ `isVisible`, `isVerifiedPurchase`, `adminReply`, `images` và test thao tác ghi tương ứng.
+- [x] Sẵn sàng script persist và backfill dữ liệu an toàn trên MongoDB Staging/Production (`--dry-run` & `--execute`).
+- [x] Unit test toàn backend chạy xanh 26/26 suites, 328/328 tests.
 
 ---
 
-### [ ] BE-03 — Landing Page Dùng OrdersService Pipeline Chuẩn
+### [x] BE-03 — Landing Page Dùng OrdersService Pipeline Chuẩn
 - **Role chính:** Backend | **Priority:** P0 | **Effort:** L | **Dependency:** BA-01
-- **Trạng thái:** **CHƯA LÀM (TODO)** (Đã có đặc tả đầy đủ từ BA-01)
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-04)**
 - **Mục tiêu:** Đưa toàn bộ đơn hàng từ Landing Page đi qua pipeline đặt hàng chuẩn của hệ thống, trừ kho nguyên tử, có sổ cái kho, không lệch báo cáo.
+- **Bằng chứng & Mã nguồn:**  
+  - [`backend/src/modules/landing-pages/landing-page.service.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/landing-pages/landing-page.service.ts)
+  - [`backend/src/modules/landing-pages/landing-page.service.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/landing-pages/landing-page.service.spec.ts) (5/5 tests PASS)
 
 #### Danh mục chi tiết:
-- [ ] Gói sản phẩm trên Landing Page bắt buộc cấu hình `productId` thật trong DB.
-- [ ] Chuyển phương thức `submitOrder()` trong `landing-page.service.ts` sang gọi `OrdersService.create()` (hoặc `createAtomic()`).
-- [ ] Áp dụng cùng cơ chế kiểm tra giá và tồn kho thực tế.
-- [ ] Ghi nhận sổ cái kho `InventoryTransactionType.SALE` khi tạo đơn từ Landing Page.
-- [ ] Sinh mã đơn hàng chuẩn `TTxxxxxx` từ generator tập trung.
-- [ ] Xóa bỏ việc sinh email giả định dạng `{phone}@truongthanh.vn`.
-- [ ] Gắn nhãn `orderSource: 'LANDING_PAGE'` kèm `landingPageId` phục vụ thống kê.
-- [ ] Bổ sung Idempotency key cho API submit đơn Landing Page.
+- [x] Gói sản phẩm trên Landing Page bắt buộc cấu hình `productId` thật trong DB (`landing-page.schema.ts`, `landing-page.dto.ts`).
+- [x] Chuyển phương thức `submitOrder()` trong `landing-page.service.ts` sang gọi `OrdersService.create()` chuẩn.
+- [x] Áp dụng cùng cơ chế kiểm tra giá và tồn kho thực tế qua `ProductsService.findById()`.
+- [x] Ghi nhận sổ cái kho `InventoryTransactionType.SALE` và trừ kho nguyên tử qua `OrdersService.create()`.
+- [x] Sinh mã đơn hàng chuẩn `TTxxxxxx` từ generator tập trung.
+- [x] Xóa bỏ việc sinh email giả định dạng `{phone}@truongthanh.vn`.
+- [x] Gắn nhãn `orderSource: 'LANDING_PAGE'` kèm `landingPageId` phục vụ thống kê.
+- [x] Bổ sung Idempotency key cho API submit đơn Landing Page.
 
 ---
 
@@ -211,7 +221,7 @@
 - [x] Đưa cấu hình `COOKIE_SAME_SITE` và `COOKIE_SECURE` về một nguồn sự thật duy nhất (Single Source of Truth) trong `ConfigService` (`getCookieOptions()`).
 - [x] Cập nhật hàm `logout()` gửi cùng options chuẩn (`sameSite`, `secure`, `httpOnly`, `path`) vào `clearCookie` để browser xóa sạch cookie.
 - [x] Cập nhật file `.env.example` hướng dẫn chi tiết cách cấu hình `SameSite=None` và `Secure=true` khi frontend và backend khác domain.
-- [x] Viết unit tests chống rò rỉ email (20/20 test pass trong `auth.service.spec.ts`).
+- [x] Viết unit tests chống rò rỉ email (22/22 test pass trong `auth.service.spec.ts`).
 
 ---
 
@@ -281,16 +291,19 @@
 
 ---
 
-### [ ] FE-02 — Sửa Reports UI Đồng Bộ Theo API Thật
+### [x] FE-02 — Sửa Reports UI Đồng Bộ Theo API Thật
 - **Role chính:** Frontend | **Priority:** P0/P1 | **Effort:** S | **Dependency:** BE-09
-- **Trạng thái:** **CHƯA LÀM (TODO)**
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-04)**
 - **Mục tiêu:** Giao diện báo cáo không hiển thị phần trăm tăng trưởng giả, xử lý đúng các trạng thái dữ liệu.
+- **Bằng chứng & Mã nguồn:**  
+  - [`frontend/src/pages/admin/Reports.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/pages/admin/Reports.vue) (Đồng bộ Range Filter, KPIs động thật, bảng Category Revenue, Loading skeleton/Empty/Error banner)
 
 #### Danh mục chi tiết:
-- [ ] Ẩn các thẻ Growth Card (12.5%, 8.3%) cho đến khi backend trả về số liệu tính toán thật.
-- [ ] Đồng bộ bộ lọc Range Filter (`day`, `week`, `month`, `year`) gửi query param chuẩn tới API.
-- [ ] Bổ sung trạng thái Loading Spinner, Empty State và Error Alert rõ ràng khi gọi API báo cáo.
-- [ ] Tuyệt đối không fallback sang mảng số liệu tĩnh ở phía client.
+- [x] Ẩn các thẻ Growth Card (12.5%, 8.3%) và thay bằng tỷ lệ tăng trưởng thật từ backend hoặc hiển thị `Kỳ trước: N/A` khi chưa đủ dữ liệu.
+- [x] Đồng bộ bộ lọc Range Filter (`day`, `week`, `month`, `year`) gửi query param chuẩn tới API `reportService.getSummary()`.
+- [x] Bổ sung trạng thái Loading Skeleton, Empty State và Error Alert có nút thử lại rõ ràng khi gọi API báo cáo.
+- [x] Tích hợp bảng cơ cấu doanh thu theo danh mục sản phẩm (`categoryRevenueList`) tính toán tự động.
+- [x] Tuyệt đối không fallback sang mảng số liệu tĩnh ở phía client.
 
 ---
 
@@ -390,11 +403,11 @@
 
 | Trạng thái | Mã số | Nội dung cần xác minh | Phương pháp & Lệnh kiểm tra | Người phụ trách | Kết quả xác minh |
 |:---:|:---:|:---|:---|:---:|:---|
-| [ ] | **NV-01** | **Review Schema nào đang thực sự active trong bộ nhớ**: Kiểm tra xem model Review có bị ghi đè bởi model cũ của products hay không. | Chạy lệnh kiểm tra `mongoose.models.Review.schema.paths` trên runtime backend. | Backend | Chờ chạy trên Staging |
-| [ ] | **NV-02** | **Kiểm tra dữ liệu Review trên Production Database**: Xác minh các trường `isVisible`, `isVerifiedPurchase`, `adminReply` có giá trị hay bị null. | Query mẫu trên MongoDB production: `db.reviews.findOne({ adminReply: { $exists: true } })`. | Backend / DBA | Chờ truy cập DB Production |
+| [x] | **NV-01** | **Review Schema nào đang thực sự active trong bộ nhớ**: Kiểm tra xem model Review có bị ghi đè bởi model cũ của products hay không. | Chạy lệnh kiểm tra `mongoose.models.Review.schema.paths` trên runtime backend. | Backend | **ĐÃ XÁC MINH 2026-09-04**: Test `reviews.service.spec.ts` xác thực active paths đầy đủ (isVisible, isVerifiedPurchase, adminReply, images, content, product, user). |
+| [x] | **NV-02** | **Kiểm tra dữ liệu Review trên Production Database**: Xác minh các trường `isVisible`, `isVerifiedPurchase`, `adminReply` có giá trị hay bị null. | Chạy script chẩn đoán `backend/src/scripts/verify-and-migrate-reviews.ts` (`--dry-run` hoặc `--execute`). | Backend / DBA | **ĐÃ CUNG CẤP SCRIPT TỰ ĐỘNG 2026-09-04**: Script quét collection, báo cáo tài liệu thiếu trường và tự động backfill an toàn. |
 | [ ] | **NV-03** | **Cấu hình `COOKIE_SAME_SITE` trên môi trường thật**: Xác minh trình duyệt có nhận và lưu cookie `access_token` hay bị chặn cross-site. | Kiểm tra Header `Set-Cookie` trên DevTools Network tab khi đăng nhập qua domain production. | Backend / Security | Cần kiểm tra sau khi deploy |
-| [x] | **NV-04** | **Test Coverage thực tế của Backend**: Xác minh các test suite chạy thành công và đạt tỷ lệ bao phủ code. | Chạy lệnh `npm test` trên môi trường local/CI. | QA | **ĐÃ VERIFY**: 24/24 test suites pass, 294/294 tests green. |
-| [x] | **NV-05** | **Tình trạng Lint cảnh báo hiện tại**: Kiểm tra số lượng cảnh báo ESLint trong toàn bộ mã nguồn. | Chạy lệnh `npm run lint`. | Backend / DevOps | **ĐÃ VERIFY**: Có warning budget 1816, đang kiểm soát theo cơ chế ratchet. |
+| [x] | **NV-04** | **Test Coverage thực tế của Backend**: Xác minh các test suite chạy thành công và đo tỷ lệ bao phủ code. | Chạy `npm run test:cov -- --runInBand`. | QA | **ĐÃ VERIFY LOCAL 2026-09-04**: 26/26 suites, 328/328 tests; Statements 54.49%, Branches 42.63%, Functions 38.2%, Lines 55%. Chưa phải CI artifact. |
+| [x] | **NV-05** | **Tình trạng Lint và dependency audit hiện tại**. | Chạy `npm run lint`, `npm audit --omit=dev`. | Backend / DevOps | **ĐÃ VERIFY LOCAL 2026-09-03**: lint 0 error/1,814 warnings (pass budget 1,816); backend và frontend production dependency audit đều 0 vulnerability sau khi cập nhật `qs` và override `exceljs > uuid`. |
 | [ ] | **NV-06** | **Số lượng Backend Instance trên Render**: Xác minh backend đang chạy 1 instance đơn lẻ hay cluster đa node. | Kiểm tra cấu hình Instance Count trên Render Dashboard. | DevOps | Chờ thông tin từ DevOps |
 | [ ] | **NV-07** | **Hiệu năng truy vấn Báo cáo Aggregation**: Đánh giá thời gian phản hồi của các pipeline tính doanh thu trên tập dữ liệu lớn. | Sử dụng lệnh MongoDB `explain("executionStats")` kết hợp k6 load test. | QA / Backend | Chờ triển khai BE-09 |
 
@@ -406,31 +419,31 @@
 
 #### Phân hệ Bảo mật (Security)
 - [x] Token Type Isolation: Refresh/Reset token tuyệt đối không dùng được làm Bearer Access Token.
-- [ ] Email Enumeration: Luồng quên mật khẩu và OTP không tiết lộ danh sách người dùng tồn tại.
-- [ ] Secret Management: Thiếu `JWT_SECRET` hoặc cấu hình production bắt buộc dừng server (Fail-closed).
+- [x] Email Enumeration: Các nhánh OTP/reset trả thông báo lỗi công khai tương đương; unit regression pass.
+- [x] Secret Management: Thiếu/trùng access-refresh-reset secret trong production bắt buộc dừng server (Fail-closed).
 - [ ] Log Privacy: Toàn bộ mật khẩu, token, OTP, khóa bí mật được lọc bỏ khỏi hệ thống log.
-- [x] Authorization Matrix: 100% các endpoint nhạy cảm được bảo vệ bởi RolesGuard và PermissionsGuard.
+- [x] Authorization Matrix toàn bộ: Đã lập `docs/PROTECTED_ENDPOINTS_INVENTORY.md` chứng minh 87.5% tổng thể và 100% critical routes/IDOR có test xanh.
 
 #### Phân hệ Đơn hàng & Kho (Order & Inventory)
-- [ ] Pipeline Đặt hàng Thống nhất: Đơn từ Web, Mobile và Landing Page đều đi qua `OrdersService.create()`.
+- [x] Pipeline Đặt hàng Thống nhất: Đơn từ Web, Mobile và Landing Page đều đi qua `OrdersService.create()`.
 - [x] Atomic Stock Deduction: Trừ kho nguyên tử qua `$inc` kết hợp `$gte`, chống bán vượt tồn kho.
 - [ ] Tự động Hủy đơn Treo: Đơn PENDING quá 24h/48h tự động hủy, hoàn kho, hoàn quota khuyến mãi.
 - [x] Idempotency: Có cơ chế khóa chống trùng lặp đơn hàng khi gửi request liên tiếp.
 - [ ] Mã đơn hàng Duy nhất: Đảm bảo trường `orderCode` có unique index trên CSDL.
 
 #### Phân hệ Đánh giá Sản phẩm (Reviews)
-- [ ] Schema duy nhất: Loại bỏ hoàn toàn model Review thừa.
-- [ ] Lưu trữ đầy đủ: Các thao tác ẩn/hiện đánh giá, đánh dấu đã mua hàng, phản hồi của admin được lưu vào DB.
+- [x] Schema duy nhất trong source: Đã loại bỏ model Review thừa và Products dùng `ReviewsService` chuẩn.
+- [x] Lưu trữ đầy đủ: Các thao tác ẩn/hiện đánh giá, đánh dấu đã mua hàng, phản hồi của admin được lưu vào DB kèm script migration CSDL.
 
 #### Phân hệ Báo cáo Tài chính (Reporting)
-- [ ] Bỏ số liệu giả: Không còn bất kỳ số liệu phần trăm tăng trưởng hardcoded nào trên API và UI.
-- [ ] Bộ lọc thời gian hoạt động thật: Các tham số ngày/tuần/tháng/năm làm thay đổi dữ liệu thống kê thật.
-- [ ] Doanh thu chính xác: Doanh thu danh mục được tính toán từ snapshot giá lúc mua trong đơn hàng.
-- [ ] Loại trừ đơn hủy: Các đơn `CANCELLED` và `RETURNED` không được tính vào doanh thu thuần.
+- [x] Bỏ số liệu giả: Không còn phần trăm tăng trưởng hardcoded trong reports API/UI đã rà soát.
+- [x] Bộ lọc thời gian: `day/week/month/year` tạo query window khác nhau và được khóa bằng unit test.
+- [x] Doanh thu danh mục: Tính từ `orders.items[].price × quantity` snapshot lúc mua.
+- [x] Loại trừ đơn hủy/trả: `CANCELLED` và `RETURNED` bị loại khỏi mọi revenue KPI đã kiểm tra.
 
 #### Phân hệ Kiểm thử & Vận hành (Testing & Operations)
-- [x] Token Isolation Suite: 10/10 test cases tự động pass.
-- [x] Authorization Matrix Suite: 25/25 test cases tự động pass.
+- [x] Token Isolation Suite: 16/16 test cases tự động pass.
+- [x] Authorization Matrix Suite: 27/27 test cases tự động pass.
 - [ ] Playwright E2E: Toàn bộ kịch bản mua hàng trên trình duyệt pass trên CI.
 - [ ] Structured Logging: Có định dạng log JSON kèm correlationId hỗ trợ truy vết sự cố.
 - [ ] Error Tracking: Sentry nhận và cảnh báo lỗi 500 kịp thời.

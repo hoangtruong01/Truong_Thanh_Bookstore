@@ -359,6 +359,20 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
   });
 
   describe('BE-09: Category Revenue & Growth Analytics', () => {
+    const expectExcludedRevenueStatuses = (pipeline: any[]) => {
+      expect(pipeline).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            $match: expect.objectContaining({
+              orderStatus: {
+                $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED],
+              },
+            }),
+          }),
+        ]),
+      );
+    };
+
     it('should aggregate category revenue excluding cancelled/returned orders', async () => {
       const mockCategoryData = [
         { category: 'Sách Kỹ Năng', revenue: 15000000 },
@@ -379,6 +393,40 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
           }),
         ]),
       );
+    });
+
+    it('should exclude cancelled and returned orders from every revenue KPI', async () => {
+      mockOrderModel.aggregate.mockResolvedValue([]);
+
+      await ordersService.getTodayRevenue();
+      await ordersService.getRevenueByDateRange(
+        new Date('2026-08-01T00:00:00.000Z'),
+        new Date('2026-08-31T23:59:59.999Z'),
+      );
+      await ordersService.getAov();
+      await ordersService.getVoucherEffectiveness();
+      await ordersService.getGrowthStats('month');
+
+      for (const [pipeline] of mockOrderModel.aggregate.mock.calls) {
+        expectExcludedRevenueStatuses(pipeline);
+      }
+    });
+
+    it('should make day and year ranges produce different query windows', async () => {
+      mockOrderModel.aggregate.mockResolvedValue([]);
+
+      await ordersService.getGrowthStats('day');
+      const dayPipeline = mockOrderModel.aggregate.mock.calls[0][0];
+      const dayMatch = dayPipeline[0].$match.createdAt;
+      mockOrderModel.aggregate.mockClear();
+
+      await ordersService.getGrowthStats('year');
+      const yearPipeline = mockOrderModel.aggregate.mock.calls[0][0];
+      const yearMatch = yearPipeline[0].$match.createdAt;
+
+      expect(
+        yearMatch.$lte.getTime() - yearMatch.$gte.getTime(),
+      ).toBeGreaterThan(dayMatch.$lte.getTime() - dayMatch.$gte.getTime());
     });
 
     it('should compute real growth rates dynamically between two periods', async () => {

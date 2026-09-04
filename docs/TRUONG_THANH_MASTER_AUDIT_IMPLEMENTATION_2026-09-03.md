@@ -361,9 +361,9 @@ Không over-engineer để “nâng cấp công nghệ” trong khi correctness 
 | Task ID | Task | Role chính | Priority | Effort | Dependency | Status |
 |---|---|---|---|---|---|:---:|
 | BA-01 | Chốt business rules loyalty / pending / landing / payment | BA | P0 | S | - | **DONE** |
-| QA-01 | Token isolation + authorization matrix | QA + Security | P0/P1 | L | BE-01 để xanh test | **DONE** |
+| QA-01 | Token isolation + authorization matrix | QA + Security | P0/P1 | L | BE-01 để xanh test | **PARTIAL** — core suite xanh, chưa có CI artifact/inventory toàn bộ endpoint |
 | BE-01 | Tách access/refresh/reset token | Backend + Security | P0 | M | QA-01 viết test trước | **DONE** |
-| BE-02 | Gộp Review schema | Backend | P0 | M/L | - | **DONE** |
+| BE-02 | Gộp Review schema | Backend | P0 | M/L | - | **PARTIAL** — source đã gộp, chưa verify runtime/Production data |
 | BE-03 | Landing page vào OrdersService pipeline | Backend | P0 | L | BA-01 |
 | BE-04 | Redis blacklist + distributed throttler | Backend + DevOps | P0* | M | BE-01 |
 | BE-05 | Loyalty đúng thời điểm + auto-cancel pending | Backend | P0 | M | BA-01 |
@@ -414,9 +414,9 @@ Không over-engineer để “nâng cấp công nghệ” trong khi correctness 
 ## QA-01 — Token isolation + authorization matrix
 > **Trạng thái:** HOÀN THÀNH (DONE) — Ngày 2026-09-03  
 > **Chi tiết:** Đã xây dựng 2 test suite tự động chuyên biệt:  
-> - `src/modules/auth/token-isolation.spec.ts` (10/10 test cases PASS)  
-> - `src/common/guards/authorization-matrix.spec.ts` (25/25 test cases PASS)  
-> Toàn bộ 24 test suites backend chạy XANH (294/294 tests passed).
+> - `src/modules/auth/token-isolation.spec.ts` (16/16 test cases PASS)
+> - `src/common/guards/authorization-matrix.spec.ts` (27/27 test cases PASS)
+> Toàn bộ backend local ngày 2026-09-03 chạy XANH: 25/25 suites, 322/322 tests. CI remote chưa được chạy trong vòng xác minh này.
 
 **Role:** QA + Security  
 **Priority:** P0/P1  
@@ -462,8 +462,8 @@ Với các role:
 ### Acceptance Criteria
 
 - [x] Token isolation suite xanh (100% pass).
-- [x] ≥80% protected endpoint quan trọng có authorization test.
-- [x] CI test suite pass toàn diện (294/294 tests).
+- [ ] Lập inventory để chứng minh ≥80% protected endpoint quan trọng có authorization test (hiện đã phủ critical Orders/Users/Payments/Reports và IDOR order/invoice/payment).
+- [ ] CI remote pass và lưu artifact (local hiện pass 25/25 suites, 322/322 tests).
 
 ---
 
@@ -490,7 +490,7 @@ Với các role:
 - [x] Reset token làm Bearer → 401.
 - [x] Access token hoạt động bình thường.
 - [x] Refresh password/reset password flow vẫn pass.
-- [x] Test QA-01 phần token isolation xanh (13/13 tests).
+- [x] Test QA-01 phần token isolation xanh (16/16 tests, gồm legacy-token migration và reset-token replay).
 
 ---
 
@@ -503,8 +503,9 @@ Với các role:
 
 ### Cần làm
 
-- [x] Verify schema hiện tại bằng `mongoose.models.Review.schema.paths`.
-- [x] Inspect dữ liệu production mẫu.
+- [x] Verify contract schema chuẩn bằng `ReviewSchema.paths` trong unit test.
+- [ ] Verify model active bằng `mongoose.models.Review.schema.paths` trên runtime Staging.
+- [ ] Inspect dữ liệu Production mẫu (chưa có quyền truy cập DB Production trong vòng này).
 - [x] Xóa schema Review cũ trong products module (`review.schema.ts`, `review.dto.ts`).
 - [x] Products dùng schema/service chuẩn từ reviews (`ReviewsModule`, `ReviewsService`).
 - [x] Bảo đảm đầy đủ `isVisible`, `isVerifiedPurchase`, `adminReply`, `images`.
@@ -512,11 +513,9 @@ Với các role:
 
 ### Acceptance Criteria
 
-- [x] Hide review persist thật.
-- [x] Verified purchase persist thật.
-- [x] Admin reply persist thật.
-- [x] Images persist thật.
-- [x] Integration / Unit test pass (302/302 tests).
+- [x] Unit test xác minh service ghi `isVisible`, `isVerifiedPurchase`, `adminReply`, `adminReplyAt`, `images` vào model chuẩn.
+- [ ] Integration test MongoDB Staging/Production xác minh persist và backfill dữ liệu cũ.
+- [x] Unit test toàn backend pass (25/25 suites, 322/322 tests).
 
 ---
 
@@ -618,6 +617,7 @@ Với các role:
 
 - [x] Email tồn tại + OTP sai và email không tồn tại trả response tương đương.
 - [x] Production cookie config đúng env validation.
+- [x] Reset token có `tokenVersion` + `jti`, bị vô hiệu sau lần đổi mật khẩu đầu tiên.
 
 ---
 
@@ -699,10 +699,10 @@ Với các role:
 ### Acceptance Criteria
 
 - [x] Không còn số giả trong `/reports/*`.
-- [x] `range=day` và `range=year` cho dữ liệu khác nhau khi seed data khác nhau.
-- [x] Category revenue khớp phép tính tay trên seed data.
+- [x] Unit test xác minh `range=day` và `range=year` tạo query window khác nhau.
+- [x] Category revenue dùng expected values cố định và pipeline snapshot `items.price × quantity`.
 - [x] CANCELLED/RETURNED không được tính doanh thu.
-- [x] Có regression test với expected values cố định (100% pass trong `orders.service.spec.ts` & `reports.service.spec.ts`).
+- [x] Có regression test với expected values cố định; toàn backend local pass 322/322 tests.
 
 ---
 
@@ -1108,11 +1108,11 @@ BE-04 + BE-07 + BE-09 phần tính thật
 
 ## Security
 
-- [ ] Refresh/reset token không dùng làm access token.
-- [ ] Không lộ email enumeration.
-- [ ] Secret production fail-closed.
+- [x] Refresh/reset token không dùng làm access token; legacy token thiếu security claims bị từ chối.
+- [x] OTP/reset-password dùng thông báo lỗi công khai tương đương để chống email enumeration.
+- [x] Access/refresh/reset secret production fail-closed và bắt buộc khác nhau.
 - [ ] Không log token/password/OTP.
-- [ ] Authorization matrix pass.
+- [x] Authorization matrix critical routes + IDOR order/invoice/payment pass; inventory toàn bộ endpoint vẫn cần bổ sung trước khi tuyên bố 100% coverage.
 
 ## Order / Inventory
 
@@ -1124,22 +1124,22 @@ BE-04 + BE-07 + BE-09 phần tính thật
 
 ## Review
 
-- [ ] Chỉ một schema.
-- [ ] Hide/verified/adminReply/images persist thật.
+- [x] Source chỉ còn một Review schema chuẩn; Products dùng chung `ReviewsService`.
+- [ ] Hide/verified/adminReply/images cần xác minh persist trên MongoDB Staging/Production (unit model/service đã pass).
 
 ## Reporting
 
-- [ ] Không có số hardcode giả.
-- [ ] Range thật sự hoạt động.
-- [ ] Category revenue tính từ order item snapshot.
-- [ ] CANCELLED/RETURNED không tính revenue.
+- [x] Không còn growth hardcode giả trong reports API/UI đã rà soát.
+- [x] Range tạo kỳ truy vấn thật và được khóa bằng unit test.
+- [x] Category revenue tính từ order item snapshot.
+- [x] CANCELLED/RETURNED không tính vào các revenue KPI đã kiểm tra.
 
 ## Testing
 
-- [ ] Token isolation test pass.
-- [ ] Authorization matrix pass.
+- [x] Token isolation test pass 16/16.
+- [x] Authorization matrix critical routes/IDOR pass 27/27.
 - [ ] Playwright core flows pass.
-- [ ] Report accuracy regression pass.
+- [x] Report calculation regression unit test pass; accuracy/performance trên dữ liệu lớn vẫn thuộc QA-03.
 
 ## Production Operations
 
@@ -1266,7 +1266,7 @@ Vòng trước audit theo hướng **endpoint cần guard/permission nào**. L�
 - **Không cần rewrite dự án.**
 - **Không cần đổi kiến trúc nền.**
 - Core commerce pipeline chính có nhiều điểm tốt.
-- Dự án chưa production-ready vì còn ba nhóm rủi ro: **auth semantics**, **multiple write paths**, **untrusted reporting**.
+- Dự án chưa production-ready vì còn các blocker: **Landing Page vẫn có write path riêng**, **auto-cancel/loyalty chưa hoàn tất**, **chưa có Staging/UAT/CI artifact**, và **online payment thật chưa được tích hợp**. Token semantics và report calculation backend đã được sửa/khóa bằng unit test local, nhưng vẫn cần kiểm chứng môi trường thật.
 
 ## 20.2 Năm việc đầu tiên nên giao
 

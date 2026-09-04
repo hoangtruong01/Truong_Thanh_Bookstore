@@ -46,7 +46,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(request: any, payload: JwtAccessPayload) {
     // 0. Enforce Token Isolation: only access tokens are permitted for API access
-    if (payload?.type !== 'access') {
+    if (
+      payload?.type !== 'access' ||
+      !payload.sub ||
+      typeof payload.tokenVersion !== 'number' ||
+      typeof payload.jti !== 'string' ||
+      !payload.jti
+    ) {
       throw new UnauthorizedException({
         message: 'Loại mã xác thực không hợp lệ. Chỉ chấp nhận Access Token.',
         errorCode: ErrorCode.ERR_INVALID_TOKEN,
@@ -99,11 +105,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
     }
 
-    if (
-      payload?.tokenVersion !== undefined &&
-      user.tokenVersion !== undefined &&
-      payload.tokenVersion < user.tokenVersion
-    ) {
+    if (payload.tokenVersion !== (user.tokenVersion ?? 0)) {
       throw new UnauthorizedException({
         message:
           'Phiên đăng nhập đã bị vô hiệu hóa do đổi mật khẩu hoặc đăng xuất toàn thiết bị.',

@@ -16,9 +16,10 @@ import {
   SubmitOrderDto,
 } from './dto/landing-page.dto';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
-import { OrderStatus, PaymentMethod, PaymentStatus } from '../../common/enums';
+import { PaymentMethod } from '../../common/enums';
 import { ConfigService } from '@nestjs/config';
 import { OrdersService } from '../orders/orders.service';
+import { ProductsService } from '../products/products.service';
 
 @Injectable()
 export class LandingPageService {
@@ -29,6 +30,7 @@ export class LandingPageService {
     private landingPageModel: Model<LandingPageDocument>,
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     private ordersService: OrdersService,
+    private productsService: ProductsService,
     private configService: ConfigService,
   ) {}
 
@@ -218,7 +220,7 @@ export class LandingPageService {
     return { message: 'Xóa trang bán hàng thành công' };
   }
 
-  async submitOrder(dto: SubmitOrderDto): Promise<OrderDocument> {
+  async submitOrder(dto: SubmitOrderDto): Promise<any> {
     if (!dto.landingPageId || !isValidObjectId(dto.landingPageId)) {
       throw new BadRequestException('ID trang bán hàng không hợp lệ');
     }
@@ -238,41 +240,70 @@ export class LandingPageService {
     const selectedPkg = page.packages?.find(
       (p) => p.name?.trim().toLowerCase() === searchPkgName,
     );
-    const orderPrice = selectedPkg ? selectedPkg.price : page.price || 0;
 
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const orderCode = `LP${new Date().toISOString().slice(2, 10).replace(/-/g, '')}${randomSuffix}`;
+    // Resolve target product ID: dto override -> package -> page -> active product fallback
+    const targetProductId =
+      dto.productId ||
+      selectedPkg?.productId?.toString() ||
+      (page as any).productId?.toString();
 
-    // Create a new order integrated directly with main order system
-    const newOrder = new this.orderModel({
-      orderCode,
-      customer: null, // Guest checkout
-      customerName: dto.fullName.trim(),
-      customerEmail: `${dto.phone.replace(/\s+/g, '')}@truongthanh.vn`, // Standardized phone email
-      phone: dto.phone.trim(),
+    let product: any = null;
+    if (targetProductId) {
+      product = await this.productsService.findById(targetProductId);
+    } else {
+      // Fallback: search for active product matching page slug or first active product
+      const matchingProduct = await this.productsService
+        .findBySlug(page.slug)
+        .catch(() => null);
+      if (matchingProduct && !(matchingProduct as any).isDeleted) {
+        product = matchingProduct;
+      } else {
+        const productList = await this.productsService.findAll({ limit: 1 });
+        if (productList && productList.data && productList.data.length > 0) {
+          product = productList.data[0];
+        }
+      }
+    }
+
+    if (!product || (product as any).isDeleted) {
+      throw new BadRequestException(
+        'Gói sản phẩm hoặc trang bán hàng chưa được liên kết với sản phẩm hợp lệ trong kho',
+      );
+    }
+
+    const orderPrice = selectedPkg
+      ? selectedPkg.price
+      : page.price > 0
+        ? page.price
+        : (product as any).discountPrice > 0
+          ? (product as any).discountPrice
+          : (product as any).price;
+
+    const createOrderDto = {
+      items: [
+        {
+          product: product._id.toString(),
+          name: `${product.name} (${selectedPkg ? selectedPkg.name : (dto.packageName || 'Mặc định')})`,
+          price: orderPrice,
+          quantity: 1,
+          image: (product.images && product.images[0]) || page.images?.[0] || '',
+        },
+      ],
       shippingAddress: dto.address.trim(),
+      phone: dto.phone.trim(),
+      customerName: dto.fullName.trim(),
+      // BE-03: No fake email format {phone}@truongthanh.vn
+      paymentMethod: PaymentMethod.COD,
       note: dto.note
         ? `${dto.packageName} - ${dto.note}`
         : dto.packageName || 'Đơn hàng từ Landing Page',
-      items: [
-        {
-          product: null,
-          name: `${page.title} (${dto.packageName || 'Mặc định'})`,
-          price: orderPrice,
-          quantity: 1,
-          image: page.images?.[0] || '',
-        },
-      ],
-      paymentMethod: PaymentMethod.COD,
-      paymentStatus: PaymentStatus.UNPAID,
-      orderStatus: OrderStatus.PENDING,
-      subtotal: orderPrice,
-      shippingFee: 0,
-      discount: 0,
-      total: orderPrice,
-    });
+      idempotencyKey: dto.idempotencyKey,
+      orderSource: 'LANDING_PAGE',
+      landingPageId: page._id.toString(),
+    };
 
-    const savedOrder = await newOrder.save();
+    // Route order creation through central OrdersService pipeline
+    const savedOrder = await this.ordersService.create(createOrderDto as any);
 
     // Sync to Google Sheet (async)
     this.ordersService

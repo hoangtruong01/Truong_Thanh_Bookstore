@@ -6,6 +6,8 @@ import {
   IsArray,
   IsBoolean,
   Min,
+  MaxLength,
+  Matches,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -54,6 +56,11 @@ export class CreateLandingPageDto {
   @IsNumber()
   @Min(0)
   originalPrice?: number;
+
+  @ApiPropertyOptional({ description: 'ID sản phẩm chính liên kết trong kho' })
+  @IsOptional()
+  @IsMongoObjectId({ message: 'productId phải là ObjectId hợp lệ' })
+  productId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -138,6 +145,11 @@ export class SubmitOrderDto {
   @IsMongoObjectId({ message: 'landingPageId phải là ObjectId hợp lệ' })
   landingPageId: string;
 
+  @ApiPropertyOptional({ description: 'Tùy chọn ghi đè productId của gói hàng' })
+  @IsOptional()
+  @IsMongoObjectId({ message: 'productId phải là ObjectId hợp lệ' })
+  productId?: string;
+
   @ApiProperty()
   @IsNotEmpty({ message: 'Họ và tên không được để trống' })
   @IsString()
@@ -165,4 +177,16 @@ export class SubmitOrderDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @ApiPropertyOptional({
+    description: 'Khóa chống gửi trùng đơn hàng từ client',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  @Matches(/^[A-Za-z0-9._:-]{16,128}$/, {
+    message:
+      'idempotencyKey phải dài từ 16 đến 128 ký tự gồm chữ, số hoặc . _ : -',
+  })
+  idempotencyKey?: string;
 }

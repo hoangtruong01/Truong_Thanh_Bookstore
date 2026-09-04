@@ -81,10 +81,8 @@ export class AuthController {
     secure: boolean;
     sameSite: 'lax' | 'strict' | 'none';
   } {
-    const isProduction =
-      this.configService.get<string>('NODE_ENV') === 'production';
     const configuredSameSite = this.configService
-      .get<string>('COOKIE_SAME_SITE')
+      .get<string>('cookie.sameSite')
       ?.toLowerCase();
     const sameSite: 'lax' | 'strict' | 'none' =
       configuredSameSite === 'none'
@@ -93,9 +91,9 @@ export class AuthController {
           ? 'strict'
           : 'lax';
 
-    const configuredSecure = this.configService.get<boolean>('COOKIE_SECURE');
-    const secure =
-      sameSite === 'none' ? true : (configuredSecure ?? isProduction);
+    const configuredSecure =
+      this.configService.get<boolean>('cookie.secure') ?? false;
+    const secure = sameSite === 'none' ? true : configuredSecure;
 
     return {
       httpOnly: true,
