@@ -225,4 +225,77 @@ describe('LandingPageService (BE-03)', () => {
       expect(slug).toBe('sach-dac-nhan-tam-giam-gia-50');
     });
   });
+
+  describe('generateLandingPage (BE-08 Schema Validation)', () => {
+    const originalFetch = global.fetch;
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('should validate valid Gemini JSON output', async () => {
+      const validPayload = {
+        description: 'Mô tả sách chuẩn SEO',
+        badgeText: 'HOT',
+        primaryColor: '#dc2626',
+        backgroundColor: '#ffffff',
+        textColor: '#1e293b',
+        benefits: [{ title: 'Lợi ích 1', description: 'Chi tiết' }],
+        packages: [{ name: 'Gói 1', price: 90000, isBestSeller: true }],
+        testimonials: [{ authorName: 'Độc giả', content: 'Sách rất hay', rating: 5 }],
+      };
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: JSON.stringify(validPayload) }],
+              },
+            },
+          ],
+        }),
+      } as any);
+
+      const result = await service.generateLandingPage({
+        title: 'Sách Hay',
+        price: 90000,
+        images: [],
+      });
+
+      expect(result.description).toBe('Mô tả sách chuẩn SEO');
+      expect(result.packages[0].name).toBe('Gói 1');
+    });
+
+    it('should fallback to template if Gemini returns schema validation violations', async () => {
+      const invalidPayload = {
+        description: 12345, // Invalid type (should be string)
+        packages: 'not-an-array', // Invalid type (should be array)
+      };
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: JSON.stringify(invalidPayload) }],
+              },
+            },
+          ],
+        }),
+      } as any);
+
+      const result = await service.generateLandingPage({
+        title: 'Sách Fallback',
+        price: 100000,
+        images: [],
+      });
+
+      // Should fallback to default template with valid packages
+      expect(Array.isArray(result.packages)).toBe(true);
+      expect(result.packages.length).toBeGreaterThan(0);
+    });
+  });
 });

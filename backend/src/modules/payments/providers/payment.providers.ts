@@ -73,7 +73,14 @@ export class BankTransferPaymentProvider implements PaymentProvider {
   }
 }
 
-abstract class SignedOnlinePaymentProvider implements PaymentProvider {
+/**
+ * BE-08: MockSignedPaymentProvider simulates online signed payments (VNPay, MoMo)
+ * with internal HMAC SHA256 signatures for development and staging environments only.
+ * 
+ * IMPORTANT: Mock online payment providers are strictly forbidden in production (NODE_ENV === 'production').
+ * Production environments must configure and integrate direct merchant bank APIs.
+ */
+export abstract class MockSignedPaymentProvider implements PaymentProvider {
   abstract readonly method: PaymentMethod;
   abstract readonly secretKey: string;
   abstract readonly gatewayUrlKey: string;
@@ -83,6 +90,13 @@ abstract class SignedOnlinePaymentProvider implements PaymentProvider {
   async initiate(
     context: PaymentInitiationContext,
   ): Promise<PaymentInitiationResult> {
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || process.env.NODE_ENV;
+    if (nodeEnv === 'production') {
+      throw new ServiceUnavailableException(
+        `Cổng thanh toán giả lập (${this.method}) bị nghiêm cấm trong môi trường production`,
+      );
+    }
+
     const secret = this.configService.get<string>(this.secretKey);
     const gatewayUrl = this.configService.get<string>(this.gatewayUrlKey);
     if (!secret || !gatewayUrl) {
@@ -116,13 +130,23 @@ abstract class SignedOnlinePaymentProvider implements PaymentProvider {
   async verifyCallback(
     payload: PaymentCallbackPayload,
   ): Promise<PaymentCallbackResult> {
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || process.env.NODE_ENV;
+    if (nodeEnv === 'production') {
+      throw new ServiceUnavailableException(
+        `Cổng thanh toán giả lập (${this.method}) bị nghiêm cấm trong môi trường production`,
+      );
+    }
+
     verifySignature(payload, this.configService.get<string>(this.secretKey));
     return callbackResult(payload);
   }
 }
 
+// Backwards compatibility alias
+export const SignedOnlinePaymentProvider = MockSignedPaymentProvider;
+
 @Injectable()
-export class VnPayPaymentProvider extends SignedOnlinePaymentProvider {
+export class VnPayPaymentProvider extends MockSignedPaymentProvider {
   readonly method = PaymentMethod.VNPAY;
   readonly secretKey = 'VNPAY_HASH_SECRET';
   readonly gatewayUrlKey = 'VNPAY_PAYMENT_URL';
@@ -133,7 +157,7 @@ export class VnPayPaymentProvider extends SignedOnlinePaymentProvider {
 }
 
 @Injectable()
-export class MomoPaymentProvider extends SignedOnlinePaymentProvider {
+export class MomoPaymentProvider extends MockSignedPaymentProvider {
   readonly method = PaymentMethod.MOMO;
   readonly secretKey = 'MOMO_SECRET_KEY';
   readonly gatewayUrlKey = 'MOMO_PAYMENT_URL';

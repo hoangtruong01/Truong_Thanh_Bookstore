@@ -234,7 +234,7 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(result.accessToken).toBe('mock.jwt.token');
       expect(result.refreshToken).toBe('mock.jwt.token');
       expect(user.save).toHaveBeenCalled();
-      expect(tokenBlacklistService.isTokenBlacklisted('old.access.token')).toBe(
+      expect(await tokenBlacklistService.isTokenBlacklisted('old.access.token')).toBe(
         true,
       );
     });
@@ -316,10 +316,10 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(result.success).toBe(true);
       expect(user.refreshTokenHash).toBeUndefined();
       expect(user.save).toHaveBeenCalled();
-      expect(tokenBlacklistService.isTokenBlacklisted(rawAccessToken)).toBe(
+      expect(await tokenBlacklistService.isTokenBlacklisted(rawAccessToken)).toBe(
         true,
       );
-      expect(tokenBlacklistService.isJtiBlacklisted('logout-jti-1')).toBe(true);
+      expect(await tokenBlacklistService.isJtiBlacklisted('logout-jti-1')).toBe(true);
     });
   });
 
@@ -368,9 +368,9 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(user.refreshTokenHash).toBeUndefined();
       expect(user.save).toHaveBeenCalled();
       expect(
-        tokenBlacklistService.isTokenBlacklisted('current.access.token'),
+        await tokenBlacklistService.isTokenBlacklisted('current.access.token'),
       ).toBe(true);
-      expect(tokenBlacklistService.isJtiBlacklisted('change-pw-jti')).toBe(
+      expect(await tokenBlacklistService.isJtiBlacklisted('change-pw-jti')).toBe(
         true,
       );
       const isNewMatch = await bcrypt.compare('NewPassword@456', user.password);

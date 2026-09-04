@@ -81,8 +81,8 @@ export class NotificationsGateway
       }>(token);
       if (
         (payload.jti &&
-          this.tokenBlacklistService.isJtiBlacklisted(payload.jti)) ||
-        this.tokenBlacklistService.isTokenBlacklisted(token)
+          (await this.tokenBlacklistService.isJtiBlacklisted(payload.jti))) ||
+        (await this.tokenBlacklistService.isTokenBlacklisted(token))
       ) {
         throw new Error('Revoked token');
       }

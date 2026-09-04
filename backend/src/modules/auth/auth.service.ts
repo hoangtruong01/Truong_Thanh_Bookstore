@@ -259,7 +259,7 @@ export class AuthService {
 
     // Blacklist previous access token if provided
     if (rawAccessToken) {
-      this.tokenBlacklistService.blacklistToken(rawAccessToken);
+      await this.tokenBlacklistService.blacklistToken(rawAccessToken);
     }
 
     // Token Rotation: Generate a completely new pair of access & refresh tokens
@@ -281,10 +281,10 @@ export class AuthService {
         const decoded: any = this.jwtService.decode(rawAccessToken);
         const exp = decoded?.exp;
         const jti = decoded?.jti;
-        if (jti) this.tokenBlacklistService.blacklistJti(jti, exp);
-        this.tokenBlacklistService.blacklistToken(rawAccessToken, exp);
+        if (jti) await this.tokenBlacklistService.blacklistJti(jti, exp);
+        await this.tokenBlacklistService.blacklistToken(rawAccessToken, exp);
       } catch {
-        this.tokenBlacklistService.blacklistToken(rawAccessToken);
+        await this.tokenBlacklistService.blacklistToken(rawAccessToken);
       }
     }
 
@@ -369,10 +369,10 @@ export class AuthService {
       try {
         const decoded: any = this.jwtService.decode(rawAccessToken);
         if (decoded?.jti)
-          this.tokenBlacklistService.blacklistJti(decoded.jti, decoded.exp);
-        this.tokenBlacklistService.blacklistToken(rawAccessToken, decoded?.exp);
+          await this.tokenBlacklistService.blacklistJti(decoded.jti, decoded.exp);
+        await this.tokenBlacklistService.blacklistToken(rawAccessToken, decoded?.exp);
       } catch {
-        this.tokenBlacklistService.blacklistToken(rawAccessToken);
+        await this.tokenBlacklistService.blacklistToken(rawAccessToken);
       }
     }
 
