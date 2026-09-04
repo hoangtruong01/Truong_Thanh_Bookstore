@@ -8,6 +8,9 @@ import { randomUUID } from 'crypto';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { SentryService } from './common/sentry/sentry.service';
+import { StructuredLoggerService } from './common/logger/structured-logger.service';
 import { ErrorCode } from './common/enums';
 import { json, urlencoded, Request, Response, NextFunction } from 'express';
 
@@ -41,11 +44,12 @@ async function bootstrap() {
 
   // Request Correlation ID Middleware (OBS-01)
   app.use((req: Request, res: Response, next: NextFunction) => {
-    const suppliedId = req.get('X-Correlation-ID');
+    const suppliedId = req.get('X-Correlation-ID') || req.get('X-Request-ID');
     const correlationId =
       suppliedId && /^[a-zA-Z0-9._:-]{1,128}$/.test(suppliedId)
         ? suppliedId
         : randomUUID();
+    (req as any).correlationId = correlationId;
     res.setHeader('X-Correlation-ID', correlationId);
     next();
   });
@@ -133,11 +137,17 @@ async function bootstrap() {
     }),
   );
 
+  // Observability & Structured Logging (BE-07)
+  const sentryService = app.get(SentryService);
+  const structuredLogger = app.get(StructuredLoggerService);
+  const loggingInterceptor = app.get(LoggingInterceptor);
+  app.useLogger(structuredLogger);
+
   // Global filters
-  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new HttpExceptionFilter(sentryService));
 
   // Global interceptors
-  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(new TransformInterceptor(), loggingInterceptor);
 
   // Keep the API explorer out of production unless explicitly enabled.
   const enableSwagger =

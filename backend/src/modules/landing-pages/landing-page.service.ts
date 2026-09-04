@@ -173,11 +173,50 @@ export class LandingPageService {
     cleaned.status =
       cleaned.status !== undefined ? Boolean(cleaned.status) : true;
 
+    if (cleaned.status) {
+      if (cleaned.packages.length > 0) {
+        const unboundPackage = cleaned.packages.find(
+          (pkg) => !pkg.productId && !cleaned.productId,
+        );
+        if (unboundPackage) {
+          throw new BadRequestException(
+            `Gói "${unboundPackage.name}" phải liên kết với một Product ID thực`,
+          );
+        }
+        cleaned.packages = cleaned.packages.map((pkg) => ({
+          ...pkg,
+          productId: pkg.productId || cleaned.productId,
+        }));
+      } else if (!cleaned.productId) {
+        throw new BadRequestException(
+          'Landing page đang hoạt động phải liên kết với một Product ID thực',
+        );
+      }
+    }
+
     return cleaned;
+  }
+
+  private async assertProductBindings(
+    dto: CreateLandingPageDto,
+  ): Promise<void> {
+    if (dto.status === false) return;
+    const ids = [
+      dto.productId,
+      ...(dto.packages || []).map((pkg) => pkg.productId),
+    ].filter((id): id is string => typeof id === 'string' && id.length > 0);
+    const uniqueIds = [...new Set(ids)];
+    const products = await this.productsService.findByIds(uniqueIds);
+    if (products.length !== uniqueIds.length) {
+      throw new BadRequestException(
+        'Một hoặc nhiều Product ID trên landing page không tồn tại hoặc đã bị xóa',
+      );
+    }
   }
 
   async create(dto: CreateLandingPageDto): Promise<LandingPageDocument> {
     const cleanedDto = this.cleanLandingPageDto(dto);
+    await this.assertProductBindings(cleanedDto);
     const existing = await this.landingPageModel
       .findOne({ slug: cleanedDto.slug })
       .exec();
@@ -195,6 +234,7 @@ export class LandingPageService {
       throw new BadRequestException('ID trang bán hàng không hợp lệ');
     }
     const cleanedDto = this.cleanLandingPageDto(dto);
+    await this.assertProductBindings(cleanedDto);
     const existing = await this.landingPageModel
       .findOne({ slug: cleanedDto.slug, _id: { $ne: id } })
       .exec();
@@ -244,31 +284,25 @@ export class LandingPageService {
       (p) => p.name?.trim().toLowerCase() === searchPkgName,
     );
 
-    // Resolve target product ID: dto override -> package -> page -> active product fallback
-    const targetProductId =
-      dto.productId ||
-      selectedPkg?.productId?.toString() ||
-      (page as any).productId?.toString();
-
-    let product: any = null;
-    if (targetProductId) {
-      product = await this.productsService.findById(targetProductId);
-    } else {
-      // Fallback: search for active product matching page slug or first active product
-      const matchingProduct = await this.productsService
-        .findBySlug(page.slug)
-        .catch(() => null);
-      if (matchingProduct && !(matchingProduct as any).isDeleted) {
-        product = matchingProduct;
-      } else {
-        const productList = await this.productsService.findAll({ limit: 1 });
-        if (productList && productList.data && productList.data.length > 0) {
-          product = productList.data[0];
-        }
-      }
+    if (page.packages?.length && !selectedPkg) {
+      throw new BadRequestException(
+        'Gói sản phẩm đã chọn không tồn tại trên landing page',
+      );
     }
 
-    if (!product || (product as any).isDeleted) {
+    // Resolve only an administrator-configured binding. Never guess a SKU.
+    const targetProductId =
+      selectedPkg?.productId?.toString() || (page as any).productId?.toString();
+
+    if (!targetProductId) {
+      throw new BadRequestException(
+        'Gói sản phẩm chưa được liên kết với Product ID thực trong kho',
+      );
+    }
+
+    const product = await this.productsService.findById(targetProductId);
+
+    if (!product || product.isDeleted) {
       throw new BadRequestException(
         'Gói sản phẩm hoặc trang bán hàng chưa được liên kết với sản phẩm hợp lệ trong kho',
       );
@@ -278,18 +312,19 @@ export class LandingPageService {
       ? selectedPkg.price
       : page.price > 0
         ? page.price
-        : (product as any).discountPrice > 0
-          ? (product as any).discountPrice
-          : (product as any).price;
+        : product.discountPrice > 0
+          ? product.discountPrice
+          : product.price;
 
     const createOrderDto = {
       items: [
         {
           product: product._id.toString(),
-          name: `${product.name} (${selectedPkg ? selectedPkg.name : (dto.packageName || 'Mặc định')})`,
+          name: `${product.name} (${selectedPkg ? selectedPkg.name : dto.packageName || 'Mặc định'})`,
           price: orderPrice,
           quantity: 1,
-          image: (product.images && product.images[0]) || page.images?.[0] || '',
+          image:
+            (product.images && product.images[0]) || page.images?.[0] || '',
         },
       ],
       shippingAddress: dto.address.trim(),
@@ -306,7 +341,7 @@ export class LandingPageService {
     };
 
     // Route order creation through central OrdersService pipeline
-    const savedOrder = await this.ordersService.create(createOrderDto as any);
+    const savedOrder = await this.ordersService.create(createOrderDto);
 
     // Sync to Google Sheet (async)
     this.ordersService
@@ -425,7 +460,10 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
       const parsed = JSON.parse(cleanJson);
 
       // BE-08: Validate AI output schema with class-validator
-      const dtoInstance = plainToInstance(GeneratedLandingPageResponseDto, parsed);
+      const dtoInstance = plainToInstance(
+        GeneratedLandingPageResponseDto,
+        parsed,
+      );
       const validationErrors = await validate(dtoInstance);
       if (validationErrors.length > 0) {
         this.logger.warn(

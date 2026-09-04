@@ -20,6 +20,12 @@ export class OrderItem {
   @Prop({ required: true })
   quantity: number;
 
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Category' })
+  category?: Types.ObjectId;
+
+  @Prop()
+  categoryName?: string;
+
   @Prop()
   image: string;
 }
@@ -121,6 +127,12 @@ export class Order {
   @Prop({ type: Boolean, default: false })
   loyaltyAwarded: boolean;
 
+  @Prop({ type: Number, default: 0, min: 0 })
+  loyaltyPointsAwarded: number;
+
+  @Prop()
+  revenueRecognizedAt?: Date;
+
   @Prop()
   autoCancelWarningSentAt?: Date;
 
@@ -131,10 +143,10 @@ export class Order {
 export const OrderSchema = SchemaFactory.createForClass(Order);
 
 // BE-08 & FIX-2.4: Indexes for order queries
-OrderSchema.index({ orderCode: 1 }, { unique: true });
 OrderSchema.index({ customer: 1, createdAt: -1 });
 OrderSchema.index({ orderStatus: 1 });
 OrderSchema.index({ createdAt: -1 });
+OrderSchema.index({ revenueRecognizedAt: -1 });
 OrderSchema.index({ promotionCode: 1 });
 OrderSchema.index(
   { customer: 1, idempotencyKeyHash: 1 },

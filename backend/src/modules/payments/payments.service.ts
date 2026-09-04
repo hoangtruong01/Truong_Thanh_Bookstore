@@ -31,6 +31,18 @@ export class PaymentsService {
     private readonly providers: PaymentProviderRegistry,
   ) {}
 
+  private async syncOrderPaymentStatus(
+    orderId: Types.ObjectId,
+    status: PaymentStatus,
+    paidAt?: Date,
+  ): Promise<void> {
+    const update: Record<string, unknown> = { paymentStatus: status };
+    if (status === PaymentStatus.PAID) {
+      update.revenueRecognizedAt = paidAt || new Date();
+    }
+    await this.orderModel.updateOne({ _id: orderId }, { $set: update }).exec();
+  }
+
   private normalizeActor(
     actor?: string | PaymentActor,
   ): PaymentActor | undefined {
@@ -180,7 +192,14 @@ export class PaymentsService {
       throw new BadRequestException('Phiên thanh toán đã hết hạn');
     }
     if (payment.callbackProcessedAt || payment.status === PaymentStatus.PAID) {
-      if (payment.transactionId === dto.transactionId) return payment;
+      if (payment.transactionId === dto.transactionId) {
+        await this.syncOrderPaymentStatus(
+          payment.order,
+          payment.status,
+          payment.paidAt,
+        );
+        return payment;
+      }
       throw new ConflictException(
         'Thanh toán đã nhận một callback khác trước đó',
       );
@@ -205,16 +224,22 @@ export class PaymentsService {
       .exec();
     if (!updated) {
       const processed = await this.paymentModel.findById(payment._id).exec();
-      if (processed?.transactionId === dto.transactionId) return processed;
+      if (processed?.transactionId === dto.transactionId) {
+        await this.syncOrderPaymentStatus(
+          processed.order,
+          processed.status,
+          processed.paidAt,
+        );
+        return processed;
+      }
       throw new ConflictException('Callback thanh toán trùng lặp');
     }
 
-    await this.orderModel
-      .updateOne(
-        { _id: payment.order },
-        { $set: { paymentStatus: result.status } },
-      )
-      .exec();
+    await this.syncOrderPaymentStatus(
+      payment.order,
+      result.status,
+      updated.paidAt,
+    );
     return updated;
   }
 

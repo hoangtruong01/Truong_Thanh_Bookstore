@@ -162,7 +162,7 @@ describe('LandingPageService (BE-03)', () => {
         }),
       );
       expect(
-        (mockOrdersService.create.mock.calls[0][0] as any).customerEmail,
+        mockOrdersService.create.mock.calls[0][0].customerEmail,
       ).toBeUndefined();
       expect(mockOrdersService.syncToGoogleSheet).toHaveBeenCalledWith(
         createdMockOrder,
@@ -217,6 +217,46 @@ describe('LandingPageService (BE-03)', () => {
         }),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('should reject an active landing package without a configured productId', async () => {
+      mockLandingPageModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          ...mockLandingPage,
+          productId: undefined,
+          packages: [{ name: 'Unbound package', price: 75000 }],
+        }),
+      });
+
+      await expect(
+        service.submitOrder({
+          landingPageId: mockLandingPageId,
+          fullName: 'Test User',
+          phone: '0901234567',
+          address: 'Ha Noi',
+          packageName: 'Unbound package',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockProductsService.findById).not.toHaveBeenCalled();
+      expect(mockProductsService.findBySlug).not.toHaveBeenCalled();
+      expect(mockProductsService.findAll).not.toHaveBeenCalled();
+    });
+
+    it('should reject a package name that is not configured on the page', async () => {
+      mockLandingPageModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockLandingPage),
+      });
+
+      await expect(
+        service.submitOrder({
+          landingPageId: mockLandingPageId,
+          fullName: 'Test User',
+          phone: '0901234567',
+          address: 'Ha Noi',
+          packageName: 'Forged package',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockOrdersService.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('generateSlug', () => {
@@ -242,7 +282,9 @@ describe('LandingPageService (BE-03)', () => {
         textColor: '#1e293b',
         benefits: [{ title: 'Lợi ích 1', description: 'Chi tiết' }],
         packages: [{ name: 'Gói 1', price: 90000, isBestSeller: true }],
-        testimonials: [{ authorName: 'Độc giả', content: 'Sách rất hay', rating: 5 }],
+        testimonials: [
+          { authorName: 'Độc giả', content: 'Sách rất hay', rating: 5 },
+        ],
       };
 
       global.fetch = jest.fn().mockResolvedValue({

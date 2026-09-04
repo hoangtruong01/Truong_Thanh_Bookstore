@@ -422,6 +422,7 @@ const orderForm = ref({
   address: '',
   note: '',
 });
+const landingOrderIdempotencyKey = crypto.randomUUID();
 
 const selectedPackagePrice = computed(() => {
   if (!page.value.packages || page.value.packages.length === 0) return page.value.price || 0;
@@ -526,9 +527,10 @@ async function handleSubmitOrder() {
       address: orderForm.value.address,
       packageName: selectedPackage.value,
       note: orderForm.value.note,
+      idempotencyKey: landingOrderIdempotencyKey,
     })) as any;
 
-    createdOrderCode.value = response.orderCode;
+    createdOrderCode.value = response.data?.orderCode || response.orderCode;
     showSuccessModal.value = true;
     toast.success('Đăng ký đặt hàng thành công!');
   } catch (err: any) {

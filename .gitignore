@@ -70,3 +70,12 @@ out/
 # Scratch/test files
 scratch_*
 **/scratch_*
+
+# Playwright
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
+blob-report/
+**/blob-report/
+playwright/.cache/

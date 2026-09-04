@@ -17,7 +17,7 @@ export class BenefitItem {
 
 @Schema({ _id: false })
 export class PackageItem {
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: false })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: true })
   productId?: Types.ObjectId;
 
   @Prop({ required: true })
@@ -112,4 +112,3 @@ export class LandingPage {
 export const LandingPageSchema = SchemaFactory.createForClass(LandingPage);
 
 // BE-08: Explicit unique index for landing page slug lookup
-LandingPageSchema.index({ slug: 1 }, { unique: true });

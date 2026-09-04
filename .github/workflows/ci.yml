@@ -7,6 +7,27 @@ on:
     branches: [ main, master, develop, dev ]
 
 jobs:
+  # -------------------------------------------------------------
+  # Security Scan (Gitleaks) — Scan repository for leaked secrets
+  # -------------------------------------------------------------
+  gitleaks:
+    name: 🛡️ Secret Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Run Gitleaks Security Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  # -------------------------------------------------------------
+  # Backend CI — NestJS, MongoDB ReplicaSet, Jest & Security
+  # -------------------------------------------------------------
   backend-ci:
     name: 🚀 Backend CI (NestJS + Jest)
     runs-on: ubuntu-latest
@@ -55,8 +76,11 @@ jobs:
       - name: 🏗️ Build Backend Production Bundle
         run: npm run build
 
+  # -------------------------------------------------------------
+  # Frontend CI — Vue 3, Vite, TypeCheck & Playwright E2E
+  # -------------------------------------------------------------
   frontend-ci:
-    name: 🌐 Frontend CI (Vue 3 + Vite + TypeCheck)
+    name: 🌐 Frontend CI (Vue 3 + Vite + Playwright)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -85,6 +109,23 @@ jobs:
       - name: 🏗️ Type Check & Build Production Bundle
         run: npm run build
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: 🎭 Run Playwright E2E Tests
+        run: npm run test:e2e
+
+      - name: 📦 Upload Playwright Trace & Artifacts on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 14
+
+  # -------------------------------------------------------------
+  # Mobile CI — Flutter & Dart Tests
+  # -------------------------------------------------------------
   mobile-ci:
     name: 📱 Mobile CI (Flutter + Dart Tests)
     runs-on: ubuntu-latest

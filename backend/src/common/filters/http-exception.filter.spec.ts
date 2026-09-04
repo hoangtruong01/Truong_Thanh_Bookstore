@@ -5,11 +5,8 @@ import {
   getErrorCodeFromStatus,
 } from './http-exception.filter';
 import { ErrorCode } from '../enums/error-code.enum';
-import {
-  AppException,
-  BusinessException,
-  InsufficientStockException,
-} from '../exceptions/app.exception';
+import { InsufficientStockException } from '../exceptions/app.exception';
+import { SentryService } from '../sentry/sentry.service';
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;
@@ -19,7 +16,7 @@ describe('HttpExceptionFilter', () => {
     delete process.env.NODE_ENV;
   });
 
-  const createMockHost = (reqOverwrites: Record<string, any> = {}) => {
+  const createMockHost = (reqOverwrites: Record<string, unknown> = {}) => {
     const mockJson = jest.fn();
     const mockStatus = jest.fn().mockReturnValue({ json: mockJson });
     const mockGetResponse = jest.fn().mockReturnValue({ status: mockStatus });
@@ -319,7 +316,7 @@ describe('HttpExceptionFilter', () => {
       const syntaxError = new SyntaxError(
         'Unexpected token in JSON at position 10',
       );
-      (syntaxError as any).status = 400;
+      (syntaxError as SyntaxError & { status: number }).status = 400;
 
       filter.catch(syntaxError, mockHost);
 
@@ -349,6 +346,46 @@ describe('HttpExceptionFilter', () => {
           message: 'Đã có lỗi xảy ra từ hệ thống. Vui lòng thử lại sau.',
           errorCode: ErrorCode.ERR_INTERNAL_SERVER_ERROR,
           details: {},
+        }),
+      );
+    });
+
+    it('should include correlationId in response and logPayload when provided', () => {
+      const { mockHost, mockJson } = createMockHost({
+        headers: { 'x-correlation-id': 'my-custom-cid-123' },
+      });
+      const error = new HttpException('Bad Request', HttpStatus.BAD_REQUEST);
+
+      filter.catch(error, mockHost);
+
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          correlationId: 'my-custom-cid-123',
+        }),
+      );
+    });
+
+    it('should forward 500 exceptions to SentryService if configured', () => {
+      const mockSentryService = {
+        captureException: jest.fn(),
+      };
+      const filterWithSentry = new HttpExceptionFilter(
+        mockSentryService as unknown as SentryService,
+      );
+
+      const { mockHost } = createMockHost({
+        headers: { 'x-correlation-id': 'sentry-cid-456' },
+      });
+      const internalError = new Error('Unexpected crash in payments');
+
+      filterWithSentry.catch(internalError, mockHost);
+
+      expect(mockSentryService.captureException).toHaveBeenCalledTimes(1);
+      expect(mockSentryService.captureException).toHaveBeenCalledWith(
+        internalError,
+        expect.objectContaining({
+          correlationId: 'sentry-cid-456',
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         }),
       );
     });

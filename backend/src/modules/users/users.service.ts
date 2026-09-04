@@ -22,6 +22,7 @@ import {
   UpdateUserStatusDto,
   UserQueryDto,
 } from './dto/user.dto';
+import { SecurityAuditService } from '../../common/audit/security-audit.service';
 
 @Injectable()
 export class UsersService {
@@ -33,6 +34,8 @@ export class UsersService {
     @Optional()
     @Inject(forwardRef(() => CartService))
     private cartService?: CartService,
+    @Optional()
+    private securityAuditService?: SecurityAuditService,
   ) {}
 
   async findById(id: string): Promise<UserDocument> {
@@ -185,12 +188,14 @@ export class UsersService {
       typeof roleOrDto === 'object' && roleOrDto !== null
         ? roleOrDto.role
         : roleOrDto;
-    let actorRole = actorRoleOrActor;
+    let actorRole: UserRole;
     let actorId = actorIdParam;
 
     if (typeof actorRoleOrActor === 'object' && actorRoleOrActor !== null) {
-      actorRole = actorRoleOrActor.role;
+      actorRole = actorRoleOrActor.role as UserRole;
       actorId = actorRoleOrActor._id;
+    } else {
+      actorRole = actorRoleOrActor as UserRole;
     }
 
     if (actorId && targetUserId === actorId.toString()) {
@@ -247,6 +252,12 @@ export class UsersService {
     }
 
     const updated = await targetUser.save();
+    this.securityAuditService?.logRoleAssignment({
+      actorId: actorId ? String(actorId) : undefined,
+      actorRole: actorRole ? String(actorRole) : undefined,
+      targetUserId,
+      newRole,
+    });
     const result = updated.toObject ? updated.toObject() : updated;
     delete (result as any).password;
     return result as any;
@@ -303,12 +314,14 @@ export class UsersService {
       typeof statusOrDto === 'object' && statusOrDto !== null
         ? statusOrDto.status
         : statusOrDto;
-    let actorRole = actorRoleOrActor;
+    let actorRole: UserRole;
     let actorId = actorIdParam;
 
     if (typeof actorRoleOrActor === 'object' && actorRoleOrActor !== null) {
-      actorRole = actorRoleOrActor.role;
+      actorRole = actorRoleOrActor.role as UserRole;
       actorId = actorRoleOrActor._id;
+    } else {
+      actorRole = actorRoleOrActor as UserRole;
     }
 
     if (actorId && targetUserId === actorId.toString()) {
@@ -338,6 +351,12 @@ export class UsersService {
 
     targetUser.status = status;
     const updated = await targetUser.save();
+    this.securityAuditService?.logAccountStatusChange({
+      actorId: actorId ? String(actorId) : undefined,
+      actorRole: actorRole ? String(actorRole) : undefined,
+      targetUserId,
+      status,
+    });
     const result = updated.toObject ? updated.toObject() : updated;
     delete (result as any).password;
     return result as any;

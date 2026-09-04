@@ -71,6 +71,36 @@ export class OrdersService {
     return createHash('sha256').update(value).digest('hex');
   }
 
+  private getRealizedRevenueMatch(): Record<string, unknown> {
+    return {
+      orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+      $or: [
+        { paymentStatus: PaymentStatus.PAID },
+        {
+          orderStatus: {
+            $in: [OrderStatus.DELIVERED, OrderStatus.COMPLETED],
+          },
+        },
+      ],
+    };
+  }
+
+  private getRevenueDateMatch(
+    start: Date,
+    end?: Date,
+  ): Record<string, unknown> {
+    const range = end ? { $gte: start, $lte: end } : { $gte: start };
+    return {
+      $or: [
+        { revenueRecognizedAt: range },
+        {
+          revenueRecognizedAt: { $exists: false },
+          createdAt: range,
+        },
+      ],
+    };
+  }
+
   private isTransientTransactionError(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
     const hasLabel =
@@ -361,6 +391,8 @@ export class OrdersService {
       price: number;
       quantity: number;
       image: string;
+      category?: string;
+      categoryName: string;
     }> = [];
     for (const item of dto.items) {
       const product = productMap.get(item.product);
@@ -374,6 +406,13 @@ export class OrdersService {
           `Sản phẩm "${product.name}" chỉ còn ${product.stock} sản phẩm trong kho`,
         );
       }
+      const populatedCategory = product.category as unknown as {
+        _id?: { toString(): string };
+        name?: string;
+      };
+      const categoryId = populatedCategory?._id
+        ? populatedCategory._id.toString()
+        : product.category?.toString();
       verifiedItems.push({
         product: item.product,
         name: product.name,
@@ -381,6 +420,8 @@ export class OrdersService {
           product.discountPrice > 0 ? product.discountPrice : product.price,
         quantity: item.quantity,
         image: product.images?.[0] || item.image || '',
+        category: categoryId,
+        categoryName: populatedCategory?.name || 'KhÃ¡c',
       });
     }
 
@@ -555,8 +596,6 @@ export class OrdersService {
             this.logger.error('Failed to clear cart after order creation', err),
           );
       }
-
-      const points = Math.floor(savedOrder.total / 1000);
 
       await this.notificationsService
         .create({
@@ -749,6 +788,12 @@ export class OrdersService {
       } catch (error: unknown) {
         if (session.inTransaction()) await session.abortTransaction();
         if (this.isTransactionUnsupported(error)) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown transaction error';
+          this.logger.error(
+            `Order status transaction is unavailable: ${errorMessage}`,
+            error instanceof Error ? error.stack : undefined,
+          );
           throw new ServiceUnavailableException(
             'Cập nhật trạng thái đơn hàng yêu cầu MongoDB replica set để bảo đảm toàn vẹn dữ liệu',
           );
@@ -868,7 +913,9 @@ export class OrdersService {
 
       // BE-05: Deduct loyalty points ONLY if loyalty points were already awarded
       if (order.customer && order.loyaltyAwarded) {
-        const points = Math.floor(order.total / 1000);
+        const points =
+          order.loyaltyPointsAwarded ||
+          Math.floor((order.subtotal || order.total) / 1000);
         if (points > 0) {
           try {
             await this.usersService.deductLoyaltyPoints(
@@ -891,12 +938,11 @@ export class OrdersService {
 
     // BE-05: Award loyalty points only when order is DELIVERED or COMPLETED
     if (
-      (dto.orderStatus === OrderStatus.DELIVERED ||
-        dto.orderStatus === OrderStatus.COMPLETED) &&
+      dto.orderStatus === OrderStatus.DELIVERED &&
       order.customer &&
       !order.loyaltyAwarded
     ) {
-      const points = Math.floor(order.total / 1000);
+      const points = Math.floor((order.subtotal || order.total) / 1000);
       if (points > 0) {
         const customerId = order.customer.toString();
         try {
@@ -906,6 +952,7 @@ export class OrdersService {
             session,
           );
           order.loyaltyAwarded = true;
+          order.loyaltyPointsAwarded = points;
 
           if (res) {
             // Loyalty points notification
@@ -980,6 +1027,7 @@ export class OrdersService {
       order.paymentMethod === PaymentMethod.COD
     ) {
       order.paymentStatus = PaymentStatus.PAID;
+      order.revenueRecognizedAt ||= new Date();
     }
 
     const savedOrder = await order.save(session ? { session } : undefined);
@@ -1160,8 +1208,8 @@ export class OrdersService {
     const result = await this.orderModel.aggregate([
       {
         $match: {
-          createdAt: { $gte: startOfTodayVN },
-          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+          ...this.getRealizedRevenueMatch(),
+          $and: [this.getRevenueDateMatch(startOfTodayVN)],
         },
       },
       { $group: { _id: null, total: { $sum: '$total' } } },
@@ -1173,8 +1221,8 @@ export class OrdersService {
     return this.orderModel.aggregate([
       {
         $match: {
-          createdAt: { $gte: startDate, $lte: endDate },
-          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+          ...this.getRealizedRevenueMatch(),
+          $and: [this.getRevenueDateMatch(startDate, endDate)],
         },
       },
       {
@@ -1220,7 +1268,7 @@ export class OrdersService {
     const result = await this.orderModel.aggregate([
       {
         $match: {
-          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+          ...this.getRealizedRevenueMatch(),
         },
       },
       {
@@ -1238,7 +1286,7 @@ export class OrdersService {
       {
         $match: {
           promotionCode: { $exists: true, $ne: null },
-          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+          ...this.getRealizedRevenueMatch(),
         },
       },
       {
@@ -1256,7 +1304,7 @@ export class OrdersService {
     const result = await this.orderModel.aggregate([
       {
         $match: {
-          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+          ...this.getRealizedRevenueMatch(),
         },
       },
       { $unwind: '$items' },
@@ -1290,7 +1338,12 @@ export class OrdersService {
       },
       {
         $group: {
-          _id: { $ifNull: ['$categoryDoc.name', 'Khác'] },
+          _id: {
+            $ifNull: [
+              '$items.categoryName',
+              { $ifNull: ['$categoryDoc.name', 'Khác'] },
+            ],
+          },
           revenue: {
             $sum: { $multiply: ['$items.price', '$items.quantity'] },
           },
@@ -1403,8 +1456,8 @@ export class OrdersService {
     const result = await this.orderModel.aggregate([
       {
         $match: {
-          createdAt: { $gte: start, $lte: end },
-          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+          ...this.getRealizedRevenueMatch(),
+          $and: [this.getRevenueDateMatch(start, end)],
         },
       },
       {
@@ -1674,7 +1727,10 @@ export class OrdersService {
                 },
               })
               .catch((err) =>
-                this.logger.error('Lỗi khi gửi thông báo cảnh báo đơn hàng', err),
+                this.logger.error(
+                  'Lỗi khi gửi thông báo cảnh báo đơn hàng',
+                  err,
+                ),
               );
           }
 

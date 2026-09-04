@@ -28,6 +28,7 @@ import { CartModule } from './modules/cart/cart.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { SecuritySanitizerMiddleware } from './common/middleware/security-sanitizer.middleware';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { SecuritySanitizerMiddleware } from './common/middleware/security-saniti
       validate: validateEnv,
       envFilePath: ['.env.local', '.env'],
     }),
+    CommonModule,
     ScheduleModule.forRoot(),
     RedisModule,
     MongooseModule.forRootAsync({

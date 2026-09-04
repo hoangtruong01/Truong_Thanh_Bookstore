@@ -27,6 +27,10 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     status: 'ACTIVE',
     isDeleted: false,
     images: ['https://example.com/pen.jpg'],
+    category: {
+      _id: '507f1f77bcf86cd799439022',
+      name: 'Văn phòng phẩm',
+    },
   };
 
   const mockOrderModel = function (dto: any) {
@@ -379,6 +383,22 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
           }),
         ]),
       );
+      expect(pipeline).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            $match: expect.objectContaining({
+              $or: expect.arrayContaining([
+                { paymentStatus: 'PAID' },
+                {
+                  orderStatus: {
+                    $in: [OrderStatus.DELIVERED, OrderStatus.COMPLETED],
+                  },
+                },
+              ]),
+            }),
+          }),
+        ]),
+      );
     };
 
     it('should aggregate category revenue excluding cancelled/returned orders', async () => {
@@ -401,6 +421,9 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
           }),
         ]),
       );
+      expect(
+        JSON.stringify(mockOrderModel.aggregate.mock.calls[0][0]),
+      ).toContain('items.categoryName');
     });
 
     it('should exclude cancelled and returned orders from every revenue KPI', async () => {
@@ -425,12 +448,13 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
       await ordersService.getGrowthStats('day');
       const dayPipeline = mockOrderModel.aggregate.mock.calls[0][0];
-      const dayMatch = dayPipeline[0].$match.createdAt;
+      const dayMatch = dayPipeline[0].$match.$and[0].$or[0].revenueRecognizedAt;
       mockOrderModel.aggregate.mockClear();
 
       await ordersService.getGrowthStats('year');
       const yearPipeline = mockOrderModel.aggregate.mock.calls[0][0];
-      const yearMatch = yearPipeline[0].$match.createdAt;
+      const yearMatch =
+        yearPipeline[0].$match.$and[0].$or[0].revenueRecognizedAt;
 
       expect(
         yearMatch.$lte.getTime() - yearMatch.$gte.getTime(),
@@ -478,7 +502,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
         paymentMethod: PaymentMethod.COD,
       };
 
-      const created = await ordersService.create(orderDto as any, mockUserId);
+      const created = await ordersService.create(orderDto, mockUserId);
 
       expect(mockUsersService.addLoyaltyPoints).not.toHaveBeenCalled();
       expect(created.orderStatus).toBe(OrderStatus.PENDING);
@@ -489,6 +513,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
         _id: '507f1f77bcf86cd799439011',
         orderCode: 'TT100001',
         orderStatus: OrderStatus.SHIPPING,
+        subtotal: 170000,
         total: 200000,
         customer: mockUserId,
         loyaltyAwarded: false,
@@ -510,7 +535,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
       expect(mockUsersService.addLoyaltyPoints).toHaveBeenCalledWith(
         mockUserId,
-        200, // 200,000 / 1,000
+        170, // subtotal only; shipping and discounts do not earn points
         undefined,
       );
       expect(pendingOrder.loyaltyAwarded).toBe(true);
@@ -521,9 +546,11 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
         _id: '507f1f77bcf86cd799439012',
         orderCode: 'TT100002',
         orderStatus: OrderStatus.DELIVERED,
+        subtotal: 270000,
         total: 300000,
         customer: mockUserId,
         loyaltyAwarded: true,
+        loyaltyPointsAwarded: 270,
         timeline: [],
         items: [{ product: mockProduct._id, quantity: 3 }],
         save: jest.fn().mockImplementation(function () {
@@ -542,7 +569,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
       expect(mockUsersService.deductLoyaltyPoints).toHaveBeenCalledWith(
         mockUserId,
-        300,
+        270,
         undefined,
       );
       expect(deliveredOrder.loyaltyAwarded).toBe(false);
@@ -608,11 +635,13 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       };
 
       mockOrderModel.find = jest.fn().mockReturnValue({
-        exec: jest.fn().mockResolvedValue([
-          expiredOnlineOrder,
-          nonExpiredOnlineOrder,
-          expiredCodOrder,
-        ]),
+        exec: jest
+          .fn()
+          .mockResolvedValue([
+            expiredOnlineOrder,
+            nonExpiredOnlineOrder,
+            expiredCodOrder,
+          ]),
       });
 
       const updateStatusSpy = jest
@@ -666,4 +695,3 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     });
   });
 });
-

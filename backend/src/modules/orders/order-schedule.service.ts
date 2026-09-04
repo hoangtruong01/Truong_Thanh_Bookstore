@@ -14,7 +14,9 @@ export class OrderScheduleService {
    */
   @Cron('*/15 * * * *')
   async handleOrderExpirationCron() {
-    this.logger.log('Đang chạy cron job kiểm tra đơn hàng quá hạn & cảnh báo...');
+    this.logger.log(
+      'Đang chạy cron job kiểm tra đơn hàng quá hạn & cảnh báo...',
+    );
     try {
       const warningsCount = await this.ordersService.handleAutoCancelWarnings();
       const cancelledCount = await this.ordersService.handleAutoCancelOrders();
@@ -22,7 +24,10 @@ export class OrderScheduleService {
         `Cron hoàn tất: Đã gửi ${warningsCount} cảnh báo 2h, tự động hủy ${cancelledCount} đơn quá hạn.`,
       );
     } catch (error: any) {
-      this.logger.error('Lỗi khi thực thi cron job hủy đơn hàng quá hạn:', error);
+      this.logger.error(
+        'Lỗi khi thực thi cron job hủy đơn hàng quá hạn:',
+        error,
+      );
     }
   }
 }

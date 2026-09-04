@@ -2,9 +2,21 @@ import { RedisThrottlerStorageService } from './redis-throttler-storage.service'
 import { RedisService } from './redis.service';
 
 describe('RedisThrottlerStorageService (BE-04 Distributed Rate Limiting)', () => {
+  type MockRedisClient = {
+    get: jest.Mock;
+    setex: jest.Mock;
+    incr: jest.Mock;
+    expire: jest.Mock;
+    pttl: jest.Mock;
+  };
+  type MockRedisService = {
+    isConnected: boolean;
+    getClient: jest.Mock;
+  };
+
   let service: RedisThrottlerStorageService;
-  let mockRedisService: any;
-  let mockRedisClient: any;
+  let mockRedisService: MockRedisService;
+  let mockRedisClient: MockRedisClient;
 
   beforeEach(() => {
     mockRedisClient = {
@@ -20,7 +32,9 @@ describe('RedisThrottlerStorageService (BE-04 Distributed Rate Limiting)', () =>
       getClient: jest.fn().mockReturnValue(mockRedisClient),
     };
 
-    service = new RedisThrottlerStorageService(mockRedisService);
+    service = new RedisThrottlerStorageService(
+      mockRedisService as unknown as RedisService,
+    );
   });
 
   afterEach(() => {
@@ -30,7 +44,13 @@ describe('RedisThrottlerStorageService (BE-04 Distributed Rate Limiting)', () =>
   it('should use in-memory fallback when Redis is not connected', async () => {
     mockRedisService.isConnected = false;
 
-    const record = await service.increment('test-ip', 60000, 10, 60000, 'default');
+    const record = await service.increment(
+      'test-ip',
+      60000,
+      10,
+      60000,
+      'default',
+    );
 
     expect(record.totalHits).toBe(1);
     expect(record.isBlocked).toBe(false);
@@ -42,11 +62,19 @@ describe('RedisThrottlerStorageService (BE-04 Distributed Rate Limiting)', () =>
     mockRedisClient.get.mockResolvedValue(null); // Not blocked
     mockRedisClient.incr.mockResolvedValue(1); // 1st hit
 
-    const record = await service.increment('user-1', 60000, 100, 60000, 'default');
+    const record = await service.increment(
+      'user-1',
+      60000,
+      100,
+      60000,
+      'default',
+    );
 
     expect(record.totalHits).toBe(1);
     expect(record.isBlocked).toBe(false);
-    expect(mockRedisClient.incr).toHaveBeenCalledWith('throttle:hits:user-1:default');
+    expect(mockRedisClient.incr).toHaveBeenCalledWith(
+      'throttle:hits:user-1:default',
+    );
     expect(mockRedisClient.expire).toHaveBeenCalledWith(
       'throttle:hits:user-1:default',
       60,
@@ -58,7 +86,13 @@ describe('RedisThrottlerStorageService (BE-04 Distributed Rate Limiting)', () =>
     mockRedisClient.get.mockResolvedValue(null);
     mockRedisClient.incr.mockResolvedValue(101); // Exceeded limit of 100
 
-    const record = await service.increment('user-spammer', 60000, 100, 120000, 'default');
+    const record = await service.increment(
+      'user-spammer',
+      60000,
+      100,
+      120000,
+      'default',
+    );
 
     expect(record.totalHits).toBe(101);
     expect(record.isBlocked).toBe(true);
@@ -74,7 +108,13 @@ describe('RedisThrottlerStorageService (BE-04 Distributed Rate Limiting)', () =>
     mockRedisClient.get.mockResolvedValue('1'); // Already blocked
     mockRedisClient.pttl.mockResolvedValue(45000);
 
-    const record = await service.increment('user-spammer', 60000, 100, 120000, 'default');
+    const record = await service.increment(
+      'user-spammer',
+      60000,
+      100,
+      120000,
+      'default',
+    );
 
     expect(record.isBlocked).toBe(true);
     expect(record.timeToBlockExpire).toBe(45);
@@ -83,9 +123,17 @@ describe('RedisThrottlerStorageService (BE-04 Distributed Rate Limiting)', () =>
 
   it('should fall back gracefully to in-memory if Redis command throws', async () => {
     mockRedisService.isConnected = true;
-    mockRedisClient.get.mockRejectedValue(new Error('Redis connection severed'));
+    mockRedisClient.get.mockRejectedValue(
+      new Error('Redis connection severed'),
+    );
 
-    const record = await service.increment('user-failover', 60000, 10, 60000, 'default');
+    const record = await service.increment(
+      'user-failover',
+      60000,
+      10,
+      60000,
+      'default',
+    );
 
     // Falls back to in-memory without throwing error
     expect(record.totalHits).toBe(1);
