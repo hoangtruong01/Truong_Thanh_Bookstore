@@ -7,13 +7,101 @@ import '../../models/order_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
 
-class OrderDetailScreen extends StatelessWidget {
-  final OrderModel order;
+class OrderDetailScreen extends StatefulWidget {
+  final OrderModel? order;
+  final String? orderId;
 
-  const OrderDetailScreen({super.key, required this.order});
+  const OrderDetailScreen({
+    super.key,
+    this.order,
+    this.orderId,
+  }) : assert(order != null || orderId != null, 'Either order or orderId must be provided');
+
+  @override
+  State<OrderDetailScreen> createState() => _OrderDetailScreenState();
+}
+
+class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  OrderModel? _order;
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = widget.order;
+    if (_order == null && widget.orderId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadOrder());
+    }
+  }
+
+  Future<void> _loadOrder() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final fetched = await orderProvider.fetchOrderById(widget.orderId!, auth.token);
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        if (fetched != null) {
+          _order = fetched;
+        } else {
+          _errorMessage = 'Không tìm thấy thông tin đơn hàng';
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('CHI TIẾT ĐƠN HÀNG')),
+        body: const Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryRed),
+        ),
+      );
+    }
+
+    if (_errorMessage != null || _order == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('CHI TIẾT ĐƠN HÀNG')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage ?? 'Không tìm thấy thông tin đơn hàng',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadOrder,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryRed,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Thử lại'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final order = _order!;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('ĐƠN HÀNG #${order.orderCode}'),
@@ -52,6 +140,22 @@ class OrderDetailScreen extends StatelessWidget {
                     'Ngày đặt: ${Formatters.formatDate(order.createdAt)}',
                     style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
                   ),
+                  if (order.trackingCode != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Mã vận đơn ${order.shippingProvider ?? ''}: ${order.trackingCode}',
+                      style: const TextStyle(
+                        color: Color(0xFF1D4ED8),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (order.shippingStatus != null)
+                      Text(
+                        'Đối tác: ${order.shippingStatus}',
+                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                      ),
+                  ],
                   const SizedBox(height: 12),
                   SizedBox(
                     height: 36,
@@ -202,7 +306,6 @@ class OrderDetailScreen extends StatelessWidget {
               const SizedBox(height: 16),
             ],
 
-
             // Order Items Box
             Container(
               padding: const EdgeInsets.all(16),
@@ -222,7 +325,6 @@ class OrderDetailScreen extends StatelessWidget {
                     itemCount: order.items.length,
                     separatorBuilder: (context, index) => const Divider(height: 16),
                     itemBuilder: (context, index) {
-
                       final item = order.items[index];
                       return Row(
                         children: [
@@ -279,6 +381,10 @@ class OrderDetailScreen extends StatelessWidget {
                   if (order.discount > 0) ...[
                     const SizedBox(height: 6),
                     _DetailRow(label: 'Giảm giá', value: '-${Formatters.formatCurrency(order.discount)}', isRed: true),
+                  ],
+                  if (order.loyaltyDiscount > 0) ...[
+                    const SizedBox(height: 6),
+                    _DetailRow(label: 'Điểm thưởng (${order.loyaltyPointsUsed} điểm)', value: '-${Formatters.formatCurrency(order.loyaltyDiscount)}', isRed: true),
                   ],
                   const Divider(height: 20),
                   Row(

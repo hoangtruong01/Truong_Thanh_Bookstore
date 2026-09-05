@@ -6,8 +6,9 @@ import {
   Param,
   Query,
   UseGuards,
-  Request,
+  Request as NestRequest,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -21,6 +22,14 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { StaffPermission } from '../../common/enums';
 
+type AuthenticatedRequest = Request & {
+  user: {
+    _id: { toString(): string };
+    role?: string;
+    permissions?: string[];
+  };
+};
+
 @ApiTags('payments')
 @Controller('payments')
 export class PaymentsController {
@@ -31,7 +40,10 @@ export class PaymentsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Khởi tạo phiên thanh toán cho đơn hàng' })
-  create(@Body() dto: CreatePaymentDto, @Request() req: any) {
+  create(
+    @Body() dto: CreatePaymentDto,
+    @NestRequest() req: AuthenticatedRequest,
+  ) {
     return this.paymentsService.createPayment(dto, {
       ...req.user,
       _id: req.user._id.toString(),
@@ -42,7 +54,10 @@ export class PaymentsController {
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Lấy thông tin thanh toán của một đơn hàng' })
-  findByOrderId(@Param('orderId') orderId: string, @Request() req: any) {
+  findByOrderId(
+    @Param('orderId') orderId: string,
+    @NestRequest() req: AuthenticatedRequest,
+  ) {
     return this.paymentsService.findByOrderId(orderId, {
       ...req.user,
       _id: req.user._id.toString(),
@@ -54,6 +69,20 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Webhook callback từ cổng thanh toán đối tác' })
   handleCallback(@Body() dto: PaymentCallbackDto) {
     return this.paymentsService.handleCallback(dto);
+  }
+
+  @Get('vnpay/ipn')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @ApiOperation({ summary: 'VNPay server-to-server IPN endpoint' })
+  handleVnPayIpn(@Query() query: Record<string, unknown>) {
+    return this.paymentsService.handleVnPayIpn(query);
+  }
+
+  @Post('momo/ipn')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @ApiOperation({ summary: 'MoMo server-to-server IPN endpoint' })
+  handleMomoIpn(@Body() body: Record<string, unknown>) {
+    return this.paymentsService.handleMomoIpn(body);
   }
 
   @Get()

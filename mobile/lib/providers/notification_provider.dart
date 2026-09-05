@@ -5,6 +5,14 @@ import '../core/constants/api_constants.dart';
 import '../models/notification_model.dart';
 
 class NotificationProvider with ChangeNotifier {
+  NotificationProvider({http.Client? client}) : _client = client ?? http.Client();
+  final http.Client _client;
+
+  @override
+  void dispose() {
+    _client.close();
+    super.dispose();
+  }
   List<NotificationModel> _notifications = [];
   int _unreadCount = 0;
   bool _isLoading = false;
@@ -23,7 +31,7 @@ class NotificationProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await http.get(
+      final res = await _client.get(
         Uri.parse(ApiConstants.myNotifications),
         headers: {
           'Content-Type': 'application/json',
@@ -34,8 +42,9 @@ class NotificationProvider with ChangeNotifier {
       if (res.statusCode == 200) {
         final body = json.decode(res.body);
         final dynamic data = body['data'] ?? body;
-        if (data is List) {
-          _notifications = data.map((item) => NotificationModel.fromJson(item)).toList();
+        final dynamic items = data is Map ? data['items'] : data;
+        if (items is List) {
+          _notifications = items.map((item) => NotificationModel.fromJson(item)).toList();
         }
         await fetchUnreadCount(token);
       } else {
@@ -57,7 +66,7 @@ class NotificationProvider with ChangeNotifier {
     }
 
     try {
-      final res = await http.get(
+      final res = await _client.get(
         Uri.parse(ApiConstants.unreadNotificationCount),
         headers: {
           'Content-Type': 'application/json',
@@ -68,7 +77,7 @@ class NotificationProvider with ChangeNotifier {
       if (res.statusCode == 200) {
         final body = json.decode(res.body);
         final data = body['data'] ?? body;
-        _unreadCount = (data['count'] as num?)?.toInt() ?? 0;
+        _unreadCount = (data['unreadCount'] as num?)?.toInt() ?? 0;
         notifyListeners();
       }
     } catch (e) {
@@ -80,7 +89,7 @@ class NotificationProvider with ChangeNotifier {
     if (token == null || token.isEmpty) return false;
 
     try {
-      final res = await http.patch(
+      final res = await _client.patch(
         Uri.parse(ApiConstants.markNotificationRead(id)),
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +125,7 @@ class NotificationProvider with ChangeNotifier {
     if (token == null || token.isEmpty) return false;
 
     try {
-      final res = await http.patch(
+      final res = await _client.patch(
         Uri.parse(ApiConstants.markAllNotificationsRead),
         headers: {
           'Content-Type': 'application/json',

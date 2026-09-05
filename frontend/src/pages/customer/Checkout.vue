@@ -233,6 +233,48 @@
             </div>
           </div>
 
+          <!-- Loyalty Points Redemption Block (PRODUCT-01) -->
+          <div v-if="authStore.isAuthenticated && userLoyaltyPoints > 0" class="border-t border-slate-100 pt-4 space-y-3">
+            <div class="flex justify-between items-center">
+              <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span>Điểm thưởng tích lũy</span>
+              </h4>
+              <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                Có: {{ userLoyaltyPoints.toLocaleString() }} điểm
+              </span>
+            </div>
+
+            <div v-if="userLoyaltyPoints < 1000" class="text-[11px] text-slate-400 font-medium">
+              Bạn cần tối thiểu 1.000 điểm để quy đổi (hiện có {{ userLoyaltyPoints.toLocaleString() }} điểm).
+            </div>
+
+            <div v-else class="space-y-2">
+              <div class="flex gap-2">
+                <input
+                  v-model.number="loyaltyPointsInput"
+                  type="number"
+                  min="0"
+                  :max="maxAllowedPoints"
+                  step="100"
+                  placeholder="Nhập số điểm muốn tiêu (tối thiểu 1.000)..."
+                  class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-semibold"
+                />
+                <button
+                  type="button"
+                  @click="applyMaxPoints"
+                  class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-2 px-3 rounded-xl text-xs transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  Tối đa
+                </button>
+              </div>
+              <p class="text-[10px] text-slate-500">
+                1 điểm = 100 VNĐ. Tối đa 20% giá trị đơn (tối đa {{ maxAllowedPoints.toLocaleString() }} điểm = {{ formatCurrency(maxAllowedPoints * 100) }}).
+              </p>
+              <p v-if="loyaltyError" class="text-[10px] text-red-500 font-medium">{{ loyaltyError }}</p>
+            </div>
+          </div>
+
           <div class="border-t border-slate-100 pt-4 space-y-3 text-sm font-medium">
             <div class="flex justify-between text-slate-500">
               <span>Tạm tính</span>
@@ -250,12 +292,16 @@
               </div>
             </div>
             <div v-if="cartStore.discountAmount > 0" class="flex justify-between text-red-500">
-              <span>Giảm giá</span>
+              <span>Giảm giá Voucher</span>
               <span class="font-bold">-{{ formatCurrency(cartStore.discountAmount) }}</span>
+            </div>
+            <div v-if="loyaltyDiscountAmount > 0" class="flex justify-between text-amber-600">
+              <span>Điểm thưởng ({{ loyaltyPointsToSpend.toLocaleString() }} điểm)</span>
+              <span class="font-bold">-{{ formatCurrency(loyaltyDiscountAmount) }}</span>
             </div>
             <div class="border-t border-slate-100 pt-3 flex justify-between text-slate-800">
               <span class="text-base font-extrabold">Tổng thanh toán</span>
-              <span class="text-lg font-black text-[#dc2626]">{{ formatCurrency(cartStore.total) }}</span>
+              <span class="text-lg font-black text-[#dc2626]">{{ formatCurrency(finalTotal) }}</span>
             </div>
           </div>
 
@@ -305,6 +351,44 @@ const orderCode = ref('')
 const couponCode = ref('')
 const activePromotions = ref<Promotion[]>([])
 const showVoucherList = ref(false)
+
+// PRODUCT-01: Loyalty Point Spending
+const loyaltyPointsInput = ref<number | null>(null)
+const userLoyaltyPoints = computed(() => Number(authStore.user?.loyaltyPoints) || 0)
+const maxAllowedPoints = computed(() => {
+  const maxBySubtotal = Math.floor((cartStore.subtotal * 0.2) / 100)
+  return Math.min(userLoyaltyPoints.value, maxBySubtotal)
+})
+
+const loyaltyPointsToSpend = computed(() => {
+  const val = Number(loyaltyPointsInput.value) || 0
+  if (!Number.isSafeInteger(val) || val < 1000 || val > maxAllowedPoints.value) return 0
+  return val
+})
+
+const loyaltyDiscountAmount = computed(() => loyaltyPointsToSpend.value * 100)
+
+const loyaltyError = computed(() => {
+  const val = Number(loyaltyPointsInput.value) || 0
+  if (!val) return ''
+  if (!Number.isSafeInteger(val)) return 'Số điểm phải là số nguyên'
+  if (val < 1000) return 'Tối thiểu 1.000 điểm để áp dụng giảm giá'
+  if (val > userLoyaltyPoints.value) return 'Vượt quá số điểm hiện có của bạn'
+  if (val > maxAllowedPoints.value) return `Vượt quá giới hạn 20% giá trị đơn hàng (${maxAllowedPoints.value.toLocaleString()} điểm)`
+  return ''
+})
+
+function applyMaxPoints() {
+  if (maxAllowedPoints.value >= 1000) {
+    loyaltyPointsInput.value = maxAllowedPoints.value
+  } else {
+    toast.info('Đơn hàng hiện tại hoặc số dư điểm chưa đủ mức tối thiểu 1.000 điểm')
+  }
+}
+
+const finalTotal = computed(() => {
+  return Math.max(0, cartStore.total - loyaltyDiscountAmount.value)
+})
 
 const shippingInfo = reactive({
   fullName: '',
@@ -409,6 +493,10 @@ onMounted(async () => {
 })
 
 async function placeOrder() {
+  if (loyaltyError.value) {
+    toast.warning(loyaltyError.value)
+    return
+  }
   if (!shippingInfo.fullName || !shippingInfo.phone || !shippingInfo.email || !shippingInfo.address) {
     toast.warning('Vui lòng điền đầy đủ thông tin giao hàng')
     return
@@ -430,6 +518,7 @@ async function placeOrder() {
       note: shippingInfo.note || undefined,
       paymentMethod: paymentMethod.value,
       promotionCode: cartStore.appliedPromotion?.code || undefined,
+      loyaltyPointsUsed: loyaltyPointsToSpend.value > 0 ? loyaltyPointsToSpend.value : undefined,
       customerName: shippingInfo.fullName,
       customerEmail: shippingInfo.email,
       idempotencyKey: checkoutIdempotencyKey,

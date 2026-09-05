@@ -4,7 +4,7 @@
       <!-- Premium Hero Header -->
       <div 
         :style="{
-          backgroundImage: `url(${dealHotBg})`,
+          backgroundImage: dealBackground,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }"
@@ -91,7 +91,10 @@ import { productService } from '@/services/product.service';
 import { useCartStore } from '@/stores/cart';
 import { useToast } from 'vue-toastification';
 import ProductCard from '@/components/ProductCard.vue';
-import dealHotBg from '@/assets/deal-hot-bg.jpg';
+import dealHotBg from '@/assets/deal-hot-bg.webp';
+import dealHotBgAvif from '@/assets/deal-hot-bg.avif';
+
+const dealBackground = `image-set(url('${dealHotBgAvif}') type('image/avif'), url('${dealHotBg}') type('image/webp'))`;
 import { useSeoMeta } from '@/composables/useSeoMeta';
 
 useSeoMeta({

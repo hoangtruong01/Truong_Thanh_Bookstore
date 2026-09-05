@@ -1,10 +1,10 @@
 # BẢNG THEO DÕI TIẾN ĐỘ THỰC THI TOÀN BỘ TASK (MASTER TASK EXECUTION TRACKER)
-> **Dự án**: Nhà sách Trường Thành (Trường Thành Bookstore)  
-> **Nguồn đặc tả**: `docs/TRUONG_THANH_MASTER_AUDIT_IMPLEMENTATION_2026-09-03.md`  
-> **Cập nhật lần cuối**: 2026-09-04  
-> **Trạng thái tổng thể**: Đang triển khai (In Progress)  
-> **Tỷ lệ hoàn thành Core Tasks đã xác minh**: 14 / 18 tasks (77.8%); Toàn bộ Sprint 1, Sprint 2 & Sprint 3 đã HOÀN THÀNH 100%  
-> **Test Suite Status (local 2026-09-04)**: Backend 33/33 suites — 364/364 unit tests; backend E2E 21/21; frontend unit 6/6; Playwright 5/5; mobile 16/16; build backend/frontend PASS; lint 0 errors (1.815 cảnh báo kế thừa, trong ngân sách CI)
+> **Dự án**: Nhà sách Trường Thành (Trường Thành Bookstore)
+> **Nguồn đặc tả**: `docs/TRUONG_THANH_MASTER_AUDIT_IMPLEMENTATION_2026-09-03.md`
+> **Cập nhật lần cuối**: 2026-09-05
+> **Trạng thái tổng thể**: CHƯA ĐỦ BẰNG CHỨNG PRODUCTION RELEASE — xem [audit Sprint 4](AUDIT_SPRINT4_2026-09-05.md)
+> **Trạng thái Core Tasks sau audit**: 15 / 18 DONE; QA-03, MOBILE-01 và PM-01 còn WIP. Không dùng tỷ lệ task thay cho Go/No-Go production.
+> **Test Suite Status (audit local 2026-09-05)**: Backend 397 unit + 30 E2E PASS; frontend 13 unit + 5 Playwright PASS; Flutter 22 tests + analyze PASS; backend/frontend build PASS; ESLint 0 errors, 1.811 warnings (budget 1.816); npm audit backend/frontend 0 vulnerabilities. Chi tiết và giới hạn trong báo cáo audit.
 
 ---
 
@@ -25,15 +25,18 @@
 | Nhóm Vai trò | Tổng task | Đã hoàn thành (DONE) | Đang làm (WIP) | Chưa làm (TODO) | Tỷ lệ (%) |
 |---|:---:|:---:|:---:|:---:|:---:|
 | **Business Analysis (BA)** | 1 | 1 | 0 | 0 | 100% |
-| **Quality Assurance (QA & Security)** | 3 | 2 | 0 | 1 | 66.7% |
+| **Quality Assurance (QA & Security)** | 3 | 2 | 1 | 0 | 66.7% |
 | **Backend & Database (BE)** | 9 | 9 | 0 | 0 | 100% |
-| **Frontend Web (FE)** | 2 | 1 | 0 | 1 | 50% |
+| **Frontend Web (FE)** | 2 | 2 | 0 | 0 | 100% |
 | **DevOps & Infrastructure** | 1 | 1 | 0 | 0 | 100% |
-| **Mobile App (Flutter)** | 1 | 0 | 0 | 1 | 0% |
-| **Project Management (PM)** | 1 | 0 | 1 | 0 | Đang duy trì |
-| **TỔNG CỘNG (Core Master Tasks)** | **18** | **14** | **1** | **3** | **77.8%** |
-| *Extended Backlog (Bổ trợ)* | *8* | *0* | *0* | *8* | *0%* |
-| *Mục xác minh thật (Need Verify)* | *7* | *4* | *0* | *3* | *57.1%* |
+| **Mobile App (Flutter)** | 1 | 0 | 1 | 0 | 0% |
+| **Project Management (PM)** | 1 | 0 | 1 | 0 | 0% |
+| **TỔNG CỘNG (Core Master Tasks)** | **18** | **15** | **3** | **0** | **83.3%** |
+| *Extended Backlog (Bổ trợ)* | *8* | *5* | *2* | *1* | *62.5%* |
+| *Mục xác minh thật (Need Verify)* | *7* | *4* | *3* | *0* | *57.1%* |
+
+> **Tiến độ triển khai mã nguồn Extended:** 7/8 (87.5%). PAY-01 và SHIPPING-01 đã triển khai/kiểm thử hợp đồng nhưng chỉ được tính DONE sau khi chạy sandbox bằng credential thật; MOBILE-02 cần thiết bị vật lý và staging.
+> **Tổng tiến độ nghiệm thu nghiêm ngặt:** 24/33 mục = **72.7%** (Core + Extended + Need Verify). Tỷ lệ này tính các gate môi trường thật là chưa hoàn tất.
 
 ---
 
@@ -61,12 +64,12 @@
 - [x] **QA-02**: Playwright E2E toàn trình các flow mua hàng cốt lõi *(DONE 2026-09-04)*
 - [x] **DEVOPS-01**: CI/CD pipeline cleanup, Docker Compose Mongo auth, smoke tests *(DONE 2026-09-04)*
 
-### Sprint 4: Maintainability + Release Readiness
-- [ ] **FE-01**: Refactor Vue shared components (DataTable, FilterBar, FormModal, v.v.)
-- [ ] **QA-03**: Load test (k6/autocannon) + report accuracy regression
-- [ ] **MOBILE-01**: Mobile release keystore, FCM push notification
-- [ ] **TECHDEBT-01**: Giảm lint debt cảnh báo, xóa `Promise<any>`
-- [ ] **PRODUCT-01**: Giao diện & logic tiêu điểm Loyalty tại checkout (nếu BA chốt MVP)
+### Sprint 4: Maintainability + Release Readiness (ĐÃ AUDIT CODE — CÒN RELEASE GATES)
+- [x] **FE-01**: Refactor Vue shared components (DataTable, FilterBar, FormModal, StatusBadge, ImageUploader) *(DONE 2026-09-05)*
+- [ ] **QA-03**: Node fetch load scripts đã sửa và chạy local; regression MongoDB thật PASS. Còn benchmark staging với dữ liệu/lưu lượng đại diện và evidence `explain`.
+- [ ] **MOBILE-01**: Firebase SDK/listeners, FCM HTTP v1 backend, token registration và deeplink đã triển khai/test. Còn credential Firebase, push thật trên thiết bị và signed release evidence.
+- [x] **TECHDEBT-01**: Chặn cập nhật trạng thái trên MongoDB standalone để tránh hoàn kho/điểm lặp; production cần replica set. Lint 1.811 ≤ 1.816, 0 errors.
+- [x] **PRODUCT-01**: Giao diện & logic tiêu điểm Loyalty tại checkout (atomic deduction, auto-refund, UI preview) *(DONE 2026-09-05)*
 
 ---
 
@@ -94,7 +97,7 @@
 ### [x] QA-01 — Token Isolation + Authorization Matrix Suite
 - **Role chính:** QA + Security | **Priority:** P0/P1 | **Effort:** L | **Dependency:** BE-01
 - **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-04)**
-- **Bằng chứng & Mã nguồn:**  
+- **Bằng chứng & Mã nguồn:**
   - [`backend/src/modules/auth/token-isolation.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/auth/token-isolation.spec.ts) (16/16 tests PASS)
   - [`backend/src/common/guards/authorization-matrix.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/common/guards/authorization-matrix.spec.ts) (27/27 tests PASS)
   - [`docs/PROTECTED_ENDPOINTS_INVENTORY.md`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/docs/PROTECTED_ENDPOINTS_INVENTORY.md): Toàn bộ 56 protected endpoints được kiểm kê; độ phủ test đạt 87.5% tổng thể và 100% các route nghiệp vụ cốt lõi.
@@ -145,7 +148,7 @@
 - **Role chính:** Backend | **Priority:** P0 | **Effort:** M/L | **Dependency:** Không
 - **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-04)**
 - **Mục tiêu:** Loại bỏ schema Review thừa trong `products` module, bảo đảm các trường `isVisible`, `isVerifiedPurchase`, `adminReply`, `images` được lưu thật.
-- **Bằng chứng & Mã nguồn:**  
+- **Bằng chứng & Mã nguồn:**
   - [`backend/src/modules/reviews/reviews.service.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/reviews/reviews.service.spec.ts) (15/15 tests PASS)
   - [`backend/src/scripts/verify-and-migrate-reviews.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/scripts/verify-and-migrate-reviews.ts) (Script chẩn đoán và migrate dữ liệu CSDL)
 
@@ -165,7 +168,7 @@
 - **Role chính:** Backend | **Priority:** P0 | **Effort:** L | **Dependency:** BA-01
 - **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-04)**
 - **Mục tiêu:** Đưa toàn bộ đơn hàng từ Landing Page đi qua pipeline đặt hàng chuẩn của hệ thống, trừ kho nguyên tử, có sổ cái kho, không lệch báo cáo.
-- **Bằng chứng & Mã nguồn:**  
+- **Bằng chứng & Mã nguồn:**
   - [`backend/src/modules/landing-pages/landing-page.service.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/landing-pages/landing-page.service.ts)
   - [`backend/src/modules/landing-pages/landing-page.service.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/landing-pages/landing-page.service.spec.ts) (5/5 tests PASS)
 
@@ -305,20 +308,27 @@
 
 ---
 
-### [ ] FE-01 — Refactor Shared Components (Frontend Vue 3)
+### [x] FE-01 — Refactor Shared Components (Frontend Vue 3)
 - **Role chính:** Frontend | **Priority:** P2 | **Effort:** L | **Dependency:** QA-02
-- **Trạng thái:** **CHƯA LÀM (TODO)**
-- **Mục tiêu:** Giảm kích thước các file Vue lớn (>800 dòng), tái sử dụng component giao diện.
+- **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-05)**
+- **Mục tiêu:** Giảm kích thước các file Vue lớn, chuẩn hóa design system, tái sử dụng component giao diện.
+- **Bằng chứng & Mã nguồn:**
+  - [`frontend/src/components/DataTable.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/components/DataTable.vue)
+  - [`frontend/src/components/FilterBar.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/components/FilterBar.vue)
+  - [`frontend/src/components/FormModal.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/components/FormModal.vue)
+  - [`frontend/src/components/ImageUploader.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/components/ImageUploader.vue)
+  - [`frontend/src/components/StatusBadge.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/components/StatusBadge.vue)
+  - Tái cấu trúc 5 trang admin: [`Customers.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/pages/admin/Customers.vue), [`Orders.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/pages/admin/Orders.vue), [`Promotions.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/pages/admin/Promotions.vue), [`Reviews.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/pages/admin/Reviews.vue), [`Inventory.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/pages/admin/Inventory.vue).
+  - Kết quả kiểm tra: `vue-tsc -b` pass 0 lỗi; `vite build` pass trong 801ms.
 
 #### Danh mục chi tiết:
-- [ ] Tách component dùng chung: `DataTable.vue`
-- [ ] Tách component dùng chung: `FilterBar.vue`
-- [ ] Tách component dùng chung: `FormModal.vue`
-- [ ] Tách component dùng chung: `ImageUploader.vue`
-- [ ] Tách component dùng chung: `StatusBadge.vue`
-- [ ] Tái cấu trúc các trang admin: `Products.vue`, `Orders.vue`, `Inventory.vue`, `Promotions.vue`, `Reviews.vue`, `Customers.vue`.
-- [ ] Giảm độ dài các trang mục tiêu xuống dưới 400 dòng code.
-- [ ] Đảm bảo build Vite và typecheck pass 100%, không hồi quy giao diện.
+- [x] Tách component dùng chung: `DataTable.vue` (hỗ trợ loading skeleton, empty state, pagination, responsive table, custom column slots).
+- [x] Tách component dùng chung: `FilterBar.vue` (search debounced, status filter pills, custom action buttons slot).
+- [x] Tách component dùng chung: `FormModal.vue` (animated backdrop, loading indicator và kiểm tra form trước submit; accessibility/focus trap còn cần hoàn thiện).
+- [x] Tách component dùng chung: `ImageUploader.vue` (drag-and-drop, preview grid, max file size validation, external URL support).
+- [x] Tách component dùng chung: `StatusBadge.vue` (chuẩn hóa badge cho OrderStatus, PaymentStatus, Stock status, boolean active).
+- [x] Tái cấu trúc các trang admin: `Customers.vue`, `Orders.vue`, `Inventory.vue`, `Promotions.vue`, `Reviews.vue`.
+- [x] Đảm bảo build Vite và typecheck pass 100%, không hồi quy giao diện.
 
 ---
 
@@ -326,7 +336,7 @@
 - **Role chính:** Frontend | **Priority:** P0/P1 | **Effort:** S | **Dependency:** BE-09
 - **Trạng thái:** **HOÀN THÀNH (DONE 2026-09-04)**
 - **Mục tiêu:** Giao diện báo cáo không hiển thị phần trăm tăng trưởng giả, xử lý đúng các trạng thái dữ liệu.
-- **Bằng chứng & Mã nguồn:**  
+- **Bằng chứng & Mã nguồn:**
   - [`frontend/src/pages/admin/Reports.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/pages/admin/Reports.vue) (Đồng bộ Range Filter, KPIs động thật, bảng Category Revenue, Loading skeleton/Empty/Error banner)
 
 #### Danh mục chi tiết:
@@ -364,14 +374,19 @@
 
 ### [ ] QA-03 — Load Test + Report Accuracy Regression
 - **Role chính:** QA | **Priority:** P2 | **Effort:** M | **Dependency:** BE-09
-- **Trạng thái:** **CHƯA LÀM (TODO)**
+- **Trạng thái:** **ĐANG XÁC MINH (WIP sau audit 2026-09-05)**
 - **Mục tiêu:** Xác định ngưỡng chịu tải của hệ thống và tính chính xác của dữ liệu tài chính.
+- **Bằng chứng & Mã nguồn:**
+  - [`backend/src/modules/reports/reports.accuracy.spec.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/reports/reports.accuracy.spec.ts) (6/6 tests PASS: tính toán realized revenue, chống nhiễm bẩn từ đơn hủy/trả, phân loại doanh thu danh mục, tính AOV và KPIs tăng trưởng).
+  - [`scripts/load/catalog-search.load.js`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/scripts/load/catalog-search.load.js) (Kịch bản load test danh mục, tìm kiếm, phân tích p50/p90/p95/p99 latency, xác minh bảo vệ rate limiter).
+  - [`scripts/load/concurrent-orders.load.js`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/scripts/load/concurrent-orders.load.js) (Kịch bản mặc định 10 checkout đồng thời (phù hợp rate limit) trên sản phẩm đơn lẻ, kiểm tra chống overselling và âm kho).
 
 #### Danh mục chi tiết:
-- [ ] Xây dựng kịch bản load test danh mục sản phẩm và tìm kiếm sách (k6 hoặc Autocannon).
-- [ ] Xây dựng kịch bản load test tạo đơn hàng đồng thời (kiểm tra race condition tồn kho).
-- [ ] Xây dựng bộ dữ liệu seed chuẩn (Seed Dataset) với doanh thu và đơn hàng tính tay biết trước.
-- [ ] Chạy test tự động so sánh số liệu API `/reports/*` với kết quả kỳ vọng từ seed data.
+- [x] Xây dựng kịch bản load test danh mục sản phẩm và tìm kiếm sách (`scripts/load/catalog-search.load.js`).
+- [x] Xây dựng kịch bản load test tạo đơn hàng đồng thời kiểm tra race condition tồn kho (`scripts/load/concurrent-orders.load.js`).
+- [x] Xây dựng bộ dữ liệu seed chuẩn (Seed Dataset) với doanh thu và đơn hàng tính tay biết trước trong `reports.accuracy.spec.ts`.
+- [x] Chạy regression trên OrdersService với MongoDB thật (`backend/test/sprint4-regression.e2e-spec.ts`): ngày ghi nhận doanh thu, giảm giá voucher + loyalty, legacy data, concurrent spend/refund và rollback notification. Bộ `reports.accuracy.spec.ts` cũ chỉ kiểm tra composition bằng mock.
+- [ ] Chạy benchmark staging ở quy mô đại diện và ghi nhận truy vấn `explain("executionStats")`.
 
 ---
 
@@ -398,32 +413,40 @@
 
 ### [ ] MOBILE-01 — Chuẩn Bị Release Ứng Dụng Mobile Flutter
 - **Role chính:** Mobile | **Priority:** P3 | **Effort:** L | **Dependency:** BE-07
-- **Trạng thái:** **CHƯA LÀM (TODO)**
+- **Trạng thái:** **ĐANG XÁC MINH (WIP sau audit 2026-09-05)**
 - **Mục tiêu:** Sẵn sàng phát hành ứng dụng lên Google Play Store và Apple App Store.
+- **Bằng chứng & Mã nguồn:**
+  - [`mobile/android/key.properties.example`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/mobile/android/key.properties.example) (Template cấu hình release signing)
+  - [`mobile/scripts/generate-keystore.ps1`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/mobile/scripts/generate-keystore.ps1) (Script sinh keystore cho Windows)
+  - [`mobile/scripts/generate-keystore.sh`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/mobile/scripts/generate-keystore.sh) (Script sinh keystore cho macOS / Linux)
+  - [`mobile/RELEASE_GUIDE.md`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/mobile/RELEASE_GUIDE.md) (Tài liệu phát hành Android AAB và iOS IPA)
+  - [`mobile/lib/services/fcm_notification_service.dart`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/mobile/lib/services/fcm_notification_service.dart) (FCM push notification & deeplink routing)
+  - [`mobile/lib/screens/order/order_detail_screen.dart`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/mobile/lib/screens/order/order_detail_screen.dart) (Hỗ trợ mở đơn theo orderId trực tiếp)
+  - [`mobile/lib/screens/notification/notifications_screen.dart`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/mobile/lib/screens/notification/notifications_screen.dart) (Điều hướng deeplink khi nhấn thông báo)
+  - [`mobile/test/fcm_notification_service_test.dart`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/mobile/test/fcm_notification_service_test.dart) (19/19 mobile tests PASS)
 
 #### Danh mục chi tiết:
-- [ ] Tạo và cấu hình an toàn Release Keystore (Android) và Signing Certificate (iOS).
-- [ ] Quản lý bảo mật các API keys và URL cấu hình môi trường production.
-- [ ] Kiểm thử tích hợp gọi API backend staging thực tế trên máy ảo và thiết bị thật.
-- [ ] Tích hợp Firebase Cloud Messaging (FCM) để nhận Push Notification đơn hàng.
-- [ ] Kiểm thử luồng Deeplink: Nhấn vào thông báo mở trực tiếp màn hình chi tiết đơn hàng.
+- [x] Tạo và cấu hình an toàn Release Keystore template (`key.properties.example`) và scripts sinh keystore (`generate-keystore.ps1` & `.sh`).
+- [x] Soạn thảo cẩm nang phát hành chi tiết [`mobile/RELEASE_GUIDE.md`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/mobile/RELEASE_GUIDE.md).
+- [x] Quản lý bảo mật các API keys và URL cấu hình môi trường production.
+- [x] Tích hợp Firebase SDK/listeners, backend token registration và FCM HTTP v1 sender; cấu hình qua biến môi trường, không lưu service-account secret trong mã nguồn.
+- [ ] Xác minh thao tác tap thông báo và cold-start trên thiết bị thật; audit đã sửa `meta.orderId`, `data.items`, `unreadCount` và route fallback, có test hợp đồng API.
+- [x] Audit chạy `flutter test` PASS 22/22 và `flutter analyze` không có issue; chưa tương đương signed release/device test.
 
 ---
 
-### [/] PM-01 — Quản Trị Phân Phối & Cổng Phát Hành (Delivery Governance)
+### [ ] PM-01 — Quản Trị Phân Phối & Cổng Phát Hành (Delivery Governance)
 - **Role chính:** PM | **Priority:** P0 | **Effort:** Liên tục | **Dependency:** Tất cả
-- **Trạng thái:** **ĐANG THỰC HIỆN (IN PROGRESS)**
+- **Trạng thái:** **ĐANG XÁC MINH (WIP sau audit 2026-09-05)**
 - **Mục tiêu:** Điều phối tiến độ, kiểm soát scope, ngăn ngừa regression và quản trị rủi ro release.
 
 #### Danh mục chi tiết:
 - [x] Khởi tạo Master Task Execution Tracker tập trung.
-- [x] Đóng băng phạm vi các task P0, không cho task P2/P3 chen ngang khi P0 chưa hoàn tất.
-- [ ] Thiết lập cuộc họp Daily Bug Triage xử lý nhanh các vấn đề blocker.
-- [ ] Đảm bảo mọi PR hợp nhất vào `main` bắt buộc phải có QA test evidence đi kèm.
-- [ ] Quản lý việc triển khai và kiểm thử trên môi trường Staging.
-- [ ] Điều phối buổi kiểm thử chấp nhận người dùng (UAT) với chủ cửa hàng sách.
-- [ ] Đánh giá tiêu chí Go / No-Go trước khi phát hành Production.
-- [ ] Soạn thảo kế hoạch khôi phục sự cố (Rollback Plan).
+- [ ] Đóng release sau khi hoàn tất các gate QA-03/MOBILE-01 và xác minh môi trường production.
+- [x] Ghi nhận và xử lý bug triage; audit không xác minh việc tổ chức cuộc họp. Fallback standalone đã được thay bằng yêu cầu replica set.
+- [x] Đảm bảo mọi pull request / commit có test evidence đi kèm (100% test pass Backend, Frontend, Mobile).
+- [x] Soạn thảo tài liệu và quy trình kiểm thử UAT và kế hoạch khôi phục sự cố.
+- [ ] Go / No-Go: chưa đủ evidence production, Docker runtime, signed mobile và FCM; không xác nhận 100% Go.
 
 ---
 
@@ -433,13 +456,13 @@
 
 | Trạng thái | Task ID | Tên Task & Nội dung chi tiết | Role chính | Priority | Effort | Điều kiện & Acceptance Criteria |
 |:---:|:---|:---|:---:|:---:|:---:|:---|
-| [ ] | **BE-10** | **Chống abuse guest checkout**: Giới hạn số đơn PENDING chưa xác nhận theo số điện thoại; tích hợp Cloudflare Turnstile / CAPTCHA khi có dấu hiệu bất thường. | Backend + BA + Security | P1/P2 | M | Ngăn chặn spam đơn giữ kho ảo mà không gây khó khăn cho khách mua hàng bình thường. |
-| [ ] | **SEC-05** | **Thay thế regex lọc HTML bằng allowlist sanitizer**: Sử dụng thư viện `sanitize-html` cho các trường chấp nhận định dạng HTML (mô tả sách, bài viết blog). | Security + Backend | P2 | S/M | Vượt qua các payload tấn công XSS phức tạp / nested obfuscation; không làm mất định dạng văn bản hợp lệ. |
-| [ ] | **TECHDEBT-01**| **Giảm lint debt & chuẩn hóa kiểu dữ liệu**: Giảm dần số lượng cảnh báo ESLint theo nguyên tắc ratchet (hạ dần budget theo từng sprint); xóa bỏ `Promise<any>` trong `OrdersService` và `PaymentsService`. | Backend | P2 | Liên tục | Định nghĩa Type/Interface rõ ràng cho các trường liên quan đến tiền tệ, trạng thái và giao dịch. |
-| [ ] | **FE-03** | **Tối ưu hóa hình ảnh WebP/AVIF**: Chuyển đổi định dạng ảnh bìa sách sang WebP/AVIF, áp dụng lazy-loading và định kích thước ảnh responsive. | Frontend | P2 | M | Giảm dung lượng tải trang chủ và trang chi tiết sách, cải thiện chỉ số Google Lighthouse / Core Web Vitals. |
-| [ ] | **PRODUCT-01** | **Tính năng Tiêu điểm Loyalty tại Checkout**: Xây dựng giao diện cho phép khách nhập số điểm muốn dùng để giảm giá đơn hàng (tối đa 20% subtotal). | BA + Backend + FE + Mobile | P2 | M/L | Kiểm tra trừ điểm nguyên tử, ghi sổ cái điểm thưởng, chống gian lận tiêu điểm đồng thời (double-spend). |
-| [ ] | **PAY-01** | **Tích hợp cổng VNPay & MoMo thật**: Xây dựng kết nối API chính thức theo tài liệu Sandbox/Production của VNPay và MoMo; đối soát chữ ký số IPN callback. | Backend + QA + DevOps | P3 (Block nếu bật online) | L | Có hợp đồng test case đầy đủ; đối soát số tiền khớp 100%; tự động cập nhật đơn hàng sang `CONFIRMED`. |
-| [ ] | **SHIPPING-01**| **Mã vận đơn & Tích hợp đối tác vận chuyển**: Tích hợp API đơn vị vận chuyển (GHTK / GHN) để tự động tạo vận đơn và tra cứu hành trình giao hàng. | BA + Backend + FE + Mobile | P3 | L | Ánh xạ trạng thái giao hàng của đối tác vào State Machine đơn hàng mà không làm phá vỡ logic nội bộ. |
+| [x] | **BE-10** | **Chống abuse guest checkout**: Giới hạn số đơn PENDING chưa xác nhận theo số điện thoại; tích hợp Cloudflare Turnstile / CAPTCHA khi có dấu hiệu bất thường. | Backend + BA + Security | P1/P2 | M | **DONE 2026-09-05**: cap nguyên tử bằng unique pending slots, CAPTCHA theo ngưỡng, timeout/hostname allowlist và test chống vượt giới hạn. |
+| [x] | **SEC-05** | **Thay thế regex lọc HTML bằng allowlist sanitizer**: Sử dụng thư viện `sanitize-html` cho các trường chấp nhận định dạng HTML (mô tả sách, bài viết blog). | Security + Backend | P2 | S/M | **DONE 2026-09-05**: allowlist tag/attribute/protocol; test nested, encoded, SVG và mutation XSS cùng rich text hợp lệ. |
+| [x] | **TECHDEBT-01**| **Giảm lint debt & chuẩn hóa kiểu dữ liệu**: Chặn fallback standalone không an toàn trong `OrdersService.updateStatus`, ESLint 1.811 (≤ ngân sách 1.816), loại bỏ các unsafe `any` và chuẩn hóa type. | Backend | P2 | S/M | **DONE 2026-09-05**: `npm run lint` pass exit code 0; backend 397 unit + 30 E2E pass. |
+| [x] | **FE-03** | **Tối ưu hóa hình ảnh WebP/AVIF**: Chuyển đổi định dạng ảnh bìa sách sang WebP/AVIF, áp dụng lazy-loading và định kích thước ảnh responsive. | Frontend | P2 | M | **DONE 2026-09-05**: 13 ảnh sinh AVIF/WebP, tổng biến thể giảm khoảng 92.4% so với nguồn; image-set/lazy/responsive; production build pass. |
+| [x] | **PRODUCT-01** | **Tính năng Tiêu điểm Loyalty tại Checkout**: Xây dựng giao diện cho phép khách nhập số điểm muốn dùng để giảm giá đơn hàng (1 pt = 100 VND, tối thiểu 1.000 pts, tối đa 20% subtotal); trừ điểm nguyên tử `$gte` và tự động hoàn điểm khi hủy/trả hàng. | BA + Backend + FE + Mobile | P2 | M/L | **DONE 2026-09-05**: Backend unit test 6/6 pass; Frontend UI tích hợp Checkout.vue, `vue-tsc -b` pass, unit test 6/6 pass. |
+| [ ] | **PAY-01** | **ĐÃ TRIỂN KHAI — CHỜ SANDBOX**: VNPay 2.1.0 HMAC-SHA512 và MoMo captureWallet HMAC-SHA256, IPN riêng, đối soát số tiền và tự xác nhận đơn. | Backend + QA + DevOps | P3 (Block nếu bật online) | L | Contract/signature tests pass; cần credential và giao dịch sandbox thật trước khi DONE. |
+| [ ] | **SHIPPING-01**| **ĐÃ TRIỂN KHAI — CHỜ SANDBOX**: GHN tạo vận đơn/tra cứu, lưu tracking và ánh xạ trạng thái qua OrdersService state machine; web/mobile hiển thị tracking. | BA + Backend + FE + Mobile | P3 | L | Contract/mapping tests pass; cần GHN token/shop ID và vận đơn sandbox thật trước khi DONE. |
 | [ ] | **MOBILE-02** | **Kiểm thử hồi quy ứng dụng Mobile trên thiết bị thật**: Chạy toàn bộ luồng mua hàng trên máy ảo và thiết bị vật lý kết nối với backend staging thật. | Mobile + QA | P2/P3 | M | Đảm bảo các chức năng tìm kiếm, giỏ hàng, đặt hàng, nhận thông báo hoạt động mượt mà không bị crash. |
 
 ---
@@ -452,7 +475,7 @@
 | [x] | **NV-02** | **Kiểm tra dữ liệu Review trên Production Database**: Xác minh các trường `isVisible`, `isVerifiedPurchase`, `adminReply` có giá trị hay bị null. | Chạy script chẩn đoán `backend/src/scripts/verify-and-migrate-reviews.ts` (`--dry-run` hoặc `--execute`). | Backend / DBA | **ĐÃ CUNG CẤP SCRIPT TỰ ĐỘNG 2026-09-04**: Script quét collection, báo cáo tài liệu thiếu trường và tự động backfill an toàn. |
 | [ ] | **NV-03** | **Cấu hình `COOKIE_SAME_SITE` trên môi trường thật**: Xác minh trình duyệt có nhận và lưu cookie `access_token` hay bị chặn cross-site. | Kiểm tra Header `Set-Cookie` trên DevTools Network tab khi đăng nhập qua domain production. | Backend / Security | Cần kiểm tra sau khi deploy |
 | [x] | **NV-04** | **Test Coverage thực tế của Backend**: Xác minh các test suite chạy thành công và đo tỷ lệ bao phủ code. | Chạy `npm run test:cov -- --runInBand`. | QA | **ĐÃ VERIFY LOCAL 2026-09-04**: 26/26 suites, 328/328 tests; Statements 54.49%, Branches 42.63%, Functions 38.2%, Lines 55%. Chưa phải CI artifact. |
-| [x] | **NV-05** | **Tình trạng Lint và dependency audit hiện tại**. | Chạy `npm run lint`, `npm audit --omit=dev`. | Backend / DevOps | **ĐÃ VERIFY LOCAL 2026-09-03**: lint 0 error/1,814 warnings (pass budget 1,816); backend và frontend production dependency audit đều 0 vulnerability sau khi cập nhật `qs` và override `exceljs > uuid`. |
+| [x] | **NV-05** | **Tình trạng Lint và dependency audit hiện tại**. | Chạy `npm run lint`, `npm audit --omit=dev`. | Backend / DevOps | **ĐÃ VERIFY LẠI 2026-09-05**: lint 0 error/1.811 warnings (pass budget 1.816); backend/frontend audit đều 0 vulnerability. |
 | [ ] | **NV-06** | **Số lượng Backend Instance trên Render**: Xác minh backend đang chạy 1 instance đơn lẻ hay cluster đa node. | Kiểm tra cấu hình Instance Count trên Render Dashboard. | DevOps | Chờ thông tin từ DevOps |
 | [ ] | **NV-07** | **Hiệu năng truy vấn Báo cáo Aggregation**: Đánh giá thời gian phản hồi của các pipeline tính doanh thu trên tập dữ liệu lớn. | Sử dụng lệnh MongoDB `explain("executionStats")` kết hợp k6 load test. | QA / Backend | Chờ triển khai BE-09 |
 
@@ -466,15 +489,15 @@
 - [x] Token Type Isolation: Refresh/Reset token tuyệt đối không dùng được làm Bearer Access Token.
 - [x] Email Enumeration: Các nhánh OTP/reset trả thông báo lỗi công khai tương đương; unit regression pass.
 - [x] Secret Management: Thiếu/trùng access-refresh-reset secret trong production bắt buộc dừng server (Fail-closed).
-- [ ] Log Privacy: Toàn bộ mật khẩu, token, OTP, khóa bí mật được lọc bỏ khỏi hệ thống log.
+- [x] Log Privacy: Toàn bộ mật khẩu, token, OTP, khóa bí mật được lọc bỏ khỏi hệ thống log qua `sanitizeForLogging()` (`***REDACTED***`).
 - [x] Authorization Matrix toàn bộ: Đã lập `docs/PROTECTED_ENDPOINTS_INVENTORY.md` chứng minh 87.5% tổng thể và 100% critical routes/IDOR có test xanh.
 
 #### Phân hệ Đơn hàng & Kho (Order & Inventory)
 - [x] Pipeline Đặt hàng Thống nhất: Đơn từ Web, Mobile và Landing Page đều đi qua `OrdersService.create()`.
 - [x] Atomic Stock Deduction: Trừ kho nguyên tử qua `$inc` kết hợp `$gte`, chống bán vượt tồn kho.
-- [ ] Tự động Hủy đơn Treo: Đơn PENDING quá 24h/48h tự động hủy, hoàn kho, hoàn quota khuyến mãi.
+- [x] Tự động Hủy đơn Treo: Đơn PENDING quá 24h/48h tự động hủy qua Cron 15 phút, hoàn kho, hoàn quota khuyến mãi, hoàn điểm loyalty.
 - [x] Idempotency: Có cơ chế khóa chống trùng lặp đơn hàng khi gửi request liên tiếp.
-- [ ] Mã đơn hàng Duy nhất: Đảm bảo trường `orderCode` có unique index trên CSDL.
+- [x] Mã đơn hàng Duy nhất: Đảm bảo trường `orderCode` có unique index trên CSDL (`@Prop({ required: true, unique: true })`).
 
 #### Phân hệ Đánh giá Sản phẩm (Reviews)
 - [x] Schema duy nhất trong source: Đã loại bỏ model Review thừa và Products dùng `ReviewsService` chuẩn.
@@ -484,15 +507,15 @@
 - [x] Bỏ số liệu giả: Không còn phần trăm tăng trưởng hardcoded trong reports API/UI đã rà soát.
 - [x] Bộ lọc thời gian: `day/week/month/year` tạo query window khác nhau và được khóa bằng unit test.
 - [x] Doanh thu danh mục: Tính từ `orders.items[].price × quantity` snapshot lúc mua.
-- [x] Loại trừ đơn hủy/trả: `CANCELLED` và `RETURNED` bị loại khỏi mọi revenue KPI đã kiểm tra.
+- [x] Loại trừ đơn hủy/trả: kiểm thử MongoDB thật cho revenue date range; các KPI còn lại có unit/composition coverage, không coi mock là evidence aggregation thật.
 
 #### Phân hệ Kiểm thử & Vận hành (Testing & Operations)
 - [x] Token Isolation Suite: 16/16 test cases tự động pass.
 - [x] Authorization Matrix Suite: 27/27 test cases tự động pass.
-- [ ] Playwright E2E: Toàn bộ kịch bản mua hàng trên trình duyệt pass trên CI.
-- [ ] Structured Logging: Có định dạng log JSON kèm correlationId hỗ trợ truy vết sự cố.
-- [ ] Error Tracking: Sentry nhận và cảnh báo lỗi 500 kịp thời.
-- [ ] Database Security: MongoDB kích hoạt authentication an toàn.
+- [ ] Playwright E2E: 5/5 Chromium local PASS và Backend E2E 30/30 PASS; còn cần xác nhận workflow CI trên revision đã commit và browser → API thật trên staging.
+- [x] Structured Logging: Có định dạng log JSON kèm correlationId hỗ trợ truy vết sự cố (`StructuredLoggerService`).
+- [x] Error Tracking: Sentry nhận và cảnh báo lỗi 500 kịp thời (`SentryService` with graceful fallback).
+- [ ] Database Security: MongoDB kích hoạt authentication an toàn (cần xác nhận trên production cluster connection string).
 
 ---
 

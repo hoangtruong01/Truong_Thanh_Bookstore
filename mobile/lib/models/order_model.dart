@@ -67,10 +67,15 @@ class OrderModel {
   final num subtotal;
   final num shippingFee;
   final num discount;
+  final num loyaltyDiscount;
+  final int loyaltyPointsUsed;
   final num total;
   final String? customerName;
   final String? customerEmail;
   final String? promotionCode;
+  final String? shippingProvider;
+  final String? trackingCode;
+  final String? shippingStatus;
   final String createdAt;
   final List<OrderTimelineModel> timeline;
 
@@ -87,10 +92,15 @@ class OrderModel {
     required this.subtotal,
     required this.shippingFee,
     required this.discount,
+    this.loyaltyDiscount = 0,
+    this.loyaltyPointsUsed = 0,
     required this.total,
     this.customerName,
     this.customerEmail,
     this.promotionCode,
+    this.shippingProvider,
+    this.trackingCode,
+    this.shippingStatus,
     required this.createdAt,
     required this.timeline,
   });
@@ -119,10 +129,15 @@ class OrderModel {
       subtotal: json['subtotal'] ?? 0,
       shippingFee: json['shippingFee'] ?? 0,
       discount: json['discount'] ?? 0,
+      loyaltyDiscount: json['loyaltyDiscount'] ?? 0,
+      loyaltyPointsUsed: (json['loyaltyPointsUsed'] as num?)?.toInt() ?? 0,
       total: json['total'] ?? 0,
       customerName: json['customerName'],
       customerEmail: json['customerEmail'],
       promotionCode: json['promotionCode'],
+      shippingProvider: json['shippingProvider'],
+      trackingCode: json['trackingCode'],
+      shippingStatus: json['shippingStatus'],
       createdAt: json['createdAt'] ?? '',
       timeline: timelineList,
     );

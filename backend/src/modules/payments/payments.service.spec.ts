@@ -1,4 +1,5 @@
-import { PaymentStatus } from '../../common/enums';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { OrderStatus, PaymentStatus } from '../../common/enums';
 import { PaymentsService } from './payments.service';
 
 describe('PaymentsService callback reconciliation', () => {
@@ -43,7 +44,15 @@ describe('PaymentsService callback reconciliation', () => {
         },
       },
     );
-    expect(orderUpdateExec).toHaveBeenCalledTimes(1);
+    expect(orderModel.updateOne).toHaveBeenNthCalledWith(
+      2,
+      { _id: payment.order, orderStatus: OrderStatus.PENDING },
+      expect.objectContaining({
+        $set: { orderStatus: OrderStatus.CONFIRMED },
+        $push: expect.any(Object),
+      }),
+    );
+    expect(orderUpdateExec).toHaveBeenCalledTimes(2);
     expect(providers.get).not.toHaveBeenCalled();
   });
 });

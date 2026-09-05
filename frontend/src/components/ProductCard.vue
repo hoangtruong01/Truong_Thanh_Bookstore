@@ -38,6 +38,11 @@
       <img 
         v-if="product.images && product.images[0] && !isImageBroken" 
         :src="product.images[0]" 
+        loading="lazy"
+        decoding="async"
+        width="320"
+        height="320"
+        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 240px"
         class="absolute inset-0 w-full h-full object-cover blur-xl opacity-[0.22] scale-125 select-none pointer-events-none" 
       />
       
@@ -45,6 +50,11 @@
       <img 
         v-if="product.images && product.images[0] && !isImageBroken" 
         :src="product.images[0]" 
+        loading="lazy"
+        decoding="async"
+        width="320"
+        height="320"
+        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 240px"
         @error="handleImageError"
         class="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-500 relative z-10 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.06)]" 
       />

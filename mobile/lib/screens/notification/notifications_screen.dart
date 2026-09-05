@@ -7,6 +7,8 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_retry_widget.dart';
+import '../order/order_detail_screen.dart';
+import '../order/order_history_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -204,6 +206,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     onTap: () {
                       if (!item.isRead) {
                         notif.markAsRead(item.id, auth.token);
+                      }
+
+                      // Deeplink: Route to OrderDetailScreen if order-related notification
+                      final isOrderType = item.type.toUpperCase() == 'ORDER';
+                      final orderId = item.data?['orderId']?.toString() ??
+                          item.data?['order_id']?.toString() ??
+                          item.data?['id']?.toString();
+
+                      if (orderId != null && orderId.isNotEmpty) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => OrderDetailScreen(orderId: orderId),
+                          ),
+                        );
+                      } else if (isOrderType) {
+                        // If no specific order ID in payload, navigate to order history
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
+                        );
                       }
                     },
                   ),

@@ -14,6 +14,7 @@ import {
   NotificationQueryDto,
 } from './dto/create-notification.dto';
 import { NotificationsGateway } from './notifications.gateway';
+import { FcmPushService } from './fcm-push.service';
 
 @Injectable()
 export class NotificationsService {
@@ -21,6 +22,7 @@ export class NotificationsService {
     @InjectModel(Notification.name)
     private notificationModel: Model<NotificationDocument>,
     private gateway: NotificationsGateway,
+    private readonly fcmPushService: FcmPushService,
   ) {}
 
   async create(dto: CreateNotificationDto): Promise<NotificationDocument> {
@@ -45,6 +47,13 @@ export class NotificationsService {
     try {
       if (data.userId) {
         this.gateway.sendNotificationToUser(dto.userId!, savedNotification);
+        void this.fcmPushService
+          .sendToUser(
+            dto.userId!,
+            { title: data.title, body: data.message },
+            { type: data.type, ...data.meta },
+          )
+          .catch(() => undefined);
       } else {
         this.gateway.broadcastNotification(savedNotification);
       }

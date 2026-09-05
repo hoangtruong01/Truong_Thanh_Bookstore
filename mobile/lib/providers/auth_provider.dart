@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/constants/api_constants.dart';
 import '../models/user_model.dart';
+import '../services/fcm_notification_service.dart';
 
 class AuthProvider with ChangeNotifier {
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
@@ -78,6 +79,7 @@ class AuthProvider with ChangeNotifier {
         _user = UserModel.fromJson(data['user']);
 
         await _persistSession();
+        await FcmNotificationService.instance.registerForAuthenticatedUser(_token!);
 
         _isLoading = false;
         notifyListeners();
@@ -119,6 +121,7 @@ class AuthProvider with ChangeNotifier {
         _user = UserModel.fromJson(data['user']);
 
         await _persistSession();
+        await FcmNotificationService.instance.registerForAuthenticatedUser(_token!);
 
         _isLoading = false;
         notifyListeners();
@@ -204,6 +207,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     if (_token != null && _token!.isNotEmpty) {
       try {
+        await FcmNotificationService.instance.unregister(_token!);
         await http.post(
           Uri.parse(ApiConstants.logout),
           headers: {

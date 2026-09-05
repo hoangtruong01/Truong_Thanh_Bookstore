@@ -23,7 +23,9 @@ class NotificationModel {
       title: json['title']?.toString() ?? '',
       message: json['message']?.toString() ?? '',
       type: json['type']?.toString() ?? 'SYSTEM',
-      data: json['data'] is Map<String, dynamic> ? json['data'] : null,
+      data: json['meta'] is Map<String, dynamic>
+          ? json['meta']
+          : json['data'] is Map<String, dynamic> ? json['data'] : null,
       isRead: json['isRead'] == true,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())

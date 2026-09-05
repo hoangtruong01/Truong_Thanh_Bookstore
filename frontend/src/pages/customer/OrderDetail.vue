@@ -71,6 +71,11 @@
                 </span>
               </p>
               <p v-if="order.promotionCode"><strong>Mã giảm giá đã dùng:</strong> <span class="font-mono text-red-600 font-bold">{{ order.promotionCode }}</span></p>
+              <p v-if="order.trackingCode">
+                <strong>Mã vận đơn {{ order.shippingProvider }}:</strong>
+                <span class="ml-1 font-mono font-bold text-blue-700">{{ order.trackingCode }}</span>
+              </p>
+              <p v-if="order.shippingStatus"><strong>Trạng thái đối tác:</strong> {{ order.shippingStatus }}</p>
             </div>
           </div>
         </div>
@@ -162,6 +167,10 @@
           <div v-if="order.discount > 0" class="flex justify-between text-red-500">
             <span>Giảm giá</span>
             <span class="font-bold">-{{ formatCurrency(order.discount) }}</span>
+          </div>
+          <div v-if="order.loyaltyDiscount" class="flex justify-between text-amber-600">
+            <span>Điểm thưởng ({{ order.loyaltyPointsUsed }} điểm)</span>
+            <span class="font-bold">-{{ formatCurrency(order.loyaltyDiscount) }}</span>
           </div>
           <div class="border-t border-slate-200 pt-2 flex justify-between text-slate-900 text-sm font-black">
             <span>Tổng cộng</span>

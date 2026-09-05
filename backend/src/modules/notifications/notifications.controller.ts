@@ -19,13 +19,43 @@ import {
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../../common/enums';
+import { RegisterDeviceTokenDto } from './dto/device-token.dto';
+import { FcmPushService } from './fcm-push.service';
 
 @ApiTags('notifications')
 @Controller('notifications')
 @UseGuards(AuthGuard('jwt'))
 @ApiBearerAuth()
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly fcmPushService: FcmPushService,
+  ) {}
+
+  @Post('device-token')
+  @ApiOperation({ summary: 'Register or rotate an FCM device token' })
+  registerDeviceToken(
+    @Body() dto: RegisterDeviceTokenDto,
+    @Request() req: any,
+  ) {
+    return this.fcmPushService.register(
+      req.user._id.toString(),
+      dto.deviceToken,
+      dto.platform,
+    );
+  }
+
+  @Patch('device-token/unregister')
+  @ApiOperation({ summary: 'Unregister an FCM device token on logout' })
+  unregisterDeviceToken(
+    @Body() dto: RegisterDeviceTokenDto,
+    @Request() req: any,
+  ) {
+    return this.fcmPushService.unregister(
+      req.user._id.toString(),
+      dto.deviceToken,
+    );
+  }
 
   @Get('my-notifications')
   @ApiOperation({

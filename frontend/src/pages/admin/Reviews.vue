@@ -1,270 +1,205 @@
 <template>
-  <div class="space-y-8">
+  <div class="space-y-6">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
       <div>
-        <h1 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+        <h1 class="text-xl font-black text-slate-900 uppercase tracking-tight">
           Kiểm duyệt Đánh giá Sản phẩm
         </h1>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        <p class="text-xs text-slate-500 mt-1">
           Quản lý, phản hồi và kiểm duyệt các đánh giá từ khách hàng đã mua sách & văn phòng phẩm
         </p>
       </div>
-      <div class="flex items-center gap-3">
-        <button
-          @click="fetchReviews"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+      <button
+        type="button"
+        @click="fetchReviews"
+        class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+      >
+        <span>🔄</span>
+        <span>Làm mới</span>
+      </button>
+    </div>
+
+    <!-- FilterBar -->
+    <FilterBar
+      v-model="filters.search"
+      placeholder="Tìm theo tên khách hoặc nội dung đánh giá..."
+      @search="handleSearch"
+    >
+      <template #filters>
+        <!-- Rating Filter -->
+        <select
+          v-model="filters.rating"
+          @change="handleFilterChange"
+          class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
         >
-          <span>🔄</span>
-          <span>Làm mới</span>
-        </button>
-      </div>
-    </div>
+          <option :value="undefined">Tất cả mức sao</option>
+          <option :value="5">⭐⭐⭐⭐⭐ (5 sao)</option>
+          <option :value="4">⭐⭐⭐⭐ (4 sao)</option>
+          <option :value="3">⭐⭐⭐ (3 sao)</option>
+          <option :value="2">⭐⭐ (2 sao)</option>
+          <option :value="1">⭐ (1 sao)</option>
+        </select>
 
-    <!-- Filters Bar -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-wrap items-center gap-3 shadow-xs">
-      <!-- Search Input -->
-      <div class="relative flex-1 min-w-[200px]">
-        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
-        <input
-          v-model="filters.search"
-          @keyup.enter="handleSearch"
-          type="text"
-          placeholder="Tìm theo tên khách hoặc nội dung đánh giá..."
-          class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-hidden focus:border-[#dc2626]"
-        />
-      </div>
+        <!-- Visibility Filter -->
+        <select
+          v-model="filters.isVisible"
+          @change="handleFilterChange"
+          class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+        >
+          <option :value="undefined">Tất cả trạng thái</option>
+          <option :value="true">Đang hiển thị</option>
+          <option :value="false">Đã ẩn (vi phạm)</option>
+        </select>
+      </template>
+    </FilterBar>
 
-      <!-- Rating Filter -->
-      <select
-        v-model="filters.rating"
-        @change="handleFilterChange"
-        class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-hidden"
-      >
-        <option :value="undefined">Tất cả mức sao</option>
-        <option :value="5">⭐⭐⭐⭐⭐ (5 sao)</option>
-        <option :value="4">⭐⭐⭐⭐ (4 sao)</option>
-        <option :value="3">⭐⭐⭐ (3 sao)</option>
-        <option :value="2">⭐⭐ (2 sao)</option>
-        <option :value="1">⭐ (1 sao)</option>
-      </select>
+    <!-- Reviews DataTable -->
+    <DataTable
+      :columns="columns"
+      :items="reviews"
+      :loading="loading"
+      pagination
+      :current-page="currentPage"
+      :total-items="total"
+      :page-size="filters.limit"
+      empty-text="Không tìm thấy đánh giá nào."
+      empty-subtext="Chưa có đánh giá nào phù hợp với bộ lọc hiện tại."
+      @page-change="changePage"
+    >
+      <!-- Product Column -->
+      <template #cell(product)="{ row }">
+        <div class="flex items-center gap-3 max-w-[220px]">
+          <img
+            :src="row.product?.images?.[0] || 'https://placehold.co/80x80/f1f5f9/94a3b8?text=Book'"
+            class="w-10 h-10 object-cover rounded-lg border border-slate-200 flex-shrink-0"
+          />
+          <div class="min-w-0">
+            <p class="font-bold text-slate-900 truncate leading-tight">{{ row.product?.name || 'Sản phẩm' }}</p>
+            <p class="text-[10px] text-slate-400 font-mono mt-0.5">ID: {{ (row.product?._id || '').slice(-6) }}</p>
+          </div>
+        </div>
+      </template>
 
-      <!-- Visibility Filter -->
-      <select
-        v-model="filters.isVisible"
-        @change="handleFilterChange"
-        class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-hidden"
-      >
-        <option :value="undefined">Tất cả trạng thái</option>
-        <option :value="true">Đang hiển thị</option>
-        <option :value="false">Đã ẩn (vi phạm)</option>
-      </select>
-    </div>
-
-    <!-- Loading Skeleton -->
-    <SkeletonLoader v-if="loading" type="table" :count="5" />
-
-    <!-- Empty State -->
-    <EmptyState
-      v-else-if="reviews.length === 0"
-      icon="⭐"
-      title="Không tìm thấy đánh giá nào"
-      description="Chưa có đánh giá nào phù hợp với bộ lọc hiện tại."
-    />
-
-    <!-- Reviews Table -->
-    <div v-else class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-[11px] font-black uppercase text-slate-500 tracking-wider">
-              <th class="py-4 px-6">Sản phẩm</th>
-              <th class="py-4 px-6">Khách hàng</th>
-              <th class="py-4 px-6">Đánh giá</th>
-              <th class="py-4 px-6">Nội dung</th>
-              <th class="py-4 px-6">Trạng thái</th>
-              <th class="py-4 px-6 text-right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-            <tr
-              v-for="rev in reviews"
-              :key="rev._id"
-              class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+      <!-- Customer Column -->
+      <template #cell(customer)="{ row }">
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-bold text-slate-800">{{ row.name }}</span>
+            <span
+              v-if="row.isVerifiedPurchase"
+              class="text-[9px] bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded-full font-bold border border-emerald-200"
+              title="Khách hàng đã mua sản phẩm này"
             >
-              <!-- Product -->
-              <td class="py-4 px-6 max-w-[220px]">
-                <div class="flex items-center gap-3">
-                  <img
-                    :src="rev.product?.images?.[0] || 'https://placehold.co/80x80/f1f5f9/94a3b8?text=Book'"
-                    class="w-10 h-10 object-cover rounded-lg border border-slate-200 dark:border-slate-700 flex-shrink-0"
-                    :alt="rev.product?.name || 'Sản phẩm'"
-                  />
-                  <div class="min-w-0">
-                    <p class="font-bold text-slate-900 dark:text-white truncate">
-                      {{ rev.product?.name || 'Sản phẩm' }}
-                    </p>
-                    <p class="text-[10px] text-slate-400 font-mono">
-                      {{ rev.product?.sku || rev.product?._id }}
-                    </p>
-                  </div>
-                </div>
-              </td>
+              ✓ Đã mua
+            </span>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-0.5">{{ formatDate(row.createdAt) }}</p>
+        </div>
+      </template>
 
-              <!-- Customer -->
-              <td class="py-4 px-6 whitespace-nowrap">
-                <div class="font-bold text-slate-800 dark:text-slate-200">
-                  {{ rev.name || rev.user?.fullName || 'Khách hàng' }}
-                </div>
-                <div class="text-[10px] text-slate-400">
-                  {{ rev.user?.email || 'N/A' }}
-                </div>
-                <span
-                  v-if="rev.isVerifiedPurchase"
-                  class="inline-block mt-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded"
-                >
-                  ✓ Đã mua hàng
-                </span>
-              </td>
+      <!-- Rating Column -->
+      <template #cell(rating)="{ row }">
+        <div>
+          <div class="flex items-center text-amber-400 text-xs">
+            <span v-for="s in 5" :key="s">{{ s <= row.rating ? '★' : '☆' }}</span>
+          </div>
+          <span class="text-[10px] font-extrabold text-slate-600 mt-0.5 block">{{ row.rating }}/5 sao</span>
+        </div>
+      </template>
 
-              <!-- Rating -->
-              <td class="py-4 px-6 whitespace-nowrap">
-                <div class="flex items-center text-amber-400 text-sm">
-                  <span v-for="star in 5" :key="star">
-                    {{ star <= rev.rating ? '★' : '☆' }}
-                  </span>
-                </div>
-                <span class="text-[10px] text-slate-400 mt-0.5 block">
-                  {{ formatDate(rev.createdAt) }}
-                </span>
-              </td>
+      <!-- Content Column -->
+      <template #cell(content)="{ row }">
+        <div class="space-y-1.5 max-w-sm">
+          <p class="text-slate-800 leading-relaxed">{{ row.content }}</p>
 
-              <!-- Content & Reply -->
-              <td class="py-4 px-6 max-w-xs">
-                <p class="text-slate-700 dark:text-slate-300 font-medium line-clamp-2">
-                  {{ rev.content }}
-                </p>
+          <!-- Review Images -->
+          <div v-if="row.images && row.images.length > 0" class="flex gap-1.5 mt-1">
+            <img
+              v-for="(img, idx) in row.images"
+              :key="idx"
+              :src="img"
+              class="w-8 h-8 rounded object-cover border border-slate-200 cursor-pointer"
+              @click="previewImage(img)"
+            />
+          </div>
 
-                <!-- Review Images -->
-                <div v-if="rev.images && rev.images.length > 0" class="flex gap-1.5 mt-2">
-                  <img
-                    v-for="(img, idx) in rev.images"
-                    :key="idx"
-                    :src="img"
-                    class="w-8 h-8 rounded object-cover border border-slate-200 dark:border-slate-700"
-                    alt="review-img"
-                  />
-                </div>
+          <!-- Store Reply Display -->
+          <div v-if="row.adminReply" class="bg-red-50/60 border-l-2 border-[#dc2626] p-2 rounded-r-lg text-[11px] text-slate-700 mt-1">
+            <p class="font-bold text-[#dc2626] text-[10px]">Phản hồi từ Nhà sách:</p>
+            <p class="mt-0.5 italic">{{ row.adminReply }}</p>
+          </div>
+        </div>
+      </template>
 
-                <!-- Admin Reply Display -->
-                <div
-                  v-if="rev.adminReply"
-                  class="mt-2 p-2 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-300"
-                >
-                  <span class="font-bold text-[#dc2626]">Phản hồi Admin:</span> {{ rev.adminReply }}
-                </div>
-              </td>
+      <!-- Status Column -->
+      <template #cell(status)="{ row }">
+        <StatusBadge
+          :status="row.isVisible !== false ? 'ACTIVE' : 'INACTIVE'"
+          :label="row.isVisible !== false ? 'Đang hiển thị' : 'Đã ẩn (vi phạm)'"
+        />
+      </template>
 
-              <!-- Status -->
-              <td class="py-4 px-6 whitespace-nowrap">
-                <button
-                  @click="toggleVisibility(rev)"
-                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black cursor-pointer transition-colors"
-                  :class="[
-                    rev.isVisible !== false
-                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 hover:bg-emerald-100'
-                      : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 hover:bg-red-100'
-                  ]"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full" :class="rev.isVisible !== false ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                  <span>{{ rev.isVisible !== false ? 'Hiển thị' : 'Đã ẩn' }}</span>
-                </button>
-              </td>
-
-              <!-- Actions -->
-              <td class="py-4 px-6 whitespace-nowrap text-right space-x-2">
-                <button
-                  @click="openReplyModal(rev)"
-                  class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300 font-bold transition-colors cursor-pointer"
-                  title="Trả lời đánh giá"
-                >
-                  💬 Trả lời
-                </button>
-                <button
-                  @click="openDeleteModal(rev)"
-                  class="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg font-bold transition-colors cursor-pointer"
-                  title="Xóa đánh giá"
-                >
-                  🗑️
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      <div v-if="totalPages > 1" class="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-        <span class="text-xs text-slate-500">
-          Trang {{ currentPage }} / {{ totalPages }} (Tổng {{ total }} đánh giá)
-        </span>
-        <div class="flex gap-2">
+      <!-- Actions Column -->
+      <template #cell(actions)="{ row }">
+        <div class="flex items-center justify-end gap-2">
+          <!-- Toggle visibility button -->
           <button
-            @click="changePage(currentPage - 1)"
-            :disabled="currentPage <= 1"
-            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold disabled:opacity-40 cursor-pointer"
+            type="button"
+            @click="toggleVisibility(row)"
+            :class="[
+              row.isVisible !== false ? 'text-amber-600 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-700',
+              'font-bold cursor-pointer'
+            ]"
           >
-            ← Trước
+            {{ row.isVisible !== false ? 'Ẩn' : 'Hiện' }}
           </button>
+
+          <!-- Reply button -->
           <button
-            @click="changePage(currentPage + 1)"
-            :disabled="currentPage >= totalPages"
-            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold disabled:opacity-40 cursor-pointer"
+            type="button"
+            @click="openReplyModal(row)"
+            class="text-[#dc2626] hover:text-[#b91c1c] font-bold cursor-pointer"
           >
-            Sau →
+            {{ row.adminReply ? 'Sửa trả lời' : 'Trả lời' }}
+          </button>
+
+          <!-- Delete button -->
+          <button
+            type="button"
+            @click="confirmDelete(row)"
+            class="text-slate-400 hover:text-red-600 font-bold cursor-pointer"
+          >
+            Xóa
           </button>
         </div>
-      </div>
-    </div>
+      </template>
+    </DataTable>
 
-    <!-- Reply Modal -->
-    <div v-if="showReplyModal" class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
-      <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs" @click="showReplyModal = false"></div>
-      <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl z-10 space-y-4">
-        <h3 class="text-base font-black text-slate-900 dark:text-white">
-          Phản hồi Đánh giá của {{ selectedReview?.name }}
-        </h3>
-        <p class="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl italic">
+    <!-- Reply FormModal -->
+    <FormModal
+      v-model="showReplyModal"
+      :title="`Phản hồi đánh giá của ${selectedReview?.name || ''}`"
+      confirm-text="Gửi phản hồi"
+      cancel-text="Hủy"
+      :loading="submittingReply"
+      @confirm="submitReply"
+    >
+      <div class="space-y-4">
+        <p class="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl italic border border-slate-100">
           "{{ selectedReview?.content }}"
         </p>
         <div class="space-y-1.5">
-          <label class="text-xs font-bold text-slate-700 dark:text-slate-300">Nội dung phản hồi từ Cửa hàng:</label>
+          <label class="text-xs font-bold text-slate-700">Nội dung phản hồi từ Cửa hàng:</label>
           <textarea
             v-model="replyText"
             rows="4"
             placeholder="Nhập nội dung phản hồi chân thành đến khách hàng..."
-            class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-hidden focus:border-[#dc2626]"
+            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
           ></textarea>
         </div>
-        <div class="flex gap-3 justify-end pt-2">
-          <button
-            type="button"
-            @click="showReplyModal = false"
-            class="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
-          >
-            Hủy
-          </button>
-          <button
-            type="button"
-            @click="submitReply"
-            :disabled="!replyText.trim()"
-            class="px-5 py-2 rounded-xl bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold shadow-sm disabled:opacity-50 cursor-pointer"
-          >
-            Gửi phản hồi
-          </button>
-        </div>
       </div>
-    </div>
+    </FormModal>
 
     <!-- Confirm Delete Modal -->
     <ConfirmModal
@@ -279,19 +214,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
-import { reviewService, type ReviewQuery } from '@/services/review.service';
-import SkeletonLoader from '@/components/SkeletonLoader.vue';
-import EmptyState from '@/components/EmptyState.vue';
-import ConfirmModal from '@/components/ConfirmModal.vue';
-import { useToast } from 'vue-toastification';
+import { ref, reactive, onMounted } from 'vue'
+import { reviewService, type ReviewQuery } from '@/services/review.service'
+import { formatDate } from '@/utils/helpers'
+import { useToast } from 'vue-toastification'
+import FilterBar from '@/components/FilterBar.vue'
+import DataTable, { type TableColumn } from '@/components/DataTable.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
+import FormModal from '@/components/FormModal.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 
-const toast = useToast();
-const reviews = ref<any[]>([]);
-const total = ref(0);
-const currentPage = ref(1);
-const totalPages = ref(1);
-const loading = ref(true);
+const toast = useToast()
+const reviews = ref<any[]>([])
+const total = ref(0)
+const currentPage = ref(1)
+const loading = ref(true)
+const submittingReply = ref(false)
 
 const filters = reactive<ReviewQuery>({
   page: 1,
@@ -299,15 +237,24 @@ const filters = reactive<ReviewQuery>({
   search: '',
   rating: undefined,
   isVisible: undefined,
-});
+})
 
-const showReplyModal = ref(false);
-const showDeleteModal = ref(false);
-const selectedReview = ref<any>(null);
-const replyText = ref('');
+const columns: TableColumn[] = [
+  { key: 'product', label: 'SẢN PHẨM' },
+  { key: 'customer', label: 'KHÁCH HÀNG' },
+  { key: 'rating', label: 'ĐÁNH GIÁ' },
+  { key: 'content', label: 'NỘI DUNG' },
+  { key: 'status', label: 'TRẠNG THÁI' },
+  { key: 'actions', label: 'THAO TÁC', align: 'right' },
+]
+
+const showReplyModal = ref(false)
+const showDeleteModal = ref(false)
+const selectedReview = ref<any>(null)
+const replyText = ref('')
 
 async function fetchReviews() {
-  loading.value = true;
+  loading.value = true
   try {
     const res = await reviewService.getAllAdmin({
       page: filters.page,
@@ -315,92 +262,86 @@ async function fetchReviews() {
       search: filters.search || undefined,
       rating: filters.rating,
       isVisible: filters.isVisible,
-    });
-    const data = res.data?.data || res.data || {};
-    reviews.value = data.items || [];
-    total.value = data.total || 0;
-    currentPage.value = data.page || 1;
-    totalPages.value = data.totalPages || 1;
+    })
+    const data = res.data?.data || res.data || {}
+    reviews.value = data.items || []
+    total.value = data.total || 0
+    currentPage.value = data.page || 1
   } catch (err: any) {
-    toast.error('Không thể tải danh sách đánh giá');
+    toast.error('Không thể tải danh sách đánh giá')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
 function handleSearch() {
-  filters.page = 1;
-  fetchReviews();
+  filters.page = 1
+  fetchReviews()
 }
 
 function handleFilterChange() {
-  filters.page = 1;
-  fetchReviews();
+  filters.page = 1
+  fetchReviews()
 }
 
 function changePage(page: number) {
-  filters.page = page;
-  fetchReviews();
+  filters.page = page
+  fetchReviews()
 }
 
 async function toggleVisibility(rev: any) {
   try {
-    const nextState = rev.isVisible === false;
-    await reviewService.moderate(rev._id, nextState);
-    rev.isVisible = nextState;
-    toast.success(nextState ? 'Đã hiển thị đánh giá' : 'Đã ẩn đánh giá');
+    const nextState = rev.isVisible === false
+    await reviewService.moderate(rev._id, nextState)
+    rev.isVisible = nextState
+    toast.success(nextState ? 'Đã công khai đánh giá' : 'Đã ẩn đánh giá')
   } catch (err: any) {
-    toast.error('Lỗi cập nhật trạng thái hiển thị');
+    toast.error('Không thể thay đổi trạng thái hiển thị')
   }
 }
 
 function openReplyModal(rev: any) {
-  selectedReview.value = rev;
-  replyText.value = rev.adminReply || '';
-  showReplyModal.value = true;
+  selectedReview.value = rev
+  replyText.value = rev.adminReply || ''
+  showReplyModal.value = true
 }
 
 async function submitReply() {
-  if (!selectedReview.value) return;
+  if (!selectedReview.value || !replyText.value.trim()) return
+  submittingReply.value = true
   try {
-    await reviewService.adminReply(selectedReview.value._id, replyText.value.trim());
-    selectedReview.value.adminReply = replyText.value.trim();
-    toast.success('Đã gửi phản hồi đánh giá thành công!');
-    showReplyModal.value = false;
+    await reviewService.adminReply(selectedReview.value._id, replyText.value.trim())
+    selectedReview.value.adminReply = replyText.value.trim()
+    toast.success('Đã gửi phản hồi thành công')
+    showReplyModal.value = false
   } catch (err: any) {
-    toast.error('Không thể gửi phản hồi đánh giá');
+    toast.error('Lỗi khi gửi phản hồi')
+  } finally {
+    submittingReply.value = false
   }
 }
 
-function openDeleteModal(rev: any) {
-  selectedReview.value = rev;
-  showDeleteModal.value = true;
+function confirmDelete(rev: any) {
+  selectedReview.value = rev
+  showDeleteModal.value = true
 }
 
 async function submitDelete() {
-  if (!selectedReview.value) return;
+  if (!selectedReview.value) return
   try {
-    const productId = selectedReview.value.product?._id || selectedReview.value.product;
-    await reviewService.delete(productId, selectedReview.value._id);
-    toast.success('Đã xóa đánh giá thành công');
-    showDeleteModal.value = false;
-    fetchReviews();
+    const prodId = selectedReview.value.product?._id || selectedReview.value.product || 'default'
+    await reviewService.delete(prodId, selectedReview.value._id)
+    toast.success('Đã xóa đánh giá thành công')
+    showDeleteModal.value = false
+    fetchReviews()
   } catch (err: any) {
-    toast.error('Không thể xóa đánh giá');
+    toast.error('Không thể xóa đánh giá')
   }
 }
 
-function formatDate(dateStr: string) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+function previewImage(url: string) {
+  window.open(url, '_blank')
 }
 
-onMounted(() => {
-  fetchReviews();
-});
+onMounted(fetchReviews)
 </script>

@@ -35,6 +35,7 @@ jobs:
           npm ci
           npm audit --audit-level=high
           npm run lint
+          node --test ../scripts/load/load.test.js
           npm test -- --runInBand
           npx jest --rootDir . test/all-fixes.spec.ts test/e2e-flow.spec.ts test/critical-commerce-regression.spec.ts --runInBand --detectOpenHandles
           npm run test:e2e -- --runInBand --detectOpenHandles

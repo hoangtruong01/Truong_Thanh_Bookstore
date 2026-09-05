@@ -42,6 +42,11 @@
                 <img 
                   v-if="!brokenImages[img]"
                   :src="img" 
+                  :loading="idx === 0 ? 'eager' : 'lazy'"
+                  decoding="async"
+                  width="720"
+                  height="720"
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   class="absolute inset-0 w-full h-full object-cover blur-xl opacity-[0.22] scale-125 select-none pointer-events-none" 
                 />
                 
@@ -49,6 +54,12 @@
                 <img 
                   v-if="!brokenImages[img]"
                   :src="img" 
+                  :loading="idx === 0 ? 'eager' : 'lazy'"
+                  decoding="async"
+                  :fetchpriority="idx === 0 ? 'high' : 'auto'"
+                  width="720"
+                  height="720"
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   @error="handleImageError(img)"
                   class="w-full h-full object-contain p-4 relative z-10 filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.06)] group-hover:scale-105 transition-transform duration-300" 
                 />

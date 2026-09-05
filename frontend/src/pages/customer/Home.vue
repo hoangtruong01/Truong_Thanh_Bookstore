@@ -225,7 +225,7 @@
     <!-- Section 3: DEAL SỐC GIỜ VÀNG (Flash Sale) (Placed above Categories) -->
     <section
       :style="{
-        backgroundImage: `url(${flashSaleBg})`,
+        backgroundImage: optimizedBackground(flashSaleBg),
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }"
@@ -388,6 +388,11 @@
                       <img 
                         v-if="prod.images && prod.images[0] && !brokenImages[prod._id]" 
                         :src="prod.images[0]" 
+                        loading="lazy"
+                        decoding="async"
+                        width="320"
+                        height="320"
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 240px"
                         class="absolute inset-0 w-full h-full object-cover blur-xl opacity-[0.22] scale-125 select-none pointer-events-none" 
                       />
                       
@@ -397,6 +402,11 @@
                           prod.images && prod.images[0] && !brokenImages[prod._id]
                         "
                         :src="prod.images[0]"
+                        loading="lazy"
+                        decoding="async"
+                        width="320"
+                        height="320"
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 240px"
                         @error="handleImageError(prod._id)"
                         class="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300 relative z-10 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.06)]"
                         :alt="prod.name"
@@ -762,7 +772,7 @@
             <!-- Card Background Image with hover zoom effect -->
             <div
               class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 pointer-events-none"
-              :style="{ backgroundImage: `url(${cat.bgImage})` }"
+              :style="{ backgroundImage: optimizedBackground(cat.bgImage) }"
             ></div>
 
             <!-- Soft gradient overlay to ensure text contrast/readability on the left -->
@@ -835,7 +845,7 @@
     <!-- Section 5: Editorial Banner -->
     <section
       :style="{
-        backgroundImage: `url(${inspirationBg})`,
+        backgroundImage: optimizedBackground(inspirationBg),
         backgroundSize: 'cover',
         backgroundPosition: 'right center',
       }"
@@ -965,14 +975,22 @@ import ProductCard from "@/components/ProductCard.vue";
 import CategoryProductSection from "@/components/CategoryProductSection.vue";
 import { useScrollReveal } from "@/composables/useScrollReveal";
 import type { Product, Category } from "@/types";
-import flashSaleBg from "@/assets/flash-sale-bg.png";
-import sgkBg from "@/assets/sgk-bg.jpg";
-import doChoiBg from "@/assets/do-choi-bg.png";
-import comboBg from "@/assets/combo-bg.png";
-import truyenTranhBg from "@/assets/truyen-tranh-bg.png";
-import sachThamKhaoBg from "@/assets/sach-tham-khao-bg.png";
-import doLuuNiemBg from "@/assets/do-luu-niem-bg.jpg";
-import inspirationBg from "@/assets/inspiration-bg.png";
+import flashSaleBg from "@/assets/flash-sale-bg.webp";
+import sgkBg from "@/assets/sgk-bg.webp";
+import doChoiBg from "@/assets/do-choi-bg.webp";
+import comboBg from "@/assets/combo-bg.webp";
+import truyenTranhBg from "@/assets/truyen-tranh-bg.webp";
+import sachThamKhaoBg from "@/assets/sach-tham-khao-bg.webp";
+import doLuuNiemBg from "@/assets/do-luu-niem-bg.webp";
+import inspirationBg from "@/assets/inspiration-bg.webp";
+import flashSaleBgAvif from "@/assets/flash-sale-bg.avif";
+import sgkBgAvif from "@/assets/sgk-bg.avif";
+import doChoiBgAvif from "@/assets/do-choi-bg.avif";
+import comboBgAvif from "@/assets/combo-bg.avif";
+import truyenTranhBgAvif from "@/assets/truyen-tranh-bg.avif";
+import sachThamKhaoBgAvif from "@/assets/sach-tham-khao-bg.avif";
+import doLuuNiemBgAvif from "@/assets/do-luu-niem-bg.avif";
+import inspirationBgAvif from "@/assets/inspiration-bg.avif";
 import { useSeoMeta } from "@/composables/useSeoMeta";
 import { useOrganizationSchema } from "@/composables/useStructuredData";
 
@@ -981,6 +999,24 @@ useSeoMeta({
   description: 'Hệ thống bán lẻ văn phòng phẩm & dụng cụ học tập chính hãng tại Việt Nam. Giảm giá đến 30%, giao hàng toàn quốc, đổi trả 7 ngày.',
 });
 useOrganizationSchema();
+
+const avifByWebp = new Map([
+  [flashSaleBg, flashSaleBgAvif],
+  [sgkBg, sgkBgAvif],
+  [doChoiBg, doChoiBgAvif],
+  [comboBg, comboBgAvif],
+  [truyenTranhBg, truyenTranhBgAvif],
+  [sachThamKhaoBg, sachThamKhaoBgAvif],
+  [doLuuNiemBg, doLuuNiemBgAvif],
+  [inspirationBg, inspirationBgAvif],
+]);
+
+function optimizedBackground(webp: string): string {
+  const avif = avifByWebp.get(webp);
+  return avif
+    ? `image-set(url("${avif}") type("image/avif"), url("${webp}") type("image/webp"))`
+    : `url("${webp}")`;
+}
 
 const cartStore = useCartStore();
 const toast = useToast();

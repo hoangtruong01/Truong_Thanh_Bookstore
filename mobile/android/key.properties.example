@@ -1,0 +1,17 @@
+# ==============================================================================
+# TRƯỜNG THÀNH BOOKSTORE — ANDROID RELEASE SIGNING PROPERTIES TEMPLATE
+# ==============================================================================
+# Instructions:
+# 1. Copy this file to `mobile/android/key.properties`:
+#    cp key.properties.example key.properties
+# 2. Generate a release keystore using the helper script:
+#    Windows PowerShell:  ./scripts/generate-keystore.ps1
+#    macOS / Linux Bash:  ./scripts/generate-keystore.sh
+# 3. Replace the placeholder values below with your actual credentials.
+# 4. IMPORTANT: NEVER commit `key.properties` or `*.jks` / `*.keystore` files to Git!
+# ==============================================================================
+
+storePassword=YOUR_SECURE_STORE_PASSWORD
+keyPassword=YOUR_SECURE_KEY_PASSWORD
+keyAlias=truongthanh_release_key
+storeFile=../app/upload-keystore.jks

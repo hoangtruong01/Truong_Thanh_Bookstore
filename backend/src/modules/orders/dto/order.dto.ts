@@ -133,6 +133,15 @@ export class CreateOrderDto {
   idempotencyKey?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Cloudflare Turnstile token, required when a guest phone has repeated pending checkouts',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  captchaToken?: string;
+
+  @ApiPropertyOptional({
     description: 'Nguồn phát sinh đơn hàng (WEB, MOBILE, LANDING_PAGE)',
     default: 'WEB',
   })
@@ -146,6 +155,17 @@ export class CreateOrderDto {
   @IsOptional()
   @IsMongoObjectId({ message: 'landingPageId phải là ObjectId hợp lệ' })
   landingPageId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Số điểm loyalty khách hàng muốn sử dụng để giảm giá (1 điểm = 100 VNĐ, tối thiểu 1.000 điểm, tối đa 20% subtotal)',
+    example: 1000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'loyaltyPointsUsed phải là số nguyên' })
+  @Min(0, { message: 'loyaltyPointsUsed không được âm' })
+  loyaltyPointsUsed?: number;
 }
 
 export class UpdateOrderStatusDto {

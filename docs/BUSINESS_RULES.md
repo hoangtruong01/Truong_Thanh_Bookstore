@@ -235,14 +235,20 @@ Một mã khuyến mãi (`promotionCode`) chỉ được áp dụng khi thỏa m
 
 ### 7.2 Tỷ lệ Tích điểm & Tiêu điểm
 - **Tỷ lệ Tích điểm (Earning Rate)**:
-  - Mỗi **1,000 VND** chi tiêu thực tế (không tính phí vận chuyển và giảm giá) = **1 điểm thưởng (Loyalty Point)**.
+  - Mỗi **1,000 VND** tiền hàng thực trả = **1 điểm thưởng**: `floor(max(0, subtotal - discount - loyaltyDiscount) / 1000)`. Phí vận chuyển và phần giảm giá không được tích điểm.
+  - Đơn online/chuyển khoản phải có `paymentStatus=PAID` trước khi chuyển `DELIVERED`/`COMPLETED`; COD được xác nhận thu tiền tại thời điểm giao thành công.
   - Ví dụ: Đơn hàng thanh toán 250,000 VND -> Tích được 250 điểm.
 - **Tỷ lệ Tiêu điểm (Redemption Rate)**:
   - **1 điểm thưởng = 100 VND** giảm trừ trực tiếp vào đơn hàng tại bước Checkout.
-  - Ví dụ: Dùng 500 điểm = Giảm 50,000 VND.
+  - Ví dụ: Dùng 1,000 điểm = Giảm 100,000 VND.
 - **Hạn mức Tiêu điểm Bảo vệ Biên lợi nhuận**:
   - Ngưỡng tối thiểu để bắt đầu tiêu điểm: **1,000 điểm** (= tương đương 100,000 VND).
   - Mức giảm giá tối đa từ điểm thưởng: **Không vượt quá 20% tổng giá trị tiền hàng (subtotal)** của đơn hàng.
+- **Khấu trừ Nguyên tử & Chống Double-Spending (PRODUCT-01)**:
+  - Khấu trừ điểm trực tiếp trong hàm `OrdersService.create()` thông qua truy vấn nguyên tử MongoDB: `userModel.findOneAndUpdate({ _id: userId, loyaltyPoints: { $gte: points } }, { $inc: { loyaltyPoints: -points } })`.
+  - Nếu số dư điểm không đủ hoặc có hành vi gian lận gửi điểm âm / vượt ngưỡng cho phép, hệ thống từ chối tạo đơn ngay lập tức với mã lỗi `400 Bad Request` (`ERR_INSUFFICIENT_LOYALTY_POINTS`).
+- **Tự động Hoàn điểm khi Hủy / Trả hàng (Auto-Refund on Cancel / Return)**:
+  - Khi đơn hàng có sử dụng điểm thưởng (`loyaltyPointsUsed > 0`) chuyển sang trạng thái `CANCELLED` hoặc `RETURNED`, hệ thống tự động hoàn lại đầy đủ số điểm đã dùng vào tài khoản khách hàng thông qua `UsersService.refundLoyaltyPoints()` và bật cờ `loyaltyPointsRefunded = true`.
 
 ### 7.3 Hạng Thành viên (Loyalty Tiers)
 Hệ thống tự động nâng hạng thành viên dựa trên tổng điểm tích lũy lũy kế (`loyaltyPoints`):

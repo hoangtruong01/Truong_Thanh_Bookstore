@@ -3,6 +3,7 @@ import { plainToInstance, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -228,11 +229,87 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  VNPAY_TMN_CODE?: string;
+
+  @IsString()
+  @IsOptional()
+  VNPAY_RETURN_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  VNPAY_IP_ADDRESS?: string;
+
+  @IsString()
+  @IsOptional()
   MOMO_PAYMENT_URL?: string;
 
   @IsString()
   @IsOptional()
   MOMO_SECRET_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  MOMO_ACCESS_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  MOMO_PARTNER_CODE?: string;
+
+  @IsString()
+  @IsOptional()
+  MOMO_IPN_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  MOMO_RETURN_URL?: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  GUEST_PENDING_ORDER_LIMIT?: number = 3;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  GUEST_CAPTCHA_THRESHOLD?: number = 2;
+
+  @IsString()
+  @IsOptional()
+  TURNSTILE_SECRET_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  TURNSTILE_ALLOWED_HOSTNAMES?: string;
+
+  @IsString()
+  @IsOptional()
+  FCM_ENABLED?: string = 'false';
+
+  @IsString()
+  @IsOptional()
+  FIREBASE_PROJECT_ID?: string;
+
+  @IsString()
+  @IsOptional()
+  FIREBASE_CLIENT_EMAIL?: string;
+
+  @IsString()
+  @IsOptional()
+  FIREBASE_PRIVATE_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  GHN_API_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  GHN_TOKEN?: string;
+
+  @IsString()
+  @IsOptional()
+  GHN_SHOP_ID?: string;
 }
 
 /**
@@ -438,20 +515,43 @@ export function validateEnv(
   }
   if (
     enabledPayments.includes('VNPAY') &&
-    (!validatedConfig.VNPAY_PAYMENT_URL || !validatedConfig.VNPAY_HASH_SECRET)
+    (!validatedConfig.VNPAY_PAYMENT_URL ||
+      !validatedConfig.VNPAY_HASH_SECRET ||
+      !validatedConfig.VNPAY_TMN_CODE ||
+      !validatedConfig.VNPAY_RETURN_URL)
   ) {
-    paymentErrors.push('VNPAY_PAYMENT_URL và VNPAY_HASH_SECRET');
+    paymentErrors.push(
+      'VNPAY_PAYMENT_URL, VNPAY_HASH_SECRET, VNPAY_TMN_CODE và VNPAY_RETURN_URL',
+    );
   }
   if (
     enabledPayments.includes('MOMO') &&
-    (!validatedConfig.MOMO_PAYMENT_URL || !validatedConfig.MOMO_SECRET_KEY)
+    (!validatedConfig.MOMO_PAYMENT_URL ||
+      !validatedConfig.MOMO_SECRET_KEY ||
+      !validatedConfig.MOMO_ACCESS_KEY ||
+      !validatedConfig.MOMO_PARTNER_CODE ||
+      !validatedConfig.MOMO_IPN_URL ||
+      !validatedConfig.MOMO_RETURN_URL)
   ) {
-    paymentErrors.push('MOMO_PAYMENT_URL và MOMO_SECRET_KEY');
+    paymentErrors.push(
+      'MOMO_PAYMENT_URL, MOMO_SECRET_KEY, MOMO_ACCESS_KEY, MOMO_PARTNER_CODE, MOMO_IPN_URL và MOMO_RETURN_URL',
+    );
   }
   if (paymentErrors.length) {
     throw new Error(
       `Thiếu cấu hình cho cổng thanh toán đã bật: ${paymentErrors.join('; ')}`,
     );
+  }
+
+  if (validatedConfig.FCM_ENABLED?.toLowerCase() === 'true') {
+    const missingFcm = [
+      'FIREBASE_PROJECT_ID',
+      'FIREBASE_CLIENT_EMAIL',
+      'FIREBASE_PRIVATE_KEY',
+    ].filter((key) => !normalizedConfig[key]);
+    if (missingFcm.length) {
+      throw new Error(`FCM_ENABLED=true requires: ${missingFcm.join(', ')}`);
+    }
   }
 
   return validatedConfig;

@@ -99,10 +99,16 @@ export interface Order {
   subtotal: number
   shippingFee: number
   discount: number
+  loyaltyPointsUsed?: number
+  loyaltyDiscount?: number
   total: number
   customerName?: string
   customerEmail?: string
   promotionCode?: string
+  shippingProvider?: 'GHN'
+  trackingCode?: string
+  shippingStatus?: string
+  shippingSyncedAt?: string
   timeline?: OrderTimelineItem[]
   createdAt: string
   updatedAt: string

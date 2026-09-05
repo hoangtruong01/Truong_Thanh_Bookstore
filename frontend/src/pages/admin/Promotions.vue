@@ -1,233 +1,217 @@
 <template>
   <div class="space-y-6">
-    <!-- Header with Action -->
+    <!-- Header -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
       <div class="space-y-1">
         <h2 class="text-lg font-extrabold text-slate-900">Quản lý mã khuyến mãi</h2>
         <p class="text-xs text-slate-500 font-medium">Tạo mã giảm giá theo phần trăm hoặc số tiền cố định, quy định giá trị đơn hàng tối thiểu.</p>
       </div>
       <button
-        v-if="!showForm"
         @click="openCreateForm"
-        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2"
+        type="button"
+        class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
         <span>Tạo mã giảm giá</span>
       </button>
     </div>
 
-    <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
-      <!-- Promotions List -->
-      <div class="xl:col-span-2 bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
-        <!-- Search box -->
-        <div class="p-4 border-b border-slate-100 flex gap-4 items-center">
-          <div class="relative flex-grow">
-            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
-            </span>
-            <input
-              v-model="promoQuery"
-              type="text"
-              placeholder="Tìm kiếm mã giảm giá theo mã hoặc tên chương trình..."
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white text-slate-700 font-semibold transition-all placeholder:text-slate-400"
-            />
-          </div>
+    <!-- FilterBar -->
+    <FilterBar
+      v-model="promoQuery"
+      placeholder="Tìm kiếm mã giảm giá theo mã hoặc tên chương trình..."
+    />
+
+    <!-- Promotions DataTable -->
+    <DataTable
+      :columns="columns"
+      :items="filteredPromotions"
+      :loading="loading"
+      empty-text="Chưa có mã giảm giá nào."
+      empty-subtext="Không tìm thấy mã giảm giá nào phù hợp."
+    >
+      <!-- Coupon Code -->
+      <template #cell(code)="{ row }">
+        <span class="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">
+          {{ row.code }}
+        </span>
+      </template>
+
+      <!-- Details -->
+      <template #cell(details)="{ row }">
+        <div>
+          <p class="font-bold text-slate-800">{{ row.name }}</p>
+          <p class="text-xs text-blue-700 font-extrabold mt-0.5">
+            {{ row.discountType === 'PERCENT' ? `Giảm ${row.discountValue}%` : `Giảm ${formatCurrency(row.discountValue)}` }}
+          </p>
+        </div>
+      </template>
+
+      <!-- Min Order Value -->
+      <template #cell(minOrderValue)="{ row }">
+        <span class="font-semibold text-slate-700">{{ formatCurrency(row.minOrderValue) }}</span>
+      </template>
+
+      <!-- Usage Limit -->
+      <template #cell(usage)="{ row }">
+        <span class="text-xs text-slate-600 font-semibold">{{ row.usedCount }} / {{ row.usageLimit }}</span>
+      </template>
+
+      <!-- StatusBadge -->
+      <template #cell(status)="{ row }">
+        <StatusBadge
+          :status="row.status ? 'ACTIVE' : 'INACTIVE'"
+          :label="row.status ? 'Đang chạy' : 'Ngừng chạy'"
+        />
+      </template>
+
+      <!-- Actions -->
+      <template #cell(actions)="{ row }">
+        <button
+          type="button"
+          @click="deletePromotion(row._id)"
+          class="text-red-500 hover:text-red-700 font-bold cursor-pointer"
+        >
+          Xóa
+        </button>
+      </template>
+    </DataTable>
+
+    <!-- Create Promotion FormModal -->
+    <FormModal
+      v-model="showForm"
+      title="Tạo mã giảm giá mới"
+      subtitle="Thiết lập thể lệ và hạn mức cho chương trình ưu đãi"
+      size="lg"
+      confirm-text="Tạo mã ngay"
+      cancel-text="Hủy bỏ"
+      :loading="saving"
+      @confirm="handleSubmit"
+    >
+      <form @submit.prevent="handleSubmit" class="space-y-4">
+        <div>
+          <label class="text-xs font-bold text-slate-700">Mã giảm giá (Coupon Code) *</label>
+          <input
+            v-model="form.code"
+            type="text"
+            required
+            placeholder="Ví dụ: CHAOMUNG2026"
+            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626] font-mono uppercase tracking-wider font-bold"
+          />
         </div>
 
-        <div v-if="loading" class="p-8 animate-pulse space-y-4">
-          <div v-for="n in 5" :key="n" class="h-12 bg-slate-100 rounded-xl w-full"></div>
+        <div>
+          <label class="text-xs font-bold text-slate-700">Tên chương trình *</label>
+          <input
+            v-model="form.name"
+            type="text"
+            required
+            placeholder="Ví dụ: Giảm giá ngày hè..."
+            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+          />
         </div>
 
-        <div v-else-if="promotions.length === 0" class="p-16 text-center text-slate-400 font-medium">
-          Chưa có mã giảm giá nào trong hệ thống.
+        <div>
+          <label class="text-xs font-bold text-slate-700">Mô tả chi tiết</label>
+          <textarea
+            v-model="form.description"
+            rows="2"
+            placeholder="Mô tả điều kiện áp dụng cho khách hàng..."
+            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+          ></textarea>
         </div>
 
-        <div v-else-if="filteredPromotions.length === 0" class="p-16 text-center text-slate-400 font-medium">
-          Không tìm thấy mã giảm giá nào phù hợp.
-        </div>
-
-        <div v-else class="overflow-x-auto">
-          <table class="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr class="bg-slate-50 border-b border-slate-150 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                <th class="py-4 px-6">Mã giảm giá</th>
-                <th class="py-4 px-6">Chi tiết ưu đãi</th>
-                <th class="py-4 px-6">Đơn tối thiểu</th>
-                <th class="py-4 px-6">Đã dùng / Giới hạn</th>
-                <th class="py-4 px-6">Trạng thái</th>
-                <th class="py-4 px-6 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
-              <tr v-for="promo in filteredPromotions" :key="promo._id" class="hover:bg-slate-50/50">
-                <td class="py-4 px-6 font-mono text-xs font-bold text-slate-900 bg-slate-50/20">{{ promo.code }}</td>
-                <td class="py-4 px-6">
-                  <p class="font-bold text-slate-800">{{ promo.name }}</p>
-                  <p class="text-xs text-blue-700 font-extrabold">
-                    {{ promo.discountType === 'PERCENT' ? `Giảm ${promo.discountValue}%` : `Giảm ${formatCurrency(promo.discountValue)}` }}
-                  </p>
-                </td>
-                <td class="py-4 px-6 font-semibold">{{ formatCurrency(promo.minOrderValue) }}</td>
-                <td class="py-4 px-6 text-xs text-slate-500 font-semibold">{{ promo.usedCount }} / {{ promo.usageLimit }}</td>
-                <td class="py-4 px-6">
-                  <span :class="[promo.status ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800', 'px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider']">
-                    {{ promo.status ? 'Đang chạy' : 'Ngừng chạy' }}
-                  </span>
-                </td>
-                <td class="py-4 px-6 text-right space-x-2">
-                  <button @click="deletePromotion(promo._id)" class="text-red-500 hover:text-red-700 inline-block font-bold">
-                    Xóa
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Creation Form Panel -->
-      <div v-if="showForm" class="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-6">
-        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-          <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Tạo mã giảm giá mới</h3>
-          <button @click="showForm = false" class="text-slate-400 hover:text-slate-600">&times;</button>
-        </div>
-
-        <form @submit.prevent="handleSubmit" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="text-xs font-bold text-slate-700">Mã giảm giá (Coupon Code) *</label>
-            <input
-              v-model="form.code"
-              type="text"
-              required
-              placeholder="Ví dụ: CHAOMUNG2026"
-              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white font-mono uppercase tracking-wider"
-            />
+            <label class="text-xs font-bold text-slate-700">Loại giảm giá *</label>
+            <select
+              v-model="form.discountType"
+              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+            >
+              <option value="PERCENT">Phần trăm (%)</option>
+              <option value="FIXED">Số tiền cố định (VNĐ)</option>
+            </select>
           </div>
-
           <div>
-            <label class="text-xs font-bold text-slate-700">Tên chương trình *</label>
+            <label class="text-xs font-bold text-slate-700">Mức giảm *</label>
             <input
-              v-model="form.name"
-              type="text"
-              required
-              placeholder="Ví dụ: Giảm giá ngày hè..."
-              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
-            />
-          </div>
-
-          <div>
-            <label class="text-xs font-bold text-slate-700">Mô tả chi tiết</label>
-            <textarea
-              v-model="form.description"
-              rows="2"
-              placeholder="Mô tả ưu đãi..."
-              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
-            ></textarea>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-xs font-bold text-slate-700">Loại giảm giá</label>
-              <select
-                v-model="form.discountType"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-              >
-                <option value="PERCENT">Phần trăm (%)</option>
-                <option value="FIXED">Số tiền cố định (VND)</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-xs font-bold text-slate-700">Giá trị giảm giá *</label>
-              <input
-                v-if="form.discountType === 'FIXED'"
-                :value="formatNumberWithDots(form.discountValue)"
-                @input="handleDiscountValueInput"
-                type="text"
-                required
-                placeholder="Nhập giá trị..."
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
-              />
-              <input
-                v-else
-                v-model.number="form.discountValue"
-                type="number"
-                required
-                min="1"
-                max="100"
-                placeholder="Nhập giá trị..."
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-xs font-bold text-slate-700">Đơn tối thiểu *</label>
-              <input
-                :value="formatNumberWithDots(form.minOrderValue)"
-                @input="handleMinOrderValueInput"
-                type="text"
-                required
-                placeholder="0đ"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
-              />
-            </div>
-            <div>
-              <label class="text-xs font-bold text-slate-700">Lượt dùng tối đa *</label>
-              <input
-                v-model.number="form.usageLimit"
-                type="number"
-                required
-                min="1"
-                placeholder="1000"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-xs font-bold text-slate-700">Ngày bắt đầu *</label>
-              <input
-                v-model="form.startDate"
-                type="date"
-                required
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-              />
-            </div>
-            <div>
-              <label class="text-xs font-bold text-slate-700">Ngày kết thúc *</label>
-              <input
-                v-model="form.endDate"
-                type="date"
-                required
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label class="text-xs font-bold text-slate-700">Lượt tối đa mỗi khách *</label>
-            <input
-              v-model.number="form.perUserLimit"
+              v-model.number="form.discountValue"
               type="number"
               required
               min="1"
-              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+              :max="form.discountType === 'PERCENT' ? 100 : undefined"
+              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626] font-bold"
             />
           </div>
+        </div>
 
-          <button
-            type="submit"
-            :disabled="submitting"
-            class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl transition-colors flex items-center justify-center text-xs uppercase tracking-wider shadow-lg shadow-blue-500/20 disabled:bg-slate-300 disabled:shadow-none"
-          >
-            {{ submitting ? 'Đang tạo...' : 'Tạo mã giảm giá' }}
-          </button>
-        </form>
-      </div>
-    </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-bold text-slate-700">Đơn hàng tối thiểu (VNĐ)</label>
+            <input
+              v-model.number="form.minOrderValue"
+              type="number"
+              min="0"
+              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+            />
+          </div>
+          <div v-if="form.discountType === 'PERCENT'">
+            <label class="text-xs font-bold text-slate-700">Giảm tối đa (VNĐ)</label>
+            <input
+              v-model.number="form.maxDiscountAmount"
+              type="number"
+              min="0"
+              placeholder="Để trống nếu không giới hạn"
+              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-bold text-slate-700">Giới hạn số lần dùng</label>
+            <input
+              v-model.number="form.usageLimit"
+              type="number"
+              min="1"
+              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Giới hạn mỗi khách hàng</label>
+            <input
+              v-model.number="form.limitPerUser"
+              type="number"
+              min="1"
+              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-bold text-slate-700">Ngày bắt đầu *</label>
+            <input
+              v-model="form.startDate"
+              type="date"
+              required
+              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Ngày kết thúc *</label>
+            <input
+              v-model="form.endDate"
+              type="date"
+              required
+              class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+            />
+          </div>
+        </div>
+      </form>
+    </FormModal>
   </div>
 </template>
 
@@ -237,48 +221,27 @@ import { useToast } from 'vue-toastification'
 import { promotionService } from '@/services/promotion.service'
 import { formatCurrency } from '@/utils/helpers'
 import type { Promotion } from '@/types'
-
-const formatNumberWithDots = (val: string | number | undefined | null): string => {
-  if (val === undefined || val === null || val === '') return '';
-  const clean = String(val).replace(/\D/g, '');
-  if (!clean) return '';
-  return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-};
-
-const handleDiscountValueInput = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const rawValue = target.value;
-  const cleanValue = rawValue.replace(/\D/g, '');
-  form.discountValue = cleanValue ? parseInt(cleanValue, 10) : 0;
-  target.value = formatNumberWithDots(cleanValue);
-};
-
-const handleMinOrderValueInput = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const rawValue = target.value;
-  const cleanValue = rawValue.replace(/\D/g, '');
-  form.minOrderValue = cleanValue ? parseInt(cleanValue, 10) : 0;
-  target.value = formatNumberWithDots(cleanValue);
-};
+import FilterBar from '@/components/FilterBar.vue'
+import DataTable, { type TableColumn } from '@/components/DataTable.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
+import FormModal from '@/components/FormModal.vue'
 
 const toast = useToast()
 
 const promotions = ref<Promotion[]>([])
 const loading = ref(true)
+const saving = ref(false)
 const showForm = ref(false)
-const submitting = ref(false)
 const promoQuery = ref('')
 
-const filteredPromotions = computed(() => {
-  if (!promoQuery.value) return promotions.value
-  const q = promoQuery.value.toLowerCase().trim()
-  return promotions.value.filter(promo => {
-    const code = (promo.code || '').toLowerCase()
-    const name = (promo.name || '').toLowerCase()
-    const desc = (promo.description || '').toLowerCase()
-    return code.includes(q) || name.includes(q) || desc.includes(q)
-  })
-})
+const columns: TableColumn[] = [
+  { key: 'code', label: 'MÃ GIẢM GIÁ' },
+  { key: 'details', label: 'CHI TIẾT ƯU ĐÃI' },
+  { key: 'minOrderValue', label: 'ĐƠN TỐI THIỂU' },
+  { key: 'usage', label: 'ĐÃ DÙNG / GIỚI HẠN' },
+  { key: 'status', label: 'TRẠNG THÁI' },
+  { key: 'actions', label: 'THAO TÁC', align: 'right' },
+]
 
 const form = reactive({
   code: '',
@@ -286,11 +249,12 @@ const form = reactive({
   description: '',
   discountType: 'PERCENT',
   discountValue: 10,
-  minOrderValue: 100000,
-  startDate: '',
-  endDate: '',
+  minOrderValue: 0,
+  maxDiscountAmount: undefined as number | undefined,
   usageLimit: 100,
-  perUserLimit: 1,
+  limitPerUser: 1,
+  startDate: new Date().toISOString().split('T')[0],
+  endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
 })
 
 onMounted(fetchPromotions)
@@ -298,57 +262,59 @@ onMounted(fetchPromotions)
 async function fetchPromotions() {
   loading.value = true
   try {
-    const res = await promotionService.getAll()
-    promotions.value = res.data
+    const res: any = await promotionService.getAll()
+    promotions.value = Array.isArray(res.data) ? res.data : (res.data?.data || [])
   } catch (err) {
-    toast.error('Lỗi khi tải danh sách khuyến mãi')
+    toast.error('Lỗi khi tải danh sách mã giảm giá')
   } finally {
     loading.value = false
   }
 }
 
+const filteredPromotions = computed(() => {
+  if (!promoQuery.value) return promotions.value
+  const q = promoQuery.value.toLowerCase().trim()
+  return promotions.value.filter(p => {
+    const code = (p.code || '').toLowerCase()
+    const name = (p.name || '').toLowerCase()
+    return code.includes(q) || name.includes(q)
+  })
+})
+
 function openCreateForm() {
-  form.code = ''
-  form.name = ''
-  form.description = ''
-  form.discountType = 'PERCENT'
-  form.discountValue = 10
-  form.minOrderValue = 100000
-  form.startDate = new Date().toISOString().substring(0, 10)
-  form.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)
-  form.usageLimit = 100
-  form.perUserLimit = 1
   showForm.value = true
 }
 
 async function handleSubmit() {
-  submitting.value = true
+  if (!form.code || !form.name) {
+    toast.warning('Vui lòng điền mã và tên chương trình')
+    return
+  }
+  saving.value = true
   try {
     const payload = {
       ...form,
-      code: form.code.toUpperCase().trim(),
-      startDate: new Date(form.startDate),
-      endDate: new Date(form.endDate),
+      code: form.code.trim().toUpperCase(),
     }
     await promotionService.create(payload)
     toast.success('Tạo mã giảm giá thành công!')
     showForm.value = false
     fetchPromotions()
   } catch (err: any) {
-    toast.error(err.message || 'Lỗi khi tạo khuyến mãi')
+    toast.error(err.response?.data?.message || 'Không thể tạo mã giảm giá')
   } finally {
-    submitting.value = false
+    saving.value = false
   }
 }
 
 async function deletePromotion(id: string) {
-  if (!confirm('Bạn có chắc muốn xóa mã giảm giá này?')) return
+  if (!confirm('Bạn có chắc chắn muốn xóa mã giảm giá này?')) return
   try {
     await promotionService.delete(id)
-    toast.success('Xóa khuyến mãi thành công')
+    toast.success('Đã xóa mã giảm giá')
     fetchPromotions()
   } catch (err) {
-    toast.error('Lỗi khi xóa khuyến mãi')
+    toast.error('Xóa mã giảm giá thất bại')
   }
 }
 </script>
