@@ -1,6 +1,7 @@
 import { Module, Logger, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import type { Connection } from 'mongoose';
 import configuration from './config/configuration';
 import { validateEnv } from './config/env.validation';
 import { AuthModule } from './modules/auth/auth.module';
@@ -29,6 +30,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { SecuritySanitizerMiddleware } from './common/middleware/security-sanitizer.middleware';
 import { CommonModule } from './common/common.module';
+import { ShippingModule } from './modules/shipping/shipping.module';
 
 @Module({
   imports: [
@@ -37,6 +39,9 @@ import { CommonModule } from './common/common.module';
       load: [configuration],
       validate: validateEnv,
       envFilePath: ['.env.local', '.env'],
+      // Tests must use explicit test credentials/database and must not load
+      // developer SMTP, Google Sheets or production database configuration.
+      ignoreEnvFile: process.env.NODE_ENV === 'test',
     }),
     CommonModule,
     ScheduleModule.forRoot(),
@@ -45,9 +50,10 @@ import { CommonModule } from './common/common.module';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('MONGODB_URI'),
-        connectionFactory: (connection) => {
+        connectionFactory: (connection: Connection): Connection => {
           const logger = new Logger('Database');
-          connection.on('error', (err: any) => {
+          connection.on('error', (err: unknown) => {
+            if (!(err instanceof Error)) return;
             logger.error(`❌ Mongoose connection error: ${err.message || err}`);
           });
           connection.on('connected', () => {
@@ -79,6 +85,7 @@ import { CommonModule } from './common/common.module';
     CartModule,
     OrdersModule,
     PaymentsModule,
+    ShippingModule,
     InventoryModule,
     ReviewsModule,
     CustomersModule,

@@ -164,11 +164,13 @@ export class UsersService {
     });
 
     const saved = await user.save();
-    const result = saved.toObject ? saved.toObject() : saved;
-    delete (result as any).password;
-    delete (result as any).refreshTokenHash;
-    delete (result as any).resetOtp;
-    return result as any;
+    const result = (saved.toObject
+      ? saved.toObject()
+      : saved) as unknown as Record<string, unknown>;
+    delete result.password;
+    delete result.refreshTokenHash;
+    delete result.resetOtp;
+    return result as unknown as UserDocument;
   }
 
   async updateRole(
@@ -258,9 +260,11 @@ export class UsersService {
       targetUserId,
       newRole,
     });
-    const result = updated.toObject ? updated.toObject() : updated;
-    delete (result as any).password;
-    return result as any;
+    const result = (updated.toObject
+      ? updated.toObject()
+      : updated) as unknown as Record<string, unknown>;
+    delete result.password;
+    return result as unknown as UserDocument;
   }
 
   async updatePermissions(
@@ -292,9 +296,11 @@ export class UsersService {
 
     targetUser.permissions = permissions;
     const updated = await targetUser.save();
-    const result = updated.toObject ? updated.toObject() : updated;
-    delete (result as any).password;
-    return result as any;
+    const result = (updated.toObject
+      ? updated.toObject()
+      : updated) as unknown as Record<string, unknown>;
+    delete result.password;
+    return result as unknown as UserDocument;
   }
 
   async updateStatus(
@@ -357,9 +363,11 @@ export class UsersService {
       targetUserId,
       status,
     });
-    const result = updated.toObject ? updated.toObject() : updated;
-    delete (result as any).password;
-    return result as any;
+    const result = (updated.toObject
+      ? updated.toObject()
+      : updated) as unknown as Record<string, unknown>;
+    delete result.password;
+    return result as unknown as UserDocument;
   }
 
   async deleteUser(
@@ -565,6 +573,50 @@ export class UsersService {
     if (!user) return null;
     user.loyaltyPoints = Math.max(0, (user.loyaltyPoints || 0) - points);
     return user.save(session ? { session } : undefined);
+  }
+
+  /**
+   * PRODUCT-01: Atomically spends loyalty points with anti-double-spending guard.
+   * Checks that the user has at least `points` before decrementing.
+   */
+  async spendLoyaltyPoints(
+    userId: string,
+    points: number,
+    session?: ClientSession,
+  ): Promise<UserDocument | null> {
+    if (points <= 0) return this.findById(userId);
+    const query = this.userModel.findOneAndUpdate(
+      {
+        _id: userId,
+        loyaltyPoints: { $gte: points },
+      },
+      {
+        $inc: { loyaltyPoints: -points },
+      },
+      { new: true },
+    );
+    if (session) query.session(session);
+    return await query.exec();
+  }
+
+  /**
+   * PRODUCT-01: Refunds spent loyalty points when an order is CANCELLED or RETURNED.
+   */
+  async refundLoyaltyPoints(
+    userId: string,
+    points: number,
+    session?: ClientSession,
+  ): Promise<UserDocument | null> {
+    if (points <= 0) return this.findById(userId);
+    const query = this.userModel.findOneAndUpdate(
+      { _id: userId },
+      {
+        $inc: { loyaltyPoints: points },
+      },
+      { new: true },
+    );
+    if (session) query.session(session);
+    return await query.exec();
   }
 
   async getLoyaltyInfo(userId: string) {

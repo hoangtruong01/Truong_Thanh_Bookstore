@@ -10,11 +10,14 @@ services:
       MONGO_INITDB_DATABASE: truong_thanh_bookstore
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:?MONGO_INITDB_ROOT_USERNAME is required}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:?MONGO_INITDB_ROOT_PASSWORD is required}
-    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    entrypoint: ["bash", "/opt/mongo-replica-entrypoint.sh"]
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--keyFile", "/data/configdb/replica.key"]
     volumes:
       - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./scripts/mongo-replica-entrypoint.sh:/opt/mongo-replica-entrypoint.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "mongosh -u \"$${MONGO_INITDB_ROOT_USERNAME}\" -p \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --quiet --eval \"try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}).ok }\" | grep 1"]
+      test: ["CMD-SHELL", "mongosh -u \"$${MONGO_INITDB_ROOT_USERNAME}\" -p \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --quiet --eval \"try { rs.status() } catch (e) { if (e.code === 94) rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}); else throw e; } quit(db.hello().isWritablePrimary ? 0 : 1)\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -100,6 +103,8 @@ services:
       - truongthanh-network
 
 volumes:
+  mongodb_config:
+    driver: local
   mongodb_data:
     driver: local
   redis_data:

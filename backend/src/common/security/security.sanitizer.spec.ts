@@ -65,7 +65,7 @@ describe('Security Sanitizer & Middleware Spec', () => {
 
     it('should strip javascript: and data:text/html pseudo-protocols', () => {
       const input = '<a href="javascript:alert(1)">Click</a>';
-      expect(sanitizeXss(input)).toBe('<a href="alert(1)">Click</a>');
+      expect(sanitizeXss(input)).toBe('<a>Click</a>');
     });
 
     it('should strip inline event handlers like onerror and onload', () => {
@@ -74,7 +74,31 @@ describe('Security Sanitizer & Middleware Spec', () => {
       const output = sanitizeXss(input);
       expect(output).not.toContain('onerror');
       expect(output).not.toContain('onload');
-      expect(output).toContain('<img src="invalid.jpg"  />');
+      expect(output).toBe('');
+    });
+
+    it('blocks nested, encoded and SVG mutation-XSS payloads', () => {
+      const payloads = [
+        '<svg><animate href="#x" attributeName="href" values="javascript:alert(1)" /></svg><p>Safe</p>',
+        '<math><mtext></style><img src=x onerror=alert(1)></mtext></math>Text',
+        '<a href="&#106;&#97;vascript:alert(1)">Click</a>',
+        '<textarea><img src=x onerror=alert(1)></textarea/>Tail',
+      ];
+
+      for (const payload of payloads) {
+        const output = sanitizeXss(payload);
+        expect(output).not.toMatch(/(?:javascript|onerror|<svg|<math|<img)/i);
+      }
+    });
+
+    it('preserves allowed rich text and hardens target blank links', () => {
+      expect(
+        sanitizeXss(
+          '<h3>Sách mới</h3><p><strong>Nội dung</strong> <a href="https://truongthanh.vn" target="_blank">xem thêm</a></p>',
+        ),
+      ).toBe(
+        '<h3>Sách mới</h3><p><strong>Nội dung</strong> <a href="https://truongthanh.vn" target="_blank" rel="noopener noreferrer">xem thêm</a></p>',
+      );
     });
 
     it('should preserve safe Vietnamese text with diacritics and symbols', () => {
@@ -135,7 +159,7 @@ describe('Security Sanitizer & Middleware Spec', () => {
 
       const cleaned = sanitizePayload(payload);
       expect(cleaned.customerName).toBe('Nguyễn Văn A');
-      expect(cleaned.notes).toBe('<img src=x >Giao hàng cẩn thận');
+      expect(cleaned.notes).toBe('Giao hàng cẩn thận');
       expect(cleaned.items[0].name).toBe('Bút bi Thiên Long');
       expect(cleaned.items[1].name).toBe('Thước kẻ 20cm');
     });

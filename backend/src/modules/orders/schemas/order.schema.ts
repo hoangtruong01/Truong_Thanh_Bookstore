@@ -67,6 +67,12 @@ export class Order {
   @Prop({ select: false })
   idempotencyKeyHash?: string;
 
+  @Prop({ select: false })
+  guestPhoneKey?: string;
+
+  @Prop({ type: Number, select: false })
+  guestPendingSlot?: number;
+
   @Prop({ type: [OrderItemSchema], required: true })
   items: OrderItem[];
 
@@ -130,11 +136,32 @@ export class Order {
   @Prop({ type: Number, default: 0, min: 0 })
   loyaltyPointsAwarded: number;
 
+  @Prop({ type: Number, default: 0, min: 0 })
+  loyaltyPointsUsed: number;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  loyaltyDiscount: number;
+
+  @Prop({ type: Boolean, default: false })
+  loyaltyPointsRefunded: boolean;
+
   @Prop()
   revenueRecognizedAt?: Date;
 
   @Prop()
   autoCancelWarningSentAt?: Date;
+
+  @Prop({ enum: ['GHN'] })
+  shippingProvider?: 'GHN';
+
+  @Prop({ index: true })
+  trackingCode?: string;
+
+  @Prop()
+  shippingStatus?: string;
+
+  @Prop()
+  shippingSyncedAt?: Date;
 
   createdAt: Date;
   updatedAt: Date;
@@ -148,6 +175,20 @@ OrderSchema.index({ orderStatus: 1 });
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ revenueRecognizedAt: -1 });
 OrderSchema.index({ promotionCode: 1 });
+// BE-10: each phone can occupy only a bounded set of pending guest slots.
+// The slot is released automatically when orderStatus leaves PENDING because
+// the document no longer participates in this partial unique index.
+OrderSchema.index(
+  { guestPhoneKey: 1, guestPendingSlot: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      guestPhoneKey: { $type: 'string' },
+      guestPendingSlot: { $type: 'number' },
+      orderStatus: OrderStatus.PENDING,
+    },
+  },
+);
 OrderSchema.index(
   { customer: 1, idempotencyKeyHash: 1 },
   {

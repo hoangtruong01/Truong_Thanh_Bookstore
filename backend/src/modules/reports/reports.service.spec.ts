@@ -123,6 +123,28 @@ describe('ReportsService', () => {
   });
 
   describe('getRevenue', () => {
+    it('uses Vietnam day boundaries independent of server timezone', async () => {
+      await service.getRevenue('2026-09-05', '2026-09-05');
+      expect(mockOrdersService.getRevenueByDateRange).toHaveBeenCalledWith(
+        new Date('2026-09-04T17:00:00.000Z'),
+        new Date('2026-09-05T16:59:59.999Z'),
+      );
+    });
+
+    it.each(['2026-02-30', 'bad-date', '2026-13-01'])(
+      'rejects invalid date %s',
+      async (date) => {
+        await expect(service.getRevenue(date, '2026-09-05')).rejects.toThrow(
+          'Ngày báo cáo',
+        );
+      },
+    );
+
+    it('rejects reversed ranges', async () => {
+      await expect(
+        service.getRevenue('2026-09-06', '2026-09-05'),
+      ).rejects.toThrow('Ngày bắt đầu');
+    });
     it('should query revenue within date range', async () => {
       const result = await service.getRevenue('2026-08-01', '2026-08-30');
       expect(result).toBeDefined();

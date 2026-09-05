@@ -9,6 +9,8 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsGateway } from './notifications.gateway';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
+import { DeviceToken, DeviceTokenSchema } from './schemas/device-token.schema';
+import { FcmPushService } from './fcm-push.service';
 
 @Module({
   imports: [
@@ -16,10 +18,11 @@ import { UsersModule } from '../users/users.module';
     UsersModule,
     MongooseModule.forFeature([
       { name: Notification.name, schema: NotificationSchema },
+      { name: DeviceToken.name, schema: DeviceTokenSchema },
     ]),
   ],
   controllers: [NotificationsController],
-  providers: [NotificationsService, NotificationsGateway],
-  exports: [NotificationsService, NotificationsGateway],
+  providers: [NotificationsService, NotificationsGateway, FcmPushService],
+  exports: [NotificationsService, NotificationsGateway, FcmPushService],
 })
 export class NotificationsModule {}

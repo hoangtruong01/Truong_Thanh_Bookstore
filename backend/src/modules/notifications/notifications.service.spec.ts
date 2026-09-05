@@ -5,6 +5,7 @@ import { Types } from 'mongoose';
 import { NotificationsService } from './notifications.service';
 import { Notification } from './schemas/notification.schema';
 import { NotificationsGateway } from './notifications.gateway';
+import { FcmPushService } from './fcm-push.service';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -46,6 +47,10 @@ describe('NotificationsService', () => {
           useValue: MockNotification,
         },
         { provide: NotificationsGateway, useValue: mockGateway },
+        {
+          provide: FcmPushService,
+          useValue: { sendToUser: jest.fn().mockResolvedValue(undefined) },
+        },
       ],
     }).compile();
 

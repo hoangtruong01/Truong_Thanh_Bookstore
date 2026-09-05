@@ -49,8 +49,8 @@ export class OrdersController {
   @Post()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Create an order (guest)' })
-  create(@Body() dto: CreateOrderDto) {
-    return this.ordersService.create(dto);
+  create(@Body() dto: CreateOrderDto, @Request() req: any) {
+    return this.ordersService.create(dto, undefined, req.ip);
   }
 
   @Post('authenticated')

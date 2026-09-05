@@ -25,7 +25,9 @@ export class CreatePaymentDto {
   })
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   orderCode?: string;
 
   @ApiPropertyOptional({
@@ -57,7 +59,9 @@ export class PaymentCallbackDto {
   @ApiProperty({ description: 'Mã giao dịch từ cổng thanh toán' })
   @IsNotEmpty({ message: 'transactionId không được để trống' })
   @IsString()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   transactionId: string;
 
   @ApiPropertyOptional({

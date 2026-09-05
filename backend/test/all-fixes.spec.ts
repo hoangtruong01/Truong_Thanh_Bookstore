@@ -221,7 +221,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
   });
 
   describe('New Feature: Loyalty Point System Check', () => {
-    it('should award 1 point for every 1000 VND spent when order is created for registered user', async () => {
+    it('should defer loyalty awards until delivery for registered users', async () => {
       mockProductsService.deductStock.mockResolvedValue(undefined);
       mockProductsService.incrementSold.mockResolvedValue(undefined);
 
@@ -238,13 +238,10 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
 
       const result = await ordersService.create(createDto, 'user123'); // authenticated user
       expect(result.total).toBe(80000); // 50k + 30k ship
-      expect(mockUsersService.addLoyaltyPoints).toHaveBeenCalledWith(
-        'user123',
-        80,
-      );
+      expect(mockUsersService.addLoyaltyPoints).not.toHaveBeenCalled();
     });
 
-    it('should deduct points when order status transitions to CANCELLED', async () => {
+    it('should not deduct unearned points when a PENDING order is cancelled', async () => {
       // Mock order finding
       const mockOrder = {
         _id: 'order123',
@@ -266,11 +263,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       };
 
       await ordersService.updateStatus('order123', updateDto);
-      expect(mockUsersService.deductLoyaltyPoints).toHaveBeenCalledWith(
-        'user123',
-        80,
-        undefined,
-      );
+      expect(mockUsersService.deductLoyaltyPoints).not.toHaveBeenCalled();
     });
   });
 });

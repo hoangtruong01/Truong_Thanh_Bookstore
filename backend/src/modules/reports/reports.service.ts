@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { OrdersService } from '../orders/orders.service';
 import { ProductsService } from '../products/products.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -46,26 +46,30 @@ export class ReportsService {
   }
 
   async getRevenue(startDate?: string, endDate?: string) {
-    let start: Date;
-    let end: Date;
-
-    if (startDate) {
-      const [y, m, d] = startDate.split('-').map(Number);
-      start = new Date(y, m - 1, d, 0, 0, 0, 0);
-    } else {
-      start = new Date();
-      start.setDate(start.getDate() - 30);
-      start.setHours(0, 0, 0, 0);
-    }
-
-    if (endDate) {
-      const [y, m, d] = endDate.split('-').map(Number);
-      end = new Date(y, m - 1, d, 23, 59, 59, 999);
-    } else {
-      end = new Date();
-      end.setHours(23, 59, 59, 999);
-    }
-
+    const dayMs = 24 * 60 * 60 * 1000;
+    const vnOffset = 7 * 60 * 60 * 1000;
+    const today = new Date(Date.now() + vnOffset).toISOString().slice(0, 10);
+    const parseDay = (value: string): Date => {
+      const utc = new Date(`${value}T00:00:00.000Z`);
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+        !Number.isFinite(utc.getTime()) ||
+        utc.toISOString().slice(0, 10) !== value
+      ) {
+        throw new BadRequestException(
+          'Ngày báo cáo phải hợp lệ theo định dạng YYYY-MM-DD',
+        );
+      }
+      return new Date(utc.getTime() - vnOffset);
+    };
+    const start = startDate
+      ? parseDay(startDate)
+      : new Date(parseDay(today).getTime() - 30 * dayMs);
+    const end = new Date(parseDay(endDate || today).getTime() + dayMs - 1);
+    if (start > end)
+      throw new BadRequestException(
+        'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc',
+      );
     return this.ordersService.getRevenueByDateRange(start, end);
   }
 

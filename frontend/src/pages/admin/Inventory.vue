@@ -24,7 +24,7 @@
 
     <!-- Tab 1: Current Stock & Adjust Panel -->
     <div v-if="activeTab === 'stock'" class="space-y-6">
-      <!-- Low Stock Warning Alert Box (Matches Screenshot) -->
+      <!-- Low Stock Warning Alert Box -->
       <div v-if="lowStockItems.length > 0" class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col gap-2">
         <div class="flex items-center gap-2 text-amber-800">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0 text-amber-600">
@@ -46,179 +46,161 @@
 
       <!-- Main Grid -->
       <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-        <!-- Stock List Table -->
-        <div class="xl:col-span-2 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-          <!-- Search box -->
-          <div class="p-4 border-b border-slate-100 flex gap-4 items-center">
-            <div class="relative flex-grow">
-              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
-              </span>
-              <input
-                v-model="stockQuery"
-                type="text"
-                placeholder="Tìm kiếm theo tên sản phẩm hoặc SKU..."
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold transition-all placeholder:text-slate-400"
+        <!-- Stock List DataTable -->
+        <div class="xl:col-span-2">
+          <DataTable
+            :columns="stockColumns"
+            :items="paginatedStocks"
+            :loading="loading"
+            clickable
+            :selected-row-key="selectedStock?._id"
+            pagination
+            :current-page="currentPage"
+            :total-items="filteredStocks.length"
+            :page-size="15"
+            empty-text="Chưa có thông tin kho cho sản phẩm nào."
+            empty-subtext="Không tìm thấy sản phẩm phù hợp với từ khóa tìm kiếm."
+            @row-click="selectStock"
+            @page-change="page => currentPage = page"
+          >
+            <!-- Header with Search box -->
+            <template #header>
+              <div class="relative flex-grow">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
+                </span>
+                <input
+                  v-model="stockQuery"
+                  type="text"
+                  placeholder="Tìm kiếm theo tên sản phẩm hoặc SKU..."
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold transition-all placeholder:text-slate-400"
+                />
+              </div>
+            </template>
+
+            <!-- Product Cell with Avatar / Placeholder -->
+            <template #cell(product)="{ row }">
+              <div class="flex items-center gap-3">
+                <img v-if="getProductImage(row)" :src="getProductImage(row)" class="w-8 h-8 rounded-full object-cover bg-slate-50 flex-shrink-0" />
+                <div v-else :class="['w-8 h-8 rounded-full flex items-center justify-center text-white font-extrabold text-[12px] flex-shrink-0 shadow-xs', getProductPlaceholder(getProductName(row)).gradient]">
+                  <span class="text-[10px] uppercase font-bold">{{ getProductName(row).slice(0, 2) }}</span>
+                </div>
+                <div class="min-w-0">
+                  <p class="font-bold text-slate-900 truncate leading-tight">{{ getProductName(row) }}</p>
+                  <p class="text-[10px] text-slate-400 mt-0.5">Đơn vị: {{ getProductUnit(row) }}</p>
+                </div>
+              </div>
+            </template>
+
+            <!-- SKU Cell -->
+            <template #cell(sku)="{ row }">
+              <span class="font-mono text-[10px] font-bold text-slate-500">{{ getProductSku(row) || '-' }}</span>
+            </template>
+
+            <!-- Current Stock Cell -->
+            <template #cell(stock)="{ row }">
+              <span class="font-bold text-slate-900">{{ row.currentStock }} {{ getProductUnit(row) }}</span>
+            </template>
+
+            <!-- Status Cell with StatusBadge -->
+            <template #cell(status)="{ row }">
+              <StatusBadge
+                :status="getInventoryStatusKey(row)"
+                type="inventory"
+                :label="getInventoryStatusLabel(row.status, row.currentStock, row.minStock)"
               />
-            </div>
-          </div>
-
-          <div v-if="loading" class="p-8 animate-pulse space-y-4">
-            <div v-for="n in 5" :key="n" class="h-12 bg-slate-100 rounded-xl w-full"></div>
-          </div>
-
-          <div v-else-if="stocks.length === 0" class="p-16 text-center text-slate-400 font-bold text-xs uppercase tracking-wider">
-            Chưa có thông tin kho cho sản phẩm nào.
-          </div>
-
-          <div v-else-if="filteredStocks.length === 0" class="p-16 text-center text-slate-400 font-bold text-xs uppercase tracking-wider">
-            Không tìm thấy sản phẩm phù hợp.
-          </div>
-
-          <div v-else class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
-                  <th class="py-4 px-6">Sản phẩm</th>
-                  <th class="py-4 px-6">SKU</th>
-                  <th class="py-4 px-6">Kho</th>
-                  <th class="py-4 px-6">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-150 font-medium text-slate-800">
-                <tr
-                  v-for="stk in paginatedStocks"
-                  :key="stk._id"
-                  @click="selectStock(stk)"
-                  class="hover:bg-slate-50/50 cursor-pointer transition-colors"
-                  :class="[selectedStock?._id === stk._id ? 'bg-red-50/40' : '']"
-                >
-                  <!-- Image circular indicator + name -->
-                  <td class="py-4 px-6 flex items-center gap-3">
-                    <img v-if="getProductImage(stk)" :src="getProductImage(stk)" class="w-8 h-8 rounded-full object-cover bg-slate-50 flex-shrink-0" />
-                    <div v-else :class="['w-8 h-8 rounded-full flex items-center justify-center text-white font-extrabold text-[12px] flex-shrink-0 shadow-xs', getProductPlaceholder(getProductName(stk)).gradient]">
-                      <!-- Render fallback icon matching name -->
-                      <svg v-if="getProductPlaceholder(getProductName(stk)).icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 text-white/90">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                      </svg>
-                      <svg v-else-if="getProductPlaceholder(getProductName(stk)).icon === 'document'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 text-white/90">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                      </svg>
-                      <svg v-else-if="getProductPlaceholder(getProductName(stk)).icon === 'calculator'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 text-white/90">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm-2.25 2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008Zm0-2.25h.008v.008h-.008v-.008ZM2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm11.379-3.379a.75.75 0 0 0-1.06 1.06l1.25 1.25a.75.75 0 0 0 1.06-1.06l-1.25-1.25Z" />
-                      </svg>
-                      <svg v-else-if="getProductPlaceholder(getProductName(stk)).icon === 'folder'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 text-white/90">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-19.5 0A2.25 2.25 0 0 0 4.5 15h15a2.25 2.25 0 0 0 2.25-2.25m-19.5 0v.225C2.25 14.28 3.52 15 5.04 15h13.92c1.52 0 2.79-.72 2.79-2.025v-.225M3 9V6a3 3 0 0 1 3-3h3.75a3 3 0 0 1 2.25 1.025L13.5 6h6.75A3 3 0 0 1 23 9v2.25m-20.25 0h17.5" />
-                      </svg>
-                      <span v-else>{{ getProductName(stk).charAt(0).toUpperCase() }}</span>
-                    </div>
-                    <span class="font-extrabold text-slate-800 truncate max-w-[180px] leading-tight">{{ getProductName(stk) }}</span>
-                  </td>
-                  <td class="py-4 px-6 font-mono text-[10px] font-bold text-slate-500">{{ getProductSku(stk) }}</td>
-                  <!-- Stock counts -->
-                  <td class="py-4 px-6 font-extrabold" :class="[stk.status === 'LOW_STOCK' || stk.currentStock <= stk.minStock ? 'text-[#dc2626] bg-red-50/50 rounded px-2 py-0.5' : 'text-slate-800']">
-                    {{ stk.currentStock }} {{ getProductUnit(stk) }}
-                  </td>
-                  <td class="py-4 px-6">
-                    <span :class="['px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wide', getInventoryBadgeStyle(stk.status, stk.currentStock, stk.minStock)]">
-                      {{ getInventoryStatusLabel(stk.status, stk.currentStock, stk.minStock) }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Pagination -->
-          <div v-if="totalPages > 1" class="p-4 border-t border-slate-100 flex items-center justify-between bg-white text-xs">
-            <div class="text-slate-500 font-semibold">
-              Hiển thị {{ (currentPage - 1) * 15 + 1 }} - {{ Math.min(currentPage * 15, filteredStocks.length) }} trên {{ filteredStocks.length }} sản phẩm
-            </div>
-            <div class="flex items-center gap-1.5">
-              <button 
-                @click="currentPage = Math.max(1, currentPage - 1)" 
-                :disabled="currentPage === 1"
-                class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                Trước
-              </button>
-              <button 
-                v-for="page in visiblePages" 
-                :key="page"
-                @click="currentPage = page"
-                class="w-8 h-8 rounded-lg font-bold transition-colors cursor-pointer"
-                :class="currentPage === page ? 'bg-[#dc2626] text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-600'"
-              >
-                {{ page }}
-              </button>
-              <button 
-                @click="currentPage = Math.min(totalPages, currentPage + 1)" 
-                :disabled="currentPage === totalPages"
-                class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                Sau
-              </button>
-            </div>
-          </div>
+            </template>
+          </DataTable>
         </div>
 
-        <!-- Quick stock adjust panel (Matches Screenshot) -->
+        <!-- Adjust Stock Panel (Matches Screenshot) -->
         <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
           <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-3">Điều chỉnh kho</h3>
 
           <div v-if="!selectedStock" class="text-center py-12 text-slate-400 text-xs font-bold uppercase tracking-wider">
-            Chọn một sản phẩm từ danh sách để thực hiện nhập/xuất hoặc điều chỉnh kho.
+            Chọn một sản phẩm từ danh sách bên trái để thực hiện điều chỉnh kho.
           </div>
 
-          <div v-else class="space-y-4">
-            <div class="space-y-1">
-              <h4 class="font-extrabold text-slate-800 text-xs leading-tight">{{ getProductName(selectedStock) }}</h4>
-              <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Mã SKU: {{ getProductSku(selectedStock) }} | Hiện tại: <span class="font-extrabold text-slate-800">{{ selectedStock.currentStock }} {{ getProductUnit(selectedStock) }}</span></p>
+          <div v-else class="space-y-6">
+            <!-- Selected Product Summary Box -->
+            <div class="border border-slate-100 bg-slate-50/50 rounded-xl p-4 flex gap-4 items-center">
+              <img v-if="getProductImage(selectedStock)" :src="getProductImage(selectedStock)" class="w-12 h-12 rounded-xl object-cover bg-white border border-slate-200 shadow-xs flex-shrink-0" />
+              <div v-else :class="['w-12 h-12 rounded-xl flex items-center justify-center text-white font-extrabold text-[14px] flex-shrink-0 shadow-xs', getProductPlaceholder(getProductName(selectedStock)).gradient]">
+                <span class="text-xs uppercase font-bold">{{ getProductName(selectedStock).slice(0, 2) }}</span>
+              </div>
+              <div class="min-w-0">
+                <p class="font-extrabold text-slate-900 text-sm leading-snug">{{ getProductName(selectedStock) }}</p>
+                <p class="text-slate-400 text-xs font-semibold mt-0.5 font-mono">SKU: {{ getProductSku(selectedStock) || 'Chưa có SKU' }}</p>
+              </div>
             </div>
 
-            <!-- Adjust Options Form -->
-            <div class="space-y-4 border-t border-slate-150 pt-4">
+            <!-- 3 Stat Badges Grid -->
+            <div class="grid grid-cols-3 gap-3 text-center">
+              <div class="border border-slate-200/80 rounded-xl p-2.5">
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Hiện có</span>
+                <span class="text-base font-extrabold text-slate-900 leading-tight block mt-0.5">{{ selectedStock.currentStock }}</span>
+                <span class="text-[9px] text-slate-400 font-semibold">{{ getProductUnit(selectedStock) }}</span>
+              </div>
+              <div class="border border-slate-200/80 rounded-xl p-2.5">
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Tối thiểu</span>
+                <span class="text-base font-extrabold text-slate-900 leading-tight block mt-0.5">{{ selectedStock.minStock }}</span>
+                <span class="text-[9px] text-slate-400 font-semibold">{{ getProductUnit(selectedStock) }}</span>
+              </div>
+              <div class="border border-slate-200/80 rounded-xl p-2.5">
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Tối đa</span>
+                <span class="text-base font-extrabold text-slate-900 leading-tight block mt-0.5">{{ selectedStock.maxStock }}</span>
+                <span class="text-[9px] text-slate-400 font-semibold">{{ getProductUnit(selectedStock) }}</span>
+              </div>
+            </div>
+
+            <!-- Form Inputs -->
+            <div class="space-y-4 pt-2 border-t border-slate-100">
+              <!-- Adjust Type -->
               <div>
-                <label class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Loại điều chỉnh</label>
+                <label class="text-xs font-bold text-slate-700 block mb-1">Loại thao tác</label>
                 <select
                   v-model="adjustType"
-                  class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
                 >
-                  <option value="import">Nhập kho (IMPORT)</option>
-                  <option value="sale">Bán hàng thủ công (SALE)</option>
-                  <option value="return">Hoàn kho (RETURN)</option>
-                  <option value="adjustment">Điều chỉnh tăng/giảm (ADJUSTMENT)</option>
-                  <option value="damage">Hư hỏng / thất thoát (DAMAGE)</option>
+                  <option value="import">Nhập kho (+)</option>
+                  <option value="sale">Bán hàng (-)</option>
+                  <option value="return">Khách trả hàng (+)</option>
+                  <option value="damage">Hư hỏng / Hao hụt (-)</option>
+                  <option value="adjustment">Điều chỉnh số lượng trực tiếp</option>
                 </select>
               </div>
 
+              <!-- Quantity Input -->
               <div>
-                <label class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Số lượng điều chỉnh *</label>
+                <label class="text-xs font-bold text-slate-700 block mb-1">
+                  {{ adjustType === 'adjustment' ? 'Số lượng kho mới' : 'Số lượng thay đổi' }}
+                </label>
                 <input
                   v-model.number="adjustQty"
                   type="number"
-                  :min="adjustType === 'adjustment' ? undefined : 1"
-                  placeholder="Nhập số lượng..."
-                  class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold placeholder:text-slate-400"
+                  min="1"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
                 />
               </div>
 
+              <!-- Note Input -->
               <div>
-                <label class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Ghi chú / Lý do điều chỉnh</label>
+                <label class="text-xs font-bold text-slate-700 block mb-1">Ghi chú thao tác</label>
                 <textarea
                   v-model="adjustNote"
                   rows="3"
-                  placeholder="Ví dụ: Nhập thêm hàng mới, kiểm kê kho cuối tháng..."
-                  class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold placeholder:text-slate-400"
+                  placeholder="Nhập lý do nhập/xuất hoặc số chứng từ liên quan..."
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
                 ></textarea>
               </div>
 
               <button
+                type="button"
                 @click="submitAdjustment"
-                :disabled="submittingAdjust"
-                class="w-full bg-[#dc2626] hover:bg-red-700 text-white font-extrabold py-2.5 px-6 rounded-xl transition-all flex items-center justify-center text-xs uppercase tracking-wider shadow-xs disabled:bg-slate-300 disabled:shadow-none cursor-pointer"
+                :disabled="submittingAdjust || adjustQty <= 0"
+                class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
               >
-                {{ submittingAdjust ? 'Đang thực hiện...' : 'Xác nhận thay đổi' }}
+                {{ submittingAdjust ? 'Đang cập nhật...' : 'Xác nhận điều chỉnh' }}
               </button>
             </div>
           </div>
@@ -226,70 +208,55 @@
       </div>
     </div>
 
-    <!-- Tab 2: Lịch sử giao dịch kho -->
-    <div v-else-if="activeTab === 'history'" class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-      <!-- Search Box -->
-      <div class="p-4 border-b border-slate-100 flex gap-4 items-center">
-        <div class="relative flex-grow">
-          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
+    <!-- Tab 2: Transaction History -->
+    <div v-else class="space-y-6">
+      <FilterBar
+        v-model="historyQuery"
+        placeholder="Tìm kiếm lịch sử theo sản phẩm, SKU, người thực hiện hoặc ghi chú..."
+      />
+
+      <DataTable
+        :columns="historyColumns"
+        :items="filteredTransactions"
+        :loading="loadingTransactions"
+        empty-text="Chưa có lịch sử giao dịch kho nào."
+        empty-subtext="Không tìm thấy lịch sử phù hợp với từ khóa tìm kiếm."
+      >
+        <template #cell(createdAt)="{ row }">
+          <span class="text-slate-500 font-semibold">{{ formatDateTime(row.createdAt) }}</span>
+        </template>
+
+        <template #cell(product)="{ row }">
+          <span class="font-extrabold text-slate-800 truncate max-w-[220px] block">
+            {{ row.product?.name || 'Sản phẩm đã bị xóa' }}
           </span>
-          <input
-            v-model="historyQuery"
-            type="text"
-            placeholder="Tìm kiếm lịch sử theo tên sản phẩm, SKU hoặc ghi chú..."
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-semibold transition-all placeholder:text-slate-400"
-          />
-        </div>
-      </div>
+        </template>
 
-      <div v-if="loadingTransactions" class="p-8 animate-pulse space-y-4">
-        <div v-for="n in 5" :key="n" class="h-12 bg-slate-100 rounded-xl w-full"></div>
-      </div>
+        <template #cell(sku)="{ row }">
+          <span class="font-mono text-[10px] font-bold text-slate-500">{{ row.product?.sku || '-' }}</span>
+        </template>
 
-      <div v-else-if="transactions.length === 0" class="p-16 text-center text-slate-400 font-bold text-xs uppercase tracking-wider">
-        Chưa có lịch sử giao dịch kho nào được ghi nhận.
-      </div>
+        <template #cell(type)="{ row }">
+          <span :class="['px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wide border', getTransactionTypeStyle(row.type)]">
+            {{ getTransactionTypeLabel(row.type) }}
+          </span>
+        </template>
 
-      <div v-else-if="filteredTransactions.length === 0" class="p-16 text-center text-slate-400 font-bold text-xs uppercase tracking-wider">
-        Không tìm thấy lịch sử phù hợp.
-      </div>
+        <template #cell(quantity)="{ row }">
+          <span :class="row.change >= 0 ? 'text-emerald-600' : 'text-red-600'" class="font-extrabold">
+            {{ row.change >= 0 ? '+' : '' }}{{ row.change }} {{ row.product?.unit || 'cái' }}
+            <small class="block text-slate-400">{{ row.stockBefore }} → {{ row.stockAfter }}</small>
+          </span>
+        </template>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
-              <th class="py-4 px-6">Thời gian</th>
-              <th class="py-4 px-6">Sản phẩm</th>
-              <th class="py-4 px-6">Mã SKU</th>
-              <th class="py-4 px-6">Loại giao dịch</th>
-              <th class="py-4 px-6">Số lượng</th>
-              <th class="py-4 px-6">Người thực hiện</th>
-              <th class="py-4 px-6">Ghi chú</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-150 font-medium text-slate-700">
-            <tr v-for="tx in filteredTransactions" :key="tx._id" class="hover:bg-slate-50/50">
-              <td class="py-4 px-6 text-slate-500 font-semibold">{{ formatDateTime(tx.createdAt) }}</td>
-              <td class="py-4 px-6 font-extrabold text-slate-800 truncate max-w-[220px]">{{ tx.product?.name || 'Sản phẩm đã bị xóa' }}</td>
-              <td class="py-4 px-6 font-mono text-[10px] font-bold text-slate-500">{{ tx.product?.sku || '-' }}</td>
-              <td class="py-4 px-6">
-                <span :class="['px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wide border', getTransactionTypeStyle(tx.type)]">
-                  {{ getTransactionTypeLabel(tx.type) }}
-                </span>
-              </td>
-              <td class="py-4 px-6 font-extrabold text-slate-800">
-                <span :class="tx.change >= 0 ? 'text-emerald-600' : 'text-red-600'" class="font-extrabold">
-                  {{ tx.change >= 0 ? '+' : '' }}{{ tx.change }} {{ tx.product?.unit || 'cái' }}
-                  <small class="block text-slate-400">{{ tx.stockBefore }} → {{ tx.stockAfter }}</small>
-                </span>
-              </td>
-              <td class="py-4 px-6 text-slate-600 font-bold">{{ tx.createdBy?.fullName || 'Hệ thống' }}</td>
-              <td class="py-4 px-6 text-slate-500 italic max-w-[150px] truncate" :title="tx.note">{{ tx.note || '-' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <template #cell(createdBy)="{ row }">
+          <span class="text-slate-600 font-bold">{{ row.createdBy?.fullName || 'Hệ thống' }}</span>
+        </template>
+
+        <template #cell(note)="{ row }">
+          <span class="text-slate-500 italic max-w-[150px] truncate block" :title="row.note">{{ row.note || '-' }}</span>
+        </template>
+      </DataTable>
     </div>
   </div>
 </template>
@@ -299,6 +266,9 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { inventoryService } from '@/services/inventory.service'
 import type { Inventory } from '@/types'
+import FilterBar from '@/components/FilterBar.vue'
+import DataTable, { type TableColumn } from '@/components/DataTable.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
 
 const toast = useToast()
 
@@ -311,10 +281,26 @@ const adjustQty = ref(1)
 const adjustNote = ref('')
 const submittingAdjust = ref(false)
 
-// History state
 const activeTab = ref<'stock' | 'history'>('stock')
 const transactions = ref<any[]>([])
 const loadingTransactions = ref(false)
+
+const stockColumns: TableColumn[] = [
+  { key: 'product', label: 'Sản phẩm' },
+  { key: 'sku', label: 'SKU' },
+  { key: 'stock', label: 'Kho' },
+  { key: 'status', label: 'Trạng thái' },
+]
+
+const historyColumns: TableColumn[] = [
+  { key: 'createdAt', label: 'Thời gian' },
+  { key: 'product', label: 'Sản phẩm' },
+  { key: 'sku', label: 'Mã SKU' },
+  { key: 'type', label: 'Loại giao dịch' },
+  { key: 'quantity', label: 'Số lượng' },
+  { key: 'createdBy', label: 'Người thực hiện' },
+  { key: 'note', label: 'Ghi chú' },
+]
 
 onMounted(() => {
   fetchStocks()
@@ -348,7 +334,6 @@ async function fetchTransactions() {
   }
 }
 
-// Search states
 const stockQuery = ref('')
 const historyQuery = ref('')
 
@@ -362,33 +347,12 @@ const filteredStocks = computed(() => {
   })
 })
 
-// Pagination
 const currentPage = ref(1)
 
 const paginatedStocks = computed(() => {
   const start = (currentPage.value - 1) * 15
   const end = start + 15
   return filteredStocks.value.slice(start, end)
-})
-
-const totalPages = computed(() => {
-  return Math.ceil(filteredStocks.value.length / 15) || 1
-})
-
-const visiblePages = computed(() => {
-  const pages: number[] = []
-  const maxVisible = 5
-  let start = Math.max(1, currentPage.value - 2)
-  let end = Math.min(totalPages.value, start + maxVisible - 1)
-
-  if (end - start < maxVisible - 1) {
-    start = Math.max(1, end - maxVisible + 1)
-  }
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i)
-  }
-  return pages
 })
 
 watch(stockQuery, () => {
@@ -407,7 +371,6 @@ const filteredTransactions = computed(() => {
   })
 })
 
-// Low Stock warning computation matching screenshot
 const lowStockItems = computed(() => {
   return stocks.value.filter(stk => stk.status === 'LOW_STOCK' || stk.currentStock <= stk.minStock)
 })
@@ -422,12 +385,10 @@ function getProductName(stk: Inventory) {
   return (stk.product && typeof stk.product === 'object') ? stk.product.name : 'Sản phẩm không rõ'
 }
 
-// Product Sku helper
 function getProductSku(stk: Inventory) {
   return (stk.product && typeof stk.product === 'object') ? stk.product.sku : ''
 }
 
-// Product Image helper
 function getProductImage(stk: Inventory) {
   return (stk.product && typeof stk.product === 'object') ? stk.product.images?.[0] : ''
 }
@@ -466,7 +427,6 @@ async function submitAdjustment() {
       toast.success('Điều chỉnh số lượng kho thành công!')
     }
 
-    // Refresh stocks list
     const oldId = selectedStock.value?._id
     await fetchStocks()
     if (oldId) {
@@ -476,7 +436,6 @@ async function submitAdjustment() {
       }
     }
 
-    // Refresh transaction history
     await fetchTransactions()
   } catch (err: any) {
     toast.error(err.message || 'Gặp lỗi trong quá trình điều chỉnh kho')
@@ -513,14 +472,14 @@ function getTransactionTypeStyle(type: string) {
   return 'bg-blue-50 text-blue-800 border-blue-200'
 }
 
-function getInventoryBadgeStyle(status: string, current: number, min: number) {
-  if (status === 'LOW_STOCK' || current <= min) {
-    return 'bg-amber-100 text-amber-800 border border-amber-200'
+function getInventoryStatusKey(stk: Inventory) {
+  if (stk.status === 'LOW_STOCK' || stk.currentStock <= stk.minStock) {
+    return 'LOW_STOCK'
   }
-  if (current === 0) {
-    return 'bg-red-100 text-red-800 border border-red-200'
+  if (stk.currentStock === 0) {
+    return 'OUT_OF_STOCK'
   }
-  return 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+  return 'IN_STOCK'
 }
 
 function getInventoryStatusLabel(status: string, current: number, min: number) {
@@ -536,32 +495,14 @@ function getInventoryStatusLabel(status: string, current: number, min: number) {
 function getProductPlaceholder(prodName?: string) {
   const name = (prodName || '').toLowerCase()
   if (name.includes('bút') || name.includes('viết') || name.includes('chì')) {
-    return {
-      gradient: 'bg-gradient-to-br from-red-400 to-rose-500',
-      icon: 'pencil'
-    }
+    return { gradient: 'bg-gradient-to-br from-red-400 to-rose-500', icon: 'pencil' }
   }
   if (name.includes('giấy') || name.includes('sổ') || name.includes('vở') || name.includes('tập') || name.includes('note')) {
-    return {
-      gradient: 'bg-gradient-to-br from-emerald-400 to-teal-500',
-      icon: 'document'
-    }
+    return { gradient: 'bg-gradient-to-br from-emerald-400 to-teal-500', icon: 'document' }
   }
   if (name.includes('máy tính') || name.includes('casio')) {
-    return {
-      gradient: 'bg-gradient-to-br from-indigo-400 to-purple-500',
-      icon: 'calculator'
-    }
+    return { gradient: 'bg-gradient-to-br from-indigo-400 to-purple-500', icon: 'calculator' }
   }
-  if (name.includes('hồ sơ') || name.includes('bìa') || name.includes('kẹp') || name.includes('keo') || name.includes('thước')) {
-    return {
-      gradient: 'bg-gradient-to-br from-blue-400 to-sky-500',
-      icon: 'folder'
-    }
-  }
-  return {
-    gradient: 'bg-gradient-to-br from-pink-400 to-rose-500',
-    icon: 'tag'
-  }
+  return { gradient: 'bg-gradient-to-br from-pink-400 to-rose-500', icon: 'tag' }
 }
 </script>

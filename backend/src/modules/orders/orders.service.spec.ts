@@ -82,10 +82,14 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       tierUpgraded: false,
     }),
     deductLoyaltyPoints: jest.fn().mockResolvedValue({}),
+    spendLoyaltyPoints: jest.fn().mockResolvedValue({ loyaltyPoints: 5000 }),
+    refundLoyaltyPoints: jest.fn().mockResolvedValue({ loyaltyPoints: 6000 }),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockOrderModel.countDocuments.mockReset();
+    mockConfigService.get.mockReset().mockReturnValue('');
     delete (mockOrderModel as any).db;
     mockProductsService.findById.mockResolvedValue(mockProduct);
     mockProductsService.findByIds.mockResolvedValue([mockProduct]);
@@ -106,7 +110,119 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     ordersService = module.get<OrdersService>(OrdersService);
   });
 
+  describe('BE-10: guest checkout abuse protection', () => {
+    it('rejects a phone that already reached the pending-order limit', async () => {
+      mockOrderModel.countDocuments.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(3),
+      });
+      mockConfigService.get.mockImplementation((key: string) =>
+        key === 'GUEST_PENDING_ORDER_LIMIT' ? '3' : '',
+      );
+
+      await expect(
+        (ordersService as any).checkGuestCheckoutProtection(
+          { phone: '0901234567' },
+          '127.0.0.1',
+        ),
+      ).rejects.toMatchObject({ status: 429 });
+    });
+
+    it('requires and verifies Turnstile after the suspicious threshold', async () => {
+      mockOrderModel.countDocuments.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(1),
+      });
+      mockConfigService.get.mockImplementation((key: string) => {
+        const values: Record<string, string> = {
+          GUEST_PENDING_ORDER_LIMIT: '3',
+          GUEST_CAPTCHA_THRESHOLD: '1',
+          TURNSTILE_SECRET_KEY: 'turnstile-test-secret',
+          TURNSTILE_ALLOWED_HOSTNAMES: 'shop.example.com',
+        };
+        return values[key] || '';
+      });
+      const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          success: true,
+          hostname: 'shop.example.com',
+        }),
+      } as any);
+
+      await expect(
+        (ordersService as any).checkGuestCheckoutProtection(
+          { phone: '+84 901 234 567', captchaToken: 'valid-token' },
+          '203.0.113.4',
+        ),
+      ).resolves.toEqual({ phoneKey: '0901234567', slot: 1 });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        expect.objectContaining({ method: 'POST' }),
+      );
+      fetchSpy.mockRestore();
+    });
+
+    it('rejects a mismatched Turnstile hostname', async () => {
+      mockOrderModel.countDocuments.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(1),
+      });
+      mockConfigService.get.mockImplementation((key: string) => {
+        const values: Record<string, string> = {
+          GUEST_CAPTCHA_THRESHOLD: '1',
+          TURNSTILE_SECRET_KEY: 'turnstile-test-secret',
+          TURNSTILE_ALLOWED_HOSTNAMES: 'shop.example.com',
+        };
+        return values[key] || '';
+      });
+      const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          success: true,
+          hostname: 'attacker.example',
+        }),
+      } as any);
+
+      await expect(
+        (ordersService as any).checkGuestCheckoutProtection({
+          phone: '0901234567',
+          captchaToken: 'replayed-token',
+        }),
+      ).rejects.toThrow('không hợp lệ');
+      fetchSpy.mockRestore();
+    });
+  });
+
   describe('Fix 1.3: Race Condition & Atomic Rollback Check', () => {
+    it('rejects standalone status updates before any stock or loyalty side effect', async () => {
+      const session = {
+        startTransaction: jest.fn(),
+        inTransaction: jest.fn().mockReturnValue(true),
+        abortTransaction: jest.fn().mockResolvedValue(undefined),
+        endSession: jest.fn().mockResolvedValue(undefined),
+      };
+      Object.assign(mockOrderModel, {
+        db: { startSession: jest.fn().mockResolvedValue(session) },
+      });
+      mockOrderModel.findById.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest
+          .fn()
+          .mockRejectedValue(
+            new Error(
+              'Transaction numbers are only allowed on a replica set member or mongos',
+            ),
+          ),
+      });
+      await expect(
+        ordersService.updateStatus('order-1', {
+          orderStatus: OrderStatus.CANCELLED,
+        }),
+      ).rejects.toThrow('yêu cầu MongoDB replica set');
+      expect(mockOrderModel.findById).toHaveBeenCalledTimes(1);
+      expect(mockProductsService.updateStock).not.toHaveBeenCalled();
+      expect(mockUsersService.refundLoyaltyPoints).not.toHaveBeenCalled();
+      expect(session.abortTransaction).toHaveBeenCalled();
+      expect(session.endSession).toHaveBeenCalled();
+    });
     it('should deduct stock BEFORE saving order and rollback if stock fails', async () => {
       mockProductsService.deductStock.mockRejectedValueOnce(
         new BadRequestException('Không đủ tồn kho cho sản phẩm'),
@@ -600,6 +716,165 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
       });
 
       expect(mockUsersService.deductLoyaltyPoints).not.toHaveBeenCalled();
+    });
+
+    describe('PRODUCT-01: Loyalty Point Spending at Checkout', () => {
+      it('should reject guest attempting to spend loyalty points', async () => {
+        const guestOrderDto = {
+          items: [
+            {
+              product: '507f1f77bcf86cd799439011',
+              name: 'Book',
+              price: 1000000,
+              quantity: 1,
+            },
+          ],
+          shippingAddress: '123 Street',
+          phone: '0901234567',
+          customerName: 'Guest',
+          loyaltyPointsUsed: 1000,
+        };
+
+        await expect(
+          ordersService.create(guestOrderDto as any, undefined),
+        ).rejects.toThrow(
+          'Chỉ khách hàng có tài khoản mới có thể sử dụng điểm thưởng Loyalty',
+        );
+      });
+
+      it('should reject spending less than 1,000 loyalty points', async () => {
+        const orderDto = {
+          items: [
+            {
+              product: '507f1f77bcf86cd799439011',
+              name: 'Book',
+              price: 1000000,
+              quantity: 1,
+            },
+          ],
+          shippingAddress: '123 Street',
+          phone: '0901234567',
+          customerName: 'Customer',
+          loyaltyPointsUsed: 500,
+        };
+
+        await expect(
+          ordersService.create(orderDto as any, 'user123'),
+        ).rejects.toThrow('Mức tiêu điểm tối thiểu là 1.000 điểm');
+      });
+
+      it('should reject spending loyalty points exceeding 20% of subtotal', async () => {
+        // subtotal = 100,000 => 20% is 20,000 => max points is 200 points.
+        // 1,000 points = 100,000 VND discount > 20,000 VND
+        const orderDto = {
+          items: [
+            {
+              product: '507f1f77bcf86cd799439011',
+              name: 'Book',
+              price: 100000,
+              quantity: 1,
+            },
+          ],
+          shippingAddress: '123 Street',
+          phone: '0901234567',
+          customerName: 'Customer',
+          loyaltyPointsUsed: 1000,
+        };
+
+        await expect(
+          ordersService.create(orderDto as any, 'user123'),
+        ).rejects.toThrow('vượt quá hạn mức tối đa cho phép');
+      });
+
+      it('should reject if user balance is insufficient', async () => {
+        mockProductsService.findByIds.mockResolvedValueOnce([
+          { ...mockProduct, price: 1000000 },
+        ]);
+        mockUsersService.spendLoyaltyPoints.mockResolvedValueOnce(null);
+        const orderDto = {
+          items: [
+            {
+              product: '507f1f77bcf86cd799439011',
+              name: 'Book',
+              price: 1000000,
+              quantity: 1,
+            },
+          ],
+          shippingAddress: '123 Street',
+          phone: '0901234567',
+          customerName: 'Customer',
+          loyaltyPointsUsed: 1000, // 100,000 VND <= 20% of 1,000,000 (200,000)
+        };
+
+        await expect(
+          ordersService.create(orderDto as any, 'user123'),
+        ).rejects.toThrow('Số điểm thưởng trong tài khoản không đủ');
+      });
+
+      it('should successfully spend loyalty points and deduct from total', async () => {
+        mockProductsService.findByIds.mockResolvedValueOnce([
+          { ...mockProduct, price: 1000000 },
+        ]);
+        mockUsersService.spendLoyaltyPoints.mockResolvedValueOnce({
+          loyaltyPoints: 4000,
+        });
+        const orderDto = {
+          items: [
+            {
+              product: '507f1f77bcf86cd799439011',
+              name: 'Book',
+              price: 1000000,
+              quantity: 1,
+            },
+          ],
+          shippingAddress: '123 Street',
+          phone: '0901234567',
+          customerName: 'Customer',
+          loyaltyPointsUsed: 1000,
+        };
+
+        const result = await ordersService.create(orderDto, 'user123');
+        expect(mockUsersService.spendLoyaltyPoints).toHaveBeenCalledWith(
+          'user123',
+          1000,
+          undefined,
+        );
+        expect(result.loyaltyPointsUsed).toBe(1000);
+        expect(result.loyaltyDiscount).toBe(100000);
+        // subtotal 1,000,000 >= FREE_SHIPPING_THRESHOLD -> shippingFee = 0; total = 900,000
+        expect(result.total).toBe(900000);
+      });
+
+      it('should refund spent loyalty points when order is CANCELLED', async () => {
+        const orderWithLoyaltySpent = {
+          _id: '507f1f77bcf86cd799439099',
+          orderCode: 'TT_LOYALTY_CANCEL',
+          orderStatus: OrderStatus.PENDING,
+          customer: 'user123',
+          loyaltyPointsUsed: 1000,
+          loyaltyPointsRefunded: false,
+          items: [],
+          save: jest.fn().mockImplementation(function () {
+            return Promise.resolve(this);
+          }),
+        };
+
+        mockOrderModel.findById = jest.fn().mockReturnValue({
+          session: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValue(orderWithLoyaltySpent),
+        });
+
+        await ordersService.updateStatus(orderWithLoyaltySpent._id, {
+          orderStatus: OrderStatus.CANCELLED,
+        });
+
+        expect(mockUsersService.refundLoyaltyPoints).toHaveBeenCalledWith(
+          'user123',
+          1000,
+          undefined,
+        );
+        expect(orderWithLoyaltySpent.loyaltyPointsRefunded).toBe(true);
+      });
     });
 
     it('handleAutoCancelOrders should cancel online orders >24h and COD >48h', async () => {

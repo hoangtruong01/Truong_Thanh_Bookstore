@@ -42,7 +42,7 @@ jobs:
       - name: 🟢 Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
@@ -64,6 +64,7 @@ jobs:
 
       - name: 🧪 Run Unit & Integration Tests
         run: |
+          node --test ../scripts/load/load.test.js
           npm test -- --runInBand
           npx jest --rootDir . test/all-fixes.spec.ts test/e2e-flow.spec.ts test/critical-commerce-regression.spec.ts --runInBand --detectOpenHandles
           npm run test:e2e -- --runInBand --detectOpenHandles
@@ -93,7 +94,7 @@ jobs:
       - name: 🟢 Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 

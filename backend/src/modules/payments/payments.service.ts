@@ -14,7 +14,13 @@ import {
   PaymentCallbackDto,
   PaymentQueryDto,
 } from './dto/payment.dto';
-import { PaymentStatus, StaffPermission, UserRole } from '../../common/enums';
+import {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  StaffPermission,
+  UserRole,
+} from '../../common/enums';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
 import { PaymentProviderRegistry } from './providers/payment.providers';
 import { PaymentInitiationResult } from './providers/payment-provider.interface';
@@ -41,6 +47,23 @@ export class PaymentsService {
       update.revenueRecognizedAt = paidAt || new Date();
     }
     await this.orderModel.updateOne({ _id: orderId }, { $set: update }).exec();
+    if (status === PaymentStatus.PAID) {
+      await this.orderModel
+        .updateOne(
+          { _id: orderId, orderStatus: OrderStatus.PENDING },
+          {
+            $set: { orderStatus: OrderStatus.CONFIRMED },
+            $push: {
+              timeline: {
+                status: OrderStatus.CONFIRMED,
+                note: 'Đơn hàng tự động xác nhận sau khi thanh toán thành công.',
+                createdAt: new Date(),
+              },
+            },
+          },
+        )
+        .exec();
+    }
   }
 
   private normalizeActor(
@@ -61,9 +84,16 @@ export class PaymentsService {
 
   private assertOrderAccess(order: OrderDocument, actor?: PaymentActor): void {
     if (this.canManage(actor)) return;
-    const customerId = order.customer
-      ? ((order.customer as any)._id || order.customer).toString()
-      : undefined;
+    const customer = order.customer as unknown;
+    let customerId: string | undefined;
+    if (customer instanceof Types.ObjectId || typeof customer === 'string') {
+      customerId = customer.toString();
+    } else if (customer && typeof customer === 'object' && '_id' in customer) {
+      const id = (customer as { _id?: unknown })._id;
+      if (id instanceof Types.ObjectId || typeof id === 'string') {
+        customerId = id.toString();
+      }
+    }
     if (!actor || !customerId || customerId !== actor._id.toString()) {
       throw new ForbiddenException(
         'Bạn không có quyền truy cập thanh toán của đơn hàng này',
@@ -243,8 +273,59 @@ export class PaymentsService {
     return updated;
   }
 
+  async handleVnPayIpn(query: Record<string, unknown>) {
+    const raw = Object.fromEntries(
+      Object.entries(query).map(([key, value]) => [
+        key,
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean'
+          ? String(value)
+          : '',
+      ]),
+    );
+    try {
+      await this.handleCallback({
+        provider: PaymentMethod.VNPAY,
+        providerReference: raw.vnp_TxnRef,
+        transactionId: raw.vnp_TransactionNo || raw.vnp_TxnRef,
+        amount: Number(raw.vnp_Amount) / 100,
+        status: raw.vnp_TransactionStatus,
+        signature: raw.vnp_SecureHash,
+        gatewayResponse: raw,
+      });
+      return { RspCode: '00', Message: 'Confirm Success' };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/không tìm thấy/i.test(message)) {
+        return { RspCode: '01', Message: 'Order not found' };
+      }
+      if (/Số tiền/i.test(message)) {
+        return { RspCode: '04', Message: 'Invalid amount' };
+      }
+      return { RspCode: '97', Message: 'Invalid signature' };
+    }
+  }
+
+  async handleMomoIpn(body: Record<string, unknown>) {
+    const raw = { ...body } as Record<string, any>;
+    return this.handleCallback({
+      provider: PaymentMethod.MOMO,
+      providerReference: String(raw.orderId || ''),
+      transactionId: String(raw.transId || raw.requestId || ''),
+      amount: Number(raw.amount),
+      status: String(raw.resultCode),
+      signature: String(raw.signature || ''),
+      gatewayResponse: raw,
+    });
+  }
+
   async findAll(query: PaymentQueryDto): Promise<PaymentDocument[]> {
-    const filter: any = {};
+    const filter: {
+      order?: Types.ObjectId;
+      status?: PaymentStatus;
+      provider?: PaymentMethod;
+    } = {};
     if (query.orderId) filter.order = new Types.ObjectId(query.orderId);
     if (query.status) filter.status = query.status;
     if (query.provider) filter.provider = query.provider;

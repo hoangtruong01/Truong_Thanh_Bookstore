@@ -1,0 +1,2 @@
+# Shell entrypoints are executed in Linux containers and CI runners.
+*.sh text eol=lf

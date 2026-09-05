@@ -157,4 +157,29 @@ class OrderProvider with ChangeNotifier {
     }
     return false;
   }
+
+  Future<OrderModel?> fetchOrderById(String orderId, String? token) async {
+    try {
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(
+        Uri.parse('${ApiConstants.orders}/$orderId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final data = body['data'] ?? body;
+        return OrderModel.fromJson(data);
+      }
+    } catch (e) {
+      debugPrint('Error fetching order by id: $e');
+    }
+    return null;
+  }
 }
