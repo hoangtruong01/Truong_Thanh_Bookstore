@@ -75,7 +75,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                     itemCount: orderProv.myOrders.length,
                     separatorBuilder: (context, index) => const SizedBox(height: 12),
 

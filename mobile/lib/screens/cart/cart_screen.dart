@@ -366,7 +366,7 @@ class _CartScreenState extends State<CartScreen> {
                       child: const Text('TIẾN HÀNH THANH TOÁN', style: TextStyle(letterSpacing: 0.5)),
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 96),
                 ],
               ),
             ),
