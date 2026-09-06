@@ -43,6 +43,7 @@ async function benchmark() {
   let serverErrors = 0;
   let clientErrors = 0;
   const statusCounts = {};
+  const routeLatencies = Object.fromEntries(endpoints.map(path => [path, []]));
 
   const startedAt = performance.now();
   const endTime = Date.now() + durationSec * 1000;
@@ -68,6 +69,7 @@ async function benchmark() {
         if (res.ok) {
           successfulRequests++;
           latencies.push(elapsed);
+          routeLatencies[path].push(elapsed);
         } else if (res.status === 429) {
           throttledRequests++;
         } else if (res.status >= 500) {
@@ -135,8 +137,24 @@ async function benchmark() {
   // 3. Sub-500ms p95 latency for successful, fully consumed responses
   const hasServerError = serverErrors > 0;
   const hasClientError = clientErrors > 0;
+  // Aggregate p95 can hide a slow route or routes that were never exercised.
+  const routes = Object.fromEntries(Object.entries(routeLatencies).map(([path, samples]) => {
+    samples.sort((a, b) => a - b);
+    return [path, { successes: samples.length,
+      p95: samples.length ? samples[Math.floor(samples.length * 0.95)] : null }];
+  }));
+  const routesPassed = Object.values(routes).every(route => route.successes > 0 && route.p95 < 500);
+  const passed = successfulRequests > 0 && throttledRequests === 0 && !hasServerError &&
+    !hasClientError && p95 < 500 && routesPassed;
+  const evidence = { timestamp: new Date().toISOString(), concurrency, durationSec, delayMs,
+    totalRequests, successfulRequests, throttledRequests, serverErrors, clientErrors,
+    p95, rps, routes, passed };
+  console.log(JSON.stringify(evidence, null, 2));
+  if (process.env.LOAD_REPORT_PATH) {
+    require('node:fs').writeFileSync(process.env.LOAD_REPORT_PATH, JSON.stringify(evidence, null, 2) + '\n');
+  }
 
-  if (successfulRequests > 0 && throttledRequests === 0 && !hasServerError && !hasClientError && p95 < 500) {
+  if (passed) {
     console.log('✅ BENCHMARK PASSED: 0 server errors, 0 invalid client requests, high performance!');
     process.exit(0);
   } else {

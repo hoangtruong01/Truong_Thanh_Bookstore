@@ -11,7 +11,7 @@
   [![Frontend CI](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/frontend-ci.yml)
   [![Mobile CI/CD](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/mobile-ci.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/mobile-ci.yml)
   [![Test Suite](https://img.shields.io/badge/Tests-322%20Passed%20Local-brightgreen.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore)
-  [![Security Audit](https://img.shields.io/badge/Audit-Sprint%201%20Hardened-blue.svg)](docs/TASK_EXECUTION_TRACKER.md)
+  [![Security Audit](https://img.shields.io/badge/Audit-Sprint%201--4%20Hardened-blue.svg)](docs/PENDING_TASKS.md)
 
 </div>
 
@@ -30,7 +30,7 @@ Truong_Thanh_Bookstore/
 ├── backend/    # RESTful API Service (NestJS 11 + MongoDB Mongoose 9 + JWT)
 ├── frontend/   # Web Storefront & Admin CMS (Vue 3 Composition API + Pinia + Tailwind CSS + Vite)
 ├── mobile/     # Native Cross-Platform Mobile App (Flutter 3.x + Provider + Material 3)
-├── docs/       # Đặc tả nghiệp vụ, tài liệu kiểm toán hệ thống & Task Tracker
+├── docs/       # Tài liệu tổng quan kiến trúc, cấu hình & Backlog công việc
 └── .github/    # Quy trình CI/CD Automation (GitHub Actions: test, lint, build)
 ```
 
@@ -46,7 +46,7 @@ Truong_Thanh_Bookstore/
 
 ## 🛡️ Điểm Nhấn Bảo Mật & Chuẩn Hóa Hệ Thống (Sprint 1 Audit)
 
-Hệ thống đã trải qua đợt rà soát và khắc phục toàn diện theo tài liệu kiểm toán [TRUONG_THANH_MASTER_AUDIT_IMPLEMENTATION_2026-09-03.md](docs/TRUONG_THANH_MASTER_AUDIT_IMPLEMENTATION_2026-09-03.md):
+Hệ thống đã trải qua đợt rà soát và khắc phục toàn diện theo tài liệu đặc tả [PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md):
 
 1. **🔐 Tách biệt Secret Keys (BE-01):**
    - Cô lập độc lập 3 khóa bí mật: `JWT_SECRET` (Access Token), `JWT_REFRESH_SECRET` (Refresh Token) và `JWT_RESET_SECRET` (Password Reset Token).
@@ -166,11 +166,10 @@ flutter test
 
 ## 📚 Kho Tài Liệu Dự Án (Documentation Hub)
 
-Các tài liệu nghiệp vụ và đặc tả kiến trúc được lưu trữ tại thư mục `docs/`:
+Các tài liệu nghiệp vụ, kiến trúc và quản lý công việc được lưu trữ tại thư mục `docs/`:
 
-- 📜 [docs/BUSINESS_RULES.md](docs/BUSINESS_RULES.md) — Tài liệu Quy tắc Nghiệp vụ v2.0 (9 chương, State Machines, Ma trận Phân quyền Role × Permission).
-- 📋 [docs/TASK_EXECUTION_TRACKER.md](docs/TASK_EXECUTION_TRACKER.md) — Bảng theo dõi tiến độ chi tiết 18 Core Master Tasks và các Sprint.
-- 🔍 [docs/TRUONG_THANH_MASTER_AUDIT_IMPLEMENTATION_2026-09-03.md](docs/TRUONG_THANH_MASTER_AUDIT_IMPLEMENTATION_2026-09-03.md) — Báo cáo Kiểm toán Kỹ thuật & Danh mục Lỗi Hệ thống Cần Khắc Phục.
+- 📘 [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) — Tài liệu Tổng Quan Dự Án & Cẩm Nang Cho Intern/Dev Mới (Kiến trúc hệ thống, chi tiết cấu hình biến môi trường, cơ chế bảo mật JWT/RBAC, 16 modules, quy tắc nghiệp vụ mua hàng/tồn kho/loyalty và hướng dẫn phát triển).
+- 📋 [docs/PENDING_TASKS.md](docs/PENDING_TASKS.md) — Danh Mục Công Việc Chưa Xong & Kế Hoạch Chi Tiết (Tổng hợp release gates, kết nối sandbox VNPay/MoMo/GHN, nợ kỹ thuật và hướng dẫn chọn việc cho Intern).
 
 ---
 

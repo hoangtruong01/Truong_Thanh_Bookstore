@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -9,7 +10,41 @@ import '../screens/order/order_detail_screen.dart';
 
 class FcmNotificationService {
   FcmNotificationService._internal();
+  @visibleForTesting
+  FcmNotificationService.forTesting({required http.Client client,
+    required Future<String?> Function() tokenLoader})
+      : _client = client, _tokenLoader = tokenLoader;
   static final FcmNotificationService instance = FcmNotificationService._internal();
+  http.Client? _client;
+  Future<String?> Function()? _tokenLoader;
+  String? Function()? _authTokenProvider;
+  StreamSubscription<String>? _tokenSubscription;
+  StreamSubscription<RemoteMessage>? _openSubscription;
+  StreamSubscription<RemoteMessage>? _foregroundSubscription;
+  GlobalKey<ScaffoldMessengerState>? _messengerKey;
+
+  void setMessengerKey(GlobalKey<ScaffoldMessengerState> key) {
+    _messengerKey = key;
+  }
+
+  /// In-app foreground notice. Private payload text is not shown on screen.
+  void handleForegroundMessage(RemoteMessage message) {
+    final messenger = _messengerKey?.currentState;
+    if (messenger == null) return;
+    messenger.hideCurrentSnackBar();
+    final orderId = _orderId(message.data);
+    messenger.showSnackBar(SnackBar(
+      content: const Text('Bạn có thông báo mới'),
+      action: orderId == null ? null : SnackBarAction(
+        label: 'Xem đơn',
+        onPressed: () => navigateToOrder(orderId),
+      ),
+    ));
+  }
+
+  void setAuthTokenProvider(String? Function() provider) {
+    _authTokenProvider = provider;
+  }
 
   GlobalKey<NavigatorState>? _navigatorKey;
   String? _fcmToken;
@@ -38,11 +73,14 @@ class FcmNotificationService {
       if (!_firebaseReady) return;
 
       final messaging = FirebaseMessaging.instance;
-      await messaging.requestPermission(alert: true, badge: true, sound: true);
-      final token = await messaging.getToken();
-      if (token != null && token.isNotEmpty) await setDeviceToken(token);
-      messaging.onTokenRefresh.listen((token) => setDeviceToken(token));
-      FirebaseMessaging.onMessageOpenedApp.listen(
+      await _tokenSubscription?.cancel();
+      await _openSubscription?.cancel();
+      await _foregroundSubscription?.cancel();
+      _foregroundSubscription = FirebaseMessaging.onMessage.listen(handleForegroundMessage);
+      _tokenSubscription = messaging.onTokenRefresh.listen(
+        (token) => unawaited(setDeviceToken(token)),
+      );
+      _openSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
         (message) => handleNotificationPayload(message.data),
       );
       final initialMessage = await messaging.getInitialMessage();
@@ -50,7 +88,11 @@ class FcmNotificationService {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => handleNotificationPayload(initialMessage.data),
         );
+        WidgetsBinding.instance.ensureVisualUpdate();
       }
+      await messaging.requestPermission(alert: true, badge: true, sound: true);
+      final token = await messaging.getToken();
+      if (token != null && token.isNotEmpty) await setDeviceToken(token);
     } catch (e) {
       debugPrint('FcmNotificationService init error: $e');
     }
@@ -76,8 +118,9 @@ class FcmNotificationService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefFcmTokenKey, token);
 
-      if (authToken != null && authToken.isNotEmpty) {
-        await syncTokenWithBackend(token, authToken);
+      final currentAuthToken = authToken ?? _authTokenProvider?.call();
+      if (currentAuthToken != null && currentAuthToken.isNotEmpty) {
+        await syncTokenWithBackend(token, currentAuthToken);
       }
     } catch (e) {
       debugPrint('Error storing device token: $e');
@@ -85,18 +128,29 @@ class FcmNotificationService {
   }
 
   Future<bool> registerForAuthenticatedUser(String authToken) async {
-    if (!_firebaseReady) return false;
-    final token = await FirebaseMessaging.instance.getToken();
-    if (token == null || token.isEmpty) return false;
-    await setDeviceToken(token);
-    return syncTokenWithBackend(token, authToken);
+    if ((!_firebaseReady && _tokenLoader == null) || authToken.isEmpty) return false;
+    try {
+      final token = await (_tokenLoader?.call() ?? FirebaseMessaging.instance.getToken())
+          .timeout(const Duration(seconds: 10));
+      if (token == null || token.isEmpty) return false;
+      // Authentication may have changed while Firebase was resolving the token.
+      if (_authTokenProvider != null && _authTokenProvider!() != authToken) return false;
+      _fcmToken = token;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefFcmTokenKey, token);
+      if (_authTokenProvider != null && _authTokenProvider!() != authToken) return false;
+      return await syncTokenWithBackend(token, authToken);
+    } catch (_) {
+      debugPrint('Push registration unavailable; authentication remains active.');
+      return false;
+    }
   }
 
   Future<void> unregister(String authToken) async {
     final token = await getDeviceToken();
     if (token == null || token.isEmpty) return;
     try {
-      await http.patch(
+      await (_client?.patch ?? http.patch)(
         Uri.parse('${ApiConstants.baseUrl}/notifications/device-token/unregister'),
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +160,7 @@ class FcmNotificationService {
           'deviceToken': token,
           'platform': _platform,
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
     } catch (e) {
       debugPrint('Failed to unregister device token: $e');
     }
@@ -115,7 +169,7 @@ class FcmNotificationService {
   /// Syncs FCM push token with backend server.
   Future<bool> syncTokenWithBackend(String token, String authToken) async {
     try {
-      final response = await http.post(
+      final response = await (_client?.post ?? http.post)(
         Uri.parse('${ApiConstants.baseUrl}/notifications/device-token'),
         headers: {
           'Content-Type': 'application/json',
@@ -125,7 +179,7 @@ class FcmNotificationService {
           'deviceToken': token,
           'platform': _platform,
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       debugPrint('Failed to sync device token with backend: $e');
@@ -138,21 +192,17 @@ class FcmNotificationService {
 
   /// Parses push notification data and executes deep link navigation.
   bool handleNotificationPayload(Map<String, dynamic> data) {
-    debugPrint('FcmNotificationService handling payload: $data');
+    final orderId = _orderId(data);
+    return orderId != null && navigateToOrder(orderId);
+  }
 
-    final type = (data['type'] ?? '').toString().toLowerCase();
-    final orderId = data['orderId']?.toString() ??
-        data['order_id']?.toString() ??
-        data['id']?.toString();
-
-    // Order Deep Link
-    if (type == 'order' || orderId != null) {
-      if (orderId != null && orderId.isNotEmpty) {
-        return navigateToOrder(orderId);
-      }
-    }
-
-    return false;
+  String? _orderId(Map<String, dynamic> data) {
+    final meta = data['meta'];
+    final value = data['orderId'] ?? data['order_id'] ??
+        (meta is Map ? meta['orderId'] : null) ??
+        (data['type']?.toString().toLowerCase() == 'order' ? data['id'] : null);
+    if (value is! String || value.trim().isEmpty) return null;
+    return value.trim();
   }
 
   /// Navigates directly to OrderDetailScreen for the given orderId using navigatorKey.

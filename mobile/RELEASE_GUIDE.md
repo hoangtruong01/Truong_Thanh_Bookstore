@@ -2,6 +2,36 @@
 
 This guide details the end-to-end procedure for signing, building, and deploying the **Trường Thành Bookstore** mobile application to Google Play Store and Apple App Store.
 
+## Local verification update — 2026-09-06
+
+Run `flutter analyze` and `flutter test` from `mobile`. Local tests now cover
+search/cart/COD/history API contracts, retry idempotency, push token rotation,
+logout during token resolution, Firebase failures, and release API validation.
+These mocked tests do not certify physical-device behavior or push delivery.
+
+Release startup now requires `--dart-define=API_URL=https://your-api-host/api`;
+missing URLs, HTTP, localhost/emulator URLs, embedded credentials and query
+strings are rejected. A trailing slash is normalized. Validate the URL before
+building a signed artifact; debug builds retain local API defaults.
+
+Push registration runs independently from authentication and is retried when a
+stored session is restored. Token refresh uses the current session. Firebase or
+registration HTTP errors no longer cause successful login/register to fail.
+
+Device acceptance remains pending: Android/iOS signed builds, APNs entitlement
+and provisioning, foreground/background/terminated notification behavior,
+See `../docs/PENDING_TASKS.md` (Task MOBILE-01 & MOBILE-02) for the verified scope and open acceptance gates.
+
+Follow-up: 42 local tests pass. Foreground notifications now show an in-app
+notice with an order action, and order details wait for session restoration.
+Checkout stays locked through payment initiation. Runner.entitlements is wired
+to all three iOS build configurations: Debug uses development APNs, Profile and
+Release use production APNs. Match the provisioning profile to this setting (or
+override APS_ENVIRONMENT for a development-signed Profile build). Upload APNs
+credentials in Firebase and verify the signed entitlements on macOS before
+accepting iOS push delivery. No signing certificate or service-account key has
+been generated or added by this change.
+
 ---
 
 ## 1. Android Release Guide

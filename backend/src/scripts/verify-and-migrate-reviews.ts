@@ -1,6 +1,6 @@
 /**
  * Script chẩn đoán và migrate dữ liệu Review trên Staging / Production
- * Giải quyết mục xác minh NV-01, NV-02 trong TASK_EXECUTION_TRACKER.md (BE-02)
+ * Tham chiếu tài liệu: docs/PROJECT_OVERVIEW.md (Mục 3.2 - Module Reviews)
  *
  * Cách chạy:
  *   npx ts-node src/scripts/verify-and-migrate-reviews.ts            (Chế độ kiểm tra / Dry-run)

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/theme/app_theme.dart';
+import 'core/constants/api_constants.dart';
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/cart_provider.dart';
@@ -15,6 +17,7 @@ import 'firebase_options.dart';
 import 'services/fcm_notification_service.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
+final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -23,6 +26,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ApiConstants.baseUrl; // Validate release configuration before starting services.
   var firebaseReady = false;
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -31,11 +35,12 @@ Future<void> main() async {
   } catch (error) {
     debugPrint('Firebase disabled: $error');
   }
-  await FcmNotificationService.instance.initialize(
+  FcmNotificationService.instance.setMessengerKey(messengerKey);
+  runApp(const TruongThanhApp());
+  unawaited(FcmNotificationService.instance.initialize(
     navKey: navigatorKey,
     firebaseReady: firebaseReady,
-  );
-  runApp(const TruongThanhApp());
+  ));
 }
 
 class TruongThanhApp extends StatelessWidget {
@@ -55,6 +60,7 @@ class TruongThanhApp extends StatelessWidget {
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
+        scaffoldMessengerKey: messengerKey,
         title: 'Trường Thành Bookstore',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,

@@ -7,8 +7,11 @@ import '../models/order_model.dart';
 import '../models/cart_item_model.dart';
 
 class OrderProvider with ChangeNotifier {
+  OrderProvider({http.Client? client}) : _client = client;
+  final http.Client? _client;
   List<OrderModel> _myOrders = [];
   bool _isLoading = false;
+  bool _placingOrder = false;
   Map<String, dynamic>? _lastPaymentAction;
   String? _pendingIdempotencyKey;
 
@@ -32,6 +35,8 @@ class OrderProvider with ChangeNotifier {
     String? promotionCode,
     String? token,
   }) async {
+    if (_placingOrder) throw StateError('Đơn hàng đang được xử lý');
+    _placingOrder = true;
     _isLoading = true;
     notifyListeners();
 
@@ -60,7 +65,7 @@ class OrderProvider with ChangeNotifier {
       final isAuth = token != null && token.isNotEmpty;
       final url = isAuth ? ApiConstants.authenticatedOrders : ApiConstants.orders;
 
-      final response = await http.post(
+      final response = await (_client?.post ?? http.post)(
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
@@ -70,8 +75,6 @@ class OrderProvider with ChangeNotifier {
       );
 
       final body = jsonDecode(response.body);
-      _isLoading = false;
-      notifyListeners();
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final order = OrderModel.fromJson(body['data']);
@@ -79,7 +82,7 @@ class OrderProvider with ChangeNotifier {
         _lastPaymentAction = null;
         if (isAuth && paymentMethod != 'COD') {
           try {
-            final paymentResponse = await http.post(
+            final paymentResponse = await (_client?.post ?? http.post)(
               Uri.parse(ApiConstants.payments),
               headers: {
                 'Content-Type': 'application/json',
@@ -105,10 +108,10 @@ class OrderProvider with ChangeNotifier {
       } else {
         throw Exception(body['message'] ?? 'Đặt hàng thất bại');
       }
-    } catch (e) {
+    } finally {
+      _placingOrder = false;
       _isLoading = false;
       notifyListeners();
-      rethrow;
     }
   }
 
@@ -117,7 +120,7 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(
+      final response = await (_client?.get ?? http.get)(
         Uri.parse(ApiConstants.myOrders),
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -143,7 +146,7 @@ class OrderProvider with ChangeNotifier {
 
   Future<bool> cancelOrder(String orderId, String token) async {
     try {
-      final response = await http.delete(
+      final response = await (_client?.delete ?? http.delete)(
         Uri.parse('${ApiConstants.orders}/$orderId'),
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -167,7 +170,7 @@ class OrderProvider with ChangeNotifier {
         headers['Authorization'] = 'Bearer $token';
       }
 
-      final response = await http.get(
+      final response = await (_client?.get ?? http.get)(
         Uri.parse('${ApiConstants.orders}/$orderId'),
         headers: headers,
       );

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -13,6 +14,7 @@ class AuthProvider with ChangeNotifier {
   String? _token;
   String? _refreshToken;
   bool _isLoading = false;
+  late final Future<void> sessionReady;
 
   UserModel? get user => _user;
   String? get token => _token;
@@ -21,7 +23,19 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   AuthProvider() {
-    _loadStoredSession();
+    FcmNotificationService.instance.setAuthTokenProvider(() => _token);
+    sessionReady = _restoreSessionSafely();
+  }
+
+  Future<void> _restoreSessionSafely() async {
+    try {
+      await _loadStoredSession();
+    } catch (_) {
+      _token = null;
+      _refreshToken = null;
+      _user = null;
+      debugPrint('Stored session unavailable; sign in again.');
+    }
   }
 
   Future<void> _loadStoredSession() async {
@@ -46,6 +60,9 @@ class AuthProvider with ChangeNotifier {
       } catch (_) {}
     }
     notifyListeners();
+    if (_token != null && _token!.isNotEmpty) {
+      unawaited(FcmNotificationService.instance.registerForAuthenticatedUser(_token!));
+    }
   }
 
   Future<void> _persistSession() async {
@@ -58,6 +75,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> login(String email, String password) async {
+    await sessionReady;
     _isLoading = true;
     notifyListeners();
 
@@ -79,7 +97,7 @@ class AuthProvider with ChangeNotifier {
         _user = UserModel.fromJson(data['user']);
 
         await _persistSession();
-        await FcmNotificationService.instance.registerForAuthenticatedUser(_token!);
+        unawaited(FcmNotificationService.instance.registerForAuthenticatedUser(_token!));
 
         _isLoading = false;
         notifyListeners();
@@ -95,6 +113,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> register(String fullName, String email, String password, String? phone) async {
+    await sessionReady;
     _isLoading = true;
     notifyListeners();
 
@@ -121,7 +140,7 @@ class AuthProvider with ChangeNotifier {
         _user = UserModel.fromJson(data['user']);
 
         await _persistSession();
-        await FcmNotificationService.instance.registerForAuthenticatedUser(_token!);
+        unawaited(FcmNotificationService.instance.registerForAuthenticatedUser(_token!));
 
         _isLoading = false;
         notifyListeners();
@@ -205,6 +224,8 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await sessionReady;
+    FcmNotificationService.instance.setAuthTokenProvider(() => null);
     if (_token != null && _token!.isNotEmpty) {
       try {
         await FcmNotificationService.instance.unregister(_token!);
@@ -224,6 +245,7 @@ class AuthProvider with ChangeNotifier {
     _user = null;
     _token = null;
     _refreshToken = null;
+    FcmNotificationService.instance.setAuthTokenProvider(() => _token);
     final prefs = await SharedPreferences.getInstance();
     await _secureStorage.delete(key: 'token');
     await _secureStorage.delete(key: 'refreshToken');

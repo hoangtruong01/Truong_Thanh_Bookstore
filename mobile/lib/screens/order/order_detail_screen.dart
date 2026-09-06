@@ -36,6 +36,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _loadOrder() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -43,6 +44,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    await auth.sessionReady;
+    if (!mounted) return;
     final fetched = await orderProvider.fetchOrderById(widget.orderId!, auth.token);
 
     if (mounted) {
