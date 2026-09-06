@@ -6,6 +6,8 @@ import '../models/product_model.dart';
 import '../models/category_model.dart';
 
 class ProductProvider with ChangeNotifier {
+  ProductProvider({http.Client? client}) : _client = client;
+  final http.Client? _client;
   List<ProductModel> _products = [];
   List<CategoryModel> _categories = [];
   bool _isLoading = false;
@@ -62,7 +64,7 @@ class ProductProvider with ChangeNotifier {
       };
 
       final uri = Uri.parse(ApiConstants.products).replace(queryParameters: queryParams);
-      final response = await http.get(uri);
+      final response = await (_client?.get ?? http.get)(uri);
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);

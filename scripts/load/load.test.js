@@ -7,6 +7,7 @@ const path = require('node:path');
 async function run(t, script, scenario, args = ['3']) {
   let stock = 2;
   const server = createServer(async (req, res) => {
+    if (scenario === 'slow') await new Promise(resolve => setTimeout(resolve, 550));
     let status = 200;
     let data;
     if (scenario === 'throttled') {
@@ -61,5 +62,20 @@ test('concurrency benchmark passes for valid DTOs and exact stock conservation',
 
 test('catalog benchmark cannot pass on 100% HTTP 429', async t => {
   const result = await run(t, 'catalog-search.load.js', 'throttled', ['1', '0.1', '10']);
+  assert.equal(result.code, 1, result.output);
+});
+
+test('catalog benchmark passes when all routes are sampled successfully', async t => {
+  const result = await run(t, 'catalog-search.load.js', 'valid', ['1', '0.8', '10']);
+  assert.equal(result.code, 0, result.output);
+});
+
+test('catalog benchmark fails when duration is too short to exercise all routes', async t => {
+  const result = await run(t, 'catalog-search.load.js', 'valid', ['1', '0.1', '200']);
+  assert.equal(result.code, 1, result.output);
+});
+
+test('catalog benchmark fails for responses exceeding the latency gate', async t => {
+  const result = await run(t, 'catalog-search.load.js', 'slow', ['6', '0.2', '0']);
   assert.equal(result.code, 1, result.output);
 });

@@ -1,40 +1,40 @@
-# 📚 TRƯỜNG THÀNH BOOKSTORE — TÀI LIỆU TỔNG QUAN & HƯỚNG DẪN DỰ ÁN TOÀN DIỆN
-> **Phiên bản tài liệu:** 2.0 (Cập nhật sau Technical Audit)  
-> **Đối tượng:** Developer mới, Thực tập sinh (Intern), Quản lý dự án & Trợ lý AI (AI Agents).  
-> **Mục tiêu:** Giúp bất kỳ ai (người hoặc AI) có thể đọc hiểu 100% kiến trúc, cấu hình môi trường, quy tắc nghiệp vụ, luồng dữ liệu và tiếp tục phát triển/bảo trì dự án mà không gặp rào cản.
+# 📚 TRƯỜNG THÀNH BOOKSTORE — TÀI LIỆU TỔNG QUAN & CẨM NANG DỰ ÁN TOÀN DIỆN
+> **Phiên bản tài liệu:** 3.0 (Chuẩn hóa toàn diện — Hợp nhất Kiến trúc, Cấu hình & Quy tắc Nghiệp vụ)  
+> **Đối tượng:** Thực tập sinh (Intern), Lập trình viên mới (New Developer), Quản lý dự án (PM) & Trợ lý AI (AI Agents).  
+> **Mục tiêu:** Cung cấp tài liệu tra cứu duy nhất (Single Source of Truth) giúp bất kỳ ai đọc hiểu 100% kiến trúc, cấu hình môi trường, quy tắc nghiệp vụ, phân quyền RBAC và tiếp tục phát triển/bảo trì hệ thống ngay lập tức mà không gặp rào cản.
 
 ---
 
 ## 📑 MỤC LỤC
 1. [🌟 Giới thiệu Tổng quan Dự án (Executive Summary)](#1--giới-thiệu-tổng-quan-dự-án-executive-summary)
-2. [🏗️ Kiến trúc Hệ thống & Công nghệ (Architecture & Tech Stack)](#2-️-kiến-trúc-hệ-thống--công-nghệ-architecture--tech-stack)
+2. [🏗️ Kiến trúc Hệ thống & Ngăn xếp Công nghệ (Architecture & Tech Stack)](#2-️-kiến-trúc-hệ-thống--ngăn-xếp-công-nghệ-architecture--tech-stack)
 3. [📁 Sơ đồ Cấu trúc Mã nguồn (Project Structure & Modules Map)](#3--sơ-đồ-cấu-trúc-mã-nguồn-project-structure--modules-map)
 4. [⚙️ Hướng dẫn Cài đặt & Cấu hình Môi trường (Setup & Environment Guide)](#4-️-hướng-dẫn-cài-đặt--cấu-hình-môi-trường-setup--environment-guide)
-5. [🔐 Xác thực, Phân quyền & Bảo mật (Auth & Security Architecture)](#5--xác-thực-phân-quyền--bảo-mật-auth--security-architecture)
-6. [🛍️ Quy tắc Nghiệp vụ Cốt lõi (Core Commerce Business Logic)](#6-️-quy-tắc-nghiệp-vụ-cốt-lõi-core-commerce-business-logic)
-7. [📡 Đặc tả API & Giao tiếp Thời gian thực (API & Realtime WebSocket)](#7--đặc-tả-api--giao-tiếp-thời-gian-thực-api--realtime-websocket)
-8. [🧪 Kiểm thử & Quy trình CI/CD (Testing & Deployment Pipelines)](#8--kiểm-thử--quy-trình-cicd-testing--deployment-pipelines)
-9. [🔍 Kế hoạch Xử lý Nợ Kỹ thuật & Hardening (Audit Backlog)](#9--kế-hoạch-xử-lý-nợ-kỹ-thuật--hardening-audit-backlog)
-10. [📘 Cẩm nang Dành cho Intern / Developer Mới & Trợ lý AI](#10--cẩm-nang-dành-cho-intern--developer-mới--trợ-lý-ai)
+5. [🔐 Bảo mật, Xác thực & Phiên làm việc (Authentication & Token Security)](#5--bảo-mật-xác-thực--phiên-làm-việc-authentication--token-security)
+6. [🛡️ Ma trận Phân quyền & Endpoint Bảo vệ (RBAC & Protected Endpoints)](#6-️-ma-trận-phân-quyền--endpoint-bảo-vệ-rbac--protected-endpoints)
+7. [🛍️ Quy tắc Nghiệp vụ Cốt lõi (Core Commerce Business Rules)](#7-️-quy-tắc-nghiệp-vụ-cốt-lõi-core-commerce-business-rules)
+8. [📡 Chuẩn Giao tiếp API & Thời gian thực (API Envelope & WebSocket)](#8--chuẩn-giao-tiếp-api--thời-gian-thực-api-envelope--websocket)
+9. [🧪 Kiểm thử Tự động & Quy trình CI/CD (Testing & Deployment Pipelines)](#9--kiểm-thử-tự-động--quy-trình-cicd-testing--deployment-pipelines)
+10. [📘 Cẩm nang Dành cho Intern & Lập trình viên Mới](#10--cẩm-nang-dành-cho-intern--lập-trình-viên-mới)
 
 ---
 
 ## 1. 🌟 Giới thiệu Tổng quan Dự án (Executive Summary)
 
 ### 1.1. Dự án là gì?
-**Trường Thành Bookstore** là nền tảng thương mại điện tử đa kênh (**Omni-channel E-commerce**) chuyên cung cấp:
+**Trường Thành Bookstore** là giải pháp nền tảng thương mại điện tử đa kênh (**Omni-channel E-commerce**) phục vụ chuyển đổi số cho **Công Ty TNHH Giáo Dục & Phát Triển Trường Thành**. Hệ thống chuyên kinh doanh:
 - **Sách:** Sách giáo khoa, sách tham khảo, truyện tranh thiếu nhi, văn học, kỹ năng sống, sách ngoại ngữ.
-- **Văn phòng phẩm & Dụng cụ học tập:** Bút, vở, thước kẻ, máy tính cầm tay, dụng cụ vẽ, màu vẽ, cặp sách, bìa hồ sơ.
-- **Đồ chơi giáo dục & Quà tặng:** Đồ chơi phát triển trí tuệ, mô hình lắp ráp, đồ lưu niệm.
+- **Văn phòng phẩm & Dụng cụ học tập:** Bút viết, vở ô ly, thước kẻ, máy tính bỏ túi, dụng cụ vẽ mỹ thuật, cặp sách, bìa hồ sơ.
+- **Đồ chơi giáo dục & Quà tặng:** Đồ chơi phát triển trí tuệ, mô hình lắp ráp LEGO/gỗ, quà lưu niệm văn hóa.
 
 ### 1.2. Các kênh tương tác (Touchpoints)
-1. **Web Khách hàng (Storefront):** Khách hàng tìm kiếm sản phẩm, lọc theo giá/danh mục/thương hiệu, thêm giỏ hàng, áp mã khuyến mãi, đặt hàng (hỗ trợ cả tài khoản thành viên và khách vãng lai), theo dõi đơn hàng và đánh giá sản phẩm.
-2. **Web Quản trị (Admin Dashboard CMS):** Dành cho quản trị viên (Admin) quản lý sản phẩm, cây danh mục, kho hàng (phiếu nhập/xuất/điều chỉnh), đơn hàng, khuyến mãi, khách hàng, banner quảng cáo, báo cáo doanh thu tài chính và xuất/nhập danh sách sản phẩm bằng Excel.
-3. **Ứng dụng Di động (Mobile App - iOS & Android):** Trải nghiệm mua sắm nhanh, nhận thông báo đẩy tức thì (thông báo đơn hàng, flash sale), đồng bộ giỏ hàng và danh sách yêu thích với Web.
+1. **Web Khách hàng (Storefront):** Khách hàng tìm kiếm sản phẩm theo từ khóa tiếng Việt không dấu, lọc theo giá/danh mục/nhà xuất bản, thêm giỏ hàng, áp mã giảm giá, tiêu điểm thưởng Loyalty, đặt hàng (hỗ trợ cả tài khoản và khách vãng lai), theo dõi vận đơn và gửi đánh giá sản phẩm.
+2. **Web Quản trị (Admin CMS Dashboard):** Dành cho Admin và Staff quản lý danh mục sản phẩm, biến thể tồn kho, phiếu nhập/xuất/điều chỉnh kho, xử lý đơn hàng, mã khuyến mãi, duyệt đánh giá, quản trị khách hàng, banner quảng cáo, báo cáo doanh thu tài chính và xuất/nhập danh mục sản phẩm bằng Excel.
+3. **Ứng dụng Di động (Mobile App - Flutter):** Trải nghiệm mua sắm mượt mà trên Android và iOS, đồng bộ giỏ hàng với Web, nhận thông báo đẩy tức thì (FCM / APNs) khi đơn đổi trạng thái và đặt hàng nhanh COD.
 
 ---
 
-## 2. 🏗️ Kiến trúc Hệ thống & Công nghệ (Architecture & Tech Stack)
+## 2. 🏗️ Kiến trúc Hệ thống & Ngăn xếp Công nghệ (Architecture & Tech Stack)
 
 ### 2.1. Sơ đồ Kiến trúc Tổng thể (System Architecture Diagram)
 
@@ -47,41 +47,43 @@
 │   - Quản trị (Admin CMS Dashboard)     │   - Hỗ trợ đa nền tảng Android & iOS    │
 └───────────────────┬────────────────────┴────────────────────┬────────────────────┘
                     │ HTTP REST (JSON)                        │ HTTP REST (JSON)
-                    │ WebSocket (Socket.IO notifications)     │
+                    │ WebSocket (Socket.IO /notifications)    │
                     ▼                                         ▼
 ┌──────────────────────────────────────────────────────────────────────────────────┐
 │                          BACKEND API LAYER (NestJS v11)                          │
 ├──────────────────────────────────────────────────────────────────────────────────┤
 │ - Global: ValidationPipe (DTOs), HttpExceptionFilter, TransformInterceptor       │
-│ - Security: Helmet, CORS Whitelist, Throttler Rate Limiting, Input Sanitization  │
-│ - Auth Engine: Passport JWT, Refresh Token Rotation, Token Blacklist, OTP SHA256 │
-│ - Business Modules (16 modules): Auth, Users, Products, Categories, Cart, Orders,│
-│   Payments, Inventory, Reviews, Promotions, Notifications, Reports, Banners...   │
-│ - Realtime Gateway: Socket.IO WebSocket Server (Namespace /notifications)       │
-└────────────────────────────────────────┬─────────────────────────────────────────┘
-                                         │
-                                         ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                       DATABASE & THIRD-PARTY SERVICES LAYER                      │
-├──────────────────────────────────────────────────────────────────────────────────┤
-│ 🗄️ MongoDB (v7.0)           : Cơ sở dữ liệu chính (Mongoose ODM, Compound Index) │
-│ ☁️ Cloudinary Storage        : Lưu trữ ảnh sản phẩm, ảnh danh mục, avatar       │
-│ 📧 Nodemailer (SMTP/Gmail)  : Gửi email OTP đặt lại mật khẩu, hóa đơn đơn hàng  │
-│ 📊 Google Apps Script Sync  : Tự động đồng bộ đơn hàng sang Google Sheets (Ops) │
-│ 💳 Cổng Thanh toán          : COD, Chuyển khoản QR, VNPay, MoMo Gateway          │
-│ 🤖 Google Gemini AI (Ops)   : Hỗ trợ sinh nội dung banner & landing page (tùy chọn)│
-└──────────────────────────────────────────────────────────────────────────────────┘
+│ - Security: Helmet, CORS Whitelist, Distributed Throttler (Redis), Redaction     │
+│ - Auth Engine: Passport JWT, Refresh Rotation, Token Blacklist, OTP SHA-256      │
+│ - 16 Business Modules: Auth, Users, Products, Categories, Cart, Orders, Payments,│
+│   Inventory, Reviews, Promotions, Notifications, Reports, Customers, Banners...  │
+│ - Realtime Gateway: Socket.IO WebSocket Server (Namespace /notifications)        │
+└───────────────────┬─────────────────────────────────────────┬────────────────────┘
+                    │                                         │
+                    ▼                                         ▼
+┌───────────────────────────────────────┐ ┌────────────────────────────────────────┐
+│     🗄️ DATABASE & DISTRIBUTED CACHE   │ │       ☁️ THIRD-PARTY CLOUD SERVICES    │
+├───────────────────────────────────────┤ ├────────────────────────────────────────┤
+│ • MongoDB 7.0 (Single-Node ReplicaSet)│ │ • Cloudinary: Lưu trữ hình ảnh         │
+│   - Mongoose 9 Schemas & Indexes      │ │ • Nodemailer: Gửi email OTP & Hóa đơn  │
+│   - Transactions nguyên tử cho Orders │ │ • Firebase Cloud Messaging (FCM HTTP v1│
+│ • Redis 7 (In-Memory Distributed):    │ │ • Google Sheets Sync (Tự động đồng bộ) │
+│   - Token Blacklist phân tán          │ │ • Cổng thanh toán: COD, VietQR,        │
+│   - Distributed Throttler storage     │ │   VNPay 2.1.0, MoMo IPN               │
+│   - Fallback bộ nhớ cục bộ an toàn    │ │ • Sentry: Giám sát ngoại lệ thời gian  │
+└───────────────────────────────────────┘ └────────────────────────────────────────┘
 ```
 
-### 2.2. Bảng Công nghệ (Tech Stack Breakdown)
+### 2.2. Bảng Ngăn xếp Công nghệ (Tech Stack Breakdown)
 
 | Phân hệ | Công nghệ lõi | Thư viện & Công cụ chính |
 | :--- | :--- | :--- |
-| **Backend** | NestJS v11 (Node.js 20+, TypeScript) | `@nestjs/mongoose`, `mongoose v9`, `@nestjs/jwt`, `passport-jwt`, `bcrypt`, `class-validator`, `class-transformer`, `helmet`, `@nestjs/throttler`, `pdfkit` (xuất PDF), `exceljs` (Excel Import/Export), `socket.io`, `@nestjs/swagger` |
-| **Frontend** | Vue 3 (Composition API, `<script setup>`), Vite 8, TypeScript | `pinia` (State Management), `vue-router v4`, `tailwindcss v4`, `axios`, `chart.js` + `vue-chartjs`, `vue-toastification`, `vue-i18n`, `lucide-vue-next` |
-| **Mobile** | Flutter SDK (^3.11), Dart | `provider` (State), `http`, `shared_preferences`, `cached_network_image`, `shimmer`, `intl`, `google_fonts` |
-| **Database** | MongoDB 7.0 (Mongoose Schemas) | Compound Indexes, Text Indexes diacritic-insensitive, Timestamps |
-| **DevOps / CI** | Docker, Docker Compose, GitHub Actions | GitHub Actions CI (Backend, Frontend, Mobile), Vercel (FE Deploy), Render (BE Deploy) |
+| **Backend API** | NestJS v11 (Node.js 20+, TypeScript) | `@nestjs/mongoose`, `mongoose v9`, `@nestjs/jwt`, `passport-jwt`, `bcrypt`, `class-validator`, `class-transformer`, `helmet`, `@nestjs/throttler`, `ioredis`, `pdfkit` (xuất PDF), `exceljs` (Excel Import/Export), `socket.io`, `@nestjs/swagger`, `winston`, `@sentry/node` |
+| **Frontend Web** | Vue 3 (Composition API, `<script setup>`), Vite 8, TypeScript | `pinia` (State), `vue-router v4`, `tailwindcss v4`, `axios`, `chart.js` + `vue-chartjs`, `vue-toastification`, `vue-i18n`, `lucide-vue-next` |
+| **Mobile App** | Flutter SDK (^3.11), Dart | `provider` (State), `http`, `flutter_secure_storage`, `firebase_core`, `firebase_messaging`, `cached_network_image`, `shimmer`, `intl` |
+| **Database** | MongoDB 7.0 (Replica Set mode) | Hỗ trợ MongoDB Multi-document Transactions, Compound Indexes, Unique Indexes, Text Indexes không dấu |
+| **Cache & Throttler** | Redis 7 | Quản lý Token Blacklist phân tán, Rate-limiting chống DDoS nhiều node instance |
+| **DevOps / CI** | Docker, Docker Compose, GitHub Actions | Multi-stage Dockerfile, ReplicaSet keyfile authentication, Gitleaks, Playwright E2E |
 
 ---
 
@@ -92,144 +94,194 @@
 ```text
 Truong_Thanh_Bookstore/
 ├── .github/
-│   └── workflows/              # Các kịch bản CI/CD GitHub Actions
-│       ├── backend-ci.yml      # CI kiểm thử & build NestJS backend
-│       ├── frontend-ci.yml     # CI type-check & build Vue 3 frontend
-│       ├── mobile-ci.yml       # CI analyze & test Flutter mobile app
-│       └── deploy.yml          # Kịch bản triển khai Vercel & Render
-├── backend/                    # 🚀 MÃ NGUỒN BACKEND (NestJS)
+│   └── workflows/              # Kịch bản CI/CD GitHub Actions
+│       ├── ci.yml              # CI tổng hợp: Gitleaks, Backend, Frontend, Playwright
+│       └── deploy.yml          # Kịch bản tự động triển khai Vercel & Render
+├── backend/                    # 🚀 MÃ NGUỒN BACKEND (NestJS v11)
 │   ├── src/
-│   │   ├── main.ts             # Điểm khởi chạy API (CORS, Helmet, Pipes, Swagger)
-│   │   ├── app.module.ts       # Module gốc cấu hình DB, Config, Throttler
-│   │   ├── common/             # Middleware & Tiện ích dùng chung
-│   │   │   ├── decorators/     # @GetUser, @Roles, @Public...
-│   │   │   ├── dto/            # DTO dùng chung (PaginationDto, StandardResponse)
-│   │   │   ├── enums/          # Enum tập trung (ErrorCode, UserRole, OrderStatus...)
-│   │   │   ├── exceptions/     # AppException, BusinessException, ResourceNotFoundException...
+│   │   ├── main.ts             # Điểm khởi chạy (CORS, Helmet, Rate Limit, Redaction, Swagger)
+│   │   ├── app.module.ts       # Module gốc cấu hình DB, Config, Throttler, Sentry
+│   │   ├── common/             # Thành phần dùng chung toàn hệ thống
+│   │   │   ├── audit/          # SecurityAuditService ghi nhận hành vi bảo mật
+│   │   │   ├── decorators/     # @GetUser, @Roles, @Permissions, @Public, @IdempotencyKey
+│   │   │   ├── dto/            # PaginationDto, StandardResponse, DateRangeDto
+│   │   │   ├── enums/          # ErrorCode, UserRole, StaffPermission, OrderStatus, PaymentMethod
+│   │   │   ├── exceptions/     # AppException, BusinessException, ResourceNotFoundException
 │   │   │   ├── filters/        # HttpExceptionFilter (Chuẩn hóa response lỗi toàn cục)
-│   │   │   ├── guards/         # JwtAuthGuard, RolesGuard, OptionalJwtGuard
-│   │   │   ├── interceptors/   # TransformInterceptor (Đóng gói { success, message, data, meta })
-│   │   │   └── validators/     # Custom validators (IsMongoObjectId, IsPhoneNumberVN)
-│   │   ├── config/             # Quản lý & Xác thực biến môi trường (.env)
-│   │   │   ├── configuration.ts
-│   │   │   └── env.validation.ts
-│   │   ├── modules/            # 16 Modules nghiệp vụ độc lập (Xem chi tiết mục 3.2)
-│   │   └── seeds/              # Script khởi tạo dữ liệu mẫu (Admin, Sản phẩm, Danh mục)
+│   │   │   ├── guards/         # JwtAuthGuard, RolesGuard, PermissionsGuard, OptionalJwtGuard
+│   │   │   ├── interceptors/   # LoggingInterceptor, TransformInterceptor, RedactionFilter
+│   │   │   ├── logger/         # StructuredLoggerService (JSON logs 1 dòng có Correlation ID)
+│   │   │   ├── redis/          # RedisService & RedisThrottlerStorageService
+│   │   │   └── sentry/         # SentryService tích hợp error tracking
+│   │   ├── config/             # Quản lý & Xác thực biến môi trường (env.validation.ts)
+│   │   ├── modules/            # 16 Modules nghiệp vụ độc lập (Xem mục 3.2)
+│   │   └── scripts/            # Scripts bảo trì (verify-and-migrate-reviews, load harness)
 │   ├── test/                   # Jest E2E & Integration Test Suites
-│   ├── Dockerfile
+│   ├── Dockerfile              # Multi-stage production build
 │   └── package.json
 ├── frontend/                   # 🌐 MÃ NGUỒN FRONTEND WEB (Vue 3 + Vite)
 │   ├── src/
 │   │   ├── main.ts             # Khởi chạy Vue app, nạp Pinia, Router, Toast, i18n
 │   │   ├── App.vue             # Root layout component
-│   │   ├── assets/             # Hình ảnh, icon, font tĩnh
-│   │   ├── components/         # Components giao diện dùng chung (ProductCard, Breadcrumb...)
-│   │   ├── composables/        # Vue composables (useDebounce, useFormatCurrency...)
-│   │   ├── layouts/            # Layouts mẫu: CustomerLayout.vue, AdminLayout.vue
-│   │   ├── pages/              # Các trang giao diện (Khách hàng & Admin CMS)
-│   │   ├── router/             # Vue Router cấu hình Route Guards phân quyền
-│   │   ├── services/           # Lớp kết nối HTTP Axios tới Backend API
+│   │   ├── components/         # Shared UI: DataTable, FilterBar, FormModal, StatusBadge, ImageUploader
+│   │   ├── composables/        # Vue composables (useDebounce, useCurrency, useAuth)
+│   │   ├── layouts/            # CustomerLayout.vue, AdminLayout.vue
+│   │   ├── pages/              # Giao diện Khách hàng & Admin CMS
+│   │   ├── router/             # Vue Router & Route Navigation Guards
+│   │   ├── services/           # Lớp Axios HTTP Service kết nối API
 │   │   ├── stores/             # Pinia Stores (auth, cart, product, category, notification...)
-│   │   ├── types/              # Định nghĩa kiểu dữ liệu TypeScript Interfaces
-│   │   └── utils/              # Tiện ích (api.ts axios interceptor, helpers, formatters)
-│   ├── nginx.conf              # Cấu hình Nginx cho Docker frontend production
-│   ├── Dockerfile
+│   │   ├── types/              # TypeScript Interfaces & Types
+│   │   └── utils/              # api.ts (Axios Interceptors), formatters, helpers
+│   ├── e2e/                    # Playwright E2E browser tests (5 core user flows)
 │   └── package.json
 ├── mobile/                     # 📱 MÃ NGUỒN MOBILE APP (Flutter)
 │   ├── lib/
-│   │   ├── main.dart           # Điểm khởi chạy Flutter app
-│   │   ├── core/               # Constants, API endpoints, App Theme, Network client
+│   │   ├── main.dart           # Khởi chạy Flutter, Firebase FCM & Deep-link routing
+│   │   ├── core/               # App constants, API client, Secure storage, App theme
 │   │   ├── models/             # Data Models (User, Product, Order, CartItem...)
-│   │   ├── providers/          # State Providers (AuthProvider, CartProvider, ProductProvider...)
-│   │   ├── screens/            # Màn hình (Home, Product Detail, Cart, Checkout, Profile, Orders...)
-│   │   └── widgets/            # Widgets tái sử dụng (ProductGridItem, CustomButton, ShimmerLoading...)
+│   │   ├── providers/          # State Providers (AuthProvider, CartProvider, OrdersProvider...)
+│   │   ├── screens/            # Màn hình (Home, Product Detail, Cart, Checkout, Order Detail...)
+│   │   ├── services/           # FcmNotificationService
+│   │   └── widgets/            # Reusable UI Widgets
+│   ├── android/                # Cấu hình Android native & Keystore signing
+│   ├── ios/                    # Cấu hình iOS native, Entitlements & APNs
 │   └── pubspec.yaml
-├── docs/                       # 📖 TÀI LIỆU DỰ ÁN & AUDIT BACKLOG
-│   ├── PROJECT_OVERVIEW.md     # Tài liệu tổng quan này (Master Documentation)
-│   └── AUDIT_FIX_TASKS.md      # Danh sách backlog sửa lỗi & hardening kỹ thuật
-├── docker-compose.yml          # Core stack: DB, BE, FE
-└── docker-compose.tools.yml    # Mongo Express tùy chọn, bắt buộc credential
+├── docs/                       # 📖 TÀI LIỆU DỰ ÁN DUY NHẤT
+│   ├── PROJECT_OVERVIEW.md     # Tài liệu tổng quan & hướng dẫn này
+│   └── PENDING_TASKS.md        # Danh mục việc chưa xong, nợ kỹ thuật & release gates
+├── docker-compose.yml          # Core Stack: MongoDB ReplicaSet + Redis + Backend + Frontend
+└── docker-compose.tools.yml    # Mongo Express (Chỉ dùng khi debug cục bộ)
 ```
 
 ### 3.2. Bản đồ 16 Module Nghiệp vụ Backend
 
 | STT | Module | Trách nhiệm chính (Responsibilities) |
 | :---: | :--- | :--- |
-| 1 | **auth** | Đăng ký, đăng nhập, quên/đặt lại mật khẩu (OTP 6 số SHA-256), băm mật khẩu bcrypt, phát hành & quay vòng JWT (Token Rotation), danh sách đen thu hồi token (`TokenBlacklistService`), kiểm soát phiên (`tokenVersion`). |
-| 2 | **users** | Quản lý hồ sơ cá nhân, đổi mật khẩu, quản lý Sổ địa chỉ giao hàng (`addresses`), đồng bộ danh sách sản phẩm yêu thích (`wishlist`). |
-| 3 | **products** | CRUD sản phẩm, tìm kiếm không dấu (diacritic regex), lọc đa tiêu chí, quản lý biến thể/ảnh/SKU/ISBN, xuất file Excel 14 cột, nhập dữ liệu hàng loạt từ Excel. |
-| 4 | **categories** | Cây danh mục đa cấp (Danh mục cha - con), tạo slug tự động, kiểm tra ràng buộc khi xóa danh mục có sản phẩm liên quan. |
-| 5 | **cart** | Quản lý giỏ hàng phía server, kiểm tra tồn kho theo thời gian thực, tính tạm tính (subtotal), ngưỡng miễn phí vận chuyển. |
-| 6 | **orders** | Tạo đơn hàng (Guest & Auth), kiểm tra trùng lặp (`idempotencyKey`), tính giá server-side, trừ kho nguyên tử, xuất hóa đơn PDF (`pdfkit`), chuyển đổi trạng thái đơn. |
-| 7 | **payments** | Lớp trừu tượng xử lý cổng thanh toán: COD, Chuyển khoản QR ngân hàng, Webhook/IPN xác thực chữ ký (VNPay, MoMo). |
-| 8 | **inventory** | Quản lý tồn kho & nhật ký giao dịch kho với 5 loại (`IMPORT`, `SALE`, `RETURN`, `ADJUSTMENT`, `DAMAGE`), cảnh báo sản phẩm sắp hết hàng (`stockAlert`). |
-| 9 | **promotions** | Hệ thống mã giảm giá (Voucher), giảm theo % hoặc số tiền cố định, kiểm tra điều kiện đơn tối thiểu, số lượt dùng tối đa, chống dùng lặp. |
-| 10 | **reviews** | Đánh giá sao & bình luận sản phẩm, kiểm tra đã mua hàng (`Verified Purchase`), kiểm duyệt nội dung (Moderate) và phản hồi của Admin. |
-| 11 | **notifications** | WebSocket Gateway (Socket.IO `/notifications`) đẩy thông báo tức thì (đơn mới, thay đổi trạng thái, khuyến mãi), lưu trữ thông báo vào DB. |
-| 12 | **reports** | Báo cáo doanh thu theo khoảng thời gian/múi giờ địa phương, tỷ lệ đơn hàng, giá trị trung bình đơn (AOV), top sản phẩm bán chạy. |
-| 13 | **customers** | Quản trị danh sách khách hàng, thống kê tổng chi tiêu, số lượng đơn đã mua dành cho Admin CMS. |
-| 14 | **banners** | Quản lý danh sách banner quảng cáo, banner trượt (slider), vị trí hiển thị trên Web và Mobile. |
-| 15 | **landing-pages**| Quản lý và tùy biến nội dung các trang sự kiện khuyến mãi / Flash Sale động. |
-| 16 | **email** | Gửi email giao dịch qua SMTP (Nodemailer): Gửi mã OTP xác thực, gửi email xác nhận đặt hàng thành công. |
+| 1 | **auth** | Đăng ký, đăng nhập, quên/đặt lại mật khẩu (OTP SHA-256), phát hành/quay vòng JWT (Token Rotation), Token Blacklist Redis, thu hồi phiên theo `tokenVersion`. |
+| 2 | **users** | Hồ sơ cá nhân, đổi mật khẩu, quản lý Sổ địa chỉ (`addresses`), danh sách yêu thích (`wishlist`), quản lý điểm tích lũy và hoàn điểm thưởng. |
+| 3 | **products** | CRUD sản phẩm, tìm kiếm không dấu (diacritic regex), lọc đa tiêu chí, quản lý biến thể/SKU, xuất/nhập file Excel 14 cột với `exceljs`. |
+| 4 | **categories** | Cây danh mục đa cấp (Cha - Con), tạo slug tự động, kiểm tra ràng buộc không cho xóa danh mục còn sản phẩm. |
+| 5 | **cart** | Quản lý giỏ hàng phía server, kiểm tra tồn kho thời gian thực, tính tạm tính (subtotal), áp dụng ngưỡng miễn phí vận chuyển. |
+| 6 | **orders** | Tạo đơn hàng nguyên tử (Guest & Auth), kiểm tra trùng lặp (`idempotencyKey`), tính giá server-side, trừ kho nguyên tử, xuất hóa đơn PDF (`pdfkit`), chuyển đổi trạng thái đơn hàng. |
+| 7 | **payments** | Lớp xử lý cổng thanh toán: COD, Chuyển khoản VietQR, VNPay 2.1.0 (HMAC-SHA512), MoMo (HMAC-SHA256), khóa chặn mock ở production. |
+| 8 | **inventory** | Quản lý tồn kho & sổ cái giao dịch với 5 loại (`IMPORT`, `SALE`, `RETURN`, `ADJUSTMENT`, `DAMAGE`), cảnh báo sản phẩm sắp hết hàng (`stockAlert`). |
+| 9 | **promotions** | Hệ thống mã giảm giá (Voucher % hoặc cố định), kiểm tra trần giảm giá, đơn tối thiểu, số lượt dùng tối đa, chống dùng lặp. |
+| 10 | **reviews** | Đánh giá sao & bình luận sản phẩm, kiểm tra đã mua hàng (`isVerifiedPurchase`), kiểm duyệt hiển thị (`isVisible`), phản hồi của Admin (`adminReply`). |
+| 11 | **notifications** | WebSocket Gateway (Socket.IO `/notifications`) đẩy thông báo tức thì (đơn mới, thay đổi trạng thái, cảnh báo kho), lưu trữ thông báo vào DB, đồng bộ FCM. |
+| 12 | **reports** | Báo cáo doanh thu thuần (loại trừ đơn hủy/trả), tỷ lệ tăng trưởng kỳ trước, cơ cấu doanh thu theo danh mục, giá trị đơn trung bình (AOV). |
+| 13 | **customers** | Quản trị danh sách khách hàng, thống kê tổng chi tiêu, tổng số đơn mua dành cho Admin CMS. |
+| 14 | **banners** | Quản lý banner quảng cáo, banner trượt (slider), vị trí hiển thị trên Web và Mobile. |
+| 15 | **landing-pages**| Quản lý trang đích Flash Sale động, tích hợp trọn vẹn vào `OrdersService.create()` với sản phẩm thật trong DB. |
+| 16 | **email** | Gửi email giao dịch qua SMTP Nodemailer: Gửi mã OTP xác thực và gửi email xác nhận đặt hàng thành công. |
 
 ---
 
 ## 4. ⚙️ Hướng dẫn Cài đặt & Cấu hình Môi trường (Setup & Environment Guide)
 
 ### 4.1. Yêu cầu Tiền đề (Prerequisites)
-- **Node.js:** Phiên bản `>= 20.x` (khuyến nghị LTS).
-- **Package Manager:** `npm` (đi kèm Node.js).
-- **MongoDB:** Phiên bản `>= 7.0` (Chạy cục bộ hoặc dùng MongoDB Atlas).
-- **Docker & Docker Compose:** Nếu muốn chạy toàn bộ qua container.
-- **Flutter SDK:** Phiên bản `>= 3.11.x` (nếu phát triển Mobile).
+- **Node.js:** Phiên bản `>= 20.x` LTS.
+- **npm:** Đi kèm Node.js.
+- **MongoDB:** Phiên bản `>= 7.0` (Khuyến nghị chạy Replica Set để hỗ trợ Transaction).
+- **Redis:** Phiên bản `>= 7.0` (Dùng cho Rate-limiting & Token Blacklist).
+- **Docker & Docker Compose:** Dành cho triển khai container hóa.
+- **Flutter SDK:** Phiên bản `>= 3.11.x` (Nếu lập trình Mobile).
 
 ---
 
-### 4.2. Cấu hình Biến Môi trường (.env)
+### 4.2. Cấu hình Chi tiết Biến Môi trường (.env)
 
-#### 🔹 Backend: Tạo file `backend/.env` từ `backend/.env.example`
+#### 🔹 Backend: File `backend/.env` (Tạo từ `backend/.env.example`)
 
 ```env
-# 1. Server Environment
-NODE_ENV=development
+# ==============================================================================
+# 1. SERVER CONFIGURATION
+# ==============================================================================
+NODE_ENV=development                       # 'development' | 'production' | 'test'
 PORT=3000
+FRONTEND_URL=http://localhost:5173,http://localhost:80 # Danh sách domain CORS cho phép
 
-# 2. Database Connection (MongoDB)
-MONGODB_URI=mongodb://127.0.0.1:27017/truong_thanh_bookstore
+# ==============================================================================
+# 2. DATABASE CONFIGURATION (MONGODB REPLICA SET)
+# ==============================================================================
+# Bắt buộc kết nối tới Replica Set để hỗ trợ Transaction khi tạo đơn & trừ kho
+MONGODB_URI=mongodb://127.0.0.1:27017/truong_thanh_bookstore?replicaSet=rs0
 
-# 3. Security & JWT (BẮT BUỘC: Thay đổi chuỗi bí mật ngẫu nhiên >= 32 ký tự ở Production)
-JWT_SECRET=ThayTheBangChuoiBiMatNgauNhienItNhat32KyTu!2026
+# ==============================================================================
+# 3. REDIS DISTRIBUTED CACHE & THROTTLER
+# ==============================================================================
+REDIS_URL=redis://localhost:6379           # Quản lý Token Blacklist và Rate-limit
+
+# ==============================================================================
+# 4. SECURITY & JWT (BẮT BUỘC RIÊNG BIỆT - FAIL-CLOSED Ở PRODUCTION)
+# ==============================================================================
+# 3 secret keys này PHẢI HOÀN TOÀN KHÁC NHAU, tối thiểu 32 ký tự ngẫu nhiên
+JWT_SECRET=ThayTheBangChuoiBiMatAccessNgauNhienItNhat32KyTu!2026
 JWT_REFRESH_SECRET=ThayTheBangChuoiRefreshNgauNhienItNhat32KyTu!2026
 JWT_RESET_SECRET=ThayTheBangChuoiResetNgauNhienItNhat32KyTu!2026
-JWT_EXPIRES_IN=7d
+JWT_EXPIRES_IN=15m                         # Thời hạn Access Token
+JWT_REFRESH_EXPIRES_IN=30d                 # Thời hạn Refresh Token
 
-# 4. CORS Whitelist
-FRONTEND_URL=http://localhost:5173,http://localhost:80
+# ==============================================================================
+# 5. COOKIE SECURITY
+# ==============================================================================
+COOKIE_SAME_SITE=lax                       # 'lax' cho local | 'none' nếu FE/BE khác domain
+COOKIE_SECURE=false                        # 'false' cho http://localhost | 'true' cho HTTPS
 
-# 5. Cookie Security
-COOKIE_SAME_SITE=lax
-COOKIE_SECURE=false
+# ==============================================================================
+# 6. SEEDING & KHỞI TẠO DỮ LIỆU AN TOÀN
+# ==============================================================================
+AUTO_SEED=false                            # Mặc định TẮT. Chỉ bật khi dev cần seed mẫu
+RESET_DATABASE_ON_SEED=false               # CẤM bật ở production (Sẽ ném Exception dừng app)
+SEED_SUPER_ADMIN_PASSWORD=MatKhauSuperAdminManh123!
+SEED_ADMIN_PASSWORD=MatKhauAdminManh123!
+SEED_STAFF_PASSWORD=MatKhauStaffManh123!
+SEED_CUSTOMER_PASSWORD=MatKhauCustomerManh123!
 
-# 6. Cloudinary Storage (Tùy chọn - lưu ảnh sản phẩm)
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-
-# 7. SMTP Email (Tùy chọn - gửi mail OTP & đơn hàng)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_gmail_app_password
-EMAIL_FROM="Trường Thành Bookstore" <no-reply@truongthanh.vn>
-
-# 8. Cổng Thanh toán (Enabled Methods)
-ENABLED_PAYMENT_METHODS=COD,BANK_TRANSFER
+# ==============================================================================
+# 7. CỔNG THANH TOÁN (PAYMENTS)
+# ==============================================================================
+ENABLED_PAYMENT_METHODS=COD,BANK_TRANSFER  # Cấu hình cổng: COD, BANK_TRANSFER, VNPAY, MOMO
 BANK_NAME=MB Bank
 BANK_ACCOUNT_NUMBER=0123456789
-PAYMENT_WEBHOOK_SECRET=your_random_webhook_secret
+BANK_ACCOUNT_NAME=CONG TY TNHH TRUONG THANH
+
+# Cổng VNPay (Tùy chọn)
+VNPAY_TMN_CODE=
+VNPAY_HASH_SECRET=
+VNPAY_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+VNPAY_RETURN_URL=http://localhost:5173/checkout/payment-result
+
+# Cổng MoMo (Tùy chọn)
+MOMO_PARTNER_CODE=
+MOMO_ACCESS_KEY=
+MOMO_SECRET_KEY=
+MOMO_ENDPOINT=https://test-payment.momo.vn/v2/gateway/api/create
+
+# ==============================================================================
+# 8. TÍCH HỢP BÊN THỨ 3 (OPTIONAL)
+# ==============================================================================
+# Cloudinary (Lưu trữ ảnh bìa sách & banner)
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+# SMTP Email (Gửi mã OTP & Email hóa đơn)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=
+EMAIL_PASS=
+EMAIL_FROM="Trường Thành Bookstore" <no-reply@truongthanh.vn>
+
+# Firebase Admin SDK (Gửi Push Notification)
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+
+# Sentry (Giám sát lỗi 500)
+SENTRY_DSN=
 ```
 
-#### 🔹 Frontend: Tạo file `frontend/.env` từ `frontend/.env.example`
+#### 🔹 Frontend: File `frontend/.env` (Tạo từ `frontend/.env.example`)
 
 ```env
 VITE_API_URL=http://localhost:3000/api
@@ -239,111 +291,145 @@ VITE_APP_NAME="Trường Thành Bookstore"
 
 ---
 
-### 4.3. Cách Chạy Dự án Cục bộ (Local Development)
+### 4.3. Cách Khởi Chạy Dự Án Cục Bộ (Local Development)
 
-#### 🚀 Cách 1: Chạy trực tiếp từng phân hệ (Khuyến nghị cho Dev)
+#### 🚀 Cách 1: Chạy trực tiếp từng phân hệ (Khuyến nghị khi lập trình)
 
 ```bash
 # -------------------------------------------------------------
-# 1. Khởi động Database MongoDB (nếu chạy Docker MongoDB)
+# Bước 1: Khởi động cơ sở dữ liệu MongoDB ReplicaSet & Redis qua Docker
 # -------------------------------------------------------------
-docker compose up -d mongodb
+docker compose up -d mongodb redis
 
 # -------------------------------------------------------------
-# 2. Khởi chạy Backend (Terminal 1)
+# Bước 2: Khởi chạy Backend API (Terminal 1)
 # -------------------------------------------------------------
 cd backend
 npm install
-# Seed mặc định tắt. Chỉ bật AUTO_SEED=true và khai báo đủ SEED_*_PASSWORD
-# trong môi trường development khi chủ động cần dữ liệu mẫu.
-npm run start:dev  # API chạy tại: http://localhost:3000 | Swagger: http://localhost:3000/api/docs
+npm run start:dev
+# API hoạt động tại: http://localhost:3000/api
+# Tài liệu Swagger: http://localhost:3000/api/docs (Chỉ hiển thị ở development)
 
 # -------------------------------------------------------------
-# 3. Khởi chạy Frontend Web (Terminal 2)
+# Bước 3: Khởi chạy Web Frontend (Terminal 2)
 # -------------------------------------------------------------
 cd frontend
 npm install
-npm run dev        # Giao diện Web chạy tại: http://localhost:5173
+npm run dev
+# Giao diện Web mở tại: http://localhost:5173
 
 # -------------------------------------------------------------
-# 4. Khởi chạy Mobile App (Terminal 3 - Tùy chọn)
+# Bước 4: Khởi chạy Mobile App (Terminal 3 - Tùy chọn)
 # -------------------------------------------------------------
 cd mobile
 flutter pub get
 flutter run
 ```
 
-#### 🐳 Cách 2: Chạy Toàn bộ bằng Docker Compose
+#### 🐳 Cách 2: Khởi chạy toàn bộ hệ thống bằng Docker Compose
 
 ```bash
-# Tại thư mục gốc của dự án:
-# Cần khai báo JWT_SECRET, JWT_REFRESH_SECRET và JWT_RESET_SECRET riêng biệt
-# trong file .env ở thư mục gốc (không phải backend/.env).
+# Tại thư mục gốc:
 docker compose up -d --build
 
 # Các dịch vụ được khởi chạy:
-# - Frontend:     http://localhost:80
-# - Backend API:  http://localhost:3000/api
-# - Swagger Docs: http://localhost:3000/api/docs
-# - Mongo Express: dùng docker-compose.tools.yml, chỉ bật khi cần và có credentials
+# - Frontend Web:    http://localhost:80
+# - Backend REST API: http://localhost:3000/api
+# - Swagger Docs:     http://localhost:3000/api/docs
 ```
 
-#### 🔑 Seed dữ liệu an toàn
+---
 
-Không có mật khẩu seed mặc định trong source. Khi `AUTO_SEED=true`, phải cung cấp bốn biến
-`SEED_SUPER_ADMIN_PASSWORD`, `SEED_ADMIN_PASSWORD`, `SEED_STAFF_PASSWORD` và
-`SEED_CUSTOMER_PASSWORD` (tối thiểu 12 ký tự). `RESET_DATABASE_ON_SEED=true` bị cấm ở production.
+## 5. 🔐 Bảo mật, Xác thực & Phiên làm việc (Authentication & Token Security)
+
+### 5.1. Cơ chế Đăng nhập Lai (Hybrid Authentication)
+Hệ thống giải quyết triệt để rủi ro bảo mật trên từng nền tảng khách hàng:
+1. **Web Browser Clients:**
+   - `access_token` được lưu trong cookie `HttpOnly, Secure, SameSite=Lax`, thời hạn 15 phút.
+   - `refresh_token` được lưu trong cookie `HttpOnly, Secure, SameSite=Lax`, giới hạn path `/api/auth`, thời hạn 30 ngày.
+   - JavaScript trên trình duyệt **hoàn toàn không thể đọc cookie**, triệt tiêu nguy cơ bị đánh cắp token qua lỗ hổng XSS.
+   - Các mutation requests gửi kèm header `x-requested-with` / CSRF check.
+2. **Mobile Native Clients (Flutter):**
+   - Ứng dụng gửi header `x-client-platform: mobile`.
+   - Backend phản hồi token trực tiếp trong response body (`data.accessToken`, `data.refreshToken`) để lưu trữ vào **Secure Keystore** (Android) hoặc **Keychain** (iOS).
+
+### 5.2. Nguyên tắc Cô lập Loại Token (Token Type Isolation)
+Nhằm chống lại tấn công nhầm lẫn token (Token Type Confusion):
+- **Access Token:** Payload có `type: 'access'`. Chỉ được chấp nhận để xác thực các API nghiệp vụ thông thường.
+- **Refresh Token:** Payload có `type: 'refresh'`. Ký bằng secret độc lập `JWT_REFRESH_SECRET`. Chỉ được chấp nhận tại endpoint `/api/auth/refresh`. Nếu gửi vào endpoint nghiệp vụ sẽ bị chặn với lỗi `401 Unauthorized` (`ERR_INVALID_TOKEN`).
+- **Reset Password Token:** Payload có `type: 'RESET_PASSWORD'`. Ký bằng `JWT_RESET_SECRET`. Chỉ được chấp nhận tại `/api/auth/reset-password`.
+
+### 5.3. Xoay vòng Token & Phát hiện Đánh cắp Phiên (Token Rotation & Reuse Detection)
+- Khi gọi `/api/auth/refresh`, Refresh Token cũ sẽ bị hủy ngay lập tức và cấp phát cặp token mới.
+- Hash SHA-256 của refresh token hợp lệ được lưu trong `user.refreshTokenHash`.
+- **Phát hiện tái sử dụng (Reuse Attack):** Nếu một refresh token đã từng được sử dụng trước đó bị gửi lại:
+  1. Hệ thống nhận diện phiên đăng nhập bị tấn công đánh cắp.
+  2. Lập tức xóa `refreshTokenHash` và tăng `user.tokenVersion = user.tokenVersion + 1`.
+  3. Toàn bộ phiên đăng nhập của tài khoản trên mọi thiết bị bị vô hiệu hóa tức thì.
+  4. Trả về mã lỗi `401 Unauthorized` (`ERR_REFRESH_TOKEN_REUSE`).
+
+### 5.4. Thu hồi Phiên & Token Blacklist Phân tán
+- **Khi Đăng xuất (Logout):** JTI của Access token được lưu vào Redis Blacklist (`SETEX bl:jti:{jti}`) với thời gian sống (TTL) bằng thời hạn còn lại của token.
+- **Khi Đổi mật khẩu:** Trường `tokenVersion` trong User được tăng lên (+1). Mọi token cũ có `payload.tokenVersion < user.tokenVersion` đều bị từ chối ngay lập tức (`ERR_TOKEN_REVOKED`).
 
 ---
 
-## 5. 🔐 Xác thực, Phân quyền & Bảo mật (Auth & Security Architecture)
+## 6. 🛡️ Ma trận Phân quyền & Endpoint Bảo vệ (RBAC & Protected Endpoints)
 
-### 5.1. Cơ chế Quản lý Token & Bảo mật Phiên (JWT Security)
-1. **Mã hóa Mật khẩu:** 100% mật khẩu người dùng được băm qua thuật toán `bcrypt` với Salt rounds = 10.
-2. **Access Token & Refresh Token:** Khi đăng nhập thành công, hệ thống cấp cặp `accessToken` (thời hạn ngắn) và `refreshToken` (thời hạn dài).
-3. **Token Rotation:** Mỗi lần gọi endpoint `/api/auth/refresh`, Refresh Token cũ sẽ bị hủy và một cặp Token hoàn toàn mới được cấp phát.
-4. **Token Reuse Detection:** Nếu một Refresh Token cũ (đã từng dùng) bị gửi lại, hệ thống nhận diện đây là hành vi đánh cắp phiên và lập tức hủy bỏ toàn bộ phiên hoạt động của người dùng đó.
-5. **Token Blacklist Service:** Khi người dùng bấm Đăng xuất (Logout), JTI (JWT ID) và chuỗi băm của token được đưa vào `TokenBlacklistService` để vô hiệu hóa ngay lập tức.
-6. **Phiên đăng nhập toàn cục (`tokenVersion`):** Khi người dùng Đổi mật khẩu hoặc Đặt lại mật khẩu qua OTP, trường `tokenVersion` trên `UserSchema` tự động tăng lên (+1), làm vô hiệu hóa tức thì toàn bộ JWT cũ đang lưu trên mọi thiết bị khác.
+Hệ thống quản lý truy cập theo mô hình **Role-Based Access Control (RBAC)** kết hợp **Staff Permissions**.
 
-### 5.2. Mô hình Vai trò & Quyền hạn (Role-Based Access Control)
+### 6.1. 4 Vai trò Người dùng (`UserRole`)
+1. `SUPER_ADMIN`: Toàn quyền tối cao, quản trị các tài khoản quản trị viên khác và thay đổi role.
+2. `ADMIN`: Quản trị toàn bộ nghiệp vụ (sản phẩm, đơn hàng, kho, khuyến mãi, báo cáo doanh thu).
+3. `STAFF`: Nhân viên vận hành, được phân quyền chi tiết theo 8 quyền năng (`StaffPermission`):
+   - `MANAGE_ORDERS`: Xem, duyệt, cập nhật trạng thái đơn, in hóa đơn PDF.
+   - `MANAGE_PRODUCTS`: Tạo, sửa sản phẩm, danh mục, kiểm duyệt đánh giá.
+   - `MANAGE_INVENTORY`: Tạo phiếu nhập kho, xuất kho, điều chỉnh kho.
+   - `VIEW_REPORTS`: Xem báo cáo doanh thu, sản phẩm bán chạy, khách hàng tiềm năng.
+   - `MANAGE_CUSTOMERS`: Quản trị danh sách khách hàng, cập nhật điểm loyalty.
+   - `MANAGE_PROMOTIONS`: Tạo, sửa, đóng/mở mã giảm giá.
+   - `MANAGE_BANNERS`: Đăng banner tiếp thị trên trang chủ.
+   - `MANAGE_LANDING_PAGES`: Quản trị nội dung các trang landing page Flash Sale.
+4. `CUSTOMER`: Khách hàng thành viên, quản lý giỏ hàng, đặt hàng, sổ địa chỉ cá nhân, lịch sử đơn của mình, đánh giá sản phẩm.
 
-Code hiện tại triển khai 4 vai trò (`UserRole`):
+### 6.2. Ma trận Quyền hạn Chi tiết
 
-```text
-┌─────────────────┐
-│   SUPER_ADMIN   │  (Toàn quyền và quản trị tài khoản đặc quyền)
-├─────────────────┤
-│      ADMIN      │  (Quản trị nghiệp vụ)
-├─────────────────┤
-│      STAFF      │  (Quyền chi tiết theo permissions được cấp)
-└─────────────────┘
-
-┌─────────────────┐
-│    CUSTOMER     │  (Mua hàng, quản lý sổ địa chỉ, xem lịch sử đơn, đánh giá)
-└─────────────────┘
-```
-
-| Vai trò (`UserRole`) | Phạm vi quyền hạn | Mô tả chi tiết |
-| :--- | :--- | :--- |
-| **SUPER_ADMIN** | Toàn quyền | Quản trị tài khoản đặc quyền và toàn bộ nghiệp vụ. |
-| **ADMIN** | Toàn quyền hệ thống, quản lý | Quản trị toàn bộ sản phẩm, danh mục, kho hàng, đơn hàng, mã giảm giá/khuyến mãi, khách hàng, banner quảng cáo, báo cáo doanh thu tài chính. |
-| **STAFF** | Theo quyền được cấp | Thao tác theo `StaffPermission`; backend vẫn là nơi thực thi authorization cuối cùng. |
-| **CUSTOMER** | Mua sắm & Cá nhân hóa | Mua hàng, quản lý giỏ hàng, đặt hàng, quản lý sổ địa chỉ nhận hàng, xem lịch sử đơn hàng và gửi đánh giá sản phẩm. |
-
----
-
-## 6. 🛍️ Quy tắc Nghiệp vụ Cốt lõi (Core Commerce Business Logic)
-
-### 6.1. Quy tắc Giỏ hàng & Tính toán Phí vận chuyển
-- **Ngưỡng Miễn phí Vận chuyển:** `299.000 VNĐ`
-  - Nếu `Tổng tiền hàng (Subtotal) >= 299.000đ` ➔ Phí ship = `0đ` (Miễn phí).
-  - Nếu `Tổng tiền hàng (Subtotal) < 299.000đ` ➔ Phí ship = `30.000đ`.
-- **Khóa giá từ Máy chủ (Server-side Pricing):** Giá bán và giá khuyến mãi luôn được truy vấn và tính toán trực tiếp từ cơ sở dữ liệu trên backend. Hệ thống **tuyệt đối không tin tưởng** giá tiền được gửi lên từ phía Client (chống gian lận sửa giá trên trình duyệt).
+| Module API | Hành động / Endpoint | Phân quyền yêu cầu | Mã lỗi khi vi phạm |
+|---|---|---|:---:|
+| **Auth** | Đăng ký, Đăng nhập, Quên mật khẩu | Công khai (Public) | - |
+| | Lấy thông tin cá nhân (`GET /auth/me`) | Mọi user đã đăng nhập | 401 |
+| **Users** | Xem danh sách người dùng (`GET /users`) | `ADMIN`, `SUPER_ADMIN` hoặc Staff có `MANAGE_CUSTOMERS` | 401 / 403 |
+| | Cập nhật Vai trò người dùng (`PATCH /users/:id/role`) | Duy nhất `SUPER_ADMIN` | 403 |
+| | Khóa / Mở tài khoản (`PATCH /users/:id/status`) | `ADMIN`, `SUPER_ADMIN` | 403 |
+| **Products** | Xem danh sách / Chi tiết sản phẩm active | Công khai (Public) | - |
+| | Tạo mới, Sửa, Xóa sản phẩm | `ADMIN`, `SUPER_ADMIN` hoặc Staff có `MANAGE_PRODUCTS` | 401 / 403 |
+| | Xuất file Excel danh mục sản phẩm | `ADMIN`, `SUPER_ADMIN` hoặc Staff có `MANAGE_PRODUCTS` | 401 / 403 |
+| **Orders** | Tạo đơn hàng (Guest & Auth) | Công khai / Khách hàng thành viên | 400 nếu sai giá/kho |
+| | Xem toàn bộ đơn hàng hệ thống (`GET /orders`) | `ADMIN`, `SUPER_ADMIN` hoặc Staff có `MANAGE_ORDERS` | 401 / 403 |
+| | Xem đơn của chính mình (`GET /orders/my-orders`) | Khách hàng đăng nhập | 401 |
+| | Xem chi tiết 1 đơn hàng (`GET /orders/:id`) | Staff `MANAGE_ORDERS` / Khách sở hữu đơn (IDOR Guard) | 401 / 403 |
+| | Cập nhật trạng thái đơn (`PATCH /orders/:id/status`) | Staff có `MANAGE_ORDERS` / `ADMIN` | 401 / 403 |
+| | Tải Hóa đơn PDF (`GET /orders/:id/invoice`) | Staff `MANAGE_ORDERS` / Khách sở hữu đơn | 401 / 403 |
+| **Inventory** | Xem sổ cái giao dịch, tạo phiếu nhập/xuất | Staff có `MANAGE_INVENTORY` / `ADMIN` | 401 / 403 |
+| **Reports** | Xem báo cáo tài chính & dashboard (`/reports/*`)| Staff có `VIEW_REPORTS` / `ADMIN` | 401 / 403 |
+| **Promotions**| Tạo / Sửa mã khuyến mãi | Staff có `MANAGE_PROMOTIONS` / `ADMIN` | 401 / 403 |
+| | Áp dụng mã giảm giá khi checkout | Mọi khách hàng (Public / Customer) | - |
 
 ---
 
-### 6.2. Luồng Vòng đời Đơn hàng (Order State Machine)
+## 7. 🛍️ Quy tắc Nghiệp vụ Cốt lõi (Core Commerce Business Rules)
+
+### 7.1. Giỏ hàng & Miễn phí Vận chuyển
+- **Ngưỡng Miễn phí Vận chuyển:** `299.000 VNĐ`.
+  - Nếu `Subtotal >= 299.000đ` ➔ Phí vận chuyển = `0đ` (Freeship).
+  - Nếu `Subtotal < 299.000đ` ➔ Phí vận chuyển = `30.000đ`.
+- **Khóa giá từ Máy chủ (Server-side Pricing):** Giá bán và giá khuyến mãi luôn được truy vấn và tính toán trực tiếp từ CSDL. Backend **tuyệt đối không tin tưởng giá tiền từ Client** để chống gian lận chỉnh sửa giá trên trình duyệt.
+
+---
+
+### 7.2. Máy Trạng thái Đơn hàng (Order State Machine)
+
+Vòng đời đơn hàng tuân thủ nghiêm ngặt theo đồ thị trạng thái:
 
 ```text
        ┌──────────┐
@@ -353,12 +439,12 @@ Code hiện tại triển khai 4 vai trò (`UserRole`):
             ├──────────────────────────────┐
             ▼                              ▼
      ┌───────────┐                  ┌───────────┐
-     │ CONFIRMED │ (Đã duyệt)       │ CANCELLED │ ➔ [ Hoàn lại tồn kho ]
+     │ CONFIRMED │ (Đã duyệt đơn)   │ CANCELLED │ ➔ [ Hoàn kho & hoàn điểm & voucher ]
      └─────┬─────┘                  └───────────┘
-           │
-           ▼
-    ┌────────────┐
-    │ PROCESSING │ (Đang đóng gói)
+           │                               ▲
+           ▼                               │
+    ┌────────────┐                         │
+    │ PROCESSING │ (Đang đóng gói) ────────┘
     └──────┬─────┘
            │
            ▼
@@ -369,35 +455,80 @@ Code hiện tại triển khai 4 vai trò (`UserRole`):
            ├──────────────────────────────┐
            ▼                              ▼
     ┌───────────┐                  ┌──────────┐
-    │ DELIVERED │ (Giao thành công)│ RETURNED │ ➔ [ Hoàn kho & ghi log ]
+    │ DELIVERED │ (Giao thành công)│ RETURNED │ ➔ [ Thu hồi điểm & hoàn kho ]
     └─────┬─────┘                  └──────────┘
-           │
-           ▼
-    ┌───────────┐
-    │ COMPLETED │ (Hoàn tất giao dịch)
+           │                              ▲
+           ▼                              │
+    ┌───────────┐                         │
+    │ COMPLETED │ (Hoàn tất giao dịch) ───┘
     └───────────┘
 ```
 
-**Nguyên tắc Trừ kho Nguyên tử & Hoàn kho (Atomic Inventory):**
-1. Khi khách hàng bấm Đặt hàng thành công ➔ Tồn kho của từng sản phẩm trong đơn được trừ ngay lập tức (`stock - quantity`, `soldCount + quantity`).
-2. Nếu đơn hàng bị chuyển sang trạng thái `CANCELLED` (Hủy đơn) ➔ Hệ thống tự động kích hoạt tiến trình phục hồi tồn kho: hoàn trả đúng số lượng sản phẩm vào kho và giảm số lượng đã bán (`soldCount`).
-3. Cơ chế Idempotency (`idempotencyKey`) ngăn chặn hoàn toàn việc khách bấm Đặt hàng 2 lần liên tiếp do mạng lag bị tạo 2 đơn trùng lặp.
+**Bảng Chuyển trạng thái Hợp lệ:**
+- `PENDING` ➔ `CONFIRMED`, `CANCELLED`
+- `CONFIRMED` ➔ `PROCESSING`, `CANCELLED`
+- `PROCESSING` ➔ `SHIPPING`, `CANCELLED`
+- `SHIPPING` ➔ `DELIVERED`
+- `DELIVERED` ➔ `COMPLETED`, `RETURNED`
+- `COMPLETED` ➔ `RETURNED` (Trong thời hạn 7 ngày đổi trả)
+- `CANCELLED`, `RETURNED` ➔ *(Trạng thái kết thúc - Không chuyển tiếp)*
+
+> Mọi thao tác chuyển đổi sai quy tắc (ví dụ: `SHIPPING` nhảy sang `CANCELLED`, hoặc `CANCELLED` chuyển sang `CONFIRMED`) đều bị từ chối với lỗi `400 Bad Request`.
 
 ---
 
-### 6.3. Quy tắc Khuyến mãi (Promotions / Vouchers)
-- **Hình thức giảm giá:** Giảm theo phần trăm (`PERCENTAGE`, có kèm trần giảm tối đa `maxDiscount`) hoặc Giảm theo số tiền cố định (`FIXED_AMOUNT`).
-- **Ràng buộc:** Kiểm tra thời hạn hiệu lực (`startDate` -> `endDate`), giá trị đơn hàng tối thiểu (`minOrderValue`), tổng số lượt sử dụng tối đa (`usageLimit`), và giới hạn 1 lượt/1 khách hàng.
+### 7.3. Khấu trừ Tồn kho Nguyên tử & Sổ cái Giao dịch Kho
+- **Khấu trừ nguyên tử:** Tồn kho được trừ ngay lúc tạo đơn bằng truy vấn MongoDB nguyên tử:
+  ```typescript
+  await this.productModel.findOneAndUpdate(
+    { _id: productId, stock: { $gte: quantity } },
+    { $inc: { stock: -quantity, sold: quantity } }
+  );
+  ```
+  Nếu có bất kỳ sản phẩm nào không đủ tồn kho, transaction sẽ rollback 100%, không xảy ra tình trạng bán vượt tồn kho (overselling).
+- **Hoàn trả kho khi Hủy / Trả hàng:** Khi đơn chuyển sang `CANCELLED` hoặc `RETURNED`, hệ thống tự động cộng lại tồn kho (`$inc: +quantity`) và giảm bộ đếm `sold`.
+- **Sổ cái kho (`InventoryTransaction`):** Mọi biến động đều được lưu vết với 5 loại: `IMPORT` (Nhập hàng), `SALE` (Xuất bán), `RETURN` (Hoàn trả), `ADJUSTMENT` (Kiểm kê điều chỉnh), `DAMAGE` (Hư hỏng xuất hủy).
 
 ---
 
-## 7. 📡 Đặc tả API & Giao tiếp Thời gian thực (API & Realtime WebSocket)
+### 7.4. Tự động Hủy Đơn Treo (Auto-Cancel Timeout)
+Hệ thống chạy Cron Job định kỳ 15 phút để tự động hủy đơn `PENDING` quá hạn giữ kho:
+- **Đơn thanh toán online / Chuyển khoản:** Hủy sau **24 giờ** kể từ lúc tạo đơn.
+- **Đơn COD chưa liên lạc được:** Hủy sau **48 giờ** kể từ lúc tạo đơn.
+- **Thông báo nhắc trước:** Hệ thống tự động gửi Push Notification và Email trước thời điểm hủy **2 giờ** (ở mốc 22h hoặc 46h).
 
-### 7.1. Định dạng Phản hồi API Chuẩn hóa (Standard Response Envelope)
+---
 
-Tất cả các endpoint REST API đều tuân theo cấu trúc phản hồi đồng nhất:
+### 7.5. Điểm thưởng Loyalty & Hạng Thành viên
+- **Mốc cộng điểm:** Điểm thưởng được cộng cho khách **chính xác tại thời điểm đơn hàng đạt `DELIVERED`** (hoặc `COMPLETED`). Đơn chuyển khoản/online phải có `paymentStatus = PAID`. Tuyệt đối không cộng điểm lúc tạo đơn `PENDING`.
+- **Idempotency:** Cờ `loyaltyAwarded: true` bảo đảm không bị cộng điểm lặp lần hai.
+- **Tỷ lệ Tích điểm:** 1.000 VNĐ tiền hàng thực trả = 1 điểm: `floor((subtotal - discount - loyaltyDiscount) / 1000)`.
+- **Tỷ lệ Tiêu điểm:** 1 điểm = 100 VNĐ giảm trực tiếp tại Checkout.
+  - Ngưỡng tối thiểu tiêu điểm: **1.000 điểm** (= 100.000 VNĐ).
+  - Trần tối đa: **Không quá 20% Subtotal** đơn hàng.
+  - Trừ điểm nguyên tử `$gte` tại `OrdersService.create()`.
+  - Tự động hoàn trả điểm đầy đủ vào tài khoản khách khi đơn bị `CANCELLED` hoặc `RETURNED`.
 
-#### ✅ Khi Thành Công (HTTP 200 / 201):
+---
+
+### 7.6. Đơn hàng Landing Page
+- Các gói sản phẩm trên Landing Page **bắt buộc cấu hình Product ID thật** trong CSDL.
+- Luồng gửi đơn gọi qua pipeline chuẩn `OrdersService.create()`, trừ kho thật, ghi sổ cái `SALE`, hỗ trợ `Idempotency-Key` và không sinh email giả mạo.
+
+---
+
+### 7.7. Báo cáo Doanh thu Thuần (Realized Net Revenue)
+- **Doanh thu được ghi nhận:** Chỉ tính các đơn đã thanh toán (`PAID`) hoặc đã giao thành công (`DELIVERED`, `COMPLETED`).
+- **Loại trừ tuyệt đối:** Đơn hủy (`CANCELLED`), đơn hoàn trả (`RETURNED`), đơn treo (`PENDING`).
+- Doanh thu theo danh mục được tính toán từ snapshot giá tại thời điểm đặt hàng: `items[].price * items[].quantity`.
+
+---
+
+## 8. 📡 Chuẩn Giao tiếp API & Thời gian thực (API Envelope & WebSocket)
+
+### 8.1. Cấu trúc Phản hồi API Đồng nhất
+
+#### ✅ Phản hồi Thành Công (HTTP 200 / 201):
 ```json
 {
   "success": true,
@@ -412,7 +543,7 @@ Tất cả các endpoint REST API đều tuân theo cấu trúc phản hồi đ�
 }
 ```
 
-#### ❌ Khi Xảy Ra Lỗi (HTTP 400 / 401 / 403 / 404 / 500):
+#### ❌ Phản hồi Thất Bại (HTTP 400 / 401 / 403 / 404 / 500):
 ```json
 {
   "success": false,
@@ -424,124 +555,95 @@ Tất cả các endpoint REST API đều tuân theo cấu trúc phản hồi đ�
 }
 ```
 
----
-
-### 7.2. Danh mục Các Nhóm API Chính (API Endpoints Summary)
-
-| Prefix | Mô tả nhóm chức năng | Các API tiêu biểu |
-| :--- | :--- | :--- |
-| `/api/auth` | Xác thực & Phiên đăng nhập | `POST /register`, `POST /login`, `POST /refresh`, `POST /logout`, `POST /forgot-password`, `POST /reset-password` |
-| `/api/users` | Thông tin người dùng & Sổ địa chỉ | `GET /profile`, `PATCH /profile`, `GET /addresses`, `POST /addresses`, `POST /wishlist/:id` |
-| `/api/products` | Danh mục sản phẩm & Tìm kiếm | `GET /`, `GET /:id`, `POST /` (Admin), `PATCH /:id`, `GET /export/excel`, `POST /import/excel` |
-| `/api/categories` | Cây danh mục sản phẩm | `GET /`, `GET /tree`, `POST /` (Admin), `PATCH /:id`, `DELETE /:id` |
-| `/api/cart` | Giỏ hàng & Tạm tính | `GET /`, `POST /items`, `PATCH /items/:id`, `DELETE /items/:id`, `POST /sync` |
-| `/api/orders` | Đơn hàng & Checkout | `POST /checkout-preview`, `POST /`, `GET /my-orders`, `GET /:id`, `PATCH /:id/status`, `GET /:id/invoice` |
-| `/api/inventory` | Quản lý kho hàng | `GET /`, `POST /import`, `POST /export`, `POST /adjust`, `GET /transactions`, `GET /alerts` |
-| `/api/promotions` | Mã giảm giá | `GET /`, `POST /apply`, `POST /` (Admin), `PATCH /:id` |
-| `/api/reviews` | Đánh giá sản phẩm | `GET /product/:productId`, `POST /`, `PATCH /:id/reply` (Admin) |
-| `/api/notifications`| Thông báo người dùng | `GET /`, `PATCH /:id/read`, `PATCH /read-all` |
-| `/api/reports` | Báo cáo tài chính Admin | `GET /overview`, `GET /revenue-chart`, `GET /top-products`, `GET /order-status-stats` |
-
-*Chi tiết toàn bộ schema Request/Response có thể xem trực tiếp tại Swagger UI:* `http://localhost:3000/api/docs`.
-
----
-
-### 7.3. Giao tiếp Thời gian thực (WebSocket Events)
+### 8.2. Giao tiếp WebSocket Thời gian thực
 - **Namespace:** `/notifications`
-- **Events phát từ Server:**
-  - `new_order`: Bắn thông báo tới Admin CMS khi có khách hàng vừa đặt đơn mới.
-  - `order_status_updated`: Bắn thông báo tới Web/Mobile của khách hàng khi đơn hàng được duyệt/giao.
-  - `stock_alert`: Báo động tới Admin khi tồn kho một sản phẩm giảm xuống dưới mức an toàn.
+- **Sự kiện Server phát ra:**
+  - `new_order`: Bắn tới Admin CMS khi có khách hàng vừa tạo đơn mới.
+  - `order_status_updated`: Bắn tới Web/Mobile của khách hàng khi trạng thái đơn thay đổi.
+  - `stock_alert`: Cảnh báo Admin khi tồn kho một sản phẩm giảm xuống dưới 10.
 
 ---
 
-## 8. 🧪 Kiểm thử & Quy trình CI/CD (Testing & Deployment Pipelines)
+## 9. 🧪 Kiểm thử Tự động & Quy trình CI/CD (Testing & Deployment Pipelines)
 
-### 8.1. Kiểm thử Tự động (Automated Testing)
+### 9.1. Lệnh Chạy Kiểm thử Cục bộ
 
 ```bash
 # -------------------------------------------------------------
-# 1. Chạy Unit & Integration Tests cho Backend (Jest)
+# 1. Kiểm thử Backend (NestJS + Jest)
 # -------------------------------------------------------------
 cd backend
-npm test                # Chạy toàn bộ test suites
-npm run test:cov        # Xuất báo cáo độ phủ mã nguồn (Coverage report)
+npm test -- --runInBand        # Chạy toàn bộ 35 suites / 397 unit tests
+npm run test:e2e -- --runInBand # Chạy bộ test E2E với MongoDB ReplicaSet
+npm run lint                   # Kiểm tra chất lượng mã nguồn bằng ESLint
+npm run build                  # Biên dịch NestJS production bundle
 
 # -------------------------------------------------------------
-# 2. Kiểm tra lỗi Types & Build Frontend (Vue-TSC + Vite)
+# 2. Kiểm thử Frontend Web (Vue 3 + Vitest + Playwright)
 # -------------------------------------------------------------
 cd frontend
-npm run build           # Chạy type-check vue-tsc và biên dịch dist/
+npm run test:unit              # Chạy Vitest cho stores và components
+npm run build                  # Typecheck bằng vue-tsc và build Vite
+npm run test:e2e               # Chạy 5 kịch bản Playwright E2E trình duyệt
 
 # -------------------------------------------------------------
-# 3. Kiểm tra Mã nguồn Mobile App (Flutter)
+# 3. Kiểm thử Mobile App (Flutter)
 # -------------------------------------------------------------
 cd mobile
-flutter analyze         # Phân tích tĩnh cú pháp Dart
-flutter test            # Chạy bộ test widget & provider
+flutter analyze                # Phân tích tĩnh cú pháp Dart
+flutter test                   # Chạy toàn bộ 42 unit & widget tests
 ```
 
----
-
-### 8.2. Kịch bản CI/CD (GitHub Actions)
-
-Mọi Pull Request hoặc thao tác Push vào nhánh `main` đều được kiểm soát bởi 4 workflows trong `.github/workflows/`:
-1. `backend-ci.yml`: Cài đặt dependencies, chạy linter, chạy bộ test Jest và build NestJS.
-2. `frontend-ci.yml`: Cài đặt dependencies, chạy `vue-tsc` kiểm tra kiểu dữ liệu và build Vite bundle.
-3. `mobile-ci.yml`: Chạy `flutter analyze` và `flutter test`.
-4. `deploy.yml`: Tự động trigger deploy lên **Vercel** (Frontend) và **Render** (Backend API).
+### 9.2. Quy trình CI/CD Tự động hóa
+Mọi commit push lên nhánh `main` hoặc Pull Request đều tự động kích hoạt workflow `.github/workflows/ci.yml`:
+1. **Security Scan:** Quét rò rỉ secret bằng `gitleaks`.
+2. **Backend Job:** Chạy Jest unit tests, linting, build bundle.
+3. **Frontend Job:** Chạy `vue-tsc` typecheck, build Vite bundle, Vitest.
+4. **Playwright E2E Job:** Khởi động backend & frontend và chạy kiểm thử tự động trên trình duyệt Chromium.
+5. **Deploy Gate:** Kịch bản `deploy.yml` chỉ kích hoạt sau khi CI xanh 100%.
 
 ---
 
-## 9. 🔍 Kế hoạch Xử lý Nợ Kỹ thuật & Hardening (Audit Backlog)
+## 10. 📘 Cẩm nang Dành cho Intern & Lập trình viên Mới
 
-Dự án đã trải qua đợt đánh giá kỹ thuật toàn diện (**Technical Audit**). Tất cả 24 vấn đề phát hiện và kế hoạch nâng cấp đã được lập bảng chi tiết trong tệp:  
-👉 [`docs/AUDIT_FIX_TASKS.md`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/docs/AUDIT_FIX_TASKS.md)
-
-### 📌 Trạng thái hardening sau audit ngày 2026-09-02
-
-1. **[P0 - DATA] Auto-seed:** ✅ mặc định tắt; reset chỉ bằng cờ tường minh và bị cấm ở production.
-2. **[P0 - SEC] Secrets & token web:** ⚠️ source đã fail-closed và web dùng HttpOnly cookie + CSRF header; rotation secret production vẫn là việc vận hành bắt buộc.
-3. **[P0 - DEVOPS] Deploy gate:** ✅ deploy chỉ chạy sau CI thành công; branch protection phải cấu hình trên GitHub.
-4. **[P0 - DB] Network/transaction:** ⚠️ Compose bind DB vào localhost và dùng replica set; production vẫn phải bật DB authentication, backup và kiểm chứng topology thực tế.
-5. **[P1/P2 - ORDER] Integrity:** ✅ tạo đơn và cập nhật trạng thái/tồn kho dùng transaction khi có Mongo replica set; môi trường standalone bị fail-closed cho chuyển trạng thái có side effect.
+### 10.1. Những Nguyên Tắc Bất Biến (Golden Rules)
+1. **Không Hardcode Secrets:** Tuyệt đối không viết trực tiếp URL database, mật khẩu, JWT key vào source code. Luôn đọc từ `ConfigService` (Backend) hoặc `import.meta.env` (Frontend).
+2. **Phân tách Đúng Trách nhiệm:**
+   - `Controller`: Chỉ validate DTO qua pipe, điều hướng tới service và trả kết quả. Không viết logic tính toán tại controller.
+   - `Service`: Nơi chứa 100% logic nghiệp vụ, giao dịch MongoDB Session, gửi mail, bắn thông báo.
+   - `DTO`: Khai báo decorator validation chi tiết (`@IsNotEmpty`, `@IsNumber`, `@Min`, `@Max`).
+3. **Không Sử Dụng Kiểu `any` Bừa Bãi:** Luôn định nghĩa Interface/Type rõ ràng ở cả Backend DTO và Frontend `src/types/`.
+4. **Viết Test Kèm Theo Feature:** Mọi chỉnh sửa liên quan đến giá tiền, tồn kho, phân quyền đều bắt buộc phải có Unit Test đi kèm.
 
 ---
 
-## 10. 📘 Cẩm nang Dành cho Intern / Developer Mới & Trợ lý AI
+### 10.2. Hướng dẫn Từng Bước: Cách Thêm Một Tính Năng Mới
 
-### 10.1. Nguyên tắc Bất biến khi Viết Code (Golden Rules)
-1. **Không Hardcode Secrets:** Tuyệt đối không viết trực tiếp URL database, mật khẩu, JWT key vào code. Luôn lấy thông qua `ConfigService` (Backend) hoặc `import.meta.env` (Frontend).
-2. **Phân tách Rõ ràng Trách nhiệm:**
-   - `Controller`: Chỉ nhận request, validate DTO qua pipe, gọi service và trả về kết quả. Không viết logic tính toán tại controller.
-   - `Service`: Nơi chứa 100% logic nghiệp vụ, giao dịch cơ sở dữ liệu, gửi mail, bắn socket.
-   - `DTO`: Định nghĩa rõ ràng kiểu dữ liệu và decorator validate (`@IsNotEmpty`, `@IsNumber`...).
-3. **Không Sử Dụng Kiểu `any` Tùy Tiện:** Luôn khai báo kiểu dữ liệu rõ ràng (Interface / Type) ở cả Backend DTO và Frontend `src/types/`.
-4. **Mọi Thay đổi Nghiệp vụ Cốt lõi Phải Đi Kèm Unit Test:** Khi sửa logic tính tiền, trừ kho, áp voucher... phải chạy `npm test` để đảm bảo không gây lỗi hồi quy (regression).
-
----
-
-### 10.2. Hướng dẫn Từng bước: Cách Thêm Một Tính Năng Mới
-
-#### Bước 1: Thêm API Mới ở Backend
-1. Tạo thư mục module mới trong `backend/src/modules/<feature-name>/`.
-2. Định nghĩa Schema Mongoose trong thư mục `schemas/`.
-3. Định nghĩa Request DTO trong thư mục `dto/` kèm class-validator decorators.
+#### Bước 1: Backend API
+1. Tạo thư mục module mới: `backend/src/modules/<feature-name>/`.
+2. Định nghĩa Schema Mongoose trong `schemas/<feature-name>.schema.ts`.
+3. Định nghĩa Request DTO trong `dto/` kèm class-validator decorators.
 4. Viết Business Logic trong `<feature-name>.service.ts`.
-5. Tạo endpoint REST trong `<feature-name>.controller.ts` kèm Swagger decorators (`@ApiTags`, `@ApiOperation`).
+5. Tạo endpoint REST trong `<feature-name>.controller.ts` kèm Guard phân quyền (`@UseGuards(JwtAuthGuard, RolesGuard)`).
 6. Đăng ký Module vào `backend/src/app.module.ts`.
+7. Viết unit test trong `<feature-name>.service.spec.ts` và chạy `npm test`.
 
-#### Bước 2: Thêm Giao diện Mới ở Frontend
-1. Định nghĩa Type/Interface trong `frontend/src/types/index.ts`.
+#### Bước 2: Frontend Web
+1. Khai báo TypeScript Interface trong `frontend/src/types/index.ts`.
 2. Viết hàm gọi API trong `frontend/src/services/<feature-name>.service.ts`.
-3. Tạo Component hoặc Trang trong `frontend/src/pages/`.
-4. Đăng ký đường dẫn mới trong `frontend/src/router/index.ts` (gắn kèm `meta.requiresAuth` hoặc `meta.roles` nếu cần bảo vệ).
+3. Tạo Pinia Store trong `frontend/src/stores/<feature-name>.ts` (nếu cần chia sẻ state).
+4. Tạo Component/Trang giao diện trong `frontend/src/pages/admin/` hoặc `frontend/src/pages/customer/`.
+5. Đăng ký route trong `frontend/src/router/index.ts` kèm `meta.requiresAuth` hoặc `meta.roles`.
 
 ---
 
-### 10.3. Checklist Kiểm tra Trước khi Tạo Pull Request (PR Checklist)
-- [ ] Backend: Chạy `npm test` và toàn bộ unit tests đều **PASS**.
-- [ ] Backend: Đã thêm DTO validation đầy đủ, không để lọt trường lạ.
-- [ ] Frontend: Chạy `npm run build` không bị lỗi kiểu dữ liệu TypeScript.
-- [ ] Không có file `.env` thật nào bị thêm vào Git staging (`git status`).
-- [ ] Không xuất hiện `console.log` chứa mật khẩu, token hoặc thông tin nhạy cảm.
+### 10.3. Checklist Kiểm Tra Trước Khi Mở Pull Request (PR Checklist)
+- [ ] Đã chạy `npm test` ở backend và toàn bộ unit tests đều **PASS**.
+- [ ] Đã chạy `npm run lint` ở backend và không phát sinh thêm error mới.
+- [ ] Đã chạy `npm run build` ở frontend và không có lỗi kiểu dữ liệu TypeScript.
+- [ ] Đã kiểm tra `git status` đảm bảo không commit file `.env` thật hoặc private keys.
+- [ ] Không có `console.log` chứa mật khẩu, token hoặc thông tin khách hàng nhạy cảm.
+
+---
+*Tài liệu này được duy trì chính thức cho dự án Nhà sách Trường Thành. Để xem các công việc còn tồn đọng và kế hoạch phát triển tiếp theo, vui lòng tham khảo file:*  
+👉 [`docs/PENDING_TASKS.md`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/docs/PENDING_TASKS.md)

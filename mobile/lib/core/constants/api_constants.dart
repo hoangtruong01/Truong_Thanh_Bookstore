@@ -5,6 +5,20 @@ class ApiConstants {
   // with fallback to local development platform defaults
   static String get baseUrl {
     const customApiUrl = String.fromEnvironment('API_URL', defaultValue: '');
+    return resolveBaseUrl(customApiUrl, release: kReleaseMode);
+  }
+
+  static String resolveBaseUrl(String configured, {required bool release}) {
+    final customApiUrl = configured.trim().replaceFirst(RegExp(r'/+$'), '');
+    if (release) {
+      final uri = Uri.tryParse(customApiUrl);
+      if (uri == null || uri.scheme != 'https' || uri.host.isEmpty ||
+          uri.userInfo.isNotEmpty || uri.hasQuery || uri.hasFragment ||
+          uri.path != '/api' ||
+          ['localhost', '127.0.0.1', '10.0.2.2', '::1'].contains(uri.host)) {
+        throw StateError('Release requires API_URL=https://your-api-host/api');
+      }
+    }
     if (customApiUrl.isNotEmpty) {
       return customApiUrl;
     }
