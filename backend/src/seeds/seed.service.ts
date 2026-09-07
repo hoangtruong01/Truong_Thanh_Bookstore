@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import { User, UserDocument } from '../modules/users/schemas/user.schema';
@@ -221,7 +221,8 @@ export class SeedService implements OnModuleInit {
       if (value && value.length >= 12) {
         return value;
       }
-      const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
+      const nodeEnv =
+        this.configService.get<string>('NODE_ENV') || 'development';
       if (nodeEnv !== 'production') {
         return fallbackDefault;
       }
@@ -1894,7 +1895,8 @@ export class SeedService implements OnModuleInit {
         rating: 4.5 + Math.random() * 0.5,
         sold: Math.floor(Math.random() * 200) + 10,
         isFeatured: Math.random() > 0.7,
-        status: p.stock === 0 ? ProductStatus.OUT_OF_STOCK : ProductStatus.ACTIVE,
+        status:
+          p.stock === 0 ? ProductStatus.OUT_OF_STOCK : ProductStatus.ACTIVE,
         subOptions: p.subOptions,
       };
     });
@@ -2089,14 +2091,19 @@ export class SeedService implements OnModuleInit {
     this.logger.log('Bidirectional category product relationships mapped');
 
     // Create inventory records
-    const inventoryRecords = createdProducts.map((product: any) => ({
-      product: product._id,
-      currentStock: product.stock,
-      minStock: 10,
-      maxStock: 1000,
-      status: product.stock > 0 ? InventoryStatus.IN_STOCK : InventoryStatus.OUT_OF_STOCK,
-      lastUpdated: new Date(),
-    }));
+    const inventoryRecords = createdProducts.map(
+      (product: { _id: Types.ObjectId; stock: number }) => ({
+        product: product._id,
+        currentStock: product.stock,
+        minStock: 10,
+        maxStock: 1000,
+        status:
+          product.stock > 0
+            ? InventoryStatus.IN_STOCK
+            : InventoryStatus.OUT_OF_STOCK,
+        lastUpdated: new Date(),
+      }),
+    );
 
     await this.inventoryModel.insertMany(inventoryRecords);
     this.logger.log('Inventory records generated');
@@ -2145,7 +2152,8 @@ export class SeedService implements OnModuleInit {
       {
         code: 'EXPIRED2025',
         name: 'Voucher Năm Cũ (Đã Hết Hạn)',
-        description: 'Mã giảm giá đã hết hạn sử dụng để kiểm thử nghiệp vụ voucher',
+        description:
+          'Mã giảm giá đã hết hạn sử dụng để kiểm thử nghiệp vụ voucher',
         discountType: DiscountType.PERCENT,
         discountValue: 20,
         minOrderValue: 50000,
@@ -2157,15 +2165,25 @@ export class SeedService implements OnModuleInit {
       },
     ];
     await this.promotionModel.insertMany(promotions);
-    this.logger.log('Promotions seeded (bao gồm voucher hợp lệ và voucher hết hạn)');
+    this.logger.log(
+      'Promotions seeded (bao gồm voucher hợp lệ và voucher hết hạn)',
+    );
 
     // Seed sample orders for Customer
     const sampleCustomer = await this.userModel
       .findOne({ email: 'customer@truongthanh.vn' })
       .exec();
     if (sampleCustomer && createdProducts.length >= 2) {
-      const prodA = createdProducts[0];
-      const prodB = createdProducts[1];
+      interface SeedProductRef {
+        _id: Types.ObjectId;
+        name: string;
+        price: number;
+        discountPrice?: number;
+        category?: Types.ObjectId;
+        images?: string[];
+      }
+      const prodA = createdProducts[0] as unknown as SeedProductRef;
+      const prodB = createdProducts[1] as unknown as SeedProductRef;
       const sampleOrders = [
         {
           orderCode: 'ORD-TEST-PENDING',
