@@ -33,6 +33,9 @@ import {
   DiscountType,
   InventoryStatus,
   StaffPermission,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
 } from '../common/enums';
 
 @Injectable()
@@ -213,25 +216,29 @@ export class SeedService implements OnModuleInit {
   }
 
   async seed() {
-    const getSeedPassword = (key: string): string => {
+    const getSeedPassword = (key: string, fallbackDefault: string): string => {
       const value = this.configService.get<string>(key);
-      if (!value || value.length < 12) {
-        throw new Error(
-          `${key} is required and must contain at least 12 characters when AUTO_SEED=true.`,
-        );
+      if (value && value.length >= 12) {
+        return value;
       }
-      return value;
+      const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
+      if (nodeEnv !== 'production') {
+        return fallbackDefault;
+      }
+      throw new Error(
+        `${key} is required and must contain at least 12 characters when AUTO_SEED=true.`,
+      );
     };
     const superAdminPassword = await bcrypt.hash(
-      getSeedPassword('SEED_SUPER_ADMIN_PASSWORD'),
+      getSeedPassword('SEED_SUPER_ADMIN_PASSWORD', 'SuperAdmin@123456'),
       10,
     );
     const adminPassword = await bcrypt.hash(
-      getSeedPassword('SEED_ADMIN_PASSWORD'),
+      getSeedPassword('SEED_ADMIN_PASSWORD', 'Admin@123456'),
       10,
     );
     const customerPassword = await bcrypt.hash(
-      getSeedPassword('SEED_CUSTOMER_PASSWORD'),
+      getSeedPassword('SEED_CUSTOMER_PASSWORD', 'Customer@123456'),
       10,
     );
 
@@ -278,7 +285,7 @@ export class SeedService implements OnModuleInit {
     }
 
     const staffPassword = await bcrypt.hash(
-      getSeedPassword('SEED_STAFF_PASSWORD'),
+      getSeedPassword('SEED_STAFF_PASSWORD', 'Staff@123456'),
       10,
     );
     const existingStaff = await this.userModel
@@ -446,6 +453,18 @@ export class SeedService implements OnModuleInit {
         categoryIndex: 0,
         subOptions: ['Lớp 1'],
         brand: 'NXB Giáo Dục',
+      },
+      {
+        name: 'Vở Bài Tập Toán Lớp 1 - Bản Giới Hạn (Mẫu Hết Hàng)',
+        sku: 'SGK-L1-OUT-OF-STOCK',
+        description:
+          'Vở bài tập toán lớp 1 phiên bản thử nghiệm (Sản phẩm mẫu có tồn kho bằng 0 để kiểm thử logic hết hàng).',
+        price: 35000,
+        discountPrice: 35000,
+        categoryIndex: 0,
+        subOptions: ['Lớp 1'],
+        brand: 'NXB Giáo Dục',
+        stock: 0,
       },
       {
         name: 'Bộ Sách Giáo Khoa Lớp 2 - Kết Nối Tri Thức',
@@ -1870,12 +1889,12 @@ export class SeedService implements OnModuleInit {
         brand: p.brand,
         price: p.price,
         discountPrice: p.discountPrice,
-        stock: 100,
+        stock: p.stock !== undefined ? p.stock : 100,
         images: [imageUrl],
         rating: 4.5 + Math.random() * 0.5,
         sold: Math.floor(Math.random() * 200) + 10,
         isFeatured: Math.random() > 0.7,
-        status: ProductStatus.ACTIVE,
+        status: p.stock === 0 ? ProductStatus.OUT_OF_STOCK : ProductStatus.ACTIVE,
         subOptions: p.subOptions,
       };
     });
@@ -2075,7 +2094,7 @@ export class SeedService implements OnModuleInit {
       currentStock: product.stock,
       minStock: 10,
       maxStock: 1000,
-      status: InventoryStatus.IN_STOCK,
+      status: product.stock > 0 ? InventoryStatus.IN_STOCK : InventoryStatus.OUT_OF_STOCK,
       lastUpdated: new Date(),
     }));
 
@@ -2123,9 +2142,170 @@ export class SeedService implements OnModuleInit {
         usedCount: 0,
         status: true,
       },
+      {
+        code: 'EXPIRED2025',
+        name: 'Voucher Năm Cũ (Đã Hết Hạn)',
+        description: 'Mã giảm giá đã hết hạn sử dụng để kiểm thử nghiệp vụ voucher',
+        discountType: DiscountType.PERCENT,
+        discountValue: 20,
+        minOrderValue: 50000,
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2025-01-01'),
+        usageLimit: 100,
+        usedCount: 100,
+        status: false,
+      },
     ];
     await this.promotionModel.insertMany(promotions);
-    this.logger.log('Promotions seeded');
+    this.logger.log('Promotions seeded (bao gồm voucher hợp lệ và voucher hết hạn)');
+
+    // Seed sample orders for Customer
+    const sampleCustomer = await this.userModel
+      .findOne({ email: 'customer@truongthanh.vn' })
+      .exec();
+    if (sampleCustomer && createdProducts.length >= 2) {
+      const prodA = createdProducts[0];
+      const prodB = createdProducts[1];
+      const sampleOrders = [
+        {
+          orderCode: 'ORD-TEST-PENDING',
+          customer: sampleCustomer._id,
+          customerName: sampleCustomer.fullName,
+          customerEmail: sampleCustomer.email,
+          phone: sampleCustomer.phone || '0912345678',
+          shippingAddress:
+            '123 Đường Sách Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
+          items: [
+            {
+              product: prodA._id,
+              name: prodA.name,
+              price: prodA.discountPrice || prodA.price,
+              quantity: 1,
+              category: prodA.category,
+              image: prodA.images?.[0] || '',
+            },
+          ],
+          subtotal: prodA.discountPrice || prodA.price,
+          shippingFee: 20000,
+          discount: 0,
+          total: (prodA.discountPrice || prodA.price) + 20000,
+          paymentMethod: PaymentMethod.COD,
+          paymentStatus: PaymentStatus.UNPAID,
+          orderStatus: OrderStatus.PENDING,
+          timeline: [
+            {
+              status: OrderStatus.PENDING,
+              note: 'Đơn hàng mẫu chờ xác nhận (COD)',
+              createdAt: new Date(),
+            },
+          ],
+        },
+        {
+          orderCode: 'ORD-TEST-PAID',
+          customer: sampleCustomer._id,
+          customerName: sampleCustomer.fullName,
+          customerEmail: sampleCustomer.email,
+          phone: sampleCustomer.phone || '0912345678',
+          shippingAddress:
+            '123 Đường Sách Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
+          items: [
+            {
+              product: prodB._id,
+              name: prodB.name,
+              price: prodB.discountPrice || prodB.price,
+              quantity: 2,
+              category: prodB.category,
+              image: prodB.images?.[0] || '',
+            },
+          ],
+          subtotal: (prodB.discountPrice || prodB.price) * 2,
+          shippingFee: 20000,
+          discount: 10000,
+          promotionCode: 'GIAM10K',
+          total: (prodB.discountPrice || prodB.price) * 2 + 20000 - 10000,
+          paymentMethod: PaymentMethod.VNPAY,
+          paymentStatus: PaymentStatus.PAID,
+          orderStatus: OrderStatus.CONFIRMED,
+          timeline: [
+            {
+              status: OrderStatus.PENDING,
+              note: 'Đơn hàng khởi tạo qua cổng VNPay',
+              createdAt: new Date(Date.now() - 3600000),
+            },
+            {
+              status: OrderStatus.CONFIRMED,
+              note: 'Đã thanh toán thành công qua VNPay Sandbox',
+              createdAt: new Date(),
+            },
+          ],
+        },
+        {
+          orderCode: 'ORD-TEST-COMPLETED',
+          customer: sampleCustomer._id,
+          customerName: sampleCustomer.fullName,
+          customerEmail: sampleCustomer.email,
+          phone: sampleCustomer.phone || '0912345678',
+          shippingAddress:
+            '123 Đường Sách Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
+          items: [
+            {
+              product: prodA._id,
+              name: prodA.name,
+              price: prodA.discountPrice || prodA.price,
+              quantity: 1,
+              category: prodA.category,
+              image: prodA.images?.[0] || '',
+            },
+            {
+              product: prodB._id,
+              name: prodB.name,
+              price: prodB.discountPrice || prodB.price,
+              quantity: 1,
+              category: prodB.category,
+              image: prodB.images?.[0] || '',
+            },
+          ],
+          subtotal:
+            (prodA.discountPrice || prodA.price) +
+            (prodB.discountPrice || prodB.price),
+          shippingFee: 0,
+          discount: 0,
+          total:
+            (prodA.discountPrice || prodA.price) +
+            (prodB.discountPrice || prodB.price),
+          paymentMethod: PaymentMethod.MOMO,
+          paymentStatus: PaymentStatus.PAID,
+          orderStatus: OrderStatus.COMPLETED,
+          timeline: [
+            {
+              status: OrderStatus.PENDING,
+              note: 'Đơn hàng khởi tạo qua MoMo',
+              createdAt: new Date(Date.now() - 86400000 * 3),
+            },
+            {
+              status: OrderStatus.CONFIRMED,
+              note: 'Thanh toán MoMo thành công',
+              createdAt: new Date(Date.now() - 86400000 * 3 + 60000),
+            },
+            {
+              status: OrderStatus.DELIVERED,
+              note: 'Giao hàng thành công',
+              createdAt: new Date(Date.now() - 86400000),
+            },
+            {
+              status: OrderStatus.COMPLETED,
+              note: 'Khách hàng xác nhận hoàn tất đơn hàng',
+              createdAt: new Date(),
+            },
+          ],
+        },
+      ];
+      await this.orderModel.insertMany(sampleOrders);
+      this.logger.log(
+        '3 Sample Orders (PENDING, PAID/CONFIRMED, COMPLETED) seeded successfully',
+      );
+    }
+
     await this.seedDealHotLandingPage();
   }
 }

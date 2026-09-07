@@ -17,6 +17,8 @@
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --max-warnings 1816",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "seed": "ts-node -r tsconfig-paths/register src/seeds/run-seed.ts",
+    "seed:reset": "ts-node -r tsconfig-paths/register src/seeds/run-seed.ts --reset",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
