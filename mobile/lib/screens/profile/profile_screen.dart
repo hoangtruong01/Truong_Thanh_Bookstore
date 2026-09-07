@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../auth/login_screen.dart';
 import 'address_book_screen.dart';
 import 'wishlist_screen.dart';
@@ -77,10 +78,29 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
+    final themeProv = Provider.of<ThemeProvider>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardBorderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final iconColor = isDark ? const Color(0xFFCBD5E1) : AppTheme.darkSlate;
 
     if (!auth.isAuthenticated || auth.user == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('TÀI KHOẢN')),
+        appBar: AppBar(
+          title: const Text('TÀI KHOẢN'),
+          actions: [
+            IconButton(
+              icon: Icon(
+                themeProv.isDarkMode ? Icons.dark_mode_rounded : Icons.wb_sunny_rounded,
+                color: themeProv.isDarkMode ? const Color(0xFFF59E0B) : const Color(0xFFEA580C),
+              ),
+              tooltip: 'Chuyển giao diện Sáng / Tối',
+              onPressed: () => themeProv.toggleTheme(),
+            ),
+            const SizedBox(width: 6),
+          ],
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -114,18 +134,30 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('THÔNG TIN TÀI KHOẢN'),
+        actions: [
+          // Nút chuyển đổi nhanh chế độ Sáng / Tối trên AppBar
+          IconButton(
+            icon: Icon(
+              themeProv.isDarkMode ? Icons.dark_mode_rounded : Icons.wb_sunny_rounded,
+              color: themeProv.isDarkMode ? const Color(0xFFF59E0B) : const Color(0xFFEA580C),
+            ),
+            tooltip: 'Chuyển giao diện Sáng / Tối',
+            onPressed: () => themeProv.toggleTheme(),
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         child: Column(
           children: [
             // User Header Card
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardBgColor,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: cardBorderColor),
               ),
               child: Row(
                 children: [
@@ -144,10 +176,10 @@ class ProfileScreen extends StatelessWidget {
                       children: [
                         Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                         const SizedBox(height: 4),
-                        Text(user.email, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                        Text(user.email, style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontSize: 12)),
                         if (user.phone != null && user.phone!.isNotEmpty) ...[
                           const SizedBox(height: 2),
-                          Text('SĐT: ${user.phone}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+                          Text('SĐT: ${user.phone}', style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontSize: 11)),
                         ],
                       ],
                     ),
@@ -160,16 +192,34 @@ class ProfileScreen extends StatelessWidget {
             // Options List
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardBgColor,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: cardBorderColor),
               ),
               child: Column(
                 children: [
+                  // Mục chuyển đổi Dark Mode / Light Mode
+                  ListTile(
+                    leading: Icon(
+                      themeProv.isDarkMode ? Icons.dark_mode_rounded : Icons.wb_sunny_rounded,
+                      color: themeProv.isDarkMode ? const Color(0xFFF59E0B) : const Color(0xFFEA580C),
+                    ),
+                    title: const Text('Giao diện tối (Dark Mode)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    subtitle: Text(
+                      themeProv.isDarkMode ? 'Đang bật giao diện tối' : 'Đang bật giao diện sáng',
+                      style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                    ),
+                    trailing: Switch.adaptive(
+                      value: themeProv.isDarkMode,
+                      activeColor: AppTheme.primaryRed,
+                      onChanged: (val) => themeProv.toggleTheme(val),
+                    ),
+                  ),
+                  Divider(height: 1, indent: 16, endIndent: 16, color: cardBorderColor),
                   ListTile(
                     leading: const Icon(Icons.favorite_outline_rounded, color: AppTheme.primaryRed),
                     title: const Text('Sản phẩm yêu thích', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    trailing: const Icon(Icons.chevron_right, size: 20),
+                    trailing: Icon(Icons.chevron_right, size: 20, color: isDark ? Colors.white60 : Colors.black45),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -177,18 +227,18 @@ class ProfileScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  Divider(height: 1, indent: 16, endIndent: 16, color: cardBorderColor),
                   ListTile(
-                    leading: const Icon(Icons.key_outlined, color: AppTheme.darkSlate),
+                    leading: Icon(Icons.key_outlined, color: iconColor),
                     title: const Text('Đổi mật khẩu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    trailing: const Icon(Icons.chevron_right, size: 20),
+                    trailing: Icon(Icons.chevron_right, size: 20, color: isDark ? Colors.white60 : Colors.black45),
                     onTap: () => _showChangePasswordDialog(context),
                   ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  Divider(height: 1, indent: 16, endIndent: 16, color: cardBorderColor),
                   ListTile(
-                    leading: const Icon(Icons.location_on_outlined, color: AppTheme.darkSlate),
+                    leading: Icon(Icons.location_on_outlined, color: iconColor),
                     title: const Text('Sổ địa chỉ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    trailing: const Icon(Icons.chevron_right, size: 20),
+                    trailing: Icon(Icons.chevron_right, size: 20, color: isDark ? Colors.white60 : Colors.black45),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -196,12 +246,12 @@ class ProfileScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  Divider(height: 1, indent: 16, endIndent: 16, color: cardBorderColor),
                   ListTile(
-                    leading: const Icon(Icons.support_agent_outlined, color: AppTheme.darkSlate),
+                    leading: Icon(Icons.support_agent_outlined, color: iconColor),
                     title: const Text('Hỗ trợ khách hàng', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    subtitle: const Text('Hotline: 0901234567', style: TextStyle(fontSize: 11)),
-                    trailing: const Icon(Icons.chevron_right, size: 20),
+                    subtitle: Text('Hotline: 0901234567', style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B))),
+                    trailing: Icon(Icons.chevron_right, size: 20, color: isDark ? Colors.white60 : Colors.black45),
                     onTap: () {},
                   ),
                 ],

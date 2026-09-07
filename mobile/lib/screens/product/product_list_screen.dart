@@ -355,7 +355,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           Expanded(
             child: productProvider.isLoading
                 ? GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       childAspectRatio: 0.64,
@@ -374,7 +374,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         ),
                       )
                     : GridView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           childAspectRatio: 0.64,
