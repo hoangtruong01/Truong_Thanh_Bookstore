@@ -39,7 +39,7 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js 20
+      - name: 🟢 Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -94,7 +94,7 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js 20
+      - name: 🟢 Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
