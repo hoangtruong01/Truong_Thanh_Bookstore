@@ -5,6 +5,7 @@ import 'package:mobile/models/product_model.dart';
 import 'package:mobile/models/promotion_model.dart';
 import 'package:mobile/providers/cart_provider.dart';
 import 'package:mobile/providers/auth_provider.dart';
+import 'package:mobile/widgets/glass_bottom_navigation.dart';
 
 void main() {
   final mockProduct1 = ProductModel(
@@ -46,12 +47,42 @@ void main() {
       expect(find.text('TRƯỜNG THÀNH'), findsOneWidget);
       expect(find.text('STATIONERY'), findsOneWidget);
 
-      // Verify Bottom Navigation Bar items (Active item has text, others have icons)
-      expect(find.text('Trang chủ'), findsOneWidget);
-      expect(find.byIcon(Icons.grid_view_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.shopping_bag_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.receipt_long_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.person_outline_rounded), findsOneWidget);
+      // Verify Bottom Navigation Bar items (Liquid Glass Nav Bar icons)
+      expect(
+        find.descendant(
+          of: find.byType(LiquidGlassBottomNav),
+          matching: find.byIcon(Icons.home_rounded),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(LiquidGlassBottomNav),
+          matching: find.byIcon(Icons.grid_view_outlined),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(LiquidGlassBottomNav),
+          matching: find.byIcon(Icons.shopping_bag_outlined),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(LiquidGlassBottomNav),
+          matching: find.byIcon(Icons.receipt_long_outlined),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(LiquidGlassBottomNav),
+          matching: find.byIcon(Icons.person_outline_rounded),
+        ),
+        findsOneWidget,
+      );
     });
 
     test('E2E-02: Cart & Pricing Logic E2E (Add, Quantity, Voucher & Free Shipping)', () {
@@ -122,22 +153,34 @@ void main() {
       await tester.pump();
 
       // Switch to Products Tab
-      await tester.tap(find.byIcon(Icons.grid_view_outlined));
+      await tester.tap(find.descendant(
+        of: find.byType(LiquidGlassBottomNav),
+        matching: find.byIcon(Icons.grid_view_outlined),
+      ));
       await tester.pumpAndSettle();
       expect(find.text('DANH SÁCH SẢN PHẨM'), findsOneWidget);
 
       // Switch to Cart Tab
-      await tester.tap(find.byIcon(Icons.shopping_bag_outlined));
+      await tester.tap(find.descendant(
+        of: find.byType(LiquidGlassBottomNav),
+        matching: find.byIcon(Icons.shopping_bag_outlined),
+      ));
       await tester.pumpAndSettle();
       expect(find.text('GIỎ HÀNG CỦA BẠN'), findsOneWidget);
 
       // Switch to Orders Tab
-      await tester.tap(find.byIcon(Icons.receipt_long_outlined));
+      await tester.tap(find.descendant(
+        of: find.byType(LiquidGlassBottomNav),
+        matching: find.byIcon(Icons.receipt_long_outlined),
+      ));
       await tester.pumpAndSettle();
       expect(find.text('ĐƠN HÀNG CỦA TÔI'), findsOneWidget);
 
       // Switch to Account Tab
-      await tester.tap(find.byIcon(Icons.person_outline_rounded));
+      await tester.tap(find.descendant(
+        of: find.byType(LiquidGlassBottomNav),
+        matching: find.byIcon(Icons.person_outline_rounded),
+      ));
       await tester.pumpAndSettle();
       expect(find.text('TÀI KHOẢN'), findsOneWidget);
     });
