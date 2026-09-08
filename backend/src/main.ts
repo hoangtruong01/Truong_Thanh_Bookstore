@@ -37,9 +37,9 @@ async function bootstrap() {
     }),
   );
 
-  // Restrict payload limit for image uploads to a safe 10mb
-  app.use(json({ limit: '10mb' }));
-  app.use(urlencoded({ limit: '10mb', extended: true }));
+  // Restrict JSON and urlencoded payload limit to 1mb to mitigate DoS (SEC-04)
+  app.use(json({ limit: '1mb' }));
+  app.use(urlencoded({ limit: '1mb', extended: true }));
   app.use(cookieParser());
 
   // Request Correlation ID Middleware (OBS-01)

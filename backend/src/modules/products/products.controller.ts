@@ -30,6 +30,7 @@ import {
   UpdateProductDto,
   ProductQueryDto,
 } from './dto/product.dto';
+import { SubscribeStockAlertDto } from './dto/stock-alert.dto';
 import { CreateReviewDto, UpdateReviewDto } from '../reviews/dto/review.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -255,15 +256,16 @@ export class ProductsController {
   }
 
   @Post(':id/alert')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Subscribe to back-in-stock alerts for a product' })
   async subscribeToStockAlert(
     @Param('id') id: string,
-    @Body('email') email: string,
+    @Body() dto: SubscribeStockAlertDto,
   ) {
-    if (!email) {
-      throw new BadRequestException('Email không được để trống');
-    }
-    const success = await this.productsService.subscribeToStockAlert(id, email);
+    const success = await this.productsService.subscribeToStockAlert(
+      id,
+      dto.email,
+    );
     return { success, message: 'Đăng ký nhận thông báo thành công!' };
   }
 }

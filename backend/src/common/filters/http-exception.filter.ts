@@ -188,12 +188,48 @@ export class HttpExceptionFilter implements ExceptionFilter {
         );
         message = `Dữ liệu không hợp lệ: ${msgList.join('; ')}`;
         details = msgList;
-      } else if (err.code === 11000) {
+      } else if (
+        (() => {
+          const errObj = isRecord(err) ? err : {};
+          const errResp = isRecord(errObj['errorResponse'])
+            ? (errObj['errorResponse'] as Record<string, unknown>)
+            : null;
+          const errCode =
+            typeof errObj['code'] === 'number'
+              ? errObj['code']
+              : errResp && typeof errResp['code'] === 'number'
+                ? errResp['code']
+                : null;
+          return (
+            errCode === 11000 ||
+            (typeof errMsg === 'string' && errMsg.includes('E11000'))
+          );
+        })()
+      ) {
         status = HttpStatus.CONFLICT;
         errorCode = ErrorCode.ERR_DUPLICATE_KEY;
-        message = 'Dữ liệu hoặc đường dẫn đã tồn tại trên hệ thống (trùng lặp)';
-        if (isRecord(err.keyValue)) {
-          details = { duplicateFields: Object.keys(err.keyValue) };
+        const errObj = isRecord(err) ? err : {};
+        const errResp = isRecord(errObj['errorResponse'])
+          ? (errObj['errorResponse'] as Record<string, unknown>)
+          : null;
+        const keyValue = isRecord(errObj['keyValue'])
+          ? (errObj['keyValue'] as Record<string, unknown>)
+          : errResp && isRecord(errResp['keyValue'])
+            ? (errResp['keyValue'] as Record<string, unknown>)
+            : null;
+        const duplicateFields = keyValue ? Object.keys(keyValue) : [];
+        if (duplicateFields.includes('email')) {
+          message = 'Email này đã tồn tại trên hệ thống';
+        } else if (duplicateFields.includes('slug')) {
+          message = 'Đường dẫn (slug) này đã tồn tại trên hệ thống';
+        } else if (duplicateFields.includes('phone')) {
+          message = 'Số điện thoại này đã được sử dụng';
+        } else {
+          message =
+            'Dữ liệu hoặc đường dẫn đã tồn tại trên hệ thống (trùng lặp)';
+        }
+        if (duplicateFields.length > 0) {
+          details = { duplicateFields };
         }
       } else if (errName === 'CastError') {
         status = HttpStatus.BAD_REQUEST;

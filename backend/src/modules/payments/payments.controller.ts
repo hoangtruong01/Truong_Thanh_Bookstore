@@ -11,7 +11,7 @@ import {
 import type { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { PaymentsService } from './payments.service';
 import {
   CreatePaymentDto,
@@ -65,21 +65,21 @@ export class PaymentsController {
   }
 
   @Post('callback')
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @SkipThrottle()
   @ApiOperation({ summary: 'Webhook callback từ cổng thanh toán đối tác' })
   handleCallback(@Body() dto: PaymentCallbackDto) {
     return this.paymentsService.handleCallback(dto);
   }
 
   @Get('vnpay/ipn')
-  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @SkipThrottle()
   @ApiOperation({ summary: 'VNPay server-to-server IPN endpoint' })
   handleVnPayIpn(@Query() query: Record<string, unknown>) {
     return this.paymentsService.handleVnPayIpn(query);
   }
 
   @Post('momo/ipn')
-  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @SkipThrottle()
   @ApiOperation({ summary: 'MoMo server-to-server IPN endpoint' })
   handleMomoIpn(@Body() body: Record<string, unknown>) {
     return this.paymentsService.handleMomoIpn(body);

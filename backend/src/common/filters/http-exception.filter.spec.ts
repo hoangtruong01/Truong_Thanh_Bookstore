@@ -223,9 +223,29 @@ describe('HttpExceptionFilter', () => {
         expect.objectContaining({
           success: false,
           errorCode: ErrorCode.ERR_DUPLICATE_KEY,
+          message: 'Email này đã tồn tại trên hệ thống',
+          details: { duplicateFields: ['email'] },
+        }),
+      );
+    });
+
+    it('should handle MongoDB Duplicate Key error with generic field', () => {
+      const { mockHost, mockStatus, mockJson } = createMockHost();
+      const duplicateKeyError = {
+        code: 11000,
+        keyValue: { customCode: 'XYZ123' },
+      };
+
+      filter.catch(duplicateKeyError, mockHost);
+
+      expect(mockStatus).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          errorCode: ErrorCode.ERR_DUPLICATE_KEY,
           message:
             'Dữ liệu hoặc đường dẫn đã tồn tại trên hệ thống (trùng lặp)',
-          details: { duplicateFields: ['email'] },
+          details: { duplicateFields: ['customCode'] },
         }),
       );
     });

@@ -92,12 +92,12 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 | **LOCAL-03**| Hoàn thiện tài liệu `.env.example` Đầy Đủ | Full-stack | **P0** | ✅ **Hoàn thành** | LOCAL-02 |
 | **LOCAL-04**| Xây dựng Bộ Dữ Liệu Mẫu Cục Bộ (Seed Data) | Backend | **P1** | ✅ **Hoàn thành** | LOCAL-02 |
 | **LOCAL-05**| Tài Liệu Hướng Dẫn Khởi Động Local Chi Tiết | Full-stack | **P1** | ✅ **Hoàn thành** | LOCAL-03 |
-| **SEC-01** | Kiểm tra Cơ chế Token, Cookie & Quản lý Session | Backend / Sec | **P0** | ⏳ Chờ xử lý | LOCAL-03 |
-| **SEC-02** | Rà soát Ủy quyền (RBAC) & Ngăn ngừa Lỗ hổng IDOR | Backend / Sec | **P0** | ⏳ Chờ xử lý | SEC-01 |
-| **SEC-03** | Xác thực Dữ liệu Đầu vào & Chống Mass Assignment | Backend | **P0** | ⏳ Chờ xử lý | SEC-01 |
-| **SEC-04** | Giới hạn Kích thước Payload API (Payload Hardening) | Backend / Sec | **P1** | ⏳ Chờ xử lý | SEC-03 |
-| **SEC-05** | Giới hạn Tần suất Gọi API Trọng Yếu (Rate Limiting) | Backend / Sec | **P1** | ⏳ Chờ xử lý | LOCAL-02 |
-| **SEC-07** | Chuẩn hóa Phản hồi Lỗi & Ẩn Chi tiết Kỹ thuật | Backend | **P1** | ⏳ Chờ xử lý | SEC-03 |
+| **SEC-01** | Kiểm tra Cơ chế Token, Cookie & Quản lý Session | Backend / Sec | **P0** | ✅ **Hoàn thành** | LOCAL-03 |
+| **SEC-02** | Rà soát Ủy quyền (RBAC) & Ngăn ngừa Lỗ hổng IDOR | Backend / Sec | **P0** | ✅ **Hoàn thành** | SEC-01 |
+| **SEC-03** | Xác thực Dữ liệu Đầu vào & Chống Mass Assignment | Backend | **P0** | ✅ **Hoàn thành** | SEC-01 |
+| **SEC-04** | Giới hạn Kích thước Payload API (Payload Hardening) | Backend / Sec | **P1** | ✅ **Hoàn thành** | SEC-03 |
+| **SEC-05** | Giới hạn Tần suất Gọi API Trọng Yếu (Rate Limiting) | Backend / Sec | **P1** | ✅ **Hoàn thành** | LOCAL-02 |
+| **SEC-07** | Chuẩn hóa Phản hồi Lỗi & Ẩn Chi tiết Kỹ thuật | Backend | **P1** | ✅ **Hoàn thành** | SEC-03 |
 | **BA-01**  | Chốt Ma Trận Nghiệp Vụ Hủy, Trả Hàng & Hoàn Tiền | BA / PM | **P0** | ⏳ Chờ xử lý | *None* |
 | **BE-01**  | Xây dựng Toàn bộ Vòng Đời Hoàn Tiền (Refund Flow) | Backend / BA | **P0** | ⏳ Chờ xử lý | BA-01 |
 | **BE-02**  | Đảm bảo Tính Nhất Quán Nguyên Tử Giữa Order & Payment| Backend | **P0** | ⏳ Chờ xử lý | LOCAL-02 |
@@ -113,7 +113,7 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 | **BE-06**  | Tối Ưu Truy Vấn & Đánh Index Tự Động Hủy Đơn Hàng | Backend | **P2** | ⏳ Chờ xử lý | BE-02 |
 | **BE-07**  | Triệt Tiêu Cảnh Báo Linting Mã Nguồn Backend | Backend | **P2** | ⏳ Chờ xử lý | *None* |
 | **FE-07**  | Cấu Hình & Chuẩn Hóa Linting Frontend Vue/TypeScript | Frontend | **P2** | ⏳ Chờ xử lý | *None* |
-| **QA-01**  | Bộ Kiểm Thử Tự Động Bảo Mật Xác Thực & Phân Quyền | QA / Backend | **P0** | ⏳ Chờ xử lý | SEC-01, SEC-02 |
+| **QA-01**  | Bộ Kiểm Thử Tự Động Bảo Mật Xác Thực & Phân Quyền | QA / Backend | **P0** | ✅ **Hoàn thành** | SEC-01, SEC-02 |
 | **QA-02**  | Bộ Kiểm Thử Kịch Bản Thanh Toán & Callback Idempotent | QA / Backend | **P0** | ⏳ Chờ xử lý | BE-02, BE-03 |
 | **QA-03**  | Kiểm Thử Đua Tranh Tồn Kho (Race Condition Checkout) | QA / Backend | **P1** | ⏳ Chờ xử lý | BE-02 |
 | **QA-04**  | Kiểm Thử Toàn Trình Hồi Quy Trải Nghiệm Người Dùng | QA / Frontend | **P1** | ⏳ Chờ xử lý | FE-01..FE-06 |
@@ -126,15 +126,15 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 * **Độ ưu tiên:** `P0` | **Độ phức tạp:** `M` | **Module:** [`backend/src/modules/auth/`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/auth), [`backend/src/common/guards/`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/common/guards)
 * **Mục tiêu:** Loại bỏ hoàn toàn khả năng chiếm đoạt phiên đăng nhập, lộ token hoặc tái sử dụng token đã thu hồi.
 * **Chi tiết công việc:**
-  - [ ] **Access Token:** Giới hạn thời gian sống ngắn (`15m`), mã hóa bằng thuật toán an toàn.
-  - [ ] **Refresh Token Rotation (RTR):** Mỗi lần refresh cấp mới 1 cặp Access/Refresh token; hủy ngay token cũ.
-  - [ ] **Reuse Detection:** Nếu phát hiện Refresh token cũ đã từng được sử dụng lại $\rightarrow$ kích hoạt báo động, thu hồi toàn bộ phiên làm việc của user đó.
-  - [ ] **Bảo mật Cookie:**
+  - [x] **Access Token:** Giới hạn thời gian sống ngắn (`15m`), mã hóa bằng thuật toán an toàn.
+  - [x] **Refresh Token Rotation (RTR):** Mỗi lần refresh cấp mới 1 cặp Access/Refresh token; hủy ngay token cũ.
+  - [x] **Reuse Detection:** Nếu phát hiện Refresh token cũ đã từng được sử dụng lại $\rightarrow$ kích hoạt báo động, thu hồi toàn bộ phiên làm việc của user đó.
+  - [x] **Bảo mật Cookie:**
     - Cờ `HttpOnly`: Tuyệt đối không cho phép JavaScript phía client truy cập refresh token.
     - Cờ `Secure`: Tự động bật khi chạy HTTPS (`process.env.NODE_ENV === 'production'`), cấu hình linh hoạt cho môi trường local HTTP.
     - Cờ `SameSite`: Đặt là `Lax` hoặc `Strict` để ngăn ngừa tấn công CSRF.
-  - [ ] **Lưu trữ Token an toàn:** Không lưu refresh token dạng plain text trong DB (bắt buộc băm bằng bcrypt hoặc HMAC SHA-256).
-  - [ ] **JWT Strategy Verification:** Bắt buộc truy vấn lại trạng thái user trong database (kiểm tra `isActive`, `isBanned`, `passwordChangedAt`) thay vì chỉ decode payload JWT.
+  - [x] **Lưu trữ Token an toàn:** Không lưu refresh token dạng plain text trong DB (bắt buộc băm bằng bcrypt hoặc HMAC SHA-256).
+  - [x] **JWT Strategy Verification:** Bắt buộc truy vấn lại trạng thái user trong database (kiểm tra `isActive`, `isBanned`, `passwordChangedAt`) thay vì chỉ decode payload JWT.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - Token hết hạn trả về chính xác HTTP `401 Unauthorized`.
   - Refresh token cũ không thể dùng lại sau khi đã xoay vòng.
@@ -147,14 +147,14 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 * **Độ ưu tiên:** `P0` | **Độ phức tạp:** `M` | **Module:** [`backend/src/common/guards/`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/common/guards), Toàn bộ Controllers
 * **Mục tiêu:** Không để người dùng thường hoặc staff truy cập trái phép tài nguyên quản trị hoặc tài nguyên của khách hàng khác.
 * **Chi tiết công việc:**
-  - [ ] Quét toàn bộ controller trong `backend/src/modules/` đảm bảo không có endpoint nào bị hở decorator bảo vệ (`@UseGuards(JwtAuthGuard, RolesGuard)`).
-  - [ ] Đảm bảo việc phân quyền thực thi trên Backend, không dựa dẫm vào việc ẩn/hiện menu trên Frontend.
-  - [ ] **Chống IDOR (Insecure Direct Object References):**
+  - [x] Quét toàn bộ controller trong `backend/src/modules/` đảm bảo không có endpoint nào bị hở decorator bảo vệ (`@UseGuards(JwtAuthGuard, RolesGuard)`).
+  - [x] Đảm bảo việc phân quyền thực thi trên Backend, không dựa dẫm vào việc ẩn/hiện menu trên Frontend.
+  - [x] **Chống IDOR (Insecure Direct Object References):**
     - `Profile/User`: Người dùng chỉ có quyền xem/sửa hồ sơ của chính mình (`req.user.id === targetId`).
     - `Orders`: Khách hàng A không được phép đọc, sửa, hủy đơn hàng của Khách hàng B qua tham số `/:id`.
     - `Addresses`: Không cho phép CRUD địa chỉ của tài khoản khác.
     - `Reviews`: Chỉ tác giả bài đánh giá mới có quyền chỉnh sửa/xóa bài đánh giá của mình.
-  - [ ] **Ma trận phân quyền nhân viên:** Nhân viên (Staff) bị giới hạn quyền theo Role/Permission, không tự động kế thừa toàn quyền Super Admin.
+  - [x] **Ma trận phân quyền nhân viên:** Nhân viên (Staff) bị giới hạn quyền theo Role/Permission, không tự động kế thừa toàn quyền Super Admin.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - User thường gọi bất kỳ API Admin nào đều nhận HTTP `403 Forbidden`.
   - User A cố tình gửi ID của User B trong tham số URL sẽ nhận HTTP `403` hoặc `404 Not Found`.
@@ -165,7 +165,7 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 * **Độ ưu tiên:** `P0` | **Độ phức tạp:** `M` | **Module:** [`backend/src/main.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/main.ts), Toàn bộ thư mục `dto/`
 * **Mục tiêu:** Ngăn chặn tuyệt đối việc client gửi trường dữ liệu lạ để can thiệp trái phép vào thuộc tính hệ thống.
 * **Chi tiết công việc:**
-  - [ ] Bật cấu hình nghiêm ngặt tại `ValidationPipe` toàn cục:
+  - [x] Bật cấu hình nghiêm ngặt tại `ValidationPipe` toàn cục:
     ```typescript
     app.useGlobalPipes(new ValidationPipe({
       whitelist: true,               // Tự động loại bỏ các field thừa không khai báo trong DTO
@@ -173,9 +173,9 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
       transform: true,               // Tự động convert kiểu dữ liệu theo DTO
     }));
     ```
-  - [ ] Validate chặt chẽ các trường nhạy cảm: `email`, `phone` (chuẩn E.164 hoặc số VN), `ObjectId` (sử dụng custom Pipe hoặc validator kiểm tra tính hợp lệ của Mongo HexString).
-  - [ ] Validate logic số học: `quantity >= 1`, `price >= 0`, `discount >= 0`.
-  - [ ] **Chống Mass Assignment:**
+  - [x] Validate chặt chẽ các trường nhạy cảm: `email`, `phone` (chuẩn E.164 hoặc số VN), `ObjectId` (sử dụng custom Pipe hoặc validator kiểm tra tính hợp lệ của Mongo HexString).
+  - [x] Validate logic số học: `quantity >= 1`, `price >= 0`, `discount >= 0`.
+  - [x] **Chống Mass Assignment:**
     - Cấm tuyệt đối client truyền các trường: `role`, `roles`, `permissions`, `isEmailVerified`, `paymentStatus`, `orderStatus`, `sold`, `rating`.
     - Không bao giờ nhận giá tiền (`price`, `totalPrice`) do Frontend gửi lên; giá thanh toán luôn được tính toán lại độc lập tại Backend từ Database.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
@@ -188,13 +188,13 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 * **Độ ưu tiên:** `P1` | **Độ phức tạp:** `S` | **Module:** [`backend/src/main.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/main.ts)
 * **Mục tiêu:** Ngăn chặn nguy cơ tấn công từ chối dịch vụ (DoS) bằng cách gửi các gói tin JSON quá lớn làm cạn kiệt bộ nhớ máy chủ.
 * **Chi tiết công việc:**
-  - [ ] Giảm giới hạn JSON body parser mặc định xuống `512KB - 1MB` thay vì cấu hình mặc định quá thoáng:
+  - [x] Giảm giới hạn JSON body parser mặc định xuống `512KB - 1MB` thay vì cấu hình mặc định quá thoáng:
     ```typescript
     app.use(express.json({ limit: '1mb' }));
     app.use(express.urlencoded({ extended: true, limit: '1mb' }));
     ```
-  - [ ] Đối với các endpoint upload file ảnh/tài liệu: sử dụng Multer với hạn mức riêng (ví dụ: `5MB` cho hình ảnh), kiểm tra MIME type.
-  - [ ] Cấm nhận dữ liệu ảnh dạng raw base64 kích thước lớn trong các body JSON thông thường.
+  - [x] Đối với các endpoint upload file ảnh/tài liệu: sử dụng Multer với hạn mức riêng (ví dụ: `5MB` cho hình ảnh, `10MB` cho Excel), kiểm tra MIME type.
+  - [x] Cấm nhận dữ liệu ảnh dạng raw base64 kích thước lớn trong các body JSON thông thường.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - Request có body vượt quá ngưỡng quy định lập tức bị từ chối với HTTP `413 Payload Too Large`.
   - Luồng upload file ảnh bìa/sách hợp lệ vẫn hoạt động bình thường.
@@ -205,13 +205,13 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 * **Độ ưu tiên:** `P1` | **Độ phức tạp:** `S` | **Module:** [`backend/src/app.module.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/app.module.ts), Throttler Guard
 * **Mục tiêu:** Bảo vệ tài nguyên tính toán và hạn chế các cuộc tấn công quét mật khẩu, spam mã khuyến mãi.
 * **Chi tiết công việc:**
-  - [ ] Cấu hình `@nestjs/throttler` kết hợp Redis Store để quản trị giới hạn phân tán:
+  - [x] Cấu hình `@nestjs/throttler` kết hợp Redis Store để quản trị giới hạn phân tán:
     - `POST /auth/login`: Tối đa 5 lần thử trong 1 phút trên mỗi IP/Tài khoản.
     - `POST /auth/register`: Tối đa 3 lần tạo tài khoản trong 10 phút.
-    - `POST /auth/forgot-password` & `POST /auth/verify-otp`: Tối đa 3 lần yêu cầu trong 5 phút.
+    - `POST /auth/forgot-password` & `POST /auth/verify-otp`: Tối đa 3-5 lần yêu cầu trong 5 phút.
     - `POST /auth/refresh`: Tối đa 10 lần trong 1 phút.
-    - `POST /orders/apply-voucher`: Chống brute-force quét mã voucher.
-  - [ ] **Lưu ý nghiệp vụ:** Tuyệt đối không áp rate limit lên webhook/callback thanh toán của VNPay/MoMo để tránh làm mất trạng thái giao dịch thật của khách hàng.
+    - `POST /cart/voucher` & `POST /promotions/apply`: Chống brute-force quét mã voucher.
+  - [x] **Lưu ý nghiệp vụ:** Tuyệt đối không áp rate limit lên webhook/callback thanh toán của VNPay/MoMo để tránh làm mất trạng thái giao dịch thật của khách hàng.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - Vượt quá ngưỡng quy định trả về HTTP `429 Too Many Requests` kèm header `Retry-After`.
 
@@ -234,10 +234,10 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 * **Độ ưu tiên:** `P1` | **Độ phức tạp:** `S` | **Module:** [`backend/src/common/filters/`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/common/filters)
 * **Mục tiêu:** Không để lộ stack trace, thông tin cấu trúc database hoặc thông báo nhạy cảm từ bên thứ ba ra ngoài client.
 * **Chi tiết công việc:**
-  - [ ] Triển khai `GlobalExceptionFilter` bắt mọi lỗi chưa được xử lý (`UnhandledException`).
-  - [ ] Bắt lỗi trùng khóa của MongoDB (`MongoServerError: E11000 duplicate key error`) và chuyển thể thành thông báo người dùng thân thiện (ví dụ: *"Email hoặc mã này đã tồn tại"* thay vì văng câu lệnh SQL/Mongo).
-  - [ ] Sanitize lỗi JWT: Không để lộ chi tiết nội bộ token sang client.
-  - [ ] Sanitize lỗi cổng thanh toán: Ghi log chi tiết tại server phục vụ debug, nhưng chỉ trả về mã lỗi tổng quát cho client.
+  - [x] Triển khai `GlobalExceptionFilter` bắt mọi lỗi chưa được xử lý (`UnhandledException`).
+  - [x] Bắt lỗi trùng khóa của MongoDB (`MongoServerError: E11000 duplicate key error`) và chuyển thể thành thông báo người dùng thân thiện (ví dụ: *"Email hoặc mã này đã tồn tại"* thay vì văng câu lệnh SQL/Mongo).
+  - [x] Sanitize lỗi JWT: Không để lộ chi tiết nội bộ token sang client.
+  - [x] Sanitize lỗi cổng thanh toán: Ghi log chi tiết tại server phục vụ debug, nhưng chỉ trả về mã lỗi tổng quát cho client.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - Cấu trúc phản hồi lỗi luôn đồng nhất:
     ```json
@@ -637,14 +637,14 @@ stateDiagram-v2
 ### [TASK QA-01] Bộ Kiểm Thử Tự Động Bảo Mật Xác Thực & Phân Quyền (Auth Security Suite)
 * **Độ ưu tiên:** `P0` | **Độ phức tạp:** `M` | **Thực hiện:** QA / Backend
 * **Kịch bản kiểm thử bắt buộc:**
-  - [ ] Thử đăng nhập sai mật khẩu 5 lần $\rightarrow$ Kích hoạt Rate Limit (HTTP 429).
-  - [ ] Gửi Access Token đã hết hạn $\rightarrow$ Trả về HTTP 401.
-  - [ ] Gửi Refresh Token đã bị xoay vòng (Reused token) $\rightarrow$ Thu hồi toàn bộ session.
-  - [ ] Gọi API sau khi đã đăng xuất $\rightarrow$ Trả về HTTP 401.
-  - [ ] Tài khoản bị đổi mật khẩu $\rightarrow$ Không thể dùng token cũ để gọi API.
-  - [ ] Tài khoản bị Admin khóa (`isBanned = true`) $\rightarrow$ Bị từ chối ở request kế tiếp.
-  - [ ] Tài khoản User thường gọi API `/admin/*` $\rightarrow$ Nhận HTTP 403 Forbidden.
-  - [ ] User A cố tình gửi request đọc chi tiết đơn hàng của User B $\rightarrow$ Nhận HTTP 403 hoặc 404.
+  - [x] Thử đăng nhập sai mật khẩu 5 lần $\rightarrow$ Kích hoạt Rate Limit (HTTP 429).
+  - [x] Gửi Access Token đã hết hạn $\rightarrow$ Trả về HTTP 401.
+  - [x] Gửi Refresh Token đã bị xoay vòng (Reused token) $\rightarrow$ Thu hồi toàn bộ session.
+  - [x] Gọi API sau khi đã đăng xuất $\rightarrow$ Trả về HTTP 401.
+  - [x] Tài khoản bị đổi mật khẩu $\rightarrow$ Không thể dùng token cũ để gọi API.
+  - [x] Tài khoản bị Admin khóa (`isBanned = true`) $\rightarrow$ Bị từ chối ở request kế tiếp.
+  - [x] Tài khoản User thường gọi API `/admin/*` $\rightarrow$ Nhận HTTP 403 Forbidden.
+  - [x] User A cố tình gửi request đọc chi tiết đơn hàng của User B $\rightarrow$ Nhận HTTP 403 hoặc 404.
 
 ---
 
@@ -806,11 +806,11 @@ Nếu đội ngũ cần tập trung nguồn lực thực thi ngay hôm nay, hãy
 Chỉ được phép tuyên bố giai đoạn Local MVP hoàn tất và chuyển sang giai đoạn **Pre-Production / Chuẩn bị Triển Khai (Deploy Phase)** khi và chỉ khi hệ thống thỏa mãn toàn bộ bảng kiểm định sau:
 
 ### ✅ 1. Cổng Bảo Mật (Security Gate)
-- [ ] Mọi endpoint nội bộ / admin đều được bảo vệ bằng Guard có kiểm tra quyền (`RolesGuard`).
-- [ ] Không thể xem hoặc chỉnh sửa đơn hàng / địa chỉ / thông tin cá nhân của tài khoản khác (Chống IDOR thành công).
-- [ ] DTO validation chặn đứng toàn bộ field lạ ngoài khai báo; không thể tự truyền `role` hoặc `paymentStatus`.
-- [ ] Không có secret thật nào nằm trong mã nguồn hay lịch sử commit.
-- [ ] Phản hồi lỗi (Error responses) được sanitize sạch sẽ, không lộ stack trace hay query Mongo.
+- [x] Mọi endpoint nội bộ / admin đều được bảo vệ bằng Guard có kiểm tra quyền (`RolesGuard`).
+- [x] Không thể xem hoặc chỉnh sửa đơn hàng / địa chỉ / thông tin cá nhân của tài khoản khác (Chống IDOR thành công).
+- [x] DTO validation chặn đứng toàn bộ field lạ ngoài khai báo; không thể tự truyền `role` hoặc `paymentStatus`.
+- [x] Không có secret thật nào nằm trong mã nguồn hay lịch sử commit.
+- [x] Phản hồi lỗi (Error responses) được sanitize sạch sẽ, không lộ stack trace hay query Mongo.
 
 ### ✅ 2. Cổng Nghiệp Vụ & Giao Dịch (Business Gate)
 - [ ] Trạng thái thanh toán và đơn hàng luôn đồng nhất; không có đơn "tiền đã trừ nhưng đơn chưa tạo".
