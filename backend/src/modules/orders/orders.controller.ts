@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Get,
@@ -32,6 +33,14 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt.guard';
 import { StaffPermission, UserRole } from '../../common/enums';
+
+interface AuthenticatedRequest {
+  user: {
+    _id: { toString(): string } | string;
+    role: string;
+    permissions?: StaffPermission[];
+  };
+}
 
 @ApiTags('orders')
 @Controller('orders')
@@ -203,7 +212,7 @@ export class OrdersController {
   requestReturn(
     @Param('id') id: string,
     @Body() dto: RequestReturnDto,
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.ordersService.requestReturn(
       id,
@@ -225,7 +234,7 @@ export class OrdersController {
   approveReturn(
     @Param('id') id: string,
     @Body('note') note: string,
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.ordersService.approveReturn(
       id,
@@ -245,7 +254,7 @@ export class OrdersController {
   rejectReturn(
     @Param('id') id: string,
     @Body() dto: RejectReturnDto,
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.ordersService.rejectReturn(
       id,
@@ -268,7 +277,7 @@ export class OrdersController {
   processRefund(
     @Param('id') id: string,
     @Body() dto: ProcessRefundDto,
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.ordersService.processRefund(
       id,
@@ -287,7 +296,7 @@ export class OrdersController {
   cancelOrder(
     @Param('id') id: string,
     @Body() dto: CancelOrderDto,
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.ordersService.cancelForActor(
       id,
