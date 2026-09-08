@@ -98,11 +98,11 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 | **SEC-04** | Giới hạn Kích thước Payload API (Payload Hardening) | Backend / Sec | **P1** | ✅ **Hoàn thành** | SEC-03 |
 | **SEC-05** | Giới hạn Tần suất Gọi API Trọng Yếu (Rate Limiting) | Backend / Sec | **P1** | ✅ **Hoàn thành** | LOCAL-02 |
 | **SEC-07** | Chuẩn hóa Phản hồi Lỗi & Ẩn Chi tiết Kỹ thuật | Backend | **P1** | ✅ **Hoàn thành** | SEC-03 |
-| **BA-01**  | Chốt Ma Trận Nghiệp Vụ Hủy, Trả Hàng & Hoàn Tiền | BA / PM | **P0** | ⏳ Chờ xử lý | *None* |
-| **BE-01**  | Xây dựng Toàn bộ Vòng Đời Hoàn Tiền (Refund Flow) | Backend / BA | **P0** | ⏳ Chờ xử lý | BA-01 |
-| **BE-02**  | Đảm bảo Tính Nhất Quán Nguyên Tử Giữa Order & Payment| Backend | **P0** | ⏳ Chờ xử lý | LOCAL-02 |
-| **BE-03**  | Xác thực & Chống Lặp Webhook/Callback Thanh toán | Backend / Sec | **P0** | ⏳ Chờ xử lý | BE-02 |
-| **BE-04**  | Quản lý Timeout khi Gọi Bên Thứ Ba (AbortController) | Backend | **P1** | ⏳ Chờ xử lý | *None* |
+| **BA-01**  | Chốt Ma Trận Nghiệp Vụ Hủy, Trả Hàng & Hoàn Tiền | BA / PM | **P0** | ✅ **Hoàn thành** | *None* |
+| **BE-01**  | Xây dựng Toàn bộ Vòng Đời Hoàn Tiền (Refund Flow) | Backend / BA | **P0** | ✅ **Hoàn thành** | BA-01 |
+| **BE-02**  | Đảm bảo Tính Nhất Quán Nguyên Tử Giữa Order & Payment| Backend | **P0** | ✅ **Hoàn thành** | LOCAL-02 |
+| **BE-03**  | Xác thực & Chống Lặp Webhook/Callback Thanh toán | Backend / Sec | **P0** | ✅ **Hoàn thành** | BE-02 |
+| **BE-04**  | Quản lý Timeout khi Gọi Bên Thứ Ba (AbortController) | Backend | **P1** | ✅ **Hoàn thành** | *None* |
 | **FE-01**  | Khôi phục Phiên Đăng nhập Đáng tin cậy (Auth Hydration) | Frontend | **P1** | ⏳ Chờ xử lý | SEC-01 |
 | **FE-02**  | Hàng Đợi Refresh Token Một Lần Duy Nhất (Axios Queue) | Frontend | **P1** | ⏳ Chờ xử lý | FE-01 |
 | **FE-03**  | Trải Nghiệm Xử Lý & Hiển Thị Lỗi Toàn Cục (Error UX) | Frontend | **P1** | ⏳ Chờ xử lý | SEC-07 |
@@ -114,7 +114,7 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 | **BE-07**  | Triệt Tiêu Cảnh Báo Linting Mã Nguồn Backend | Backend | **P2** | ⏳ Chờ xử lý | *None* |
 | **FE-07**  | Cấu Hình & Chuẩn Hóa Linting Frontend Vue/TypeScript | Frontend | **P2** | ⏳ Chờ xử lý | *None* |
 | **QA-01**  | Bộ Kiểm Thử Tự Động Bảo Mật Xác Thực & Phân Quyền | QA / Backend | **P0** | ✅ **Hoàn thành** | SEC-01, SEC-02 |
-| **QA-02**  | Bộ Kiểm Thử Kịch Bản Thanh Toán & Callback Idempotent | QA / Backend | **P0** | ⏳ Chờ xử lý | BE-02, BE-03 |
+| **QA-02**  | Bộ Kiểm Thử Kịch Bản Thanh Toán & Callback Idempotent | QA / Backend | **P0** | ✅ **Hoàn thành** | BE-02, BE-03 |
 | **QA-03**  | Kiểm Thử Đua Tranh Tồn Kho (Race Condition Checkout) | QA / Backend | **P1** | ⏳ Chờ xử lý | BE-02 |
 | **QA-04**  | Kiểm Thử Toàn Trình Hồi Quy Trải Nghiệm Người Dùng | QA / Frontend | **P1** | ⏳ Chờ xử lý | FE-01..FE-06 |
 
@@ -303,12 +303,12 @@ stateDiagram-v2
 * **Độ ưu tiên:** `P0` | **Độ phức tạp:** `L` | **Module:** [`backend/src/modules/orders/`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/orders), [`backend/src/modules/payments/`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/payments)
 * **Mục tiêu:** Đảm bảo toàn bộ dòng tiền hoàn trả được theo dõi chính xác, có audit trail và không bao giờ bị thất thoát hoặc hoàn trùng.
 * **Chi tiết công việc:**
-  - [ ] Bổ sung trường dữ liệu vào Schema:
+  - [x] Bổ sung trường dữ liệu vào Schema:
     * `refundStatus`: `['NONE', 'REQUESTED', 'PROCESSING', 'REFUNDED', 'FAILED', 'MANUAL_REQUIRED']`
     * `refundAmount`, `refundReason`, `refundedAt`, `refundTransactionRef`, `refundActor` (User/Admin ID).
-  - [ ] **Cấm bất biến (Invariance Rules):**
+  - [x] **Cấm bất biến (Invariance Rules):**
     - Không bao giờ tồn tại trạng thái: `Order = CANCELLED` VÀ `Payment = PAID` nhưng `RefundStatus = NONE`.
-  - [ ] Khóa chống hoàn tiền 2 lần (Anti Double-Refund Lock): Sử dụng Redis Mutex hoặc Atomic conditional update (`findOneAndUpdate({ _id, refundStatus: { $ne: 'REFUNDED' } })`).
+  - [x] Khóa chống hoàn tiền 2 lần (Anti Double-Refund Lock): Sử dụng Redis Mutex hoặc Atomic conditional update (`findOneAndUpdate({ _id, refundStatus: { $ne: 'REFUNDED' } })`).
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - Thao tác thử gọi refund 2 lần đồng thời trên cùng một đơn hàng chỉ có duy nhất 1 giao dịch được thực hiện.
   - Mọi thay đổi trạng thái hoàn tiền đều được ghi nhận vào Order Timeline (Audit Trail).
@@ -319,9 +319,9 @@ stateDiagram-v2
 * **Độ ưu tiên:** `P0` | **Độ phức tạp:** `M` | **Module:** [`backend/src/modules/payments/`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/payments), [`backend/src/modules/orders/`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/orders)
 * **Mục tiêu:** Loại bỏ hoàn toàn tình trạng "Tiền đã trừ nhưng đơn hàng vẫn ở trạng thái PENDING".
 * **Chi tiết công việc:**
-  - [ ] Áp dụng **MongoDB Multi-document Transaction** (ClientSession) khi cập nhật đồng thời trạng thái Payment và Order.
-  - [ ] Đảm bảo cơ chế cập nhật có tính lũy đẳng (Idempotent): Nếu callback của một đơn hàng được gửi đến nhiều lần, hệ thống nhận diện giao dịch đã xử lý và trả về thành công ngay mà không thực hiện lại các tác vụ phụ (không cộng điểm loyalty 2 lần, không gửi 2 email xác nhận).
-  - [ ] Viết worker/cronjob đối soát (Reconciliation helper) quét các đơn hàng có thanh toán online đang treo quá 15 phút để tự động query trạng thái từ cổng thanh toán.
+  - [x] Áp dụng **MongoDB Multi-document Transaction** (ClientSession) khi cập nhật đồng thời trạng thái Payment và Order (với fallback tuần tự an toàn khi Mongo standalone).
+  - [x] Đảm bảo cơ chế cập nhật có tính lũy đẳng (Idempotent): Nếu callback của một đơn hàng được gửi đến nhiều lần, hệ thống nhận diện giao dịch đã xử lý và trả về thành công ngay mà không thực hiện lại các tác vụ phụ (không cộng điểm loyalty 2 lần, không gửi 2 email xác nhận).
+  - [x] Viết worker/cronjob đối soát (Reconciliation helper) quét các đơn hàng có thanh toán online đang treo quá 15 phút để tự động query trạng thái từ cổng thanh toán.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - Quá trình xử lý thanh toán bị ngắt đột ngột (giả lập crash process) không để lại dữ liệu rác hay trạng thái mâu thuẫn trong DB.
 
@@ -331,10 +331,10 @@ stateDiagram-v2
 * **Độ ưu tiên:** `P0` | **Độ phức tạp:** `M` | **Module:** [`backend/src/modules/payments/`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/payments)
 * **Mục tiêu:** Chống giả mạo gói tin thanh toán từ tin tặc.
 * **Chi tiết công việc:**
-  - [ ] Kiểm tra chữ ký số (Verify Secure Hash / HMAC Signature) bằng checksum key bí mật trước khi đọc nội dung gói tin.
-  - [ ] Xác thực số tiền thanh toán (`vnp_Amount` / `amount`): Bắt buộc so khớp chính xác với số tiền lưu trong Order DB (tránh lỗ hổng sửa giá tiền gói tin callback).
-  - [ ] Xác thực mã giao dịch đối tác (`vnp_TransactionNo`, `momoTransId`) và mã tham chiếu đơn hàng.
-  - [ ] Ghi log toàn bộ payload callback kèm mã Correlation ID để phục vụ đối soát khi có khiếu nại.
+  - [x] Kiểm tra chữ ký số (Verify Secure Hash / HMAC Signature) bằng checksum key bí mật trước khi đọc nội dung gói tin.
+  - [x] Xác thực số tiền thanh toán (`vnp_Amount` / `amount`): Bắt buộc so khớp chính xác với số tiền lưu trong Order DB (tránh lỗ hổng sửa giá tiền gói tin callback).
+  - [x] Xác thực mã giao dịch đối tác (`vnp_TransactionNo`, `momoTransId`) và mã tham chiếu đơn hàng.
+  - [x] Ghi log toàn bộ payload callback kèm mã Correlation ID để phục vụ đối soát khi có khiếu nại.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - Sai chữ ký $\rightarrow$ Từ chối xử lý, ghi cảnh báo bảo mật.
   - Sai số tiền $\rightarrow$ Đóng băng trạng thái, đánh dấu `MANUAL_REQUIRED`.
@@ -345,10 +345,10 @@ stateDiagram-v2
 * **Độ ưu tiên:** `P1` | **Độ phức tạp:** `S` | **Module:** [`backend/src/modules/payments/`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/backend/src/modules/payments), HTTP Client Helper
 * **Mục tiêu:** Tránh trường hợp cổng thanh toán hoặc dịch vụ email bị treo làm cạn kiệt tài nguyên kết nối của Backend.
 * **Chi tiết công việc:**
-  - [ ] Viết HTTP wrapper sử dụng `AbortController` với cấu hình timeout rõ ràng:
+  - [x] Viết HTTP wrapper sử dụng `AbortController` với cấu hình timeout rõ ràng:
     - Tạo URL thanh toán VNPay / MoMo: Timeout `5 giây`.
     - Gửi email thông báo / OTP: Timeout `8 giây`.
-  - [ ] Khi timeout xảy ra, trả về lỗi có cấu trúc để UI hiển thị nút *"Thử lại"* cho khách hàng thay vì để màn hình quay vô tận.
+  - [x] Khi timeout xảy ra, trả về lỗi có cấu trúc để UI hiển thị nút *"Thử lại"* cho khách hàng thay vì để màn hình quay vô tận.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - Mock cổng thanh toán phản hồi chậm 30s $\rightarrow$ Backend tự động hủy request sau đúng 5s và trả lỗi an toàn.
 

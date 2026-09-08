@@ -27,6 +27,9 @@ export class EmailService {
             user,
             pass,
           },
+          connectionTimeout: 8000, // BE-04: 8s connection timeout
+          greetingTimeout: 8000, // BE-04: 8s greeting timeout
+          socketTimeout: 8000, // BE-04: 8s socket timeout
         });
         this.logger.log('📧 Nodemailer Transporter initialized successfully');
       } catch (err: any) {

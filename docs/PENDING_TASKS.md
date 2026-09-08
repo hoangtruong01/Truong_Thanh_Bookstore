@@ -190,7 +190,7 @@
   4. Đảm bảo số lượng warnings giảm dần mà không làm hỏng code (chạy `npm test` sau mỗi lần sửa).
 - **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - [ ] Số lượng warnings giảm xuống dưới 1.500 (hoặc thấp hơn).
-  - [ ] Toàn bộ 397 unit tests vẫn **PASS 100%**.
+  - [ ] Toàn bộ 423 unit tests vẫn **PASS 100%**.
 
 ---
 
