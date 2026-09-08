@@ -595,4 +595,95 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(user.tokenVersion).toBe(1);
     });
   });
+
+  describe('logout (SEC-01 Session Lifecycle Hardening)', () => {
+    let spyBlacklistJti: jest.SpyInstance;
+    let spyBlacklistToken: jest.SpyInstance;
+
+    beforeEach(() => {
+      spyBlacklistJti = jest
+        .spyOn(tokenBlacklistService, 'blacklistJti')
+        .mockResolvedValue(undefined);
+      spyBlacklistToken = jest
+        .spyOn(tokenBlacklistService, 'blacklistToken')
+        .mockResolvedValue(undefined);
+    });
+
+    it('clears refreshTokenHash in DB when logout called with userId directly', async () => {
+      const user = {
+        ...mockUser,
+        refreshTokenHash: 'active_hash',
+        save: jest.fn().mockResolvedValue(true),
+      };
+      usersService.findByIdWithPassword.mockResolvedValue(user);
+
+      const result = await authService.logout(mockUser._id);
+
+      expect(result.success).toBe(true);
+      expect(user.refreshTokenHash).toBeUndefined();
+      expect(user.save).toHaveBeenCalled();
+    });
+
+    it('resolves userId from rawAccessToken and clears DB refreshTokenHash when only access token is provided', async () => {
+      const user = {
+        ...mockUser,
+        refreshTokenHash: 'active_hash_to_clear',
+        save: jest.fn().mockResolvedValue(true),
+      };
+      usersService.findByIdWithPassword.mockResolvedValue(user);
+
+      const mockAccessToken = 'header.bearer.token';
+      jwtService.decode.mockReturnValue({
+        sub: mockUser._id,
+        jti: 'access-jti-123',
+        exp: Math.floor(Date.now() / 1000) + 900,
+      });
+
+      const result = await authService.logout(
+        undefined,
+        mockAccessToken,
+        undefined,
+      );
+
+      expect(result.success).toBe(true);
+      expect(spyBlacklistJti).toHaveBeenCalledWith(
+        'access-jti-123',
+        expect.any(Number),
+      );
+      expect(spyBlacklistToken).toHaveBeenCalledWith(
+        mockAccessToken,
+        expect.any(Number),
+      );
+      expect(user.refreshTokenHash).toBeUndefined();
+      expect(user.save).toHaveBeenCalled();
+    });
+
+    it('blacklists refresh token JTI and token if provided during logout', async () => {
+      const user = {
+        ...mockUser,
+        refreshTokenHash: 'some_hash',
+        save: jest.fn().mockResolvedValue(true),
+      };
+      usersService.findByIdWithPassword.mockResolvedValue(user);
+
+      const mockRefreshToken = 'refresh.jwt.token';
+      jwtService.decode.mockReturnValue({
+        sub: mockUser._id,
+        jti: 'refresh-jti-789',
+        exp: Math.floor(Date.now() / 1000) + 86400,
+      });
+
+      await authService.logout(undefined, undefined, mockRefreshToken);
+
+      expect(spyBlacklistJti).toHaveBeenCalledWith(
+        'refresh-jti-789',
+        expect.any(Number),
+      );
+      expect(spyBlacklistToken).toHaveBeenCalledWith(
+        mockRefreshToken,
+        expect.any(Number),
+      );
+      expect(user.refreshTokenHash).toBeUndefined();
+    });
+  });
 });

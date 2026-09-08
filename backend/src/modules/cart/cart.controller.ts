@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CartService } from './cart.service';
 import {
   AddToCartDto,
@@ -77,6 +78,7 @@ export class CartController {
   }
 
   @Post('voucher')
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
   @ApiOperation({ summary: 'Áp dụng mã giảm giá voucher vào giỏ hàng' })
   applyVoucher(@Request() req: any, @Body() dto: ApplyVoucherDto) {
     return this.cartService.applyVoucher(req.user._id, dto);

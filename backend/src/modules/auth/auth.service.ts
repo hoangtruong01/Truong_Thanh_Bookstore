@@ -278,6 +278,11 @@ export class AuthService {
       await this.tokenBlacklistService.blacklistToken(rawAccessToken);
     }
 
+    // Blacklist previous refresh token JTI upon rotation (Defense-in-depth)
+    if (payload?.jti) {
+      await this.tokenBlacklistService.blacklistJti(payload.jti, payload.exp);
+    }
+
     // Token Rotation: Generate a completely new pair of access & refresh tokens
     const tokens = await this.generateTokens(user);
     return {
@@ -304,14 +309,37 @@ export class AuthService {
       }
     }
 
-    // 2. Clear refreshToken in DB
+    // 2. Blacklist refresh token if provided
+    if (rawRefreshToken) {
+      try {
+        const decoded: any = this.jwtService.decode(rawRefreshToken);
+        const exp = typeof decoded?.exp === 'number' ? decoded.exp : undefined;
+        const jti = typeof decoded?.jti === 'string' ? decoded.jti : undefined;
+        if (jti) await this.tokenBlacklistService.blacklistJti(jti, exp);
+        await this.tokenBlacklistService.blacklistToken(rawRefreshToken, exp);
+      } catch {
+        // Continue logout even if refresh token decode fails
+      }
+    }
+
+    // 3. Resolve target user ID and clear active refreshTokenHash in DB
     let targetUserId = userId;
     if (!targetUserId && rawRefreshToken) {
       try {
         const decoded: any = this.jwtService.decode(rawRefreshToken);
-        if (decoded?.sub) targetUserId = decoded.sub;
+        if (typeof decoded?.sub === 'string') targetUserId = decoded.sub;
       } catch {
         // Invalid refresh tokens are handled by leaving targetUserId unset.
+      }
+    }
+
+    // SEC-01 fix: If targetUserId still unknown, extract sub from rawAccessToken
+    if (!targetUserId && rawAccessToken) {
+      try {
+        const decoded: any = this.jwtService.decode(rawAccessToken);
+        if (typeof decoded?.sub === 'string') targetUserId = decoded.sub;
+      } catch {
+        // Invalid access token ignored
       }
     }
 
