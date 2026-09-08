@@ -332,9 +332,11 @@ export class PaymentsService {
         session = await this.connection.startSession();
         session.startTransaction();
         useTransaction = true;
-      } catch (sessErr: any) {
+      } catch (sessErr: unknown) {
+        const sessMsg =
+          sessErr instanceof Error ? sessErr.message : String(sessErr);
         this.logger.debug?.(
-          `Replica set transaction not available, falling back to atomic sequential execution: ${sessErr.message}`,
+          `Replica set transaction not available, falling back to atomic sequential execution: ${sessMsg}`,
         );
         if (session) {
           try {

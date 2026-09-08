@@ -246,7 +246,9 @@ export class RequestReturnDto {
   @IsNotEmpty({ message: 'Lý do trả hàng không được để trống' })
   @IsString({ message: 'Lý do trả hàng phải là chuỗi ký tự' })
   @MaxLength(500, { message: 'Lý do trả hàng không vượt quá 500 ký tự' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : (value as string),
+  )
   reason: string;
 }
 
@@ -258,7 +260,9 @@ export class RejectReturnDto {
   @IsNotEmpty({ message: 'Lý do từ chối không được để trống' })
   @IsString({ message: 'Lý do từ chối phải là chuỗi ký tự' })
   @MaxLength(500, { message: 'Lý do từ chối không vượt quá 500 ký tự' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : (value as string),
+  )
   reason: string;
 }
 
@@ -270,7 +274,9 @@ export class ProcessRefundDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : (value as string),
+  )
   reason?: string;
 
   @ApiPropertyOptional({
@@ -292,6 +298,8 @@ export class CancelOrderDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : (value as string),
+  )
   reason?: string;
 }
