@@ -4,6 +4,7 @@ import {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
+  RefundStatus,
 } from '../../../common/enums';
 
 @Schema()
@@ -120,6 +121,38 @@ export class Order {
 
   @Prop({ type: SchemaTypes.ObjectId, ref: 'LandingPage' })
   landingPageId?: Types.ObjectId;
+
+  @Prop({
+    type: String,
+    enum: Object.values(RefundStatus),
+    default: RefundStatus.NONE,
+    index: true,
+  })
+  refundStatus: RefundStatus;
+
+  @Prop({ type: Number, min: 0 })
+  refundAmount?: number;
+
+  @Prop()
+  refundReason?: string;
+
+  @Prop()
+  refundedAt?: Date;
+
+  @Prop()
+  refundTransactionRef?: string;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
+  refundActor?: Types.ObjectId;
+
+  @Prop()
+  returnReason?: string;
+
+  @Prop()
+  returnRequestedAt?: Date;
+
+  @Prop()
+  deliveredAt?: Date;
 
   @Prop({ type: [OrderTimelineItemSchema], default: [] })
   timeline: OrderTimelineItem[];

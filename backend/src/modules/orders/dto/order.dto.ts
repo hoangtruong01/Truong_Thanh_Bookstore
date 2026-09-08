@@ -237,3 +237,61 @@ export class CheckoutPreviewDto {
   )
   customerEmail?: string;
 }
+
+export class RequestReturnDto {
+  @ApiProperty({
+    description: 'Lý do yêu cầu hoàn trả đơn hàng',
+    example: 'Sách bị rách gáy và nhòe mực trang 45',
+  })
+  @IsNotEmpty({ message: 'Lý do trả hàng không được để trống' })
+  @IsString({ message: 'Lý do trả hàng phải là chuỗi ký tự' })
+  @MaxLength(500, { message: 'Lý do trả hàng không vượt quá 500 ký tự' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  reason: string;
+}
+
+export class RejectReturnDto {
+  @ApiProperty({
+    description: 'Lý do từ chối yêu cầu hoàn trả',
+    example: 'Sách đã qua sử dụng, có vết bút mực do người đọc ghi chép',
+  })
+  @IsNotEmpty({ message: 'Lý do từ chối không được để trống' })
+  @IsString({ message: 'Lý do từ chối phải là chuỗi ký tự' })
+  @MaxLength(500, { message: 'Lý do từ chối không vượt quá 500 ký tự' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  reason: string;
+}
+
+export class ProcessRefundDto {
+  @ApiPropertyOptional({
+    description: 'Lý do hoặc ghi chú hoàn tiền',
+    example: 'Hoàn tiền cho khách do hết hàng tại kho',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  reason?: string;
+
+  @ApiPropertyOptional({
+    description: 'Số tiền hoàn (mặc định hoàn toàn bộ giá trị đơn hàng)',
+    example: 150000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Số tiền hoàn phải là số' })
+  @Min(0, { message: 'Số tiền hoàn không được âm' })
+  amount?: number;
+}
+
+export class CancelOrderDto {
+  @ApiPropertyOptional({
+    description: 'Lý do hủy đơn hàng',
+    example: 'Khách hàng đổi ý muốn đổi sang tựa sách khác',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  reason?: string;
+}

@@ -23,6 +23,10 @@ import {
   UpdateOrderStatusDto,
   OrderQueryDto,
   CheckoutPreviewDto,
+  RequestReturnDto,
+  RejectReturnDto,
+  ProcessRefundDto,
+  CancelOrderDto,
 } from './dto/order.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -188,5 +192,110 @@ export class OrdersController {
     @Headers('x-guest-order-token') accessToken: string | undefined,
   ) {
     return this.ordersService.cancelGuest(id, accessToken);
+  }
+
+  @Post(':id/return-request')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Yêu cầu hoàn trả hàng đối với đơn đã giao (trong vòng 7 ngày)',
+  })
+  requestReturn(
+    @Param('id') id: string,
+    @Body() dto: RequestReturnDto,
+    @Request() req: any,
+  ) {
+    return this.ordersService.requestReturn(
+      id,
+      {
+        ...req.user,
+        _id: req.user._id.toString(),
+      },
+      dto,
+    );
+  }
+
+  @Post(':id/return-approve')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_ORDERS)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Duyệt yêu cầu trả hàng và tiếp nhận nhập lại kho (Admin/Staff)',
+  })
+  approveReturn(
+    @Param('id') id: string,
+    @Body('note') note: string,
+    @Request() req: any,
+  ) {
+    return this.ordersService.approveReturn(
+      id,
+      {
+        ...req.user,
+        _id: req.user._id.toString(),
+      },
+      note,
+    );
+  }
+
+  @Post(':id/return-reject')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_ORDERS)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Từ chối yêu cầu trả hàng (Admin/Staff)' })
+  rejectReturn(
+    @Param('id') id: string,
+    @Body() dto: RejectReturnDto,
+    @Request() req: any,
+  ) {
+    return this.ordersService.rejectReturn(
+      id,
+      {
+        ...req.user,
+        _id: req.user._id.toString(),
+      },
+      dto,
+    );
+  }
+
+  @Post(':id/refund')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_ORDERS)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Kích hoạt hoàn tiền cho đơn hàng đã hủy hoặc đã hoàn trả (Admin/Staff)',
+  })
+  processRefund(
+    @Param('id') id: string,
+    @Body() dto: ProcessRefundDto,
+    @Request() req: any,
+  ) {
+    return this.ordersService.processRefund(
+      id,
+      {
+        ...req.user,
+        _id: req.user._id.toString(),
+      },
+      dto,
+    );
+  }
+
+  @Post(':id/cancel')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Hủy đơn hàng (Khách hàng hoặc Quản trị viên)' })
+  cancelOrder(
+    @Param('id') id: string,
+    @Body() dto: CancelOrderDto,
+    @Request() req: any,
+  ) {
+    return this.ordersService.cancelForActor(
+      id,
+      {
+        ...req.user,
+        _id: req.user._id.toString(),
+      },
+      dto?.reason,
+    );
   }
 }

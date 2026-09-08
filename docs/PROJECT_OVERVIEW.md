@@ -427,9 +427,9 @@ Hệ thống quản lý truy cập theo mô hình **Role-Based Access Control (R
 
 ---
 
-### 7.2. Máy Trạng thái Đơn hàng (Order State Machine)
+### 7.2. Máy Trạng thái Đơn hàng (Order State Machine & Refund Flow)
 
-Vòng đời đơn hàng tuân thủ nghiêm ngặt theo đồ thị trạng thái:
+Vòng đời đơn hàng và hoàn tiền tuân thủ nghiêm ngặt theo đồ thị trạng thái:
 
 ```text
        ┌──────────┐
@@ -439,12 +439,12 @@ Vòng đời đơn hàng tuân thủ nghiêm ngặt theo đồ thị trạng th�
             ├──────────────────────────────┐
             ▼                              ▼
      ┌───────────┐                  ┌───────────┐
-     │ CONFIRMED │ (Đã duyệt đơn)   │ CANCELLED │ ➔ [ Hoàn kho & hoàn điểm & voucher ]
+     │ CONFIRMED │ (Đã duyệt đơn)   │ CANCELLED │ ➔ [ Hoàn kho, hoàn điểm, voucher & kích hoạt Refund nếu PAID ]
      └─────┬─────┘                  └───────────┘
            │                               ▲
            ▼                               │
     ┌────────────┐                         │
-    │ PROCESSING │ (Đang đóng gói) ────────┘
+    │ PROCESSING │ (Đang đóng gói) ────────┘ (Chỉ Admin/Staff được hủy kèm lý do; Khách không tự hủy qua app)
     └──────┬─────┘
            │
            ▼
@@ -455,25 +455,37 @@ Vòng đời đơn hàng tuân thủ nghiêm ngặt theo đồ thị trạng th�
            ├──────────────────────────────┐
            ▼                              ▼
     ┌───────────┐                  ┌──────────┐
-    │ DELIVERED │ (Giao thành công)│ RETURNED │ ➔ [ Thu hồi điểm & hoàn kho ]
+    │ DELIVERED │ (Giao thành công)│ RETURNED │ ➔ [ Thu hồi điểm, hoàn kho & kích hoạt Refund nếu PAID ]
     └─────┬─────┘                  └──────────┘
            │                              ▲
-           ▼                              │
-    ┌───────────┐                         │
-    │ COMPLETED │ (Hoàn tất giao dịch) ───┘
-    └───────────┘
+           ├──────────────┐               │
+           ▼              ▼               │
+    ┌───────────┐  ┌──────────────────┐   │
+    │ COMPLETED │  │ RETURN_REQUESTED │───┘ (Admin duyệt ➔ RETURNED; Admin từ chối ➔ DELIVERED)
+    └───────────┘  └──────────────────┘     (Khách yêu cầu trong vòng 7 ngày kể từ DELIVERED)
 ```
 
 **Bảng Chuyển trạng thái Hợp lệ:**
 - `PENDING` ➔ `CONFIRMED`, `CANCELLED`
 - `CONFIRMED` ➔ `PROCESSING`, `CANCELLED`
-- `PROCESSING` ➔ `SHIPPING`, `CANCELLED`
+- `PROCESSING` ➔ `SHIPPING`, `CANCELLED` (Chỉ Admin/Staff được hủy kèm lý do; Khách hàng không thể tự hủy)
 - `SHIPPING` ➔ `DELIVERED`
-- `DELIVERED` ➔ `COMPLETED`, `RETURNED`
-- `COMPLETED` ➔ `RETURNED` (Trong thời hạn 7 ngày đổi trả)
+- `DELIVERED` ➔ `COMPLETED`, `RETURN_REQUESTED`, `RETURNED`
+- `RETURN_REQUESTED` ➔ `RETURNED` (Admin duyệt), `DELIVERED` (Admin từ chối)
+- `COMPLETED` ➔ `RETURN_REQUESTED`, `RETURNED` (Trong thời hạn 7 ngày đổi trả)
 - `CANCELLED`, `RETURNED` ➔ *(Trạng thái kết thúc - Không chuyển tiếp)*
 
-> Mọi thao tác chuyển đổi sai quy tắc (ví dụ: `SHIPPING` nhảy sang `CANCELLED`, hoặc `CANCELLED` chuyển sang `CONFIRMED`) đều bị từ chối với lỗi `400 Bad Request`.
+> Mọi thao tác chuyển đổi sai quy tắc (ví dụ: `SHIPPING` nhảy sang `CANCELLED`, hoặc khách hàng tự hủy khi `PROCESSING`) đều bị từ chối với lỗi `400 Bad Request`.
+
+---
+
+### 7.3. Vòng Đời Hoàn Tiền & An Toàn Thanh Toán (Refund Flow & Payment Safety)
+- **Vòng đời `RefundStatus`:** `NONE` ➔ `REQUESTED` ➔ `PROCESSING` ➔ `REFUNDED` / `FAILED` / `MANUAL_REQUIRED`.
+- **Quy tắc bất biến (Invariance Rule):** Tuyệt đối không bao giờ tồn tại trạng thái `orderStatus = CANCELLED | RETURNED` và `paymentStatus = PAID` nhưng `refundStatus = NONE`. Hệ thống tự động gán `refundStatus = REQUESTED` và `refundAmount = order.total`.
+- **Khóa chống hoàn tiền 2 lần (Anti Double-Refund Lock):** Áp dụng conditional atomic update `findOneAndUpdate({ _id, refundStatus: { $in: [NONE, REQUESTED, FAILED, MANUAL_REQUIRED] } }, { $set: { refundStatus: PROCESSING } })`. Nếu có 2 request đồng thời, chỉ có 1 request được thực hiện, request còn lại bị từ chối với `409 ConflictException`.
+- **Tính nhất quán nguyên tử (Atomic Consistency):** Cập nhật trạng thái `Payment` và `Order` trong một MongoDB Multi-document Transaction (`ClientSession`), có fallback tuần tự an toàn khi Mongo standalone.
+- **Chống giả mạo Webhook & Sai lệch số tiền (Amount Tampering):** So khớp số tiền callback với đơn hàng; nếu sai lệch sẽ đóng băng Payment thành `FAILED`, chuyển Order thành `MANUAL_REQUIRED` và ném `BadRequestException`. Hỗ trợ Idempotent Replay chống xử lý lặp IPN.
+- **Timeout bên thứ ba (`AbortController`):** HTTP wrapper tự động ngắt kết nối sau 5s với cổng thanh toán (VNPay, MoMo) và 8s với email SMTP, trả lỗi chuẩn `503 ServiceUnavailableException`.
 
 ---
 

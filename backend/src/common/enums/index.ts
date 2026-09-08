@@ -11,6 +11,7 @@ export enum OrderStatus {
   PROCESSING = 'PROCESSING',
   SHIPPING = 'SHIPPING',
   DELIVERED = 'DELIVERED',
+  RETURN_REQUESTED = 'RETURN_REQUESTED',
   RETURNED = 'RETURNED',
   /** @deprecated Kept only for backwards compatibility with historical orders. */
   COMPLETED = 'COMPLETED',
@@ -32,6 +33,15 @@ export enum PaymentStatus {
   FAILED = 'FAILED',
   REFUNDED = 'REFUNDED',
   CANCELLED = 'CANCELLED',
+}
+
+export enum RefundStatus {
+  NONE = 'NONE',
+  REQUESTED = 'REQUESTED',
+  PROCESSING = 'PROCESSING',
+  REFUNDED = 'REFUNDED',
+  FAILED = 'FAILED',
+  MANUAL_REQUIRED = 'MANUAL_REQUIRED',
 }
 
 export enum InventoryTransactionType {

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   Logger,
   ForbiddenException,
   Optional,
@@ -10,7 +11,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { ClientSession, Model } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { Order, OrderDocument } from './schemas/order.schema';
 import * as PDFDocument from 'pdfkit';
@@ -28,6 +29,7 @@ import {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
+  RefundStatus,
   StaffPermission,
   UserRole,
 } from '../../common/enums';
@@ -1036,9 +1038,20 @@ export class OrdersService {
       [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
       [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
       [OrderStatus.PROCESSING]: [OrderStatus.SHIPPING, OrderStatus.CANCELLED],
-      [OrderStatus.SHIPPING]: [OrderStatus.DELIVERED],
-      [OrderStatus.DELIVERED]: [OrderStatus.COMPLETED, OrderStatus.RETURNED],
-      [OrderStatus.COMPLETED]: [OrderStatus.RETURNED],
+      [OrderStatus.SHIPPING]: [OrderStatus.DELIVERED, OrderStatus.RETURNED],
+      [OrderStatus.DELIVERED]: [
+        OrderStatus.COMPLETED,
+        OrderStatus.RETURN_REQUESTED,
+        OrderStatus.RETURNED,
+      ],
+      [OrderStatus.RETURN_REQUESTED]: [
+        OrderStatus.RETURNED,
+        OrderStatus.DELIVERED,
+      ],
+      [OrderStatus.COMPLETED]: [
+        OrderStatus.RETURN_REQUESTED,
+        OrderStatus.RETURNED,
+      ],
       [OrderStatus.RETURNED]: [],
       [OrderStatus.CANCELLED]: [],
     };
@@ -1058,6 +1071,9 @@ export class OrdersService {
       );
     }
     order.orderStatus = dto.orderStatus;
+    if (dto.orderStatus === OrderStatus.DELIVERED) {
+      order.deliveredAt ||= new Date();
+    }
 
     if (!order.timeline) {
       order.timeline = [];
@@ -1082,6 +1098,10 @@ export class OrdersService {
         case OrderStatus.COMPLETED:
           timelineNote = 'Giao hàng thành công. Đơn hàng hoàn tất.';
           break;
+        case OrderStatus.RETURN_REQUESTED:
+          timelineNote =
+            'Khách hàng đã gửi yêu cầu trả hàng, đang chờ cửa hàng xem xét phê duyệt.';
+          break;
         case OrderStatus.RETURNED:
           timelineNote = 'Đơn hàng đã được tiếp nhận hoàn trả và hoàn kho.';
           break;
@@ -1096,6 +1116,20 @@ export class OrdersService {
       note: timelineNote,
       createdAt: new Date(),
     });
+
+    // BE-01 Invariance Rule: When cancelled or returned, if payment was PAID, automatically set refundStatus
+    if (
+      (dto.orderStatus === OrderStatus.CANCELLED ||
+        dto.orderStatus === OrderStatus.RETURNED) &&
+      order.paymentStatus === PaymentStatus.PAID &&
+      order.refundStatus === RefundStatus.NONE
+    ) {
+      order.refundStatus = RefundStatus.REQUESTED;
+      order.refundAmount = order.total;
+      order.refundReason ||=
+        dto.note ||
+        `Tự động khởi tạo yêu cầu hoàn tiền cho đơn hàng ${dto.orderStatus === OrderStatus.CANCELLED ? 'đã hủy' : 'hoàn trả'}`;
+    }
 
     // If cancelled, restore stock
     if (
@@ -1289,6 +1323,24 @@ export class OrdersService {
       order.revenueRecognizedAt ||= new Date();
     }
 
+    // BE-01: Invariance Rule: If a PAID order is cancelled or returned, refundStatus MUST become REQUESTED
+    if (
+      (dto.orderStatus === OrderStatus.CANCELLED ||
+        dto.orderStatus === OrderStatus.RETURNED) &&
+      order.paymentStatus === PaymentStatus.PAID
+    ) {
+      if (
+        !order.refundStatus ||
+        order.refundStatus === RefundStatus.NONE ||
+        order.refundStatus === RefundStatus.FAILED
+      ) {
+        order.refundStatus = RefundStatus.REQUESTED;
+        order.refundAmount = order.total;
+        order.refundReason ||=
+          dto.note || 'Yêu cầu hoàn tiền sau khi đơn hàng hủy/hoàn trả';
+      }
+    }
+
     const savedOrder = await order.save(session ? { session } : undefined);
 
     const notifyStatus = async () => {
@@ -1396,12 +1448,15 @@ export class OrdersService {
     return savedOrder;
   }
 
-  // FIX-C01: Cancel with ownership check
-  async cancel(id: string, userId?: string): Promise<OrderDocument> {
+  // FIX-C01 & BA-01: Cancel with ownership and role-based policy check
+  async cancel(
+    id: string,
+    userId?: string,
+    reason?: string,
+  ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(id).exec();
     if (!order) throw new NotFoundException('Order not found');
 
-    // Only the order owner or admin/staff can cancel
     if (
       userId &&
       order.customer &&
@@ -1410,19 +1465,31 @@ export class OrdersService {
       throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này');
     }
 
-    // Only allow cancelling PENDING orders
-    if (order.orderStatus !== OrderStatus.PENDING) {
+    if (order.orderStatus === OrderStatus.PROCESSING) {
       throw new BadRequestException(
-        'Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý',
+        'Đơn hàng đang được đóng gói trong kho, khách hàng không thể tự hủy. Vui lòng liên hệ CSKH.',
       );
     }
 
-    return this.updateStatus(id, { orderStatus: OrderStatus.CANCELLED });
+    if (
+      order.orderStatus !== OrderStatus.PENDING &&
+      order.orderStatus !== OrderStatus.CONFIRMED
+    ) {
+      throw new BadRequestException(
+        'Không thể hủy đơn hàng ở trạng thái hiện tại',
+      );
+    }
+
+    return this.updateStatus(id, {
+      orderStatus: OrderStatus.CANCELLED,
+      note: reason || 'Hủy đơn hàng',
+    });
   }
 
   async cancelForActor(
     id: string,
     actor: { _id: string; role: string; permissions?: string[] },
+    reason?: string,
   ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(id).exec();
     if (!order) throw new NotFoundException('Order not found');
@@ -1436,25 +1503,219 @@ export class OrdersService {
       actorRole === 'CUSTOMER' &&
       !!order.customer &&
       order.customer.toString() === actor._id.toString();
+
     if (!isAdmin && !isAuthorizedStaff && !isOwner) {
       throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này');
     }
-    if (order.orderStatus !== OrderStatus.PENDING) {
+
+    if (order.orderStatus === OrderStatus.PROCESSING) {
+      if (isOwner && !isAdmin && !isAuthorizedStaff) {
+        throw new BadRequestException(
+          'Đơn hàng đang được đóng gói trong kho, khách hàng không thể tự hủy. Vui lòng liên hệ CSKH.',
+        );
+      }
+    } else if (
+      order.orderStatus !== OrderStatus.PENDING &&
+      order.orderStatus !== OrderStatus.CONFIRMED
+    ) {
       throw new BadRequestException(
-        'Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý',
+        'Không thể hủy đơn hàng ở trạng thái hiện tại',
       );
     }
-    return this.updateStatus(id, { orderStatus: OrderStatus.CANCELLED });
+
+    const cancelNote =
+      reason || (isOwner ? 'Khách hàng hủy đơn' : 'Quản trị viên hủy đơn');
+    return this.updateStatus(id, {
+      orderStatus: OrderStatus.CANCELLED,
+      note: cancelNote,
+    });
   }
 
-  async cancelGuest(id: string, accessToken?: string): Promise<OrderDocument> {
+  async cancelGuest(
+    id: string,
+    accessToken?: string,
+    reason?: string,
+  ): Promise<OrderDocument> {
     const order = await this.findGuestById(id, accessToken);
-    if (order.orderStatus !== OrderStatus.PENDING) {
+    if (
+      order.orderStatus !== OrderStatus.PENDING &&
+      order.orderStatus !== OrderStatus.CONFIRMED
+    ) {
       throw new BadRequestException(
-        'Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý',
+        'Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý hoặc Đã xác nhận',
       );
     }
-    return this.updateStatus(id, { orderStatus: OrderStatus.CANCELLED });
+    return this.updateStatus(id, {
+      orderStatus: OrderStatus.CANCELLED,
+      note: reason || 'Khách vãng lai hủy đơn hàng',
+    });
+  }
+
+  // BA-01 & BE-01: Return & Refund Flows
+  async requestReturn(
+    id: string,
+    actor: { _id: string; role?: string },
+    dto: { reason: string },
+  ): Promise<OrderDocument> {
+    const order = await this.orderModel.findById(id).exec();
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+
+    const actorRole = (actor.role || 'CUSTOMER').toUpperCase();
+    const isAdmin = actorRole === 'SUPER_ADMIN' || actorRole === 'ADMIN';
+    const isOwner =
+      !!order.customer && order.customer.toString() === actor._id.toString();
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException(
+        'Bạn không có quyền yêu cầu trả đơn hàng này',
+      );
+    }
+
+    if (
+      order.orderStatus !== OrderStatus.DELIVERED &&
+      order.orderStatus !== OrderStatus.COMPLETED
+    ) {
+      throw new BadRequestException(
+        'Chỉ có thể yêu cầu trả hàng đối với đơn đã giao thành công',
+      );
+    }
+
+    // Check 7 days limit
+    const deliveredTime = order.deliveredAt
+      ? order.deliveredAt.getTime()
+      : order.updatedAt
+        ? order.updatedAt.getTime()
+        : Date.now();
+    const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+    if (Date.now() - deliveredTime > sevenDaysInMs) {
+      throw new BadRequestException(
+        'Đã quá thời hạn 7 ngày kể từ khi nhận hàng. Không thể yêu cầu đổi trả.',
+      );
+    }
+
+    order.returnReason = dto.reason;
+    order.returnRequestedAt = new Date();
+    return this.updateStatus(id, {
+      orderStatus: OrderStatus.RETURN_REQUESTED,
+      note: `Khách yêu cầu trả hàng: ${dto.reason}`,
+    });
+  }
+
+  async approveReturn(
+    id: string,
+    actor: { _id: string; role?: string; permissions?: string[] },
+    note?: string,
+  ): Promise<OrderDocument> {
+    const order = await this.orderModel.findById(id).exec();
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+
+    if (
+      order.orderStatus !== OrderStatus.RETURN_REQUESTED &&
+      order.orderStatus !== OrderStatus.DELIVERED
+    ) {
+      throw new BadRequestException(
+        'Chỉ có thể duyệt hoàn trả đơn hàng ở trạng thái Yêu cầu trả hàng hoặc Đã giao',
+      );
+    }
+
+    const approveNote =
+      note ||
+      'Cửa hàng đã duyệt yêu cầu hoàn trả sách và tiếp nhận nhập lại kho';
+    return this.updateStatus(id, {
+      orderStatus: OrderStatus.RETURNED,
+      note: approveNote,
+    });
+  }
+
+  async rejectReturn(
+    id: string,
+    actor: { _id: string; role?: string; permissions?: string[] },
+    dto: { reason: string },
+  ): Promise<OrderDocument> {
+    const order = await this.orderModel.findById(id).exec();
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+
+    if (order.orderStatus !== OrderStatus.RETURN_REQUESTED) {
+      throw new BadRequestException(
+        'Chỉ có thể từ chối yêu cầu trả hàng khi đơn đang ở trạng thái Chờ duyệt trả hàng',
+      );
+    }
+
+    return this.updateStatus(id, {
+      orderStatus: OrderStatus.DELIVERED,
+      note: `Từ chối trả hàng: ${dto.reason}`,
+    });
+  }
+
+  async processRefund(
+    id: string,
+    actor: { _id: string; role?: string; permissions?: string[] },
+    dto?: { reason?: string; amount?: number },
+  ): Promise<OrderDocument> {
+    const order = await this.orderModel.findById(id).exec();
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+
+    if (
+      order.orderStatus !== OrderStatus.CANCELLED &&
+      order.orderStatus !== OrderStatus.RETURNED
+    ) {
+      throw new BadRequestException(
+        'Chỉ có thể hoàn tiền cho đơn hàng đã hủy hoặc đã hoàn trả',
+      );
+    }
+
+    if (order.refundStatus === RefundStatus.REFUNDED) {
+      throw new ConflictException('Đơn hàng này đã được hoàn tiền trước đó');
+    }
+
+    // BE-01: Atomic conditional lock against double-refund
+    const lockedOrder = await this.orderModel
+      .findOneAndUpdate(
+        {
+          _id: new Types.ObjectId(id),
+          refundStatus: {
+            $in: [
+              RefundStatus.NONE,
+              RefundStatus.REQUESTED,
+              RefundStatus.FAILED,
+              RefundStatus.MANUAL_REQUIRED,
+            ],
+          },
+        },
+        {
+          $set: {
+            refundStatus: RefundStatus.PROCESSING,
+          },
+        },
+        { returnDocument: 'after' },
+      )
+      .exec();
+
+    if (!lockedOrder) {
+      throw new ConflictException(
+        'Giao dịch hoàn tiền đang được xử lý bởi tiến trình khác hoặc đã hoàn tất',
+      );
+    }
+
+    const refundAmount =
+      dto?.amount ?? lockedOrder.refundAmount ?? lockedOrder.total;
+    const refundRef = `REF-${randomBytes(4).toString('hex').toUpperCase()}`;
+
+    lockedOrder.refundStatus = RefundStatus.REFUNDED;
+    lockedOrder.refundAmount = refundAmount;
+    lockedOrder.refundReason =
+      dto?.reason || lockedOrder.refundReason || 'Hoàn tiền thành công';
+    lockedOrder.refundedAt = new Date();
+    lockedOrder.refundTransactionRef = refundRef;
+    if (actor?._id) lockedOrder.refundActor = new Types.ObjectId(actor._id);
+    lockedOrder.paymentStatus = PaymentStatus.REFUNDED;
+
+    lockedOrder.timeline.push({
+      status: OrderStatus.CANCELLED,
+      note: `Hoàn tất hoàn tiền ${refundAmount.toLocaleString('vi-VN')}đ qua ${lockedOrder.paymentMethod}. Mã tham chiếu: ${refundRef}.`,
+      createdAt: new Date(),
+    });
+
+    return lockedOrder.save();
   }
 
   async count(filter: any = {}): Promise<number> {

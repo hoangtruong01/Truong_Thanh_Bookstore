@@ -13,6 +13,7 @@ import {
   PaymentInitiationResult,
   PaymentProvider,
 } from './payment-provider.interface';
+import { fetchWithTimeout } from '../../../common/http/http-client';
 
 const makeReference = (prefix: string, orderCode: string) =>
   `${prefix}-${orderCode}-${randomBytes(5).toString('hex').toUpperCase()}`;
@@ -270,24 +271,28 @@ export class MomoPaymentProvider extends MockSignedPaymentProvider {
     const signature = createHmac('sha256', secret)
       .update(rawSignature)
       .digest('hex');
-    const response = await fetch(paymentUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        partnerCode,
-        requestId,
-        amount: context.amount,
-        orderId,
-        orderInfo,
-        redirectUrl,
-        ipnUrl,
-        requestType,
-        extraData,
-        lang: 'vi',
-        autoCapture: true,
-        signature,
-      }),
-    });
+    const response = await fetchWithTimeout(
+      paymentUrl,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          partnerCode,
+          requestId,
+          amount: context.amount,
+          orderId,
+          orderInfo,
+          redirectUrl,
+          ipnUrl,
+          requestType,
+          extraData,
+          lang: 'vi',
+          autoCapture: true,
+          signature,
+        }),
+      },
+      5000,
+    );
     const result = (await response.json()) as {
       resultCode?: number;
       message?: string;
