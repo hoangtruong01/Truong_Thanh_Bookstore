@@ -251,7 +251,7 @@ export class PaymentsService {
       Math.round(Number(dto.amount)) !== Math.round(payment.amount)
     ) {
       this.logger.error(
-        `[CID: ${correlationId}] [CẢNH BÁO BẢO MẬT] Phát hiện sai lệch số tiền (Amount Tampering)! Payment ID: ${payment._id.toString()}, Dự kiến: ${payment.amount}, Nhận được: ${dto.amount}`,
+        `[CID: ${correlationId}] [CẢNH BÁO BẢO MẬT] Phát hiện sai lệch số tiền (Amount Tampering)! Payment ID: ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}, Dự kiến: ${payment.amount}, Nhận được: ${dto.amount}`,
       );
       payment.status = PaymentStatus.FAILED;
       payment.failureReason = `Sai lệch số tiền thanh toán (Amount Tampering): Nhận ${dto.amount} nhưng yêu cầu ${payment.amount}`;
@@ -287,7 +287,7 @@ export class PaymentsService {
       payment.failureReason = 'Callback đến sau khi phiên thanh toán hết hạn';
       await payment.save();
       this.logger.warn(
-        `[CID: ${correlationId}] Callback đến sau khi phiên thanh toán ${payment._id.toString()} đã hết hạn`,
+        `[CID: ${correlationId}] Callback đến sau khi phiên thanh toán ${payment._id?.toString?.() ?? String(payment._id ?? 'none')} đã hết hạn`,
       );
       throw new BadRequestException('Phiên thanh toán đã hết hạn');
     }
@@ -296,7 +296,7 @@ export class PaymentsService {
     if (payment.callbackProcessedAt || payment.status === PaymentStatus.PAID) {
       if (payment.transactionId === dto.transactionId) {
         this.logger.log(
-          `[CID: ${correlationId}] Callback thanh toán lặp lại hợp lệ (Idempotent replay) cho giao dịch ${payment._id.toString()}`,
+          `[CID: ${correlationId}] Callback thanh toán lặp lại hợp lệ (Idempotent replay) cho giao dịch ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}`,
         );
         await this.syncOrderPaymentStatus(
           payment.order,
@@ -306,7 +306,7 @@ export class PaymentsService {
         return payment;
       }
       this.logger.warn(
-        `[CID: ${correlationId}] Phát hiện callback xung đột hoặc trùng lặp không hợp lệ cho giao dịch ${payment._id.toString()}`,
+        `[CID: ${correlationId}] Phát hiện callback xung đột hoặc trùng lặp không hợp lệ cho giao dịch ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}`,
       );
       throw new ConflictException(
         'Thanh toán đã nhận một callback khác trước đó',
@@ -319,7 +319,7 @@ export class PaymentsService {
       result.failureReason?.toLowerCase().includes('chữ ký')
     ) {
       this.logger.error(
-        `[CID: ${correlationId}] [CẢNH BÁO BẢO MẬT] Xác thực chữ ký số thất bại cho ${dto.provider} payment ${payment._id.toString()}`,
+        `[CID: ${correlationId}] [CẢNH BÁO BẢO MẬT] Xác thực chữ ký số thất bại cho ${dto.provider} payment ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}`,
       );
     }
 
@@ -404,7 +404,7 @@ export class PaymentsService {
       }
 
       this.logger.log(
-        `[CID: ${correlationId}] Xử lý callback ${dto.provider} thành công: Order ${payment.order.toString()}, Status: ${result.status}`,
+        `[CID: ${correlationId}] Xử lý callback ${dto.provider} thành công: Order ${payment.order?.toString?.() ?? String(payment.order ?? 'none')}, Status: ${result.status}`,
       );
       return updated;
     } catch (error) {
