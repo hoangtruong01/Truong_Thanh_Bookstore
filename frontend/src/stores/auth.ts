@@ -19,11 +19,43 @@ export const useAuthStore = defineStore('auth', () => {
 
   const user = ref<User | null>(getStoredUser())
   const loading = ref(false)
+  const isHydrated = ref(false)
+  const isHydrating = ref(false)
+  let hydrationPromise: Promise<User | null> | null = null
 
   const isAuthenticated = computed(() => !!user.value)
   const isSuperAdmin = computed(() => user.value?.role === 'SUPER_ADMIN')
   const isAdmin = computed(() => user.value?.role === 'ADMIN' || user.value?.role === 'SUPER_ADMIN')
   const isStaff = computed(() => user.value?.role === 'STAFF' || user.value?.role === 'ADMIN' || user.value?.role === 'SUPER_ADMIN')
+
+  async function hydrateAuth(): Promise<User | null> {
+    if (isHydrated.value) return user.value
+    if (hydrationPromise) return hydrationPromise
+
+    isHydrating.value = true
+    hydrationPromise = (async () => {
+      try {
+        const res = await authService.getProfile()
+        const raw = res.data?.data || res.data
+        const userData = raw?.user || raw
+        if (userData && (userData._id || userData.id || userData.email)) {
+          user.value = userData
+          localStorage.setItem('user', JSON.stringify(userData))
+        } else {
+          clearSession()
+        }
+      } catch {
+        clearSession()
+      } finally {
+        isHydrated.value = true
+        isHydrating.value = false
+        hydrationPromise = null
+      }
+      return user.value
+    })()
+
+    return hydrationPromise
+  }
 
   async function login(email: string, password: string) {
     loading.value = true
@@ -31,6 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authService.login(email, password)
       const data = res.data?.data || res.data
       user.value = data.user
+      isHydrated.value = true
       localStorage.setItem('user', JSON.stringify(user.value))
       return data
     } finally {
@@ -44,6 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authService.register(data)
       const responseData = res.data?.data || res.data
       user.value = responseData.user
+      isHydrated.value = true
       localStorage.setItem('user', JSON.stringify(user.value))
       return responseData
     } finally {
@@ -54,8 +88,11 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchProfile() {
     try {
       const res = await authService.getProfile()
-      user.value = res.data
+      const userData = res.data?.data || res.data
+      user.value = userData
+      isHydrated.value = true
       localStorage.setItem('user', JSON.stringify(user.value))
+      return user.value
     } catch (e) {
       clearSession()
       throw e
@@ -137,6 +174,9 @@ export const useAuthStore = defineStore('auth', () => {
     refreshSession,
     logout,
     clearSession,
-    toggleWishlist
+    toggleWishlist,
+    isHydrated,
+    isHydrating,
+    hydrateAuth,
   }
 })

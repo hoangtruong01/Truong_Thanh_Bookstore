@@ -108,14 +108,19 @@ const router = createRouter({
   },
 });
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore();
+
+  // FE-01: Controlled Auth Hydration - Guarantee session validity before evaluating access
+  if (!authStore.isHydrated) {
+    await authStore.hydrateAuth();
+  }
 
   if (to.matched.some((record) => record.meta.requiresAuth) && !authStore.isAuthenticated) {
     next({ name: 'Login', query: { redirect: to.fullPath } });
   } else if (to.matched.some((record) => record.meta.requiresAdmin)) {
     if (!authStore.isStaff) {
-      next({ name: 'Login' });
+      next({ name: 'Login', query: { redirect: to.fullPath } });
     } else {
       const user = authStore.user;
       if (user && user.role === 'STAFF') {

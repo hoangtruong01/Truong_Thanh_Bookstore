@@ -120,9 +120,17 @@
     </div>
 
     <!-- Add to Cart -->
-    <button @click.stop="$emit('add-to-cart', product)" class="mt-3 w-full bg-[#ffebd5] hover:bg-[#dc2626] text-[#c2410c] hover:text-white font-extrabold py-2 px-3 rounded-xl text-xs transition-all active:scale-95 flex items-center justify-center gap-1 border border-[#fed7aa] cursor-pointer">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 0 1-1.5 0 .75.75 0 0 1 1.5 0Z" /></svg>
-      <span>Thêm vào giỏ</span>
+    <button
+      @click.stop="handleAddToCart"
+      :disabled="isAdding || product.stock === 0"
+      class="mt-3 w-full bg-[#ffebd5] hover:bg-[#dc2626] text-[#c2410c] hover:text-white font-extrabold py-2 px-3 rounded-xl text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-[#fed7aa] cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+    >
+      <svg v-if="isAdding" class="animate-spin h-3.5 w-3.5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" /></svg>
+      <span>{{ isAdding ? 'Đang thêm...' : 'Thêm vào giỏ' }}</span>
     </button>
   </div>
 </template>
@@ -139,13 +147,23 @@ const props = defineProps<{
   product: Product
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'add-to-cart', product: Product): void
 }>()
 
 const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToast()
+const isAdding = ref(false)
+
+function handleAddToCart() {
+  if (isAdding.value) return
+  isAdding.value = true
+  emit('add-to-cart', props.product)
+  setTimeout(() => {
+    isAdding.value = false
+  }, 500)
+}
 
 const isWishlisted = computed(() => {
   if (!authStore.isAuthenticated || !authStore.user?.wishlist) return false

@@ -7,11 +7,7 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="bg-white border border-slate-200 rounded-3xl p-8 space-y-4 animate-pulse">
-      <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-      <div class="h-4 bg-slate-100 rounded w-1/4"></div>
-      <div class="h-40 bg-slate-50 rounded"></div>
-    </div>
+    <SkeletonLoader v-if="loading" type="order-list" :count="1" />
 
     <!-- Error State -->
     <div v-else-if="error" class="bg-white border border-red-200 rounded-3xl p-12 text-center space-y-4">
@@ -36,11 +32,30 @@
             {{ getStatusLabel(order.orderStatus) }}
           </span>
           <button 
-            @click="downloadInvoice"
-            class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+            v-if="order.orderStatus === 'PENDING'"
+            type="button"
+            @click="handleCancelOrder"
+            :disabled="isCancelling"
+            class="border border-red-200 text-red-600 hover:bg-red-50 font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
-            <span>📄</span>
-            Tải hóa đơn PDF
+            <svg v-if="isCancelling" class="animate-spin h-3.5 w-3.5 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>{{ isCancelling ? 'Đang hủy...' : 'Hủy đơn' }}</span>
+          </button>
+          <button 
+            type="button"
+            @click="downloadInvoice"
+            :disabled="isDownloadingInvoice"
+            class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+          >
+            <svg v-if="isDownloadingInvoice" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span v-else>📄</span>
+            <span>{{ isDownloadingInvoice ? 'Đang tải...' : 'Tải hóa đơn PDF' }}</span>
           </button>
         </div>
       </div>
@@ -235,8 +250,14 @@ function getStatusBadgeStyle(status: string) {
   }
 }
 
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
+
+const isDownloadingInvoice = ref(false)
+const isCancelling = ref(false)
+
 async function downloadInvoice() {
-  if (!order.value) return
+  if (isDownloadingInvoice.value || !order.value) return
+  isDownloadingInvoice.value = true
   try {
     const res = isGuestOrder.value
       ? await orderService.getGuestInvoice(order.value._id, guestAccessToken.value)
@@ -249,7 +270,24 @@ async function downloadInvoice() {
     link.click()
     document.body.removeChild(link)
   } catch (err) {
-    alert('Không thể tải hóa đơn. Vui lòng thử lại sau.')
+    toast.error('Không thể tải hóa đơn. Vui lòng thử lại sau.')
+  } finally {
+    isDownloadingInvoice.value = false
+  }
+}
+
+async function handleCancelOrder() {
+  if (isCancelling.value || !order.value) return
+  if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return
+  isCancelling.value = true
+  try {
+    await orderService.cancel(order.value._id)
+    toast.success('Hủy đơn hàng thành công')
+    order.value.orderStatus = 'CANCELLED'
+  } catch (err: any) {
+    toast.error(err.message || 'Hủy đơn hàng thất bại')
+  } finally {
+    isCancelling.value = false
   }
 }
 

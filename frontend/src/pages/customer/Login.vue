@@ -62,9 +62,13 @@
         <button
           type="submit"
           :disabled="authStore.loading || !!emailError"
-          class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center text-sm uppercase tracking-wider shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none cursor-pointer"
+          class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none cursor-pointer"
         >
-          {{ authStore.loading ? 'Đang xử lý...' : 'Đăng nhập' }}
+          <svg v-if="authStore.loading" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>{{ authStore.loading ? 'Đang xử lý...' : 'Đăng nhập' }}</span>
         </button>
       </form>
 
@@ -109,6 +113,7 @@ const emailError = computed(() => {
 })
 
 async function handleLogin() {
+  if (authStore.loading) return
   if (!email.value || !password.value) return
   try {
     const res = await authStore.login(email.value, password.value)

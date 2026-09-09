@@ -317,31 +317,28 @@
         </div>
 
         <!-- Products Grid / Skeleton / Empty State -->
-        <div v-if="loading" class="responsive-flex-grid-gap-4">
-          <div v-for="n in 12" :key="n" class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 animate-pulse">
-            <div class="bg-slate-200 rounded-xl aspect-square w-full"></div>
-            <div class="h-4 bg-slate-200 rounded w-2/3"></div>
-            <div class="h-6 bg-slate-200 rounded w-1/3"></div>
-          </div>
-        </div>
+        <SkeletonLoader v-if="loading" type="card" :count="10" />
 
-        <div v-else-if="products.length === 0" class="bg-white border border-slate-200 rounded-3xl p-16 text-center space-y-4 shadow-xs">
-          <div class="w-16 h-16 bg-red-50 text-[#dc2626] rounded-full flex items-center justify-center mx-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
-          </div>
-          <h3 class="text-base font-extrabold text-slate-800">Không tìm thấy sản phẩm nào</h3>
-          <p class="text-slate-400 text-xs max-w-sm mx-auto">Vui lòng điều chỉnh lại tiêu chí bộ lọc, mức giá hoặc thử tìm kiếm với các từ khóa phổ biến bên dưới.</p>
-          <div class="flex flex-wrap justify-center gap-1.5 pt-2">
-            <button
-              v-for="kw in ['Bút bi', 'Sách giáo khoa', 'Tập vở', 'Deli', 'Thiên Long']"
-              :key="kw"
-              @click="quickSearch(kw)"
-              class="bg-slate-100 hover:bg-red-50 hover:text-[#dc2626] text-slate-700 text-xs font-bold px-3 py-1.5 rounded-full transition-colors cursor-pointer"
-            >
-              {{ kw }}
-            </button>
-          </div>
-        </div>
+        <EmptyState
+          v-else-if="products.length === 0"
+          icon="🔍"
+          title="Không tìm thấy sản phẩm nào"
+          description="Vui lòng điều chỉnh lại tiêu chí bộ lọc, mức giá hoặc thử tìm kiếm với các từ khóa phổ biến bên dưới."
+        >
+          <template #action>
+            <div class="flex flex-wrap justify-center gap-1.5 pt-2">
+              <button
+                v-for="kw in ['Bút bi', 'Sách giáo khoa', 'Tập vở', 'Deli', 'Thiên Long']"
+                :key="kw"
+                type="button"
+                @click="quickSearch(kw)"
+                class="bg-slate-100 hover:bg-red-50 hover:text-[#dc2626] text-slate-700 text-xs font-bold px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+              >
+                {{ kw }}
+              </button>
+            </div>
+          </template>
+        </EmptyState>
 
         <div v-else class="space-y-8">
           <div class="responsive-flex-grid-gap-4">
@@ -397,6 +394,8 @@ import { useCartStore } from '@/stores/cart'
 import { productService } from '@/services/product.service'
 import { categoryService } from '@/services/category.service'
 import ProductCard from '@/components/ProductCard.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import type { Product, Category } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 import Breadcrumb from '@/components/Breadcrumb.vue'

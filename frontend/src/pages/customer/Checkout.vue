@@ -178,9 +178,14 @@
               />
               <button 
                 @click="handleApplyCoupon" 
-                class="bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+                :disabled="isApplyingCoupon || !couponCode.trim()"
+                class="bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
               >
-                Áp dụng
+                <svg v-if="isApplyingCoupon" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>{{ isApplyingCoupon ? 'Đang áp dụng...' : 'Áp dụng' }}</span>
               </button>
             </div>
             <p v-if="cartStore.promoError" class="text-[10px] text-red-500 font-medium mt-1">{{ cartStore.promoError }}</p>
@@ -223,10 +228,14 @@
                   </div>
                   <button 
                     @click="applySuggestedCoupon(promo.code)"
-                    :disabled="cartStore.subtotal < promo.minOrderValue"
-                    class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2.5 rounded-lg text-[10px] transition-colors disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer"
+                    :disabled="isApplyingCoupon || cartStore.subtotal < promo.minOrderValue"
+                    class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2.5 rounded-lg text-[10px] transition-colors disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
                   >
-                    Dùng
+                    <svg v-if="isApplyingCoupon" class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Dùng</span>
                   </button>
                 </div>
               </div>
@@ -310,7 +319,11 @@
             :disabled="submitting || checkoutItems.length === 0 || (!!shippingInfo.phone && !isPhoneValid)"
             class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none cursor-pointer"
           >
-            {{ submitting ? 'Đang xử lý...' : 'Đặt hàng ngay' }}
+            <svg v-if="submitting" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>{{ submitting ? 'Đang xử lý đặt hàng...' : 'Đặt hàng ngay' }}</span>
           </button>
         </div>
       </div>
@@ -346,6 +359,7 @@ const router = useRouter()
 const checkoutItems = computed(() => cartStore.items.filter(item => item.selected !== false))
 
 const submitting = ref(false)
+const isApplyingCoupon = ref(false)
 const orderSuccess = ref(false)
 const orderCode = ref('')
 const couponCode = ref('')
@@ -457,22 +471,33 @@ function onPhoneInput(e: Event) {
 }
 
 async function handleApplyCoupon() {
-  if (!couponCode.value.trim()) return
-  const success = await cartStore.applyCoupon(couponCode.value.trim().toUpperCase())
-  if (success) {
-    toast.success('Áp dụng mã giảm giá thành công!')
-    couponCode.value = ''
-  } else {
-    toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+  if (isApplyingCoupon.value || !couponCode.value.trim()) return
+  isApplyingCoupon.value = true
+  try {
+    const success = await cartStore.applyCoupon(couponCode.value.trim().toUpperCase())
+    if (success) {
+      toast.success('Áp dụng mã giảm giá thành công!')
+      couponCode.value = ''
+    } else {
+      toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+    }
+  } finally {
+    isApplyingCoupon.value = false
   }
 }
 
 async function applySuggestedCoupon(code: string) {
-  const success = await cartStore.applyCoupon(code)
-  if (success) {
-    toast.success('Áp dụng mã giảm giá thành công!')
-  } else {
-    toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+  if (isApplyingCoupon.value) return
+  isApplyingCoupon.value = true
+  try {
+    const success = await cartStore.applyCoupon(code)
+    if (success) {
+      toast.success('Áp dụng mã giảm giá thành công!')
+    } else {
+      toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+    }
+  } finally {
+    isApplyingCoupon.value = false
   }
 }
 
@@ -493,6 +518,7 @@ onMounted(async () => {
 })
 
 async function placeOrder() {
+  if (submitting.value) return
   if (loyaltyError.value) {
     toast.warning(loyaltyError.value)
     return

@@ -3,22 +3,16 @@
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" />
 
-    <div v-if="loading" class="bg-white border border-slate-200 rounded-3xl p-8 animate-pulse grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div class="bg-slate-200 rounded-2xl aspect-square w-full"></div>
-      <div class="space-y-6">
-        <div class="h-8 bg-slate-200 rounded w-2/3"></div>
-        <div class="h-4 bg-slate-200 rounded w-1/3"></div>
-        <div class="h-10 bg-slate-200 rounded w-1/2"></div>
-        <div class="h-20 bg-slate-200 rounded w-full"></div>
-      </div>
-    </div>
+    <SkeletonLoader v-if="loading" type="product-detail" />
 
-    <div v-else-if="!product" class="bg-white border border-slate-200 rounded-3xl p-16 text-center space-y-4">
-      <h3 class="text-lg font-bold text-slate-800">Không tìm thấy sản phẩm</h3>
-      <router-link to="/products" class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-2.5 px-6 rounded-xl transition-colors inline-block text-sm">
-        Trở về danh sách sản phẩm
-      </router-link>
-    </div>
+    <EmptyState
+      v-else-if="!product"
+      icon="🔍"
+      title="Không tìm thấy sản phẩm"
+      description="Sản phẩm bạn đang tìm kiếm có thể đã bị xóa hoặc không còn khả dụng trên hệ thống."
+      actionText="Trở về danh sách sản phẩm"
+      actionTo="/products"
+    />
 
     <div v-else class="space-y-12">
       <!-- Product Main Grid -->
@@ -286,18 +280,26 @@
           <div class="flex gap-4 pt-4">
             <button
               @click="addToCart()"
-              :disabled="product.stock === 0"
+              :disabled="isAddingToCart || product.stock === 0"
               class="flex-1 bg-white hover:bg-slate-50 text-[#dc2626] border-2 border-[#dc2626] font-bold py-3.5 px-4 rounded-2xl transition-colors flex items-center justify-center gap-2 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-300 disabled:cursor-not-allowed text-sm uppercase tracking-wider cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" /></svg>
-              Thêm vào giỏ hàng
+              <svg v-if="isAddingToCart" class="animate-spin h-5 w-5 text-[#dc2626]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" /></svg>
+              <span>{{ isAddingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng' }}</span>
             </button>
             <button
               @click="buyNow()"
-              :disabled="product.stock === 0"
+              :disabled="isBuyingNow || product.stock === 0"
               class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-4 rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed text-sm uppercase tracking-wider cursor-pointer"
             >
-              {{ categoryDetail && categoryDetail.comboPrice ? 'Mua trọn bộ Combo' : 'Mua ngay' }}
+              <svg v-if="isBuyingNow" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>{{ isBuyingNow ? 'Đang xử lý...' : (categoryDetail && categoryDetail.comboPrice ? 'Mua trọn bộ Combo' : 'Mua ngay') }}</span>
             </button>
           </div>
 
@@ -964,9 +966,11 @@ import { categoryService } from '@/services/category.service'
 import ProductCard from '@/components/ProductCard.vue'
 import { formatCurrency, getDiscountPercent, parseMarkdown } from '@/utils/helpers'
 import type { Product, Category } from '@/types'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import Breadcrumb from '@/components/Breadcrumb.vue'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 import { useProductSchema } from '@/composables/useStructuredData'
-import Breadcrumb from '@/components/Breadcrumb.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -999,11 +1003,20 @@ const breadcrumbItems = computed(() => {
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const toast = useToast()
+const isAddingToCart = ref(false)
+const isBuyingNow = ref(false)
 
 function buyNow() {
-  if (product.value) {
+  if (isBuyingNow.value) return
+  if (!product.value || product.value.stock === 0) return
+  isBuyingNow.value = true
+  try {
     cartStore.addToCart(product.value, quantity.value)
-    router.push('/cart')
+    router.push('/checkout')
+  } finally {
+    setTimeout(() => {
+      isBuyingNow.value = false
+    }, 500)
   }
 }
 
@@ -1479,12 +1492,20 @@ function validateQuantity() {
 }
 
 function addToCart(prod?: Product) {
-  if (prod) {
-    cartStore.addToCart(prod, 1)
-    toast.success(`Đã thêm "${prod.name}" vào giỏ hàng`)
-  } else if (product.value) {
-    cartStore.addToCart(product.value, quantity.value)
-    toast.success(`Đã thêm ${quantity.value} "${product.value.name}" vào giỏ hàng`)
+  if (isAddingToCart.value) return
+  isAddingToCart.value = true
+  try {
+    if (prod) {
+      cartStore.addToCart(prod, 1)
+      toast.success(`Đã thêm "${prod.name}" vào giỏ hàng`)
+    } else if (product.value) {
+      cartStore.addToCart(product.value, quantity.value)
+      toast.success(`Đã thêm ${quantity.value} "${product.value.name}" vào giỏ hàng`)
+    }
+  } finally {
+    setTimeout(() => {
+      isAddingToCart.value = false
+    }, 500)
   }
 }
 
