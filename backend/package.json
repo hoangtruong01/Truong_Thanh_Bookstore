@@ -48,7 +48,7 @@
     "helmet": "^8.3.0",
     "ioredis": "^6.0.0",
     "mongoose": "^9.7.1",
-    "nodemailer": "^9.0.5",
+    "nodemailer": "^9.1.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pdfkit": "^0.19.1",
@@ -95,6 +95,7 @@
     "typescript-eslint": "^8.20.0"
   },
   "overrides": {
+    "multer": "2.3.0",
     "sanitize-html": {
       "htmlparser2": "10.0.0"
     },
