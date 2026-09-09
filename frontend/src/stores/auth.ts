@@ -41,11 +41,22 @@ export const useAuthStore = defineStore('auth', () => {
         if (userData && (userData._id || userData.id || userData.email)) {
           user.value = userData
           localStorage.setItem('user', JSON.stringify(userData))
-        } else {
+        } else if (!getStoredUser()) {
           clearSession()
         }
-      } catch {
-        clearSession()
+      } catch (err: any) {
+        // Only clear session if server explicitly rejected authentication with 401 / Unauthorized.
+        // Network glitches, offline mode, or temporary 5xx errors should never destroy existing session.
+        const is401 =
+          err?.response?.status === 401 ||
+          err?.status === 401 ||
+          err?.message === 'Unauthorized' ||
+          err?.errorCode === 'ERR_UNAUTHORIZED' ||
+          err?.response?.data?.errorCode === 'ERR_UNAUTHORIZED'
+
+        if (is401) {
+          clearSession()
+        }
       } finally {
         isHydrated.value = true
         isHydrating.value = false

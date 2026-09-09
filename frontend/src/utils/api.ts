@@ -49,15 +49,24 @@ function extractErrorMessage(data: any): string {
 let refreshPromise: Promise<any> | null = null
 let hasNotifiedExpired = false
 
-function notifySessionExpired() {
-  if (hasNotifiedExpired) return
-  hasNotifiedExpired = true
-  setTimeout(() => {
-    hasNotifiedExpired = false
-  }, 3000)
-
+const toastThrottleMap = new Map<string, number>()
+function showThrottledToast(msg: string, type: 'error' | 'warning' = 'error', cooldownMs = 3000) {
+  const now = Date.now()
+  const lastTime = toastThrottleMap.get(msg) || 0
+  if (now - lastTime < cooldownMs) {
+    return
+  }
+  toastThrottleMap.set(msg, now)
   const toast = getToast()
-  toast?.error('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.')
+  if (type === 'warning') {
+    toast?.warning(msg)
+  } else {
+    toast?.error(msg)
+  }
+}
+
+function notifySessionExpired() {
+  showThrottledToast('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.', 'error', 4000)
 }
 
 // Response interceptor for API calls
@@ -66,7 +75,6 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = (error.config || {}) as CustomRequestConfig
     const url = originalRequest.url || ''
-    const toast = getToast()
 
     // 1. Handle network errors or server offline
     if (!error.response) {
@@ -76,7 +84,7 @@ api.interceptors.response.use(
         : 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng hoặc thử lại sau.'
 
       if (!originalRequest.skipGlobalToast) {
-        toast?.error(errorMsg)
+        showThrottledToast(errorMsg, 'error', 3000)
       }
 
       return Promise.reject({
@@ -96,7 +104,8 @@ api.interceptors.response.use(
         url.includes('/auth/register') ||
         url.includes('/auth/refresh') ||
         url.includes('/auth/forgot-password') ||
-        url.includes('/auth/reset-password')
+        url.includes('/auth/reset-password') ||
+        url.includes('/auth/me')
 
       if (isAuthEndpoint) {
         if (url.includes('/auth/refresh')) {
@@ -170,13 +179,13 @@ api.interceptors.response.use(
     if (!originalRequest.skipGlobalToast) {
       if (status === 400) {
         const msg = extractErrorMessage(errorData) || 'Dữ liệu yêu cầu không hợp lệ.'
-        toast?.warning(msg)
+        showThrottledToast(msg, 'warning', 1500)
       } else if (status === 403) {
-        toast?.error('Bạn không có quyền thực hiện thao tác này.')
+        showThrottledToast('Bạn không có quyền thực hiện thao tác này.', 'error', 3000)
       } else if (status === 429) {
-        toast?.warning('Bạn đang thao tác quá nhanh. Vui lòng thử lại sau ít phút!')
+        showThrottledToast('Bạn đang thao tác quá nhanh. Vui lòng thử lại sau ít phút!', 'warning', 3000)
       } else if (status >= 500) {
-        toast?.error('Đã có lỗi xảy ra từ hệ thống. Đội ngũ kỹ thuật đang xử lý.')
+        showThrottledToast('Đã có lỗi xảy ra từ hệ thống. Đội ngũ kỹ thuật đang xử lý.', 'error', 3000)
       }
     }
 

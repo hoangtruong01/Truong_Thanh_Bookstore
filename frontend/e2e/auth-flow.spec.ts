@@ -2,8 +2,27 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Kịch bản 1: Auth Lifecycle & Token Revocation', () => {
   test('Register -> Login -> Logout -> Verify old token revocation', async ({ page }) => {
-    // 1. Mock auth endpoints for reliable CI execution
+    // 1. Mock auth and background home endpoints for reliable CI execution
     let isTokenValid = false;
+
+    await page.route('**/api/banners/**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+    });
+    await page.route('**/api/categories/**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+    });
+    await page.route('**/api/categories', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+    });
+    await page.route('**/api/products/**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], total: 0 }) });
+    });
+    await page.route('**/api/notifications/**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+    });
+    await page.route('**/api/promotions/**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+    });
 
     await page.route('**/api/auth/register', async (route) => {
       await route.fulfill({
