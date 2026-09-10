@@ -97,12 +97,16 @@
 
     <!-- Products Table -->
     <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-      <div v-if="loading" class="p-8 animate-pulse space-y-4">
-        <div v-for="n in 5" :key="n" class="h-12 bg-slate-100 rounded-xl w-full"></div>
-      </div>
+      <SkeletonLoader v-if="loading" type="table" :count="5" />
 
-      <div v-else-if="products.length === 0" class="p-16 text-center space-y-4">
-        <h3 class="text-sm font-bold text-slate-800">Không tìm thấy sản phẩm nào</h3>
+      <div v-else-if="products.length === 0" class="p-8">
+        <EmptyState
+          icon="📦"
+          title="Không tìm thấy sản phẩm nào"
+          description="Vui lòng thử điều chỉnh bộ lọc hoặc bấm tạo sản phẩm mới."
+          actionText="+ Thêm sản phẩm mới"
+          actionTo="/admin/products/create"
+        />
       </div>
 
       <div v-else class="overflow-x-auto">
@@ -556,6 +560,8 @@ import { productService } from '@/services/product.service'
 import { categoryService } from '@/services/category.service'
 import { formatCurrency } from '@/utils/helpers'
 import type { Product, Category } from '@/types'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import EmptyState from '@/components/EmptyState.vue'
 
 const toast = useToast()
 

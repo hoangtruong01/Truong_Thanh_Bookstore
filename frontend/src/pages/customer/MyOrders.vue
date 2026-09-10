@@ -23,17 +23,17 @@
       </router-link>
     </div>
 
-    <!-- Loading State (FE-04) -->
-    <SkeletonLoader v-else-if="loading" type="order-item" :count="3" />
+    <!-- Loading State -->
+    <SkeletonLoader v-else-if="loading" type="order-list" :count="3" />
 
-    <!-- Empty Orders State (FE-04) -->
+    <!-- Empty Orders State -->
     <EmptyState
       v-else-if="orders.length === 0"
-      iconType="order"
+      icon="📦"
       title="Bạn chưa có đơn hàng nào"
-      description="Khám phá hàng ngàn sản phẩm văn phòng phẩm và sách giáo khoa chính hãng tại Trường Thành Bookstore."
+      description="Khám phá hàng ngàn sản phẩm văn phòng phẩm chính hãng tại Trường Thành Bookstore."
       actionText="Mua sắm ngay"
-      to="/products"
+      actionTo="/products"
     />
 
     <!-- Orders List -->
@@ -109,6 +109,7 @@
                 v-if="order.orderStatus === 'PENDING'"
                 :disabled="cancellingOrderId === order._id"
                 @click="cancelOrder(order._id)"
+                :disabled="cancellingOrderId === order._id"
                 class="px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
               >
                 <svg v-if="cancellingOrderId === order._id" class="animate-spin h-3.5 w-3.5 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -134,6 +135,8 @@ import EmptyState from '@/components/EmptyState.vue'
 import { orderService } from '@/services/order.service'
 import { formatCurrency, getStatusLabel, formatDate } from '@/utils/helpers'
 import type { Order } from '@/types'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 
 useSeoMeta({
@@ -164,7 +167,6 @@ async function fetchOrders() {
 async function cancelOrder(id: string) {
   if (cancellingOrderId.value === id) return
   if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return
-
   cancellingOrderId.value = id
   try {
     await orderService.cancel(id)

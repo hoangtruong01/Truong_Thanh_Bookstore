@@ -21,46 +21,48 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const isHydrated = ref(false)
   const isHydrating = ref(false)
-  let hydrationPromise: Promise<boolean> | null = null
+  let hydrationPromise: Promise<User | null> | null = null
 
   const isAuthenticated = computed(() => !!user.value)
   const isSuperAdmin = computed(() => user.value?.role === 'SUPER_ADMIN')
   const isAdmin = computed(() => user.value?.role === 'ADMIN' || user.value?.role === 'SUPER_ADMIN')
   const isStaff = computed(() => user.value?.role === 'STAFF' || user.value?.role === 'ADMIN' || user.value?.role === 'SUPER_ADMIN')
 
-  /**
-   * FE-01: Hydrate auth session reliably upon app boot or page refresh
-   */
-  async function initAuth(): Promise<boolean> {
-    if (isHydrated.value) {
-      return isAuthenticated.value
-    }
-    if (hydrationPromise) {
-      return hydrationPromise
-    }
+  async function hydrateAuth(): Promise<User | null> {
+    if (isHydrated.value) return user.value
+    if (hydrationPromise) return hydrationPromise
 
     isHydrating.value = true
     hydrationPromise = (async () => {
       try {
-        const res = await authService.getProfile({
-          skipGlobalErrorHandler: true,
-          skipAuthRedirect: true,
-        })
-        const userData = res.data?.data || res.data
-        if (userData && (userData._id || userData.id)) {
+        const res = await authService.getProfile()
+        const raw = res.data?.data || res.data
+        const userData = raw?.user || raw
+        if (userData && (userData._id || userData.id || userData.email)) {
           user.value = userData
           localStorage.setItem('user', JSON.stringify(userData))
-        } else {
+        } else if (!getStoredUser()) {
           clearSession()
         }
-      } catch {
-        clearSession()
+      } catch (err: any) {
+        // Only clear session if server explicitly rejected authentication with 401 / Unauthorized.
+        // Network glitches, offline mode, or temporary 5xx errors should never destroy existing session.
+        const is401 =
+          err?.response?.status === 401 ||
+          err?.status === 401 ||
+          err?.message === 'Unauthorized' ||
+          err?.errorCode === 'ERR_UNAUTHORIZED' ||
+          err?.response?.data?.errorCode === 'ERR_UNAUTHORIZED'
+
+        if (is401) {
+          clearSession()
+        }
       } finally {
         isHydrated.value = true
         isHydrating.value = false
         hydrationPromise = null
       }
-      return isAuthenticated.value
+      return user.value
     })()
 
     return hydrationPromise
@@ -72,6 +74,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authService.login(email, password)
       const data = res.data?.data || res.data
       user.value = data.user
+      isHydrated.value = true
       localStorage.setItem('user', JSON.stringify(user.value))
       return data
     } finally {
@@ -85,6 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authService.register(data)
       const responseData = res.data?.data || res.data
       user.value = responseData.user
+      isHydrated.value = true
       localStorage.setItem('user', JSON.stringify(user.value))
       return responseData
     } finally {
@@ -95,8 +99,11 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchProfile() {
     try {
       const res = await authService.getProfile()
-      user.value = res.data
+      const userData = res.data?.data || res.data
+      user.value = userData
+      isHydrated.value = true
       localStorage.setItem('user', JSON.stringify(user.value))
+      return user.value
     } catch (e) {
       clearSession()
       throw e
@@ -181,5 +188,8 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     clearSession,
     toggleWishlist,
+    isHydrated,
+    isHydrating,
+    hydrateAuth,
   }
 })

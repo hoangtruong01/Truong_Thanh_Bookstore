@@ -20,6 +20,16 @@ export const mockAdminUser = {
 };
 
 export async function setupMockAuth(page: Page, user = mockCustomerUser) {
+  await page.route('**/api/auth/me', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: { user },
+      }),
+    });
+  });
   await page.addInitScript((userData) => {
     window.localStorage.setItem('user', JSON.stringify(userData));
   }, user);

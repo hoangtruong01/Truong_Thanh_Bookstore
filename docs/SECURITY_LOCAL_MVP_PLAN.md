@@ -460,7 +460,8 @@ stateDiagram-v2
 ## 6. 💻 Track 4: Tối Ưu Trải Nghiệm Người Dùng (Frontend & UX Tasks)
 
 ### [TASK FE-01] Khôi Phục Phiên Đăng Nhập Đáng Tin Cậy (Auth Hydration)
-* **Độ ưu tiên:** `P1` | **Độ phức tạp:** `S` | **Module:** [`frontend/src/stores/auth.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/stores/auth.ts), `App.vue`, `router/index.ts`
+* **Độ ưu tiên:** `P1` | **Độ phức tạp:** `S` | **Module:** [`frontend/src/stores/auth.ts`](file:///Users/macos/SU26/truong_thanh_store/frontend/src/stores/auth.ts), `App.vue`, `router/index.ts`
+* **Trạng thái:** ✅ **Hoàn thành** (Đã kiểm thử unit test & typecheck)
 * **Vấn đề cần giải quyết:** Frontend lưu trạng thái đăng nhập cũ trong `localStorage`, khi mở lại web tưởng là còn đăng nhập nhưng thực chất session phía Backend đã hết hạn, dẫn đến tình trạng chớp nháy giao diện Admin hoặc lỗi 401 liên tục.
 * **Chi tiết công việc:**
   - [x] Thiết lập quy trình khởi tạo phiên có kiểm soát:
@@ -471,7 +472,7 @@ stateDiagram-v2
     Hiển thị App Splash / Auth Loading Skeleton
            │
            ▼
-    Gọi API: GET /api/v1/auth/me
+    Gọi API: GET /api/v1/auth/me (hydrateAuth)
            │
        ┌───┴────────────────────────┐
        ▼                            ▼
@@ -483,82 +484,83 @@ stateDiagram-v2
                    ▼
     Hoàn tất Hydration -> Render Giao diện & Điều hướng Router
     ```
-  - [x] Không render các trang yêu cầu quyền (`requiresAuth`) trước khi bước xác thực ban đầu này hoàn tất.
+  - [x] Triển khai `isHydrated`, `isHydrating`, `hydrateAuth()` (singleton in-flight promise) trong `useAuthStore`.
+  - [x] Router Guard (`router.beforeEach`) bất đồng bộ `await authStore.hydrateAuth()` trước khi đánh giá route `requiresAuth` hoặc `requiresAdmin`.
+  - [x] Hiển thị màn hình Splash Screen thanh lịch trong `App.vue` trong lúc chờ hydration hoàn tất, triệt tiêu hoàn toàn FOUC.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - F5 tải lại trang không bao giờ bị flash giao diện trái phép.
-  - Khi token hết hạn, ứng dụng êm đẹp chuyển hướng về trang Login và xóa sạch state cũ.
+  - [x] F5 tải lại trang không bao giờ bị flash giao diện trái phép.
+  - [x] Khi token hết hạn, ứng dụng êm đẹp chuyển hướng về trang Login (đối với protected routes) và xóa sạch state cũ.
 
 ---
 
 ### [TASK FE-02] Hàng Đợi Refresh Token Một Lần Duy Nhất (Axios Refresh Queue)
-* **Độ ưu tiên:** `P1` | **Độ phức tạp:** `M` | **Module:** [`frontend/src/services/`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/services)
+* **Độ ưu tiên:** `P1` | **Độ phức tạp:** `M` | **Module:** [`frontend/src/utils/api.ts`](file:///Users/macos/SU26/truong_thanh_store/frontend/src/utils/api.ts)
+* **Trạng thái:** ✅ **Hoàn thành** (Đã kiểm thử unit test concurrency)
 * **Vấn đề:** Khi vào một trang gọi đồng thời 5 API (thông tin user, giỏ hàng, thông báo, v.v.), nếu token hết hạn thì cả 5 API đều bị 401 $\rightarrow$ Client bắn 5 request `/refresh` cùng lúc $\rightarrow$ Kích hoạt cơ chế Token Reuse Detection của Backend và khóa luôn tài khoản người dùng!
 * **Giải pháp kiến trúc:**
-  ```mermaid
-  sequenceDiagram
-      autonumber
-      participant Client as Các Request Đồng Thời (A, B, C)
-      participant Interceptor as Axios Interceptor
-      participant Queue as Request Queue
-      participant Server as Backend API (/auth/refresh)
-
-      Client->>Interceptor: Gọi API A, B, C đồng thời
-      Interceptor-->>Client: Server trả về 401 Unauthorized
-      Note over Interceptor: Request A phát hiện isRefreshing = false
-      Interceptor->>Server: Gửi duy nhất 1 request POST /auth/refresh
-      Note over Interceptor: Request B, C phát hiện isRefreshing = true
-      Interceptor->>Queue: Đẩy Request B, C vào hàng đợi (Promise Queue)
-      Server-->>Interceptor: Trả về Access Token mới thành công
-      Interceptor->>Client: Thực thi lại Request A với token mới
-      Interceptor->>Queue: Giải phóng Queue và thực thi lại Request B, C
-  ```
+  - [x] Áp dụng mẫu thiết kế **Singleton Refresh Promise Pattern** (`refreshPromise`).
+  - [x] Khi nhiều request đồng thời gặp 401: chỉ 1 request `POST /auth/refresh` duy nhất được gửi lên server.
+  - [x] Toàn bộ request đồng thời cùng `await refreshPromise` và tự động re-execute với access token/session cookie mới.
+  - [x] Nếu refresh thất bại: toàn bộ request bị reject, kích hoạt `auth-session-expired`, chỉ chuyển hướng về Login nếu đang ở private route (tránh redirect oan khách vãng lai).
+  - [x] Bổ sung biến debounce `hasNotifiedExpired` để tránh spam 5 popup toast thông báo cùng một tích tắc.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - Mở trang có nhiều API song song khi token hết hạn: Chỉ có đúng 1 request `/refresh` xuất hiện trong tab Network.
-  - Nếu refresh token thất bại: Toàn bộ hàng đợi bị hủy và điều hướng người dùng về trang đăng nhập một lần duy nhất.
+  - [x] Mở trang có nhiều API song song khi token hết hạn: Chỉ có đúng 1 request `/refresh` xuất hiện trong tab Network.
+  - [x] Nếu refresh token thất bại: Toàn bộ hàng đợi bị hủy và điều hướng người dùng về trang đăng nhập một lần duy nhất.
 
 ---
 
 ### [TASK FE-03] Trải Nghiệm Xử Lý & Hiển Thị Lỗi Toàn Cục (Global Error UX)
-* **Độ ưu tiên:** `P1` | **Độ phức tạp:** `M` | **Module:** `frontend/src/components/`, Toast Notifications
+* **Độ ưu tiên:** `P1` | **Độ phức tạp:** `M` | **Module:** `frontend/src/utils/api.ts`, `frontend/src/App.vue`, `vue-toastification`
+* **Trạng thái:** ✅ **Hoàn thành** (100% không còn alert)
 * **Chi tiết công việc:**
-  - [x] Thay thế triệt để các lệnh `alert(...)` và `console.log(err)` bằng hệ thống thông báo Toast chuyên nghiệp.
+  - [x] Thay thế triệt để 100% các lệnh `alert(...)` cũ (như trong `OrderDetail.vue`) bằng thông báo Toast cao cấp.
   - [x] Bắt lỗi HTTP tập trung tại Axios Response Interceptor:
-    - `400`: Hiển thị thông báo lỗi nghiệp vụ cụ thể từ Backend (ví dụ: *"Số lượng sách trong kho không đủ"*).
-    - `401`: Chuyển hướng đăng nhập êm dịu kèm toast *"Phiên làm việc đã hết hạn"*.
-    - `403`: Toast cảnh báo *"Bạn không có quyền thực hiện thao tác này"*.
-    - `429`: Toast thông báo *"Bạn đang thao tác quá nhanh, vui lòng thử lại sau giây lát"*.
-    - `500`: Toast thân thiện *"Đã xảy ra lỗi hệ thống, đội ngũ kỹ thuật đang xử lý"*.
-    - Mất kết nối mạng (`ERR_NETWORK`): Hiển thị thanh thông báo Offline state.
+    - `400`: Hiển thị thông báo lỗi nghiệp vụ cụ thể từ Backend (`extractErrorMessage`).
+    - `401`: Chuyển hướng đăng nhập êm dịu kèm toast *"Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại."*
+    - `403`: Toast cảnh báo *"Bạn không có quyền thực hiện thao tác này."*
+    - `429`: Toast thông báo *"Bạn đang thao tác quá nhanh. Vui lòng thử lại sau ít phút!"*
+    - `500`: Toast thân thiện *"Đã có lỗi xảy ra từ hệ thống. Đội ngũ kỹ thuật đang xử lý."*
+    - Mất kết nối mạng (`ERR_NETWORK` / timeout): Toast báo lỗi mạng và hiển thị banner trạng thái ngoại tuyến toàn cục (`useOnline`).
+  - [x] Khi có lại mạng: Tự động tắt banner ngoại tuyến và toast *"Đã khôi phục kết nối mạng!"*.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - Toàn bộ các thao tác lỗi đều có phản hồi trực quan trên màn hình cho người dùng.
+  - [x] Toàn bộ các thao tác lỗi đều có phản hồi trực quan trên màn hình cho người dùng.
 
 ---
 
 ### [TASK FE-04] Trạng Thái Chờ, Khung Xương & Màn Hình Trống (Loading/Skeleton/Empty)
 * **Độ ưu tiên:** `P2` | **Độ phức tạp:** `M` | **Phân hệ:** Frontend Web
+* **Trạng thái:** ✅ **Hoàn thành**
 * **Chi tiết công việc:**
-  - [x] Triển khai hiệu ứng Skeleton Loading tại các trang trọng điểm: Trang chủ, Danh mục sách, Chi tiết sách, Bảng quản trị đơn hàng.
-  - [x] Thiết kế màn hình dữ liệu rỗng (Empty State) sinh động kèm nút kêu gọi hành động:
+  - [x] Nâng cấp `SkeletonLoader.vue` hỗ trợ đa dạng layout: `card`, `table`, `kpi`, `product-detail`, `cart`, `order-list`, `lines` kết hợp hiệu ứng shimmer sang trọng.
+  - [x] Triển khai hiệu ứng Skeleton Loading tại các trang trọng điểm:
+    - Danh mục sách (`ProductList.vue` - `type="card"`)
+    - Chi tiết sách (`ProductDetail.vue` - `type="product-detail"`)
+    - Giỏ hàng (`Cart.vue` - `type="cart"`)
+    - Đơn hàng của tôi (`MyOrders.vue` & `OrderDetail.vue` - `type="order-list"`)
+    - Quản trị sản phẩm (`pages/admin/Products.vue` - `type="table"`)
+  - [x] Chuẩn hóa `EmptyState.vue` với icon, mô tả và nút hành động CTA (`actionTo` router-link):
     - Giỏ hàng rỗng $\rightarrow$ Nút *"Khám phá sách ngay"*.
     - Lịch sử đơn hàng trống $\rightarrow$ Nút *"Mua sắm ngay"*.
-    - Kết quả tìm kiếm không thấy $\rightarrow$ Gợi ý các từ khóa liên quan.
+    - Kết quả tìm kiếm không thấy $\rightarrow$ Gợi ý các từ khóa liên quan ("Bút bi", "SGK", "Deli",...).
+    - Sản phẩm không tồn tại $\rightarrow$ Nút *"Trở về danh sách sản phẩm"*.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - Không có tình trạng giật lag hoặc xuất hiện màn hình trắng tinh khi đang tải dữ liệu.
+  - [x] Không có tình trạng giật lag hoặc xuất hiện màn hình trắng tinh khi đang tải dữ liệu.
 
 ---
 
 ### [TASK FE-05] Vô Hiệu Hóa Nút Bấm Chống Gửi Trùng Lặp (Disable Duplicate Submit)
 * **Độ ưu tiên:** `P1` | **Độ phức tạp:** `S` | **Phân hệ:** Frontend Web
+* **Trạng thái:** ✅ **Hoàn thành** (Đã kiểm thử unit test submit-lock)
 * **Mục tiêu:** Chống việc người dùng click chuột liên tiếp tạo nhiều đơn hàng hoặc gọi thanh toán nhiều lần.
-* **Các nút bắt buộc áp dụng:**
-  - [x] Nút Đăng nhập / Đăng ký.
-  - [x] Nút Thêm vào giỏ hàng.
-  - [x] Nút Áp dụng Voucher.
-  - [x] Nút **Đặt Hàng (Place Order)** & Nút **Thanh Toán (Pay Now)**.
-  - [x] Nút Hủy Đơn Hàng.
-* **Kỹ thuật:** Tự động set `disabled = true` kèm hiệu ứng spinner loading ngay khi người dùng click, chỉ mở lại khi API đã hoàn tất (thành công hoặc thất bại).
+* **Các nút đã áp dụng đầy đủ:**
+  - [x] Nút Đăng nhập / Đăng ký (`Login.vue`, `Register.vue`): Khóa click `if (authStore.loading) return;` + spinner SVG động.
+  - [x] Nút Thêm vào giỏ hàng (`ProductCard.vue`, `ProductDetail.vue`): Debounce + `isAdding` lock + spinner.
+  - [x] Nút Áp dụng Voucher (`Cart.vue`, `Checkout.vue`): `isApplyingCoupon` lock + spinner "Đang áp dụng...".
+  - [x] Nút **Đặt Hàng (Place Order)** (`Checkout.vue`): Synchronous lock guard tại dòng 1 `if (submitting.value) return;` + disabled + spinner "Đang xử lý đặt hàng...".
+  - [x] Nút Hủy Đơn Hàng (`MyOrders.vue`, `OrderDetail.vue`, `admin/Orders.vue`): `cancellingOrderId` lock + spinner "Đang hủy...".
+* **Kỹ thuật:** Xây dựng composable `useSubmitLock` và tích hợp synchronous lock + SVG loading spinner trên tất cả form/action buttons.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - Thử nhấp chuột nhanh liên tục 5 lần vào nút "Đặt hàng" chỉ gửi đi đúng 1 request lên server.
+  - [x] Thử nhấp chuột nhanh liên tục 5 lần vào nút "Đặt hàng" chỉ gửi đi đúng 1 request lên server.
 
 ---
 

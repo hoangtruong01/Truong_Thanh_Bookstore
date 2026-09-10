@@ -316,22 +316,21 @@
           </div>
         </div>
 
-        <!-- Products Grid / Skeleton / Empty State (FE-04) -->
+        <!-- Products Grid / Skeleton / Empty State -->
         <SkeletonLoader v-if="loading" type="card" :count="10" />
 
         <EmptyState
           v-else-if="products.length === 0"
-          iconType="search"
+          icon="🔍"
           title="Không tìm thấy sản phẩm nào"
           description="Vui lòng điều chỉnh lại tiêu chí bộ lọc, mức giá hoặc thử tìm kiếm với các từ khóa phổ biến bên dưới."
-          actionText="Xóa tất cả bộ lọc"
-          @action="clearAllFilters"
         >
-          <template #extra>
-            <div class="flex flex-wrap justify-center gap-1.5 pt-1">
+          <template #action>
+            <div class="flex flex-wrap justify-center gap-1.5 pt-2">
               <button
                 v-for="kw in ['Bút bi', 'Sách giáo khoa', 'Tập vở', 'Deli', 'Thiên Long']"
                 :key="kw"
+                type="button"
                 @click="quickSearch(kw)"
                 class="bg-slate-100 hover:bg-red-50 hover:text-[#dc2626] text-slate-700 text-xs font-bold px-3 py-1.5 rounded-full transition-colors cursor-pointer"
               >
@@ -395,6 +394,8 @@ import { useCartStore } from '@/stores/cart'
 import { productService } from '@/services/product.service'
 import { categoryService } from '@/services/category.service'
 import ProductCard from '@/components/ProductCard.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import type { Product, Category } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 import Breadcrumb from '@/components/Breadcrumb.vue'

@@ -111,8 +111,10 @@ const router = createRouter({
 router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore();
 
-  // FE-01: Reliable Auth Hydration - wait for session check to complete before evaluating permissions
-  await authStore.initAuth();
+  // FE-01: Controlled Auth Hydration - Guarantee session validity before evaluating access
+  if (!authStore.isHydrated) {
+    await authStore.hydrateAuth();
+  }
 
   if (to.matched.some((record) => record.meta.requiresAuth) && !authStore.isAuthenticated) {
     next({ name: 'Login', query: { redirect: to.fullPath } });

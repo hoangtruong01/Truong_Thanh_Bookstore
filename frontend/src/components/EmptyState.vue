@@ -1,10 +1,6 @@
 <template>
-  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 sm:p-14 text-center max-w-xl mx-auto space-y-6 shadow-xs">
-    <!-- Icon Container with Tailwind Gradients & SVGs -->
-    <div
-      class="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-inner transition-transform hover:scale-105"
-      :class="iconContainerClass"
-    >
+  <div class="bg-white border border-slate-200 rounded-3xl p-12 text-center max-w-xl mx-auto space-y-5 shadow-xs">
+    <div class="w-16 h-16 bg-red-50 text-[#dc2626] rounded-2xl flex items-center justify-center mx-auto text-3xl shadow-inner">
       <slot name="icon">
         <!-- Shopping Cart Icon -->
         <svg
@@ -78,29 +74,18 @@
         <span v-else class="text-4xl select-none">{{ icon }}</span>
       </slot>
     </div>
-
-    <!-- Title and Description -->
-    <div class="space-y-2">
-      <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
-        {{ title }}
-      </h3>
-      <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-        {{ description }}
-      </p>
-    </div>
-
-    <!-- Additional Content Slot (e.g. search keyword pills) -->
-    <div v-if="$slots.extra" class="pt-1">
-      <slot name="extra"></slot>
+    <div class="space-y-1.5">
+      <h3 class="text-base font-black text-slate-800">{{ title }}</h3>
+      <p class="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">{{ description }}</p>
     </div>
 
     <!-- Action Button (Router Link or Button Event) -->
     <div v-if="$slots.action || actionText" class="pt-2">
       <slot name="action">
         <router-link
-          v-if="to"
-          :to="to"
-          class="inline-flex items-center justify-center bg-[#dc2626] hover:bg-[#b91c1c] text-white font-extrabold py-3 px-8 rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-red-500/20 active:scale-95 cursor-pointer"
+          v-if="actionTo"
+          :to="actionTo"
+          class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-2.5 px-6 rounded-xl text-xs transition-colors shadow-sm inline-block"
         >
           {{ actionText }}
         </router-link>
@@ -122,11 +107,10 @@ import { computed } from 'vue'
 
 interface Props {
   icon?: string
-  iconType?: 'cart' | 'order' | 'search' | 'wishlist' | 'custom'
   title?: string
   description?: string
   actionText?: string
-  to?: string
+  actionTo?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -135,25 +119,10 @@ const props = withDefaults(defineProps<Props>(), {
   title: 'Không có dữ liệu',
   description: 'Hiện chưa có thông tin nào để hiển thị trong mục này.',
   actionText: '',
-  to: '',
+  actionTo: '',
 })
 
 defineEmits<{
   (e: 'action'): void
 }>()
-
-const iconContainerClass = computed(() => {
-  switch (props.iconType) {
-    case 'cart':
-      return 'bg-red-50 text-red-600 border border-red-100 dark:bg-red-950/40 dark:border-red-900/50'
-    case 'order':
-      return 'bg-amber-50 text-amber-600 border border-amber-100 dark:bg-amber-950/40 dark:border-amber-900/50'
-    case 'search':
-      return 'bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:border-slate-700'
-    case 'wishlist':
-      return 'bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-950/40 dark:border-rose-900/50'
-    default:
-      return 'bg-slate-50 text-slate-400 border border-slate-100 dark:bg-slate-800 dark:border-slate-700'
-  }
-})
 </script>
