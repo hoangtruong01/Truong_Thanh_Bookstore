@@ -12,7 +12,22 @@ export class CloudinaryService {
     });
   }
 
-  async uploadImage(base64Str: string): Promise<string> {
+  isConfigured(): boolean {
+    const cloudName = this.configService.get<string>('CLOUDINARY_CLOUD_NAME');
+    const apiKey = this.configService.get<string>('CLOUDINARY_API_KEY');
+    const apiSecret = this.configService.get<string>('CLOUDINARY_API_SECRET');
+    return Boolean(
+      cloudName &&
+      apiKey &&
+      apiSecret &&
+      !cloudName.includes('your_cloudinary'),
+    );
+  }
+
+  async uploadImage(
+    base64Str: string,
+    folder: string = 'truong_thanh_avatars',
+  ): Promise<string> {
     if (!base64Str || typeof base64Str !== 'string') {
       throw new BadRequestException('Dữ liệu hình ảnh không hợp lệ');
     }
@@ -27,24 +42,26 @@ export class CloudinaryService {
       );
     }
 
-    // Validate size limit (5MB = 5 * 1024 * 1024 bytes)
+    // Validate size limit (8MB = 8 * 1024 * 1024 bytes)
     const base64Data = base64Str.replace(/^data:image\/\w+;base64,/, '');
     const approximateSizeBytes = (base64Data.length * 3) / 4;
-    const MAX_SIZE = 5 * 1024 * 1024;
+    const MAX_SIZE = 8 * 1024 * 1024;
     if (approximateSizeBytes > MAX_SIZE) {
       throw new BadRequestException(
-        'Kích thước hình ảnh vượt quá giới hạn tối đa 5MB',
+        'Kích thước hình ảnh vượt quá giới hạn tối đa 8MB',
       );
     }
 
     try {
       const uploadResponse = await cloudinary.uploader.upload(base64Str, {
-        folder: 'truong_thanh_avatars',
+        folder,
         resource_type: 'image',
       });
       return uploadResponse.secure_url;
-    } catch (error) {
-      throw new BadRequestException(`Tải ảnh lên thất bại: ${error.message}`);
+    } catch (error: unknown) {
+      throw new BadRequestException(
+        `Tải ảnh lên thất bại: ${(error as Error)?.message || 'Lỗi không xác định'}`,
+      );
     }
   }
 }

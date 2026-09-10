@@ -27,7 +27,7 @@
 | **SHIPPING-01**| Tích hợp Vận đơn Sandbox Giao Hàng Nhanh (GHN) | Backend / FE | **P2** | DTO/Service đã viết; Chờ GHN Token/Shop ID | Dễ/Vừa | ✅ (Khi có shop test) |
 | **FE-04** | Tích hợp `ImageUploader.vue` vào các trang Admin CMS | Frontend Web | **P2** | Component đã hoàn chỉnh; Các trang cần gắn | **Dễ** | ⭐⭐⭐ **(Rất thích hợp)** |
 | **A11Y-01** | Bổ sung Focus Trap & Phím tắt bàn phím cho Modal | Frontend Web | **P3** | Cần xử lý trải nghiệm trợ năng bàn phím | **Dễ** | ⭐⭐⭐ **(Rất thích hợp)** |
-| **TECHDEBT-02**| Xử lý 1.811 ESLint Warnings & Chuẩn hóa Types Backend| Backend | **P2** | 0 errors nhưng còn nợ type-safety | **Dễ** | ⭐⭐⭐ **(Rất thích hợp)** |
+| **TECHDEBT-02**| Xử lý 1.808 ESLint Warnings & Chuẩn hóa Types Backend| Backend | **P2** | 0 errors (1.808 warnings <= 1.816) | **Dễ** | ⭐⭐⭐ **(Rất thích hợp)** |
 | **RELIABILITY-01**| Transactional Outbox Pattern cho sự kiện sau commit | Backend | **P3** | Hiện tại là best-effort bắn socket sau commit | Khó | ⚠️ (Cần kinh nghiệm BE) |
 | **INFRA-01** | Kiểm thử Cụm Multi-instance Backend chia sẻ Redis | DevOps / BE | **P3** | Mã nguồn đã dùng Redis; Cần test tải cụm | Vừa | ❌ (Cần môi trường cloud) |
 
@@ -181,7 +181,7 @@
 - **Vai trò chính:** Backend Developer / Intern
 - **Độ ưu tiên:** P2 | **Độ khó:** Dễ (Cần sự tỉ mỉ)
 - **Bối cảnh hiện tại:**
-  - Backend NestJS hiện tại đạt **0 errors** nhưng còn **1.811 warnings** (ngân sách giới hạn là 1.816).
+  - Backend NestJS hiện tại đạt **0 errors** và **1.808 warnings** (ngân sách giới hạn là 1.816).
   - Phần lớn warnings xuất phát từ việc dùng kiểu `any` trong các file mock test hoặc các tham số callback Mongoose/ExcelJS.
 - **Công việc cần làm:**
   1. Chạy lệnh: `npm run lint` để quan sát danh sách các cảnh báo `@typescript-eslint/no-explicit-any`.
@@ -190,7 +190,15 @@
   4. Đảm bảo số lượng warnings giảm dần mà không làm hỏng code (chạy `npm test` sau mỗi lần sửa).
 - **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - [ ] Số lượng warnings giảm xuống dưới 1.500 (hoặc thấp hơn).
-  - [ ] Toàn bộ 423 unit tests vẫn **PASS 100%**.
+  - [ ] Toàn bộ 445 unit tests vẫn **PASS 100%** (bao gồm 20 tests mới cho module Banners/Popup).
+
+---
+
+### ✅ Hạng mục Đã Hoàn Thành: Entry Popup Advertisement (Quảng Cáo Mở Website)
+- **Mã tính năng:** `FEAT-ENTRY-POPUP`
+- **Trạng thái:** **HOÀN THÀNH 100%** (Full-stack Backend + Frontend + Admin CMS)
+- **Tài liệu đặc tả:** [`docs/ENTRY_POPUP_ADVERTISEMENT.md`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/docs/ENTRY_POPUP_ADVERTISEMENT.md)
+- **Kiểm thử:** 445/445 backend tests pass, 65/65 frontend tests pass, 0 lint errors, build clean.
 
 ---
 

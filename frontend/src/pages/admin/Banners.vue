@@ -3,8 +3,10 @@
     <!-- Page Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-black text-slate-900 tracking-tight">Quản lý Banner</h1>
-        <p class="text-xs text-slate-500 font-medium mt-1">Thêm, sửa, xóa & tự động cắt/căn chỉnh ảnh banner hiển thị chuẩn trên trang chủ</p>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight">Quản lý Banner & Popup</h1>
+        <p class="text-xs text-slate-500 font-medium mt-1">
+          Quản lý banner trang chủ và quảng cáo popup khi mở website cho Trường Thành Bookstore
+        </p>
       </div>
       <button
         @click="openCreateModal"
@@ -13,7 +15,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        Thêm Banner mới
+        Thêm Banner / Popup mới
       </button>
     </div>
 
@@ -50,37 +52,58 @@
       >
         <!-- Preview Container -->
         <div>
-          <div class="relative bg-slate-100 overflow-hidden aspect-[16/9] border-b border-slate-100">
+          <div
+            class="relative overflow-hidden border-b border-slate-100"
+            :class="banner.position === 'entry_popup' ? 'aspect-[4/3] bg-slate-950/90 flex items-center justify-center p-3' : 'aspect-[16/9] bg-slate-100'"
+          >
             <img
               :src="banner.imageUrl"
               :alt="banner.title"
-              class="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+              class="transition-transform duration-300 group-hover:scale-105"
+              :class="banner.position === 'entry_popup' ? 'max-h-full max-w-full object-contain rounded-lg shadow-md' : 'w-full h-full object-cover object-center'"
             />
             <!-- Status Badge -->
-            <div class="absolute top-2 left-2">
+            <div class="absolute top-2 left-2 flex items-center gap-1.5">
               <span
-                class="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider shadow-xs"
-                :class="banner.isActive ? 'bg-emerald-500 text-white' : 'bg-slate-500 text-white'"
+                class="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider shadow-xs flex items-center gap-1"
+                :class="getBannerStatus(banner).colorClass"
               >
-                {{ banner.isActive ? 'Đang hiện' : 'Đã ẩn' }}
+                <span>{{ getBannerStatus(banner).icon }}</span>
+                <span>{{ getBannerStatus(banner).label }}</span>
               </span>
             </div>
             <!-- Position Badge -->
             <div class="absolute top-2 right-2">
-              <span class="text-[10px] font-black px-2.5 py-1 rounded-lg bg-black/60 text-white backdrop-blur-xs uppercase tracking-wider">
-                {{ getPositionLabel(banner.position) }}
+              <span
+                class="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider shadow-xs"
+                :class="banner.position === 'entry_popup' ? 'bg-[#dc2626] text-white shadow-red-900/30' : 'bg-black/60 text-white backdrop-blur-xs'"
+              >
+                {{ banner.position === 'entry_popup' ? '🚀 POPUP' : getPositionLabel(banner.position) }}
               </span>
             </div>
           </div>
 
           <!-- Info -->
           <div class="p-4 space-y-2">
-            <h3 class="text-sm font-extrabold text-slate-800 truncate">{{ banner.title }}</h3>
+            <div class="flex items-start justify-between gap-2">
+              <h3 class="text-sm font-extrabold text-slate-800 truncate flex-1">{{ banner.title }}</h3>
+              <span v-if="banner.position === 'entry_popup'" class="text-[10px] font-bold px-2 py-0.5 rounded bg-red-50 text-red-700 flex-shrink-0">
+                CTA: "{{ banner.ctaLabel || 'Mở' }}"
+              </span>
+            </div>
+
             <p v-if="banner.linkUrl" class="text-[10px] text-slate-400 font-medium truncate">Link: {{ banner.linkUrl }}</p>
-            <div class="text-[10px] text-slate-400 font-semibold flex items-center gap-2">
-              <span>Thứ tự: {{ banner.sortOrder }}</span>
+
+            <div class="text-[10px] text-slate-400 font-semibold flex flex-wrap items-center gap-2">
+              <span v-if="banner.position === 'entry_popup'">Tần suất: {{ getFrequencyLabel(banner.frequency) }}</span>
+              <span v-else>Tỷ lệ: {{ getPositionInfo(banner.position).ratioText }}</span>
               <span>•</span>
-              <span>Tỷ lệ: {{ getPositionInfo(banner.position).ratioText }}</span>
+              <span>Thứ tự: {{ banner.sortOrder }}</span>
+            </div>
+
+            <div v-if="banner.position === 'entry_popup' && (banner.startAt || banner.endAt)" class="text-[10px] text-slate-500 font-medium bg-slate-50 p-2 rounded-lg space-y-0.5">
+              <div v-if="banner.startAt">📅 Bắt đầu: {{ formatDisplayDate(banner.startAt) }}</div>
+              <div v-if="banner.endAt">⌛ Kết thúc: {{ formatDisplayDate(banner.endAt) }}</div>
             </div>
           </div>
         </div>
@@ -96,6 +119,19 @@
           </button>
 
           <div class="flex items-center gap-1.5">
+            <!-- Preview Button (Especially useful for entry popups) -->
+            <button
+              v-if="banner.position === 'entry_popup'"
+              @click="openPreviewModal(banner)"
+              class="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer"
+              title="Xem thử Popup như trên storefront"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+            </button>
+
             <!-- Edit -->
             <button
               @click="openEditModal(banner)"
@@ -125,12 +161,12 @@
     <div v-else class="text-center py-20 bg-white rounded-2xl border border-slate-100">
       <div class="text-5xl mb-4">🖼️</div>
       <h3 class="text-lg font-extrabold text-slate-800">Chưa có banner nào</h3>
-      <p class="text-xs text-slate-500 mt-1 font-medium">Bắt đầu thêm banner quảng cáo cho trang chủ</p>
+      <p class="text-xs text-slate-500 mt-1 font-medium">Bắt đầu thêm banner hoặc popup quảng cáo cho website</p>
       <button
         @click="openCreateModal"
         class="mt-4 bg-[#dc2626] hover:bg-[#b91c1c] text-white font-extrabold text-xs py-2.5 px-5 rounded-xl transition-all cursor-pointer"
       >
-        + Thêm Banner đầu tiên
+        + Thêm Banner / Popup đầu tiên
       </button>
     </div>
 
@@ -140,7 +176,14 @@
       <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
         <!-- Modal Header -->
         <div class="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 rounded-t-2xl z-10 flex items-center justify-between">
-          <h2 class="text-lg font-black text-slate-900">{{ editingBanner ? 'Sửa Banner' : 'Thêm Banner mới' }}</h2>
+          <div>
+            <h2 class="text-lg font-black text-slate-900">
+              {{ form.position === 'entry_popup' ? (editingBanner ? 'Sửa Popup Quảng Cáo' : 'Tạo Popup Quảng Cáo Mới') : (editingBanner ? 'Sửa Banner' : 'Thêm Banner mới') }}
+            </h2>
+            <p v-if="form.position === 'entry_popup'" class="text-[11px] text-slate-400 font-medium">
+              Quảng cáo tự động xuất hiện phủ phía trên website khi khách hàng truy cập
+            </p>
+          </div>
           <button @click="showModal = false" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -150,7 +193,7 @@
 
         <!-- Modal Body -->
         <div class="p-6 space-y-5">
-          <!-- Position Selection First to dictate aspect ratio -->
+          <!-- Position Selection -->
           <div>
             <label class="block text-xs font-extrabold text-slate-700 mb-1.5">Vị trí hiển thị *</label>
             <select
@@ -164,27 +207,84 @@
             </select>
           </div>
 
-          <!-- Position Aspect Ratio Guideline Box -->
-          <div class="bg-amber-50 border border-amber-200/70 rounded-xl p-3 flex items-start gap-2.5">
-            <span class="text-lg">💡</span>
-            <div class="text-xs text-amber-900 font-medium">
-              <span class="font-bold">Quy chuẩn ảnh cho "{{ getPositionLabel(form.position) }}":</span>
-              <p class="mt-0.5 text-amber-800">
+          <!-- Position Guideline Box -->
+          <div
+            class="rounded-xl p-3 flex items-start gap-2.5 border"
+            :class="form.position === 'entry_popup' ? 'bg-red-50/70 border-red-200/80 text-red-950' : 'bg-amber-50 border-amber-200/70 text-amber-900'"
+          >
+            <span class="text-lg">{{ form.position === 'entry_popup' ? '🚀' : '💡' }}</span>
+            <div class="text-xs font-medium">
+              <span class="font-bold">Quy chuẩn cho "{{ getPositionLabel(form.position) }}":</span>
+              <p v-if="form.position === 'entry_popup'" class="mt-0.5 text-red-900/90 leading-relaxed">
+                Ảnh popup giữ nguyên tỷ lệ tự nhiên, không bắt buộc cắt cố định. Khuyến nghị ảnh dạng poster (kích thước ~800x1000px hoặc 800x800px).
+              </p>
+              <p v-else class="mt-0.5 text-amber-800">
                 Tỷ lệ hiển thị: <span class="font-extrabold text-amber-950">{{ currentPosInfo.ratioText }}</span> — Kích thước đề xuất: <span class="font-extrabold text-amber-950">{{ currentPosInfo.recommendedDim }}</span>.
               </p>
             </div>
           </div>
 
-          <!-- Image Upload / Preview / Crop Button -->
+          <!-- Image Upload & Live Preview -->
           <div>
-            <label class="block text-xs font-extrabold text-slate-700 mb-2">Ảnh Banner *</label>
+            <label class="block text-xs font-extrabold text-slate-700 mb-2">
+              {{ form.position === 'entry_popup' ? 'Ảnh Quảng Cáo Popup *' : 'Ảnh Banner *' }}
+            </label>
 
             <!-- Preview Card if Image Loaded -->
             <div v-if="form.imageUrl" class="space-y-2">
+              <!-- If Entry Popup: Show simulated storefront interstitial ad -->
               <div
+                v-if="form.position === 'entry_popup'"
+                class="relative rounded-2xl overflow-hidden bg-slate-950/95 p-5 border border-slate-800 shadow-2xl flex flex-col items-center"
+              >
+                <!-- Mini Storefront Close icon -->
+                <div class="w-full flex justify-end pb-2">
+                  <span class="w-7 h-7 rounded-full bg-white/20 text-white flex items-center justify-center text-xs font-black shadow-xs">✕</span>
+                </div>
+                <!-- Image -->
+                <img
+                  :src="form.imageUrl"
+                  class="max-h-60 w-auto object-contain rounded-xl shadow-lg border border-white/10"
+                />
+                <!-- Simulated CTA Button -->
+                <div class="mt-3">
+                  <span class="bg-[#dc2626] text-white text-xs font-black px-6 py-2 rounded-xl shadow-md inline-flex items-center gap-1.5">
+                    {{ form.ctaLabel || 'Mở' }}
+                  </span>
+                </div>
+                <!-- Simulator Tag -->
+                <div class="absolute top-2 left-2">
+                  <span class="text-[9px] font-black px-2 py-0.5 rounded bg-black/70 text-slate-300 backdrop-blur-xs uppercase">
+                    Mô phỏng Storefront
+                  </span>
+                </div>
+                <!-- Edit / Remove Actions -->
+                <div class="absolute bottom-2 right-2 flex items-center gap-1.5">
+                  <button
+                    @click="openCropperWithCurrentImage"
+                    type="button"
+                    class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-md transition-all cursor-pointer"
+                  >
+                    ✂️ Cắt lại
+                  </button>
+                  <button
+                    @click="form.imageUrl = ''; rawImageSrc = ''"
+                    type="button"
+                    class="bg-red-500 hover:bg-red-600 text-white p-1 rounded-lg shadow-md transition-all cursor-pointer"
+                    title="Xóa ảnh"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Regular Homepage Banner Simulated Box -->
+              <div
+                v-else
                 class="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center p-2"
               >
-                <!-- Simulated Homepage Box Preview -->
                 <div
                   class="w-full relative overflow-hidden rounded-lg border border-slate-300/60 shadow-xs"
                   :style="{ aspectRatio: currentPosInfo.aspectRatio }"
@@ -211,8 +311,9 @@
                   </button>
                 </div>
               </div>
+
               <p class="text-[11px] text-slate-400 font-semibold text-center">
-                ✅ Ảnh đã được căn khớp tỷ lệ chuẩn {{ currentPosInfo.ratioText }} cho trang chủ
+                {{ form.position === 'entry_popup' ? '✅ Ảnh popup giữ tỷ lệ tự nhiên đẹp mắt' : `✅ Ảnh đã được căn khớp tỷ lệ chuẩn ${currentPosInfo.ratioText}` }}
               </p>
             </div>
 
@@ -225,32 +326,117 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
               </svg>
               <span class="text-xs font-bold text-slate-600">Click để chọn ảnh từ máy tính</span>
-              <span class="text-[10px] text-slate-400 mt-1">Hệ thống sẽ tự động mở công cụ Cắt & Căn chỉnh ảnh vừa vặn</span>
+              <span class="text-[10px] text-slate-400 mt-1">
+                {{ form.position === 'entry_popup' ? 'Hỗ trợ PNG, JPG, WEBP (tối đa 8MB) — giữ nguyên tỷ lệ ảnh gốc' : 'Hệ thống tự động mở công cụ Cắt & Căn chỉnh ảnh chuẩn' }}
+              </span>
               <input type="file" accept="image/*" class="hidden" @change="handleImageFileSelected" />
             </label>
           </div>
 
           <!-- Title -->
           <div>
-            <label class="block text-xs font-extrabold text-slate-700 mb-1.5">Tiêu đề *</label>
+            <label class="block text-xs font-extrabold text-slate-700 mb-1.5">
+              {{ form.position === 'entry_popup' ? 'Tên quảng cáo *' : 'Tiêu đề banner *' }}
+            </label>
             <input
               v-model="form.title"
               type="text"
-              placeholder="VD: Banner tựu trường 2026"
+              :placeholder="form.position === 'entry_popup' ? 'VD: Khuyến mãi Khai trương mùa tựu trường' : 'VD: Banner tựu trường 2026'"
               class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] transition-all"
             />
           </div>
 
           <!-- Link URL -->
           <div>
-            <label class="block text-xs font-extrabold text-slate-700 mb-1.5">Link khi click (tùy chọn)</label>
+            <label class="block text-xs font-extrabold text-slate-700 mb-1.5">URL khi click (tùy chọn)</label>
             <input
               v-model="form.linkUrl"
               type="text"
-              placeholder="VD: /products?discounted=true"
+              placeholder="VD: /products?discounted=true hoặc https://..."
               class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] transition-all"
             />
           </div>
+
+          <!-- Entry Popup Specific Fields -->
+          <template v-if="form.position === 'entry_popup'">
+            <!-- CTA Label -->
+            <div>
+              <label class="block text-xs font-extrabold text-slate-700 mb-1.5">Nhãn nút hành động (CTA)</label>
+              <input
+                v-model="form.ctaLabel"
+                type="text"
+                placeholder="VD: Mở, Xem ngay, Nhận ưu đãi"
+                class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] transition-all"
+              />
+            </div>
+
+            <!-- Frequency -->
+            <div>
+              <label class="block text-xs font-extrabold text-slate-700 mb-1.5">Tần suất hiển thị *</label>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <label
+                  class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer text-xs font-bold transition-all"
+                  :class="form.frequency === 'EVERY_VISIT' ? 'border-[#dc2626] bg-red-50/50 text-red-700 shadow-xs' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
+                >
+                  <input type="radio" v-model="form.frequency" value="EVERY_VISIT" class="accent-[#dc2626]" />
+                  <span>Mỗi lần truy cập</span>
+                </label>
+                <label
+                  class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer text-xs font-bold transition-all"
+                  :class="form.frequency === 'ONCE_PER_SESSION' ? 'border-[#dc2626] bg-red-50/50 text-red-700 shadow-xs' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
+                >
+                  <input type="radio" v-model="form.frequency" value="ONCE_PER_SESSION" class="accent-[#dc2626]" />
+                  <span>Một lần / phiên</span>
+                </label>
+                <label
+                  class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer text-xs font-bold transition-all"
+                  :class="form.frequency === 'ONCE_PER_DAY' ? 'border-[#dc2626] bg-red-50/50 text-red-700 shadow-xs' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
+                >
+                  <input type="radio" v-model="form.frequency" value="ONCE_PER_DAY" class="accent-[#dc2626]" />
+                  <span>Một lần / ngày</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Schedule: Start and End Datetime -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-extrabold text-slate-700 mb-1.5">Thời gian bắt đầu (tùy chọn)</label>
+                <input
+                  v-model="form.startAt"
+                  type="datetime-local"
+                  class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] transition-all bg-white"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-extrabold text-slate-700 mb-1.5">Thời gian kết thúc (tùy chọn)</label>
+                <input
+                  v-model="form.endAt"
+                  type="datetime-local"
+                  class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] transition-all bg-white"
+                />
+              </div>
+            </div>
+
+            <!-- Closeable Toggle -->
+            <div class="flex items-center justify-between pt-1">
+              <div>
+                <span class="text-xs font-extrabold text-slate-700 block">Cho phép khách hàng đóng popup</span>
+                <span class="text-[10px] text-slate-400 font-medium">Hiện nút Đóng (✕) và hỗ trợ phím ESC</span>
+              </div>
+              <button
+                @click="form.closeable = !form.closeable"
+                type="button"
+                class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
+                :class="form.closeable ? 'bg-emerald-500' : 'bg-slate-300'"
+              >
+                <div
+                  class="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-xs transition-transform"
+                  :class="form.closeable ? 'translate-x-5.5' : 'translate-x-0.5'"
+                ></div>
+              </button>
+            </div>
+          </template>
 
           <!-- Sort Order -->
           <div>
@@ -266,7 +452,14 @@
 
           <!-- Active Toggle -->
           <div class="flex items-center justify-between pt-2">
-            <span class="text-xs font-extrabold text-slate-700">Hiển thị banner ngay</span>
+            <div>
+              <span class="text-xs font-extrabold text-slate-700 block">
+                {{ form.position === 'entry_popup' ? 'Kích hoạt popup ngay' : 'Hiển thị banner ngay' }}
+              </span>
+              <span v-if="form.position === 'entry_popup'" class="text-[10px] text-slate-400 font-medium">
+                Khách hàng vào website sẽ thấy popup này theo tần suất cấu hình
+              </span>
+            </div>
             <button
               @click="form.isActive = !form.isActive"
               type="button"
@@ -278,6 +471,17 @@
                 :class="form.isActive ? 'translate-x-5.5' : 'translate-x-0.5'"
               ></div>
             </button>
+          </div>
+
+          <!-- Notice for single active popup -->
+          <div
+            v-if="form.position === 'entry_popup'"
+            class="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-start gap-2"
+          >
+            <span class="text-base">💡</span>
+            <p class="font-medium text-[11px] leading-relaxed">
+              <span class="font-bold">Quy tắc tự động:</span> Chỉ có tối đa 1 Popup quảng cáo hoạt động cùng một thời điểm. Khi kích hoạt popup này, hệ thống sẽ tự động tắt các popup khác đang chạy.
+            </p>
           </div>
         </div>
 
@@ -300,7 +504,52 @@
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
-            {{ editingBanner ? 'Cập nhật Banner' : 'Tạo Banner' }}
+            {{ editingBanner ? 'Cập nhật' : (form.position === 'entry_popup' ? 'Tạo Popup' : 'Tạo Banner') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Storefront Full Preview Modal for Admin -->
+    <div
+      v-if="previewingPopup"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs select-none"
+      @click.self="closePreviewModal"
+    >
+      <div class="relative w-full max-w-[92vw] sm:max-w-[700px] flex flex-col items-center">
+        <!-- Close Preview -->
+        <div class="w-full flex justify-between items-center pb-3">
+          <span class="text-xs font-black text-white/90 bg-black/50 px-3 py-1 rounded-lg backdrop-blur-xs">
+            👁️ Đang xem trước Popup ngoài Storefront
+          </span>
+          <button
+            @click="closePreviewModal"
+            class="w-10 h-10 rounded-full bg-white/20 hover:bg-white text-white hover:text-slate-900 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all cursor-pointer"
+            title="Đóng xem trước"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Ad Image -->
+        <div class="relative w-full rounded-3xl overflow-hidden bg-slate-900 border border-white/20 shadow-2xl flex flex-col items-center">
+          <img
+            :src="previewingPopup.imageUrl"
+            :alt="previewingPopup.title"
+            class="w-full h-auto max-h-[70vh] object-contain"
+          />
+        </div>
+
+        <!-- CTA Button -->
+        <div class="mt-4 flex items-center justify-center w-full">
+          <button
+            @click="closePreviewModal"
+            class="bg-[#dc2626] text-white font-black text-sm sm:text-base px-10 py-3.5 rounded-2xl shadow-xl hover:bg-[#b91c1c] transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <span>{{ previewingPopup.ctaLabel || 'MỞ / XEM NGAY' }}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
           </button>
         </div>
       </div>
@@ -472,6 +721,7 @@ const showModal = ref(false)
 const showDeleteConfirm = ref(false)
 const editingBanner = ref<any>(null)
 const deletingBanner = ref<any>(null)
+const previewingPopup = ref<any>(null)
 const filterPosition = ref('all')
 
 // Cropper state
@@ -495,6 +745,7 @@ const positionOptions = [
   { value: 'sidebar_right_top', label: '▶️ Sidebar phải trên (2:1)' },
   { value: 'sidebar_right_bottom', label: '▶️ Sidebar phải dưới (2:1)' },
   { value: 'bottom_row', label: '⬇️ Banner hàng dưới (2.5:1)' },
+  { value: 'entry_popup', label: '🚀 Popup khi mở website' },
 ]
 
 const positionSpecs: Record<string, { ratio: number; ratioText: string; recommendedDim: string; aspectRatio: string }> = {
@@ -503,6 +754,7 @@ const positionSpecs: Record<string, { ratio: number; ratioText: string; recommen
   sidebar_right_top: { ratio: 2 / 1, ratioText: '2:1', recommendedDim: '600 x 300px', aspectRatio: '2/1' },
   sidebar_right_bottom: { ratio: 2 / 1, ratioText: '2:1', recommendedDim: '600 x 300px', aspectRatio: '2/1' },
   bottom_row: { ratio: 2.5 / 1, ratioText: '2.5:1', recommendedDim: '600 x 240px', aspectRatio: '2.5/1' },
+  entry_popup: { ratio: 1, ratioText: 'Tỷ lệ tự do', recommendedDim: '800 x 1000px hoặc 800 x 800px', aspectRatio: 'auto' },
 }
 
 const defaultForm = () => ({
@@ -512,6 +764,11 @@ const defaultForm = () => ({
   position: 'main_slider',
   sortOrder: 0,
   isActive: true,
+  frequency: 'EVERY_VISIT',
+  startAt: '',
+  endAt: '',
+  ctaLabel: 'Mở',
+  closeable: true,
 })
 
 const form = ref(defaultForm())
@@ -534,10 +791,68 @@ function getPositionInfo(pos: string) {
   return positionSpecs[pos] || positionSpecs.main_slider
 }
 
+function getFrequencyLabel(freq?: string) {
+  switch (freq) {
+    case 'ONCE_PER_SESSION':
+      return '1 lần / phiên'
+    case 'ONCE_PER_DAY':
+      return '1 lần / ngày'
+    case 'EVERY_VISIT':
+    default:
+      return 'Mỗi lần truy cập'
+  }
+}
+
+function getBannerStatus(banner: any) {
+  if (!banner.isActive) {
+    return { label: 'Đã tắt', colorClass: 'bg-slate-500 text-white', icon: '○' }
+  }
+  const now = Date.now()
+  if (banner.startAt && new Date(banner.startAt).getTime() > now) {
+    return { label: 'Đã lên lịch', colorClass: 'bg-amber-500 text-white', icon: '⏰' }
+  }
+  if (banner.endAt && new Date(banner.endAt).getTime() < now) {
+    return { label: 'Hết hạn', colorClass: 'bg-rose-500 text-white', icon: '⌛' }
+  }
+  return { label: 'Đang chạy', colorClass: 'bg-emerald-500 text-white', icon: '●' }
+}
+
+function formatDisplayDate(dateStr: string) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatForDateTimeLocal(dateStr: string | Date | undefined): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 function onPositionChange() {
+  if (form.value.position === 'entry_popup') {
+    return
+  }
   if (rawImageSrc.value && form.value.imageUrl) {
     openCropperModalWithSrc(rawImageSrc.value || form.value.imageUrl)
   }
+}
+
+function openPreviewModal(banner: any) {
+  previewingPopup.value = banner
+}
+
+function closePreviewModal() {
+  previewingPopup.value = null
 }
 
 async function fetchBanners() {
@@ -569,6 +884,11 @@ function openEditModal(banner: any) {
     position: banner.position,
     sortOrder: banner.sortOrder || 0,
     isActive: banner.isActive,
+    frequency: banner.frequency || 'EVERY_VISIT',
+    startAt: formatForDateTimeLocal(banner.startAt),
+    endAt: formatForDateTimeLocal(banner.endAt),
+    ctaLabel: banner.ctaLabel || 'Mở',
+    closeable: banner.closeable !== false,
   }
   rawImageSrc.value = banner.imageUrl
   showModal.value = true
@@ -586,7 +906,12 @@ function handleImageFileSelected(event: Event) {
   reader.onload = (e) => {
     const src = e.target?.result as string
     rawImageSrc.value = src
-    openCropperModalWithSrc(src)
+    if (form.value.position === 'entry_popup') {
+      form.value.imageUrl = src
+      toast.success('Đã chọn ảnh quảng cáo popup')
+    } else {
+      openCropperModalWithSrc(src)
+    }
   }
   reader.readAsDataURL(file)
 }
@@ -632,7 +957,7 @@ function updateCanvas() {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  const targetRatio = currentPosInfo.value.ratio
+  const targetRatio = currentPosInfo.value.ratio || 1
   const canvasWidth = 560
   const canvasHeight = Math.round(canvasWidth / targetRatio)
 
@@ -700,17 +1025,34 @@ async function saveBanner() {
   }
   saving.value = true
   try {
+    const payload: any = {
+      title: form.value.title.trim(),
+      imageUrl: form.value.imageUrl,
+      linkUrl: form.value.linkUrl ? form.value.linkUrl.trim() : '',
+      position: form.value.position,
+      sortOrder: form.value.sortOrder || 0,
+      isActive: form.value.isActive,
+    }
+
+    if (form.value.position === 'entry_popup') {
+      payload.frequency = form.value.frequency || 'EVERY_VISIT'
+      payload.ctaLabel = form.value.ctaLabel ? form.value.ctaLabel.trim() : 'Mở'
+      payload.closeable = form.value.closeable !== false
+      payload.startAt = form.value.startAt ? new Date(form.value.startAt).toISOString() : null
+      payload.endAt = form.value.endAt ? new Date(form.value.endAt).toISOString() : null
+    }
+
     if (editingBanner.value) {
-      await bannerService.update(editingBanner.value._id, form.value)
+      await bannerService.update(editingBanner.value._id, payload)
       toast.success('Đã cập nhật banner thành công')
     } else {
-      await bannerService.create(form.value)
+      await bannerService.create(payload)
       toast.success('Đã tạo banner mới thành công')
     }
     showModal.value = false
     await fetchBanners()
   } catch (err: any) {
-    toast.error(err?.message || 'Lỗi lưu banner')
+    toast.error(err?.response?.data?.message || err?.message || 'Lỗi lưu banner')
   } finally {
     saving.value = false
   }
@@ -718,11 +1060,17 @@ async function saveBanner() {
 
 async function toggleActive(banner: any) {
   try {
-    await bannerService.update(banner._id, { isActive: !banner.isActive })
-    banner.isActive = !banner.isActive
-    toast.success(banner.isActive ? 'Đã hiện banner' : 'Đã ẩn banner')
-  } catch (err) {
-    toast.error('Lỗi cập nhật trạng thái')
+    const newActive = !banner.isActive
+    await bannerService.update(banner._id, { isActive: newActive })
+    banner.isActive = newActive
+    if (banner.position === 'entry_popup' && newActive) {
+      toast.success('Đã bật Popup! Các popup khác đã được tự động tắt.')
+      await fetchBanners()
+    } else {
+      toast.success(banner.isActive ? 'Đã hiện banner' : 'Đã ẩn banner')
+    }
+  } catch (err: any) {
+    toast.error(err?.response?.data?.message || 'Lỗi cập nhật trạng thái')
   }
 }
 
