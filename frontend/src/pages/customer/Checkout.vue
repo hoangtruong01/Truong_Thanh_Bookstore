@@ -162,7 +162,7 @@
             
             <div v-if="cartStore.appliedPromotion" class="bg-green-50 border border-green-200 rounded-xl p-3 flex justify-between items-center">
               <div class="text-xs text-green-800 font-medium">
-                <p class="font-bold">Đã áp dụng: {{ cartStore.appliedPromotion.code }}</p>
+                <p class="font-bold">Đã áp dụng: {{ (cartStore.appliedPromotion as any)?.code }}</p>
                 <p>Giảm {{ formatCurrency(cartStore.discountAmount) }}</p>
               </div>
               <button @click="cartStore.removeCoupon" class="text-xs font-bold text-red-600 hover:underline">Gỡ</button>
@@ -177,10 +177,16 @@
                 class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white font-mono uppercase tracking-wider"
               />
               <button 
+                type="button"
                 @click="handleApplyCoupon" 
-                class="bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+                :disabled="isApplyingCoupon"
+                class="bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center gap-1.5"
               >
-                Áp dụng
+                <svg v-if="isApplyingCoupon" class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>{{ isApplyingCoupon ? 'Đang kiểm tra...' : 'Áp dụng' }}</span>
               </button>
             </div>
             <p v-if="cartStore.promoError" class="text-[10px] text-red-500 font-medium mt-1">{{ cartStore.promoError }}</p>
@@ -222,11 +228,12 @@
                     <p class="text-[9px] text-slate-400 mt-0.5 font-medium">Đơn tối thiểu: {{ formatCurrency(promo.minOrderValue) }}</p>
                   </div>
                   <button 
+                    type="button"
                     @click="applySuggestedCoupon(promo.code)"
-                    :disabled="cartStore.subtotal < promo.minOrderValue"
+                    :disabled="isApplyingCoupon || cartStore.subtotal < promo.minOrderValue"
                     class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2.5 rounded-lg text-[10px] transition-colors disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    Dùng
+                    {{ isApplyingCoupon ? '...' : 'Dùng' }}
                   </button>
                 </div>
               </div>
@@ -306,11 +313,16 @@
           </div>
 
           <button
+            type="button"
             @click="placeOrder"
-            :disabled="submitting || checkoutItems.length === 0 || (!!shippingInfo.phone && !isPhoneValid)"
+            :disabled="submitting || isPlacingOrder || checkoutItems.length === 0 || (!!shippingInfo.phone && !isPhoneValid)"
             class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3.5 px-6 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none cursor-pointer"
           >
-            {{ submitting ? 'Đang xử lý...' : 'Đặt hàng ngay' }}
+            <svg v-if="submitting || isPlacingOrder" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>{{ (submitting || isPlacingOrder) ? 'Đang xử lý đơn hàng...' : 'Đặt hàng ngay' }}</span>
           </button>
         </div>
       </div>
@@ -332,6 +344,7 @@ import { formatCurrency, getEffectivePrice } from '@/utils/helpers'
 import { promotionService } from '@/services/promotion.service'
 import type { Promotion, Address } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
+import { useDoubleSubmit } from '@/composables/useDoubleSubmit'
 
 useSeoMeta({
   title: 'Thanh toán đơn hàng',
@@ -342,6 +355,8 @@ const cartStore = useCartStore()
 const authStore = useAuthStore()
 const toast = useToast()
 const router = useRouter()
+const { isSubmitting: isPlacingOrder, runProtected: runProtectedOrder } = useDoubleSubmit({ cooldownMs: 1000 })
+const isApplyingCoupon = ref(false)
 
 const checkoutItems = computed(() => cartStore.items.filter(item => item.selected !== false))
 
@@ -457,22 +472,33 @@ function onPhoneInput(e: Event) {
 }
 
 async function handleApplyCoupon() {
-  if (!couponCode.value.trim()) return
-  const success = await cartStore.applyCoupon(couponCode.value.trim().toUpperCase())
-  if (success) {
-    toast.success('Áp dụng mã giảm giá thành công!')
-    couponCode.value = ''
-  } else {
-    toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+  if (!couponCode.value.trim() || isApplyingCoupon.value) return
+  isApplyingCoupon.value = true
+  try {
+    const success = await cartStore.applyCoupon(couponCode.value.trim().toUpperCase())
+    if (success) {
+      toast.success('Áp dụng mã giảm giá thành công!')
+      couponCode.value = ''
+    } else {
+      toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+    }
+  } finally {
+    isApplyingCoupon.value = false
   }
 }
 
 async function applySuggestedCoupon(code: string) {
-  const success = await cartStore.applyCoupon(code)
-  if (success) {
-    toast.success('Áp dụng mã giảm giá thành công!')
-  } else {
-    toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+  if (isApplyingCoupon.value) return
+  isApplyingCoupon.value = true
+  try {
+    const success = await cartStore.applyCoupon(code)
+    if (success) {
+      toast.success('Áp dụng mã giảm giá thành công!')
+    } else {
+      toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+    }
+  } finally {
+    isApplyingCoupon.value = false
   }
 }
 
@@ -493,86 +519,88 @@ onMounted(async () => {
 })
 
 async function placeOrder() {
-  if (loyaltyError.value) {
-    toast.warning(loyaltyError.value)
-    return
-  }
-  if (!shippingInfo.fullName || !shippingInfo.phone || !shippingInfo.email || !shippingInfo.address) {
-    toast.warning('Vui lòng điền đầy đủ thông tin giao hàng')
-    return
-  }
-  submitting.value = true
-  try {
-    const items = checkoutItems.value.map(item => ({
-      product: item.product._id,
-      name: item.product.name,
-      price: getEffectivePrice(item.product.price, item.product.discountPrice),
-      quantity: item.quantity,
-      image: item.product.images?.[0] || '',
-    }))
-
-    const orderData: any = {
-      items,
-      shippingAddress: shippingInfo.address,
-      phone: shippingInfo.phone,
-      note: shippingInfo.note || undefined,
-      paymentMethod: paymentMethod.value,
-      promotionCode: cartStore.appliedPromotion?.code || undefined,
-      loyaltyPointsUsed: loyaltyPointsToSpend.value > 0 ? loyaltyPointsToSpend.value : undefined,
-      customerName: shippingInfo.fullName,
-      customerEmail: shippingInfo.email,
-      idempotencyKey: checkoutIdempotencyKey,
+  return runProtectedOrder(async () => {
+    if (loyaltyError.value) {
+      toast.warning(loyaltyError.value)
+      return
     }
+    if (!shippingInfo.fullName || !shippingInfo.phone || !shippingInfo.email || !shippingInfo.address) {
+      toast.warning('Vui lòng điền đầy đủ thông tin giao hàng')
+      return
+    }
+    submitting.value = true
+    try {
+      const items = checkoutItems.value.map(item => ({
+        product: item.product._id,
+        name: item.product.name,
+        price: getEffectivePrice(item.product.price, item.product.discountPrice),
+        quantity: item.quantity,
+        image: item.product.images?.[0] || '',
+      }))
 
-    // Pre-checkout safe validation
-    const previewRes = await orderService.checkoutPreview(orderData)
-    const previewData = previewRes.data?.data || previewRes.data
-    if (previewData && previewData.warnings && previewData.warnings.length > 0) {
-      toast.warning(previewData.warnings.join(' | '))
-      if (!previewData.isValidForCheckout) {
-        submitting.value = false
-        return
+      const orderData: any = {
+        items,
+        shippingAddress: shippingInfo.address,
+        phone: shippingInfo.phone,
+        note: shippingInfo.note || undefined,
+        paymentMethod: paymentMethod.value,
+        promotionCode: cartStore.appliedPromotion?.code || undefined,
+        loyaltyPointsUsed: loyaltyPointsToSpend.value > 0 ? loyaltyPointsToSpend.value : undefined,
+        customerName: shippingInfo.fullName,
+        customerEmail: shippingInfo.email,
+        idempotencyKey: checkoutIdempotencyKey,
       }
-    }
 
-    let response: any
-    if (authStore.isAuthenticated) {
-      response = await orderService.createAuthenticated(orderData)
-    } else {
-      response = await orderService.create(orderData)
-    }
-
-    orderCode.value = response.data.data?.orderCode || response.data.orderCode
-    const orderId = response.data.data?._id || response.data._id
-    createdOrderId.value = orderId
-
-    const guestToken = response.data.data?.guestAccessToken || response.data.guestAccessToken
-    if (!authStore.isAuthenticated && guestToken) {
-      localStorage.setItem(`guest-order-token:${orderId}`, guestToken)
-    }
-
-    if (authStore.isAuthenticated && paymentMethod.value !== 'COD') {
-      const paymentRes: any = await paymentService.create(
-        orderId,
-        paymentMethod.value,
-        `${window.location.origin}/my-orders/${orderId}`,
-      )
-      const action = paymentRes.data?.data?.action || paymentRes.data?.action
-      if (action?.instructions) toast.info(action.instructions, { timeout: 12000 })
-      if (action?.redirectUrl) {
-        window.location.assign(action.redirectUrl)
-        return
+      // Pre-checkout safe validation
+      const previewRes = await orderService.checkoutPreview(orderData)
+      const previewData = previewRes.data?.data || previewRes.data
+      if (previewData && previewData.warnings && previewData.warnings.length > 0) {
+        toast.warning(previewData.warnings.join(' | '))
+        if (!previewData.isValidForCheckout) {
+          submitting.value = false
+          return
+        }
       }
-    }
 
-    sessionStorage.removeItem('checkout-idempotency-key')
-    orderSuccess.value = true
-    cartStore.clearCheckedOutItems()
-  } catch (err: any) {
-    const errorMsg = err.response?.data?.message || err.message || 'Đặt hàng thất bại. Vui lòng kiểm tra lại tồn kho sản phẩm.'
-    toast.error(errorMsg)
-  } finally {
-    submitting.value = false
-  }
+      let response: any
+      if (authStore.isAuthenticated) {
+        response = await orderService.createAuthenticated(orderData)
+      } else {
+        response = await orderService.create(orderData)
+      }
+
+      orderCode.value = response.data.data?.orderCode || response.data.orderCode
+      const orderId = response.data.data?._id || response.data._id
+      createdOrderId.value = orderId
+
+      const guestToken = response.data.data?.guestAccessToken || response.data.guestAccessToken
+      if (!authStore.isAuthenticated && guestToken) {
+        localStorage.setItem(`guest-order-token:${orderId}`, guestToken)
+      }
+
+      if (authStore.isAuthenticated && paymentMethod.value !== 'COD') {
+        const paymentRes: any = await paymentService.create(
+          orderId,
+          paymentMethod.value,
+          `${window.location.origin}/my-orders/${orderId}`,
+        )
+        const action = paymentRes.data?.data?.action || paymentRes.data?.action
+        if (action?.instructions) toast.info(action.instructions, { timeout: 12000 })
+        if (action?.redirectUrl) {
+          window.location.assign(action.redirectUrl)
+          return
+        }
+      }
+
+      sessionStorage.removeItem('checkout-idempotency-key')
+      orderSuccess.value = true
+      cartStore.clearCheckedOutItems()
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.message || 'Đặt hàng thất bại. Vui lòng kiểm tra lại tồn kho sản phẩm.'
+      toast.error(errorMsg)
+    } finally {
+      submitting.value = false
+    }
+  })
 }
 </script>

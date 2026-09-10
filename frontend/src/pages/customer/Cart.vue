@@ -13,18 +13,14 @@
       </ul>
     </div>
 
-    <div v-if="cartStore.items.length === 0" class="bg-white border border-slate-200 rounded-3xl p-16 text-center space-y-6">
-      <div class="w-20 h-20 bg-red-50 text-[#dc2626] rounded-full flex items-center justify-center mx-auto">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" /></svg>
-      </div>
-      <div class="space-y-2">
-        <h3 class="text-lg font-bold text-slate-800">Giỏ hàng đang trống</h3>
-        <p class="text-slate-400 text-sm max-w-xs mx-auto">Hãy lấp đầy giỏ hàng bằng những sản phẩm văn phòng phẩm chất lượng.</p>
-      </div>
-      <router-link to="/products" class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3 px-8 rounded-xl transition-colors inline-block text-sm">
-        Tiếp tục mua sắm
-      </router-link>
-    </div>
+    <EmptyState
+      v-if="cartStore.items.length === 0"
+      iconType="cart"
+      title="Giỏ hàng đang trống"
+      description="Hãy lấp đầy giỏ hàng bằng những sản phẩm văn phòng phẩm và sách chất lượng."
+      actionText="Tiếp tục mua sắm"
+      to="/products"
+    />
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <!-- Items list -->
@@ -192,8 +188,16 @@
               maxlength="30"
               class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white font-mono uppercase tracking-wider"
             />
-            <button type="submit" class="bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer">
-              Áp dụng
+            <button 
+              type="submit" 
+              :disabled="isApplyingManualCoupon"
+              class="bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
+              <svg v-if="isApplyingManualCoupon" class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>{{ isApplyingManualCoupon ? 'Đang áp dụng...' : 'Áp dụng' }}</span>
             </button>
           </form>
           <p v-if="cartStore.promoError" class="text-xs text-red-500 font-medium mt-1">{{ cartStore.promoError }}</p>
@@ -219,10 +223,14 @@
                 </div>
                 <button 
                   @click="applySuggestedCoupon(promo.code)"
-                  :disabled="cartStore.subtotal < promo.minOrderValue"
-                  class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2.5 rounded-lg text-[10px] transition-colors disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer"
+                  :disabled="cartStore.subtotal < promo.minOrderValue || isApplyingSuggestedCoupon(promo.code)"
+                  class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2.5 rounded-lg text-[10px] transition-colors disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
                 >
-                  Dùng
+                  <svg v-if="isApplyingSuggestedCoupon(promo.code)" class="animate-spin h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>{{ isApplyingSuggestedCoupon(promo.code) ? '...' : 'Dùng' }}</span>
                 </button>
               </div>
             </div>
@@ -257,11 +265,15 @@
             @click="proceedToCheckout"
             :class="[
               'w-full font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-md cursor-pointer',
-              isAnyItemSelected ? 'bg-[#dc2626] hover:bg-[#b91c1c] text-white shadow-red-500/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+              isAnyItemSelected && !isValidatingCheckout ? 'bg-[#dc2626] hover:bg-[#b91c1c] text-white shadow-red-500/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
             ]"
-            :disabled="!isAnyItemSelected"
+            :disabled="!isAnyItemSelected || isValidatingCheckout"
           >
-            Tiến hành thanh toán
+            <svg v-if="isValidatingCheckout" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>{{ isValidatingCheckout ? 'Đang kiểm tra giỏ hàng...' : 'Tiến hành thanh toán' }}</span>
           </button>
         </div>
       </div>
@@ -275,10 +287,12 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
+import EmptyState from '@/components/EmptyState.vue'
 import { formatCurrency, getEffectivePrice } from '@/utils/helpers'
 import { promotionService } from '@/services/promotion.service'
 import type { Promotion } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
+import { useDoubleSubmit, useKeyedDoubleSubmit } from '@/composables/useDoubleSubmit'
 
 useSeoMeta({
   title: 'Giỏ hàng',
@@ -291,6 +305,10 @@ const toast = useToast()
 const router = useRouter()
 const couponCode = ref('')
 const activePromotions = ref<Promotion[]>([])
+
+const { isSubmitting: isValidatingCheckout, runProtected: runProceedToCheckout } = useDoubleSubmit()
+const { isSubmitting: isApplyingManualCoupon, runProtected: runApplyManualCoupon } = useDoubleSubmit()
+const { isKeySubmitting: isApplyingSuggestedCoupon, runKeyProtected: runApplySuggestedCoupon } = useKeyedDoubleSubmit()
 
 const isAnyItemSelected = computed(() => cartStore.items.some(item => item.selected !== false))
 const isAllSelected = computed(() => cartStore.items.every(item => item.selected !== false))
@@ -314,32 +332,38 @@ function removeSelectedItems() {
 
 async function proceedToCheckout() {
   if (!isAnyItemSelected.value) return
-  await cartStore.validateCartBeforeCheckout(authStore.isAuthenticated)
-  if (cartStore.warnings.length > 0) {
-    toast.warning('Một số sản phẩm trong giỏ hàng đã thay đổi tồn kho hoặc giá. Vui lòng kiểm tra lại!')
-    return
-  }
-  router.push('/checkout')
+  await runProceedToCheckout(async () => {
+    await cartStore.validateCartBeforeCheckout(authStore.isAuthenticated)
+    if (cartStore.warnings.length > 0) {
+      toast.warning('Một số sản phẩm trong giỏ hàng đã thay đổi tồn kho hoặc giá. Vui lòng kiểm tra lại!')
+      return
+    }
+    router.push('/checkout')
+  })
 }
 
 async function handleApplyCoupon() {
   if (!couponCode.value.trim()) return
-  const success = await cartStore.applyCoupon(couponCode.value.trim().toUpperCase())
-  if (success) {
-    toast.success('Áp dụng mã giảm giá thành công!')
-    couponCode.value = ''
-  } else {
-    toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
-  }
+  await runApplyManualCoupon(async () => {
+    const success = await cartStore.applyCoupon(couponCode.value.trim().toUpperCase())
+    if (success) {
+      toast.success('Áp dụng mã giảm giá thành công!')
+      couponCode.value = ''
+    } else {
+      toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+    }
+  })
 }
 
 async function applySuggestedCoupon(code: string) {
-  const success = await cartStore.applyCoupon(code)
-  if (success) {
-    toast.success('Áp dụng mã giảm giá thành công!')
-  } else {
-    toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
-  }
+  await runApplySuggestedCoupon(code, async () => {
+    const success = await cartStore.applyCoupon(code)
+    if (success) {
+      toast.success('Áp dụng mã giảm giá thành công!')
+    } else {
+      toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
+    }
+  })
 }
 
 onMounted(async () => {

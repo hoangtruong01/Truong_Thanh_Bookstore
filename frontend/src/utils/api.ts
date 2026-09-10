@@ -1,6 +1,14 @@
 import axios from 'axios'
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import router from '@/router'
+import { showErrorToast, showWarningToast, showSuccessToast } from '@/utils/errorHandler'
+
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    skipGlobalErrorHandler?: boolean
+    skipAuthRedirect?: boolean
+  }
+}
 
 const baseURL = import.meta.env.VITE_API_URL || '/api'
 
@@ -14,44 +22,41 @@ const api = axios.create({
   },
 })
 
-// Variables for Silent Token Refresh queue
-let isRefreshing = false
-let failedQueue: Array<{
-  resolve: (value?: any) => void
-  reject: (reason?: any) => void
-}> = []
-
-const processQueue = (error: any = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error)
-    } else {
-      prom.resolve()
-    }
+// Listen to browser online/offline status
+if (typeof window !== 'undefined') {
+  window.addEventListener('offline', () => {
+    showWarningToast('Mất kết nối Internet. Vui lòng kiểm tra lại đường truyền mạng.')
   })
-  failedQueue = []
+  window.addEventListener('online', () => {
+    showSuccessToast('Đã khôi phục kết nối Internet.')
+  })
 }
+
+// Singleton Refresh Promise for Axios Queue (FE-02)
+let refreshPromise: Promise<any> | null = null
+let isRedirectingToLogin = false
 
 // Response interceptor for API calls
 api.interceptors.response.use(
   (response) => (response.data?.data !== undefined ? response.data : response),
   async (error: AxiosError) => {
-    // Handle network errors or server offline
-    if (!error.response) {
-      if (error.code === 'ECONNABORTED') {
-        return Promise.reject({
-          message: 'Yêu cầu kết nối quá hạn (Timeout). Vui lòng thử lại.',
-        })
-      }
-      return Promise.reject({
-        message: 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng hoặc thử lại sau.',
-      })
-    }
+    const originalRequest = error.config as (InternalAxiosRequestConfig & {
+      _retry?: boolean
+      skipGlobalErrorHandler?: boolean
+      skipAuthRedirect?: boolean
+    }) | undefined
 
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
     const url = originalRequest?.url || ''
 
-    // 401 Unauthorized handling
+    // 1. Handle network errors or server offline
+    if (!error.response) {
+      if (!originalRequest?.skipGlobalErrorHandler) {
+        showErrorToast(error)
+      }
+      return Promise.reject(error)
+    }
+
+    // 2. Handle HTTP 401 Unauthorized
     if (error.response.status === 401) {
       const isAuthEndpoint =
         url.includes('/auth/login') ||
@@ -60,67 +65,86 @@ api.interceptors.response.use(
         url.includes('/auth/forgot-password') ||
         url.includes('/auth/reset-password')
 
+      // If already an auth endpoint, do not attempt to refresh
       if (isAuthEndpoint) {
         if (url.includes('/auth/refresh')) {
-          localStorage.removeItem('token')
           localStorage.removeItem('user')
           window.dispatchEvent(new CustomEvent('auth-session-expired'))
-          const currentPath = window.location.pathname
-          if (currentPath !== '/login' && currentPath !== '/register') {
-            router.push({ name: 'Login', query: { redirect: currentPath } })
-          }
+          handleSessionExpiredRedirect(originalRequest?.skipAuthRedirect)
+        }
+        if (!originalRequest?.skipGlobalErrorHandler && !originalRequest?.skipAuthRedirect && !url.includes('/auth/refresh')) {
+          showErrorToast(error)
         }
         return Promise.reject(error.response?.data || error)
       }
 
-      if (!originalRequest._retry) {
+      // If not retried yet, trigger token refresh queue
+      if (originalRequest && !originalRequest._retry) {
         originalRequest._retry = true
 
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject })
-          })
-            .then(() => api(originalRequest))
-            .catch((err) => Promise.reject(err))
+        // Create singleton refresh promise if one is not already in-flight
+        if (!refreshPromise) {
+          refreshPromise = axios
+            .post(
+              `${baseURL}/auth/refresh`,
+              {},
+              {
+                withCredentials: true,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Requested-With': 'XMLHttpRequest',
+                },
+              }
+            )
+            .finally(() => {
+              refreshPromise = null
+            })
         }
-
-        isRefreshing = true
 
         try {
-          // Browser refresh tokens are read exclusively from the HttpOnly cookie.
-          await axios.post(
-            `${baseURL}/auth/refresh`,
-            {},
-            {
-              withCredentials: true,
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-              },
-            }
-          )
-
-          processQueue(null)
+          await refreshPromise
+          // Retry the original failed request with the newly refreshed cookie session
           return api(originalRequest)
-        } catch (refreshErr) {
-          processQueue(refreshErr)
+        } catch (refreshErr: any) {
           localStorage.removeItem('user')
           window.dispatchEvent(new CustomEvent('auth-session-expired'))
-
-          const currentPath = window.location.pathname
-          if (currentPath !== '/login' && currentPath !== '/register') {
-            router.push({ name: 'Login', query: { redirect: currentPath } })
-          }
+          handleSessionExpiredRedirect(originalRequest.skipAuthRedirect)
           return Promise.reject(error.response?.data || refreshErr)
-        } finally {
-          isRefreshing = false
         }
-
       }
+    }
+
+    // 3. Global Error Toast for other HTTP error codes (FE-03)
+    if (!originalRequest?.skipGlobalErrorHandler) {
+      showErrorToast(error)
     }
 
     return Promise.reject(error.response?.data || error)
   }
 )
+
+/**
+ * Gracefully redirects to Login only when the user is on a protected route
+ */
+function handleSessionExpiredRedirect(skipAuthRedirect?: boolean) {
+  if (skipAuthRedirect || isRedirectingToLogin) return
+
+  const currentRoute = router.currentRoute.value
+  const isProtectedRoute = currentRoute.matched.some(
+    (record) => record.meta.requiresAuth || record.meta.requiresAdmin
+  )
+
+  if (isProtectedRoute) {
+    isRedirectingToLogin = true
+    setTimeout(() => {
+      isRedirectingToLogin = false
+    }, 1500)
+
+    const fullPath = currentRoute.fullPath || window.location.pathname
+    if (!fullPath.startsWith('/login') && !fullPath.startsWith('/register')) {
+      router.push({ name: 'Login', query: { redirect: fullPath } })
+    }
+  }
+}
 
 export default api

@@ -19,11 +19,52 @@ export const useAuthStore = defineStore('auth', () => {
 
   const user = ref<User | null>(getStoredUser())
   const loading = ref(false)
+  const isHydrated = ref(false)
+  const isHydrating = ref(false)
+  let hydrationPromise: Promise<boolean> | null = null
 
   const isAuthenticated = computed(() => !!user.value)
   const isSuperAdmin = computed(() => user.value?.role === 'SUPER_ADMIN')
   const isAdmin = computed(() => user.value?.role === 'ADMIN' || user.value?.role === 'SUPER_ADMIN')
   const isStaff = computed(() => user.value?.role === 'STAFF' || user.value?.role === 'ADMIN' || user.value?.role === 'SUPER_ADMIN')
+
+  /**
+   * FE-01: Hydrate auth session reliably upon app boot or page refresh
+   */
+  async function initAuth(): Promise<boolean> {
+    if (isHydrated.value) {
+      return isAuthenticated.value
+    }
+    if (hydrationPromise) {
+      return hydrationPromise
+    }
+
+    isHydrating.value = true
+    hydrationPromise = (async () => {
+      try {
+        const res = await authService.getProfile({
+          skipGlobalErrorHandler: true,
+          skipAuthRedirect: true,
+        })
+        const userData = res.data?.data || res.data
+        if (userData && (userData._id || userData.id)) {
+          user.value = userData
+          localStorage.setItem('user', JSON.stringify(userData))
+        } else {
+          clearSession()
+        }
+      } catch {
+        clearSession()
+      } finally {
+        isHydrated.value = true
+        isHydrating.value = false
+        hydrationPromise = null
+      }
+      return isAuthenticated.value
+    })()
+
+    return hydrationPromise
+  }
 
   async function login(email: string, password: string) {
     loading.value = true
@@ -92,20 +133,19 @@ export const useAuthStore = defineStore('auth', () => {
     router.push({ name: 'Login' })
   }
 
-
   async function toggleWishlist(productId: string) {
-    if (!isAuthenticated.value) return false;
+    if (!isAuthenticated.value) return false
     try {
-      const res = await userService.toggleWishlist(productId);
-      const updatedList = res.data.wishlist || res.data;
+      const res = await userService.toggleWishlist(productId)
+      const updatedList = res.data.wishlist || res.data
       if (user.value) {
-        user.value.wishlist = updatedList;
-        localStorage.setItem('user', JSON.stringify(user.value));
+        user.value.wishlist = updatedList
+        localStorage.setItem('user', JSON.stringify(user.value))
       }
-      return true;
+      return true
     } catch (e) {
-      console.error('Failed to toggle wishlist:', e);
-      return false;
+      console.error('Failed to toggle wishlist:', e)
+      return false
     }
   }
 
@@ -126,10 +166,13 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     loading,
+    isHydrated,
+    isHydrating,
     isAuthenticated,
     isSuperAdmin,
     isAdmin,
     isStaff,
+    initAuth,
     login,
     register,
     fetchProfile,
@@ -137,6 +180,6 @@ export const useAuthStore = defineStore('auth', () => {
     refreshSession,
     logout,
     clearSession,
-    toggleWishlist
+    toggleWishlist,
   }
 })

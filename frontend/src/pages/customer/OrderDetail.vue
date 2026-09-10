@@ -249,7 +249,7 @@ async function downloadInvoice() {
     link.click()
     document.body.removeChild(link)
   } catch (err) {
-    alert('Không thể tải hóa đơn. Vui lòng thử lại sau.')
+    toast.error('Không thể tải hóa đơn. Vui lòng thử lại sau.')
   }
 }
 

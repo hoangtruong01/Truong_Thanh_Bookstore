@@ -108,14 +108,17 @@ const router = createRouter({
   },
 });
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore();
+
+  // FE-01: Reliable Auth Hydration - wait for session check to complete before evaluating permissions
+  await authStore.initAuth();
 
   if (to.matched.some((record) => record.meta.requiresAuth) && !authStore.isAuthenticated) {
     next({ name: 'Login', query: { redirect: to.fullPath } });
   } else if (to.matched.some((record) => record.meta.requiresAdmin)) {
     if (!authStore.isStaff) {
-      next({ name: 'Login' });
+      next({ name: 'Login', query: { redirect: to.fullPath } });
     } else {
       const user = authStore.user;
       if (user && user.role === 'STAFF') {

@@ -103,11 +103,11 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 | **BE-02**  | Đảm bảo Tính Nhất Quán Nguyên Tử Giữa Order & Payment| Backend | **P0** | ✅ **Hoàn thành** | LOCAL-02 |
 | **BE-03**  | Xác thực & Chống Lặp Webhook/Callback Thanh toán | Backend / Sec | **P0** | ✅ **Hoàn thành** | BE-02 |
 | **BE-04**  | Quản lý Timeout khi Gọi Bên Thứ Ba (AbortController) | Backend | **P1** | ✅ **Hoàn thành** | *None* |
-| **FE-01**  | Khôi phục Phiên Đăng nhập Đáng tin cậy (Auth Hydration) | Frontend | **P1** | ⏳ Chờ xử lý | SEC-01 |
-| **FE-02**  | Hàng Đợi Refresh Token Một Lần Duy Nhất (Axios Queue) | Frontend | **P1** | ⏳ Chờ xử lý | FE-01 |
-| **FE-03**  | Trải Nghiệm Xử Lý & Hiển Thị Lỗi Toàn Cục (Error UX) | Frontend | **P1** | ⏳ Chờ xử lý | SEC-07 |
-| **FE-04**  | Trạng thái Loading, Skeleton & Màn hình Trống | Frontend | **P2** | ⏳ Chờ xử lý | FE-03 |
-| **FE-05**  | Vô hiệu hóa Nút Bấm Chống Trùng Lặp (Double Submit) | Frontend | **P1** | ⏳ Chờ xử lý | FE-02 |
+| **FE-01**  | Khôi phục Phiên Đăng nhập Đáng tin cậy (Auth Hydration) | Frontend | **P1** | ✅ **Hoàn thành** | SEC-01 |
+| **FE-02**  | Hàng Đợi Refresh Token Một Lần Duy Nhất (Axios Queue) | Frontend | **P1** | ✅ **Hoàn thành** | FE-01 |
+| **FE-03**  | Trải Nghiệm Xử Lý & Hiển Thị Lỗi Toàn Cục (Error UX) | Frontend | **P1** | ✅ **Hoàn thành** | SEC-07 |
+| **FE-04**  | Trạng thái Loading, Skeleton & Màn hình Trống | Frontend | **P2** | ✅ **Hoàn thành** | FE-03 |
+| **FE-05**  | Vô hiệu hóa Nút Bấm Chống Trùng Lặp (Double Submit) | Frontend | **P1** | ✅ **Hoàn thành** | FE-02 |
 | **FE-06**  | Minh Bạch Chi Phí & Trạng Thái Thanh Toán (Checkout UX)| Frontend / BA | **P1** | ⏳ Chờ xử lý | BE-02 |
 | **BE-05**  | Tách Nhỏ Lớp Nghiệp Vụ Đơn Hàng `OrdersService` | Backend | **P2** | ⏳ Chờ xử lý | BE-01, BE-02 |
 | **BE-06**  | Tối Ưu Truy Vấn & Đánh Index Tự Động Hủy Đơn Hàng | Backend | **P2** | ⏳ Chờ xử lý | BE-02 |
@@ -463,7 +463,7 @@ stateDiagram-v2
 * **Độ ưu tiên:** `P1` | **Độ phức tạp:** `S` | **Module:** [`frontend/src/stores/auth.ts`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/stores/auth.ts), `App.vue`, `router/index.ts`
 * **Vấn đề cần giải quyết:** Frontend lưu trạng thái đăng nhập cũ trong `localStorage`, khi mở lại web tưởng là còn đăng nhập nhưng thực chất session phía Backend đã hết hạn, dẫn đến tình trạng chớp nháy giao diện Admin hoặc lỗi 401 liên tục.
 * **Chi tiết công việc:**
-  - [ ] Thiết lập quy trình khởi tạo phiên có kiểm soát:
+  - [x] Thiết lập quy trình khởi tạo phiên có kiểm soát:
     ```
     Mở Web / F5 Trang
            │
@@ -483,7 +483,7 @@ stateDiagram-v2
                    ▼
     Hoàn tất Hydration -> Render Giao diện & Điều hướng Router
     ```
-  - [ ] Không render các trang yêu cầu quyền (`requiresAuth`) trước khi bước xác thực ban đầu này hoàn tất.
+  - [x] Không render các trang yêu cầu quyền (`requiresAuth`) trước khi bước xác thực ban đầu này hoàn tất.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - F5 tải lại trang không bao giờ bị flash giao diện trái phép.
   - Khi token hết hạn, ứng dụng êm đẹp chuyển hướng về trang Login và xóa sạch state cũ.
@@ -521,8 +521,8 @@ stateDiagram-v2
 ### [TASK FE-03] Trải Nghiệm Xử Lý & Hiển Thị Lỗi Toàn Cục (Global Error UX)
 * **Độ ưu tiên:** `P1` | **Độ phức tạp:** `M` | **Module:** `frontend/src/components/`, Toast Notifications
 * **Chi tiết công việc:**
-  - [ ] Thay thế triệt để các lệnh `alert(...)` và `console.log(err)` bằng hệ thống thông báo Toast chuyên nghiệp.
-  - [ ] Bắt lỗi HTTP tập trung tại Axios Response Interceptor:
+  - [x] Thay thế triệt để các lệnh `alert(...)` và `console.log(err)` bằng hệ thống thông báo Toast chuyên nghiệp.
+  - [x] Bắt lỗi HTTP tập trung tại Axios Response Interceptor:
     - `400`: Hiển thị thông báo lỗi nghiệp vụ cụ thể từ Backend (ví dụ: *"Số lượng sách trong kho không đủ"*).
     - `401`: Chuyển hướng đăng nhập êm dịu kèm toast *"Phiên làm việc đã hết hạn"*.
     - `403`: Toast cảnh báo *"Bạn không có quyền thực hiện thao tác này"*.
@@ -537,8 +537,8 @@ stateDiagram-v2
 ### [TASK FE-04] Trạng Thái Chờ, Khung Xương & Màn Hình Trống (Loading/Skeleton/Empty)
 * **Độ ưu tiên:** `P2` | **Độ phức tạp:** `M` | **Phân hệ:** Frontend Web
 * **Chi tiết công việc:**
-  - [ ] Triển khai hiệu ứng Skeleton Loading tại các trang trọng điểm: Trang chủ, Danh mục sách, Chi tiết sách, Bảng quản trị đơn hàng.
-  - [ ] Thiết kế màn hình dữ liệu rỗng (Empty State) sinh động kèm nút kêu gọi hành động:
+  - [x] Triển khai hiệu ứng Skeleton Loading tại các trang trọng điểm: Trang chủ, Danh mục sách, Chi tiết sách, Bảng quản trị đơn hàng.
+  - [x] Thiết kế màn hình dữ liệu rỗng (Empty State) sinh động kèm nút kêu gọi hành động:
     - Giỏ hàng rỗng $\rightarrow$ Nút *"Khám phá sách ngay"*.
     - Lịch sử đơn hàng trống $\rightarrow$ Nút *"Mua sắm ngay"*.
     - Kết quả tìm kiếm không thấy $\rightarrow$ Gợi ý các từ khóa liên quan.
@@ -551,11 +551,11 @@ stateDiagram-v2
 * **Độ ưu tiên:** `P1` | **Độ phức tạp:** `S` | **Phân hệ:** Frontend Web
 * **Mục tiêu:** Chống việc người dùng click chuột liên tiếp tạo nhiều đơn hàng hoặc gọi thanh toán nhiều lần.
 * **Các nút bắt buộc áp dụng:**
-  - Nút Đăng nhập / Đăng ký.
-  - Nút Thêm vào giỏ hàng.
-  - Nút Áp dụng Voucher.
-  - Nút **Đặt Hàng (Place Order)** & Nút **Thanh Toán (Pay Now)**.
-  - Nút Hủy Đơn Hàng.
+  - [x] Nút Đăng nhập / Đăng ký.
+  - [x] Nút Thêm vào giỏ hàng.
+  - [x] Nút Áp dụng Voucher.
+  - [x] Nút **Đặt Hàng (Place Order)** & Nút **Thanh Toán (Pay Now)**.
+  - [x] Nút Hủy Đơn Hàng.
 * **Kỹ thuật:** Tự động set `disabled = true` kèm hiệu ứng spinner loading ngay khi người dùng click, chỉ mở lại khi API đã hoàn tất (thành công hoặc thất bại).
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
   - Thử nhấp chuột nhanh liên tục 5 lần vào nút "Đặt hàng" chỉ gửi đi đúng 1 request lên server.
