@@ -17,7 +17,7 @@ export class BenefitItem {
 
 @Schema({ _id: false })
 export class PackageItem {
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: true })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Product', required: false })
   productId?: Types.ObjectId;
 
   @Prop({ required: true })
