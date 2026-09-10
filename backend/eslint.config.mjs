@@ -41,7 +41,7 @@ export default tseslint.config(
           varsIgnorePattern: '^_',
         },
       ],
-      'prettier/prettier': ['error', { endOfLine: 'lf' }],
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
   {

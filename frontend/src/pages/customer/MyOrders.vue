@@ -107,8 +107,8 @@
               <!-- Cancel Button (Only for PENDING orders) -->
               <button
                 v-if="order.orderStatus === 'PENDING'"
-                @click="cancelOrder(order._id)"
                 :disabled="cancellingOrderId === order._id"
+                @click="cancelOrder(order._id)"
                 class="px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
               >
                 <svg v-if="cancellingOrderId === order._id" class="animate-spin h-3.5 w-3.5 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -129,11 +129,11 @@
 import { ref, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import { orderService } from '@/services/order.service'
 import { formatCurrency, getStatusLabel, formatDate } from '@/utils/helpers'
 import type { Order } from '@/types'
-import SkeletonLoader from '@/components/SkeletonLoader.vue'
-import EmptyState from '@/components/EmptyState.vue'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 
 useSeoMeta({

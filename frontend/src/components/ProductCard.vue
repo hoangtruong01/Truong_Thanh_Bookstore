@@ -151,19 +151,19 @@ const emit = defineEmits<{
   (e: 'add-to-cart', product: Product): void
 }>()
 
-const router = useRouter()
-const authStore = useAuthStore()
-const toast = useToast()
 const isAdding = ref(false)
-
 function handleAddToCart() {
   if (isAdding.value) return
   isAdding.value = true
   emit('add-to-cart', props.product)
   setTimeout(() => {
     isAdding.value = false
-  }, 500)
+  }, 600)
 }
+
+const router = useRouter()
+const authStore = useAuthStore()
+const toast = useToast()
 
 const isWishlisted = computed(() => {
   if (!authStore.isAuthenticated || !authStore.user?.wishlist) return false

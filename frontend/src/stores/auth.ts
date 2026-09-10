@@ -35,7 +35,10 @@ export const useAuthStore = defineStore('auth', () => {
     isHydrating.value = true
     hydrationPromise = (async () => {
       try {
-        const res = await authService.getProfile()
+        const res = await authService.getProfile({
+          skipGlobalErrorHandler: true,
+          skipAuthRedirect: true,
+        } as any)
         const raw = res.data?.data || res.data
         const userData = raw?.user || raw
         if (userData && (userData._id || userData.id || userData.email)) {
@@ -66,6 +69,11 @@ export const useAuthStore = defineStore('auth', () => {
     })()
 
     return hydrationPromise
+  }
+
+  async function initAuth(): Promise<boolean> {
+    await hydrateAuth()
+    return isAuthenticated.value
   }
 
   async function login(email: string, password: string) {
@@ -140,20 +148,19 @@ export const useAuthStore = defineStore('auth', () => {
     router.push({ name: 'Login' })
   }
 
-
   async function toggleWishlist(productId: string) {
-    if (!isAuthenticated.value) return false;
+    if (!isAuthenticated.value) return false
     try {
-      const res = await userService.toggleWishlist(productId);
-      const updatedList = res.data.wishlist || res.data;
+      const res = await userService.toggleWishlist(productId)
+      const updatedList = res.data.wishlist || res.data
       if (user.value) {
-        user.value.wishlist = updatedList;
-        localStorage.setItem('user', JSON.stringify(user.value));
+        user.value.wishlist = updatedList
+        localStorage.setItem('user', JSON.stringify(user.value))
       }
-      return true;
+      return true
     } catch (e) {
-      console.error('Failed to toggle wishlist:', e);
-      return false;
+      console.error('Failed to toggle wishlist:', e)
+      return false
     }
   }
 
@@ -174,10 +181,14 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     loading,
+    isHydrated,
+    isHydrating,
     isAuthenticated,
     isSuperAdmin,
     isAdmin,
     isStaff,
+    initAuth,
+    hydrateAuth,
     login,
     register,
     fetchProfile,
@@ -186,8 +197,5 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     clearSession,
     toggleWishlist,
-    isHydrated,
-    isHydrating,
-    hydrateAuth,
   }
 })

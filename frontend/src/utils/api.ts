@@ -2,6 +2,14 @@ import axios from 'axios'
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { useToast, createToastInterface } from 'vue-toastification'
 import router from '@/router'
+import { showErrorToast, showWarningToast, showSuccessToast } from '@/utils/errorHandler'
+
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    skipGlobalErrorHandler?: boolean
+    skipAuthRedirect?: boolean
+  }
+}
 
 const baseURL = import.meta.env.VITE_API_URL || '/api'
 
@@ -69,6 +77,9 @@ function notifySessionExpired() {
   showThrottledToast('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.', 'error', 4000)
 }
 
+// Singleton Refresh Promise for Axios Queue (FE-02)
+let isRedirectingToLogin = false
+
 // Response interceptor for API calls
 api.interceptors.response.use(
   (response) => (response.data?.data !== undefined ? response.data : response),
@@ -107,6 +118,7 @@ api.interceptors.response.use(
         url.includes('/auth/reset-password') ||
         url.includes('/auth/me')
 
+      // If already an auth endpoint, do not attempt to refresh
       if (isAuthEndpoint) {
         if (url.includes('/auth/refresh')) {
           localStorage.removeItem('token')
@@ -126,7 +138,8 @@ api.interceptors.response.use(
         return Promise.reject(errorData || error)
       }
 
-      if (!originalRequest._retry) {
+      // If not retried yet, trigger token refresh queue
+      if (originalRequest && !originalRequest._retry) {
         originalRequest._retry = true
 
         // Create singleton refresh promise if not already in flight
@@ -192,5 +205,29 @@ api.interceptors.response.use(
     return Promise.reject(errorData || error)
   }
 )
+
+/**
+ * Gracefully redirects to Login only when the user is on a protected route
+ */
+function handleSessionExpiredRedirect(skipAuthRedirect?: boolean) {
+  if (skipAuthRedirect || isRedirectingToLogin) return
+
+  const currentRoute = router.currentRoute.value
+  const isProtectedRoute = currentRoute.matched.some(
+    (record) => record.meta.requiresAuth || record.meta.requiresAdmin
+  )
+
+  if (isProtectedRoute) {
+    isRedirectingToLogin = true
+    setTimeout(() => {
+      isRedirectingToLogin = false
+    }, 1500)
+
+    const fullPath = currentRoute.fullPath || window.location.pathname
+    if (!fullPath.startsWith('/login') && !fullPath.startsWith('/register')) {
+      router.push({ name: 'Login', query: { redirect: fullPath } })
+    }
+  }
+}
 
 export default api

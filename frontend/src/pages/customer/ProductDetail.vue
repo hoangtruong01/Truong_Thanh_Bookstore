@@ -321,9 +321,14 @@
               />
               <button
                 type="submit"
-                class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm flex-shrink-0 active:scale-95"
+                :disabled="isSubscribingAlert"
+                class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm flex-shrink-0 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
               >
-                Đăng ký
+                <svg v-if="isSubscribingAlert" class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>{{ isSubscribingAlert ? 'Đang đăng ký...' : 'Đăng ký' }}</span>
               </button>
             </form>
           </div>
@@ -637,9 +642,14 @@
             <button 
               type="button"
               @click="submitReview"
-              class="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-2 rounded-xl text-xs transition-colors cursor-pointer shadow-xs active:scale-95"
+              :disabled="isSubmittingReview"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-2 rounded-xl text-xs transition-colors cursor-pointer shadow-xs active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
-              Gửi đánh giá
+              <svg v-if="isSubmittingReview" class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>{{ isSubmittingReview ? 'Đang gửi...' : 'Gửi đánh giá' }}</span>
             </button>
           </div>
         </div>
@@ -975,6 +985,10 @@ import { useProductSchema } from '@/composables/useStructuredData'
 const route = useRoute()
 const router = useRouter()
 const showAllComboProducts = ref(false)
+const isAddingToCart = ref(false)
+const isBuyingNow = ref(false)
+const isSubscribingAlert = ref(false)
+const isSubmittingReview = ref(false)
 
 const breadcrumbItems = computed(() => {
   const items = [
@@ -1003,8 +1017,6 @@ const breadcrumbItems = computed(() => {
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const toast = useToast()
-const isAddingToCart = ref(false)
-const isBuyingNow = ref(false)
 
 function buyNow() {
   if (isBuyingNow.value) return
@@ -1061,12 +1073,15 @@ function copyProductLink() {
 // Stock Alert Alert form state
 const stockAlertEmail = ref(authStore.user?.email || '')
 async function handleStockAlertSubscribe() {
-  if (!product.value) return
+  if (!product.value || isSubscribingAlert.value) return
+  isSubscribingAlert.value = true
   try {
     await productService.subscribeStockAlert(product.value._id, stockAlertEmail.value)
     toast.success('Đăng ký nhận thông báo thành công!')
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Có lỗi xảy ra khi đăng ký nhận thông báo.')
+  } finally {
+    isSubscribingAlert.value = false
   }
 }
 
@@ -1397,6 +1412,7 @@ onUnmounted(() => {
 })
 
 async function submitReview() {
+  if (isSubmittingReview.value) return
   if (!authStore.isAuthenticated) {
     toast.error('Vui lòng đăng nhập để đánh giá sản phẩm')
     return
@@ -1406,6 +1422,7 @@ async function submitReview() {
     return
   }
 
+  isSubmittingReview.value = true
   const prodId = route.params.id as string
   try {
     const res = await productService.addReview(prodId, {
@@ -1422,6 +1439,8 @@ async function submitReview() {
     toast.success('Cảm ơn bạn đã đánh giá sản phẩm!')
   } catch (err) {
     toast.error('Có lỗi xảy ra khi gửi đánh giá')
+  } finally {
+    isSubmittingReview.value = false
   }
 }
 
@@ -1507,6 +1526,13 @@ function addToCart(prod?: Product) {
       isAddingToCart.value = false
     }, 500)
   }
+  if (!product.value || isAddingToCart.value) return
+  isAddingToCart.value = true
+  cartStore.addToCart(product.value, quantity.value)
+  toast.success(`Đã thêm ${quantity.value} "${product.value.name}" vào giỏ hàng`)
+  setTimeout(() => {
+    isAddingToCart.value = false
+  }, 600)
 }
 
 
