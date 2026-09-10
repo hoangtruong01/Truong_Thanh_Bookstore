@@ -1504,6 +1504,9 @@
     
     <!-- FAQ Chatbot Widget -->
     <ChatWidget />
+
+    <!-- Website Opening Entry Ad Popup -->
+    <EntryAdPopup />
   </div>
 </template>
 
@@ -1519,6 +1522,7 @@ import type { Category } from "@/types";
 import { useToast } from "vue-toastification";
 import ProfileModal from "@/components/ProfileModal.vue";
 import ChatWidget from "@/components/ChatWidget.vue";
+import EntryAdPopup from "@/components/EntryAdPopup.vue";
 import { notificationService } from "@/services/notification.service";
 
 const authStore = useAuthStore();

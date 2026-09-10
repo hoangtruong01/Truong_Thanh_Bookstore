@@ -27,6 +27,14 @@ export class BannersController {
     return this.bannersService.findActive();
   }
 
+  @Get('active-popup')
+  @ApiOperation({
+    summary: 'Get the active entry popup advertisement (public)',
+  })
+  findActivePopup() {
+    return this.bannersService.findActivePopup();
+  }
+
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(StaffPermission.MANAGE_BANNERS)

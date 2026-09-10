@@ -170,7 +170,7 @@ Truong_Thanh_Bookstore/
 | 11 | **notifications** | WebSocket Gateway (Socket.IO `/notifications`) đẩy thông báo tức thì (đơn mới, thay đổi trạng thái, cảnh báo kho), lưu trữ thông báo vào DB, đồng bộ FCM. |
 | 12 | **reports** | Báo cáo doanh thu thuần (loại trừ đơn hủy/trả), tỷ lệ tăng trưởng kỳ trước, cơ cấu doanh thu theo danh mục, giá trị đơn trung bình (AOV). |
 | 13 | **customers** | Quản trị danh sách khách hàng, thống kê tổng chi tiêu, tổng số đơn mua dành cho Admin CMS. |
-| 14 | **banners** | Quản lý banner quảng cáo, banner trượt (slider), vị trí hiển thị trên Web và Mobile. |
+| 14 | **banners** | Quản lý banner tiếp thị đa vị trí (slider, sidebar, bottom row) & Quảng cáo mở website (Entry Popup Ad / Interstitial Modal) với tần suất hiển thị (Every visit, Session, Daily), lập lịch (startAt, endAt), tự động lưu trữ Cloudinary và quy tắc kích hoạt duy nhất (Single Active Popup). |
 | 15 | **landing-pages**| Quản lý trang đích Flash Sale động, tích hợp trọn vẹn vào `OrdersService.create()` với sản phẩm thật trong DB. |
 | 16 | **email** | Gửi email giao dịch qua SMTP Nodemailer: Gửi mã OTP xác thực và gửi email xác nhận đặt hàng thành công. |
 
@@ -414,6 +414,8 @@ Hệ thống quản lý truy cập theo mô hình **Role-Based Access Control (R
 | **Reports** | Xem báo cáo tài chính & dashboard (`/reports/*`)| Staff có `VIEW_REPORTS` / `ADMIN` | 401 / 403 |
 | **Promotions**| Tạo / Sửa mã khuyến mãi | Staff có `MANAGE_PROMOTIONS` / `ADMIN` | 401 / 403 |
 | | Áp dụng mã giảm giá khi checkout | Mọi khách hàng (Public / Customer) | - |
+| **Banners** | Xem banner đang chạy & popup mở trang (`GET /banners/active`, `GET /banners/active-popup`) | Công khai (Public) | - |
+| | Quản trị Banner & Popup (`GET /banners`, `POST`, `PATCH`, `DELETE`) | Staff có `MANAGE_BANNERS` / `ADMIN` | 401 / 403 |
 
 ---
 
@@ -533,6 +535,20 @@ Hệ thống chạy Cron Job định kỳ 15 phút để tự động hủy đơ
 - **Doanh thu được ghi nhận:** Chỉ tính các đơn đã thanh toán (`PAID`) hoặc đã giao thành công (`DELIVERED`, `COMPLETED`).
 - **Loại trừ tuyệt đối:** Đơn hủy (`CANCELLED`), đơn hoàn trả (`RETURNED`), đơn treo (`PENDING`).
 - Doanh thu theo danh mục được tính toán từ snapshot giá tại thời điểm đặt hàng: `items[].price * items[].quantity`.
+
+---
+
+### 7.8. Quảng cáo Mở Trang & Quản trị Banner Tiếp thị (Entry Popup Ad & Banners)
+- **Vị trí `ENTRY_POPUP` (`entry_popup`):** Banner dạng cửa sổ nổi phủ toàn màn hình (interstitial modal) với lớp nền tối mờ (`bg-black/65 backdrop-blur-xs`), hiển thị tự động khi khách hàng truy cập bất kỳ trang nào thuộc Storefront.
+- **Quy tắc Single Active Popup:** Tại một thời điểm, hệ thống chỉ cho phép tối đa 1 quảng cáo mở trang ở trạng thái hoạt động (`isActive = true`). Khi Admin kích hoạt một popup mới, hệ thống tự động vô hiệu hóa (`isActive = false`) các popup quảng cáo đang chạy khác.
+- **Cách ly Banner Trang chủ:** API công khai `GET /banners/active` luôn loại trừ `ENTRY_POPUP`, đảm bảo các slider, carousel và banner sidebar trang chủ không bị ảnh hưởng.
+- **Tần suất Hiển thị (Display Frequency):**
+  - `EVERY_VISIT` (Mặc định): Hiển thị mỗi khi tải/mở lại trang web.
+  - `ONCE_PER_SESSION`: Chỉ hiển thị 1 lần duy nhất trong phiên duyệt web (lưu khóa `sessionStorage` kèm `_id` và `updatedAt`). Khi Admin đổi nội dung popup, khóa đổi mới giúp khách hàng thấy ngay nội dung mới.
+  - `ONCE_PER_DAY`: Chỉ hiển thị 1 lần trong ngày (lưu khóa `localStorage` kèm ngày `YYYY-MM-DD`).
+- **Lập lịch Thời gian Thực (Schedule Start/End):** Backend kiểm tra thời gian hiện tại so với `startAt` và `endAt`. Quảng cáo hết hạn hoặc chưa tới giờ bắt đầu sẽ tự động không được trả về `GET /banners/active-popup`.
+- **Tự động Lưu trữ Cloudinary & Fallback:** Ảnh tải lên qua Admin CMS được tự động đẩy lên thư mục `truong_thanh_banners` của Cloudinary và lưu URL bảo mật vào database. Nếu môi trường thử nghiệm chưa khai báo thông tin Cloudinary, hệ thống sẽ tự động chuyển sang cơ chế lưu trữ an toàn mà không gây crash hoặc lỗi.
+- **An toàn Đường dẫn (URL Sanitization):** Hệ thống lọc và từ chối toàn bộ các đường link chứa mã script độc hại (`javascript:`, `data:`, `vbscript:`), chỉ chấp nhận các đường dẫn web hợp lệ (`http://`, `https://`) hoặc đường dẫn tương đối nội bộ (`/path`).
 
 ---
 

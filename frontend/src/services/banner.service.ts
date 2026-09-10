@@ -4,6 +4,9 @@ export const bannerService = {
   getActive() {
     return api.get('/banners/active')
   },
+  getActivePopup() {
+    return api.get('/banners/active-popup')
+  },
   getAll() {
     return api.get('/banners')
   },
