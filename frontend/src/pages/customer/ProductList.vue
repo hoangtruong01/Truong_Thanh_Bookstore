@@ -399,8 +399,6 @@ import EmptyState from '@/components/EmptyState.vue'
 import type { Product, Category } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 import Breadcrumb from '@/components/Breadcrumb.vue'
-import SkeletonLoader from '@/components/SkeletonLoader.vue'
-import EmptyState from '@/components/EmptyState.vue'
 
 useSeoMeta({
   title: 'Danh sách sản phẩm & Sách',

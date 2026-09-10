@@ -78,7 +78,6 @@ function notifySessionExpired() {
 }
 
 // Singleton Refresh Promise for Axios Queue (FE-02)
-let refreshPromise: Promise<any> | null = null
 let isRedirectingToLogin = false
 
 // Response interceptor for API calls

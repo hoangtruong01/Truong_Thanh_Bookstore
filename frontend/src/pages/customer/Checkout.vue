@@ -360,7 +360,6 @@ const authStore = useAuthStore()
 const toast = useToast()
 const router = useRouter()
 const { isSubmitting: isPlacingOrder, runProtected: runProtectedOrder } = useDoubleSubmit({ cooldownMs: 1000 })
-const isApplyingCoupon = ref(false)
 
 const checkoutItems = computed(() => cartStore.items.filter(item => item.selected !== false))
 
@@ -555,79 +554,56 @@ async function placeOrder() {
       customerEmail: shippingInfo.email,
       idempotencyKey: checkoutIdempotencyKey,
     }
-    submitting.value = true
-    try {
-      const items = checkoutItems.value.map(item => ({
-        product: item.product._id,
-        name: item.product.name,
-        price: getEffectivePrice(item.product.price, item.product.discountPrice),
-        quantity: item.quantity,
-        image: item.product.images?.[0] || '',
-      }))
 
-      const orderData: any = {
-        items,
-        shippingAddress: shippingInfo.address,
-        phone: shippingInfo.phone,
-        note: shippingInfo.note || undefined,
-        paymentMethod: paymentMethod.value,
-        promotionCode: cartStore.appliedPromotion?.code || undefined,
-        loyaltyPointsUsed: loyaltyPointsToSpend.value > 0 ? loyaltyPointsToSpend.value : undefined,
-        customerName: shippingInfo.fullName,
-        customerEmail: shippingInfo.email,
-        idempotencyKey: checkoutIdempotencyKey,
+    // Pre-checkout safe validation
+    const previewRes = await orderService.checkoutPreview(orderData)
+    const previewData = previewRes.data?.data || previewRes.data
+    if (previewData && previewData.warnings && previewData.warnings.length > 0) {
+      toast.warning(previewData.warnings.join(' | '))
+      if (!previewData.isValidForCheckout) {
+        submitting.value = false
+        return
       }
-
-      // Pre-checkout safe validation
-      const previewRes = await orderService.checkoutPreview(orderData)
-      const previewData = previewRes.data?.data || previewRes.data
-      if (previewData && previewData.warnings && previewData.warnings.length > 0) {
-        toast.warning(previewData.warnings.join(' | '))
-        if (!previewData.isValidForCheckout) {
-          submitting.value = false
-          return
-        }
-      }
-
-      let response: any
-      if (authStore.isAuthenticated) {
-        response = await orderService.createAuthenticated(orderData)
-      } else {
-        response = await orderService.create(orderData)
-      }
-
-      orderCode.value = response.data.data?.orderCode || response.data.orderCode
-      const orderId = response.data.data?._id || response.data._id
-      createdOrderId.value = orderId
-
-      const guestToken = response.data.data?.guestAccessToken || response.data.guestAccessToken
-      if (!authStore.isAuthenticated && guestToken) {
-        localStorage.setItem(`guest-order-token:${orderId}`, guestToken)
-      }
-
-      if (authStore.isAuthenticated && paymentMethod.value !== 'COD') {
-        const paymentRes: any = await paymentService.create(
-          orderId,
-          paymentMethod.value,
-          `${window.location.origin}/my-orders/${orderId}`,
-        )
-        const action = paymentRes.data?.data?.action || paymentRes.data?.action
-        if (action?.instructions) toast.info(action.instructions, { timeout: 12000 })
-        if (action?.redirectUrl) {
-          window.location.assign(action.redirectUrl)
-          return
-        }
-      }
-
-      sessionStorage.removeItem('checkout-idempotency-key')
-      orderSuccess.value = true
-      cartStore.clearCheckedOutItems()
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || 'Đặt hàng thất bại. Vui lòng kiểm tra lại tồn kho sản phẩm.'
-      toast.error(errorMsg)
-    } finally {
-      submitting.value = false
     }
-  })
+
+    let response: any
+    if (authStore.isAuthenticated) {
+      response = await orderService.createAuthenticated(orderData)
+    } else {
+      response = await orderService.create(orderData)
+    }
+
+    orderCode.value = response.data.data?.orderCode || response.data.orderCode
+    const orderId = response.data.data?._id || response.data._id
+    createdOrderId.value = orderId
+
+    const guestToken = response.data.data?.guestAccessToken || response.data.guestAccessToken
+    if (!authStore.isAuthenticated && guestToken) {
+      localStorage.setItem(`guest-order-token:${orderId}`, guestToken)
+    }
+
+    if (authStore.isAuthenticated && paymentMethod.value !== 'COD') {
+      const paymentRes: any = await paymentService.create(
+        orderId,
+        paymentMethod.value,
+        `${window.location.origin}/my-orders/${orderId}`,
+      )
+      const action = paymentRes.data?.data?.action || paymentRes.data?.action
+      if (action?.instructions) toast.info(action.instructions, { timeout: 12000 })
+      if (action?.redirectUrl) {
+        window.location.assign(action.redirectUrl)
+        return
+      }
+    }
+
+    sessionStorage.removeItem('checkout-idempotency-key')
+    orderSuccess.value = true
+    cartStore.clearCheckedOutItems()
+  } catch (err: any) {
+    const errorMsg = err.response?.data?.message || err.message || 'Đặt hàng thất bại. Vui lòng kiểm tra lại tồn kho sản phẩm.'
+    toast.error(errorMsg)
+  } finally {
+    submitting.value = false
+  }
 }
 </script>

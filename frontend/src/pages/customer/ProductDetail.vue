@@ -1017,8 +1017,6 @@ const breadcrumbItems = computed(() => {
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const toast = useToast()
-const isAddingToCart = ref(false)
-const isBuyingNow = ref(false)
 
 function buyNow() {
   if (isBuyingNow.value) return

@@ -107,6 +107,7 @@ import { computed } from 'vue'
 
 interface Props {
   icon?: string
+  iconType?: 'cart' | 'order' | 'search' | 'wishlist' | 'custom' | string
   title?: string
   description?: string
   actionText?: string

@@ -289,13 +289,13 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
-import EmptyState from '@/components/EmptyState.vue'
 import { formatCurrency, getEffectivePrice } from '@/utils/helpers'
 import { promotionService } from '@/services/promotion.service'
 import type { Promotion } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import { useDoubleSubmit, useKeyedDoubleSubmit } from '@/composables/useDoubleSubmit'
 
 useSeoMeta({
   title: 'Giỏ hàng',

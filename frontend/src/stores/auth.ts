@@ -35,7 +35,10 @@ export const useAuthStore = defineStore('auth', () => {
     isHydrating.value = true
     hydrationPromise = (async () => {
       try {
-        const res = await authService.getProfile()
+        const res = await authService.getProfile({
+          skipGlobalErrorHandler: true,
+          skipAuthRedirect: true,
+        } as any)
         const raw = res.data?.data || res.data
         const userData = raw?.user || raw
         if (userData && (userData._id || userData.id || userData.email)) {
@@ -66,6 +69,11 @@ export const useAuthStore = defineStore('auth', () => {
     })()
 
     return hydrationPromise
+  }
+
+  async function initAuth(): Promise<boolean> {
+    await hydrateAuth()
+    return isAuthenticated.value
   }
 
   async function login(email: string, password: string) {
@@ -180,6 +188,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isStaff,
     initAuth,
+    hydrateAuth,
     login,
     register,
     fetchProfile,
@@ -188,8 +197,5 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     clearSession,
     toggleWishlist,
-    isHydrated,
-    isHydrating,
-    hydrateAuth,
   }
 })
