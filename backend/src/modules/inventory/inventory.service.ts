@@ -325,7 +325,10 @@ export class InventoryService {
           ? 'Xuất kho theo đơn hàng'
           : 'Hoàn kho từ đơn hàng',
       reference,
-      order: orderId ? new Types.ObjectId(orderId) : undefined,
+      order:
+        orderId && Types.ObjectId.isValid(orderId)
+          ? new Types.ObjectId(orderId)
+          : undefined,
     };
     if (session) await this.transactionModel.create([payload], { session });
     else await this.transactionModel.create(payload);
