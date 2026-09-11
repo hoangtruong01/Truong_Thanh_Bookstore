@@ -1,7 +1,12 @@
 # 📚 TRƯỜNG THÀNH BOOKSTORE — TÀI LIỆU TỔNG QUAN & CẨM NANG DỰ ÁN TOÀN DIỆN
-> **Phiên bản tài liệu:** 3.0 (Chuẩn hóa toàn diện — Hợp nhất Kiến trúc, Cấu hình & Quy tắc Nghiệp vụ)  
+> **Phiên bản tài liệu:** 4.0 — Cập nhật 2026-09-12  
 > **Đối tượng:** Thực tập sinh (Intern), Lập trình viên mới (New Developer), Quản lý dự án (PM) & Trợ lý AI (AI Agents).  
-> **Mục tiêu:** Cung cấp tài liệu tra cứu duy nhất (Single Source of Truth) giúp bất kỳ ai đọc hiểu 100% kiến trúc, cấu hình môi trường, quy tắc nghiệp vụ, phân quyền RBAC và tiếp tục phát triển/bảo trì hệ thống ngay lập tức mà không gặp rào cản.
+> **Mục tiêu:** Cung cấp tài liệu tra cứu duy nhất (Single Source of Truth) giúp bất kỳ ai đọc hiểu 100% kiến trúc, cấu hình môi trường, quy tắc nghiệp vụ, trạng thái hiện tại của dự án và tiếp tục phát triển/bảo trì hệ thống ngay lập tức mà không gặp rào cản.
+
+> **📌 Hướng dẫn đọc tài liệu:**
+> - **File này (`PROJECT_OVERVIEW.md`)**: Hiểu toàn bộ dự án — kiến trúc, cấu hình, nghiệp vụ, trạng thái hiện tại.
+> - **[`PENDING_TASKS.md`](PENDING_TASKS.md)**: Xem danh sách task chưa làm — chia theo mức độ, chi tiết nghiệp vụ từng task.
+> - **`docs/archive/`**: Lưu trữ các changelog, audit report, đặc tả tính năng đã hoàn thành (tham khảo khi cần).
 
 ---
 
@@ -16,6 +21,7 @@
 8. [📡 Chuẩn Giao tiếp API & Thời gian thực (API Envelope & WebSocket)](#8--chuẩn-giao-tiếp-api--thời-gian-thực-api-envelope--websocket)
 9. [🧪 Kiểm thử Tự động & Quy trình CI/CD (Testing & Deployment Pipelines)](#9--kiểm-thử-tự-động--quy-trình-cicd-testing--deployment-pipelines)
 10. [📘 Cẩm nang Dành cho Intern & Lập trình viên Mới](#10--cẩm-nang-dành-cho-intern--lập-trình-viên-mới)
+11. [📊 Trạng Thái Hiện Tại Dự Án (Current Project Status)](#11--trạng-thái-hiện-tại-dự-án-current-project-status)
 
 ---
 
@@ -146,9 +152,10 @@ Truong_Thanh_Bookstore/
 │   ├── android/                # Cấu hình Android native & Keystore signing
 │   ├── ios/                    # Cấu hình iOS native, Entitlements & APNs
 │   └── pubspec.yaml
-├── docs/                       # 📖 TÀI LIỆU DỰ ÁN DUY NHẤT
-│   ├── PROJECT_OVERVIEW.md     # Tài liệu tổng quan & hướng dẫn này
-│   └── PENDING_TASKS.md        # Danh mục việc chưa xong, nợ kỹ thuật & release gates
+├── docs/                       # 📖 TÀI LIỆU DỰ ÁN
+│   ├── PROJECT_OVERVIEW.md     # Tài liệu tổng quan dự án (file này)
+│   ├── PENDING_TASKS.md        # Danh mục task chưa làm, chia theo mức độ ưu tiên
+│   └── archive/                # Lưu trữ changelog, audit report, đặc tả tính năng đã xong
 ├── docker-compose.yml          # Core Stack: MongoDB ReplicaSet + Redis + Backend + Frontend
 └── docker-compose.tools.yml    # Mongo Express (Chỉ dùng khi debug cục bộ)
 ```
@@ -601,7 +608,7 @@ Hệ thống chạy Cron Job định kỳ 15 phút để tự động hủy đơ
 # 1. Kiểm thử Backend (NestJS + Jest)
 # -------------------------------------------------------------
 cd backend
-npm test -- --runInBand        # Chạy toàn bộ 35 suites / 397 unit tests
+npm test -- --runInBand        # Chạy toàn bộ 41 suites / 450 unit tests
 npm run test:e2e -- --runInBand # Chạy bộ test E2E với MongoDB ReplicaSet
 npm run lint                   # Kiểm tra chất lượng mã nguồn bằng ESLint
 npm run build                  # Biên dịch NestJS production bundle
@@ -673,5 +680,68 @@ Mọi commit push lên nhánh `main` hoặc Pull Request đều tự động kí
 - [ ] Không có `console.log` chứa mật khẩu, token hoặc thông tin khách hàng nhạy cảm.
 
 ---
-*Tài liệu này được duy trì chính thức cho dự án Nhà sách Trường Thành. Để xem các công việc còn tồn đọng và kế hoạch phát triển tiếp theo, vui lòng tham khảo file:*  
-👉 [`docs/PENDING_TASKS.md`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/docs/PENDING_TASKS.md)
+
+## 11. 📊 Trạng Thái Hiện Tại Dự Án (Current Project Status)
+
+> **Cập nhật lần cuối:** 2026-09-12
+
+### 11.1. Phase 1: Local MVP — ✅ HOÀN THÀNH 100%
+
+Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm bảo nhất quán dữ liệu đơn hàng/thanh toán và xây dựng trải nghiệm người dùng mượt mà trên cả Web và Mobile. Tổng cộng **26/26 task** đã hoàn thành.
+
+| Track | Nội dung đã hoàn thành |
+| :--- | :--- |
+| 🔒 **Bảo mật** (7 task) | Audit Auth/Token/Cookie, RBAC & Chống IDOR, Validation & Chống Mass Assignment, Payload Hardening, Rate Limiting, Secret Scan, Error Sanitize |
+| 💳 **Thanh toán** (5 task) | Chính sách Hủy/Trả/Hoàn tiền, Refund Lifecycle, Atomic Payment↔Order, Webhook Validation, Timeout bên thứ ba |
+| 🐳 **Hạ tầng Local** (5 task) | Node.js 22 LTS, Docker Compose (Mongo RS + Redis), `.env.example`, Seed Data, Hướng dẫn Local |
+| 💻 **Frontend UX** (7 task) | Auth Hydration, Refresh Token Queue, Global Error Toast, Skeleton/Empty State, Double Submit Lock, Checkout UX & VietQR, ESLint Config |
+| 🛠️ **Tech Debt** (2 task) | Tách OrdersService (Facade Pattern), Tối ưu Index Auto-cancel |
+| 🧪 **QA** (4 task) | Auth Security Suite, Payment Idempotent Suite, Race Condition Test, UX Regression Test |
+
+### 11.2. Kết Quả Kiểm Thử Hiện Tại
+
+| Phân hệ | Lệnh | Kết quả |
+| :--- | :--- | :---: |
+| Backend Unit Tests | `cd backend && npm test` | **41/41 suites, 450/450 tests PASS** |
+| Backend Linting | `cd backend && npm run lint` | **0 errors** (≤ 1.950 warnings) |
+| Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
+| Frontend Unit Tests | `cd frontend && npm run test:unit` | **14/14 suites, 72/72 tests PASS** |
+| Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |
+| Frontend Linting | `cd frontend && npm run lint` | **0 errors** |
+| Frontend Build | `cd frontend && npm run build` | **Biên dịch thành công** |
+| Mobile Tests | `cd mobile && flutter test` | **42/42 tests PASS** |
+| Mobile Analyze | `cd mobile && flutter analyze` | **0 issues** |
+
+### 11.3. Cổng Nghiệm Thu CTO — Đã Đạt 4/4
+
+| Cổng | Trạng thái | Nội dung |
+| :--- | :---: | :--- |
+| **Bảo mật** | ✅ | Endpoint admin bảo vệ RolesGuard, chống IDOR, DTO validation chặn field lạ, không secret trong repo, error sanitize |
+| **Nghiệp vụ** | ✅ | Payment↔Order đồng nhất qua Transaction, RefundStatus minh bạch, Idempotent callback, không overselling |
+| **Vận hành** | ✅ | Dev mới clone → khởi động < 15 phút, Docker 1 lệnh, `.env.example` đầy đủ, Seed idempotent |
+| **Trải nghiệm** | ✅ | F5 không giật, refresh queue 1 lần, double submit lock, checkout 5 khoản chi phí + VietQR |
+
+### 11.4. Phase 2: Pre-Production — Đang Triển Khai
+
+Chi tiết task Phase 2 xem tại: 👉 [`PENDING_TASKS.md`](PENDING_TASKS.md)
+
+Trọng tâm Phase 2:
+- Tích hợp cổng thanh toán VNPay/MoMo sandbox
+- Tích hợp vận đơn GHN
+- Ký số mobile app & Push notification thật
+- Cải thiện Admin UI (ImageUploader, Focus Trap)
+- Giảm nợ kỹ thuật (ESLint warnings)
+
+### 11.5. Tài Liệu Lưu Trữ (Archive)
+
+Các tài liệu changelog, audit report và đặc tả tính năng đã hoàn thành được lưu tại `docs/archive/`:
+- `SECURITY_LOCAL_MVP_PLAN.md` — Kế hoạch bảo mật & roadmap Phase 1 (26 task đã xong)
+- `AUDIT_2026-09-11.md` — Báo cáo audit toàn hệ thống
+- `CHANGELOG_FE06_BE05_BE06_BE07_FE07.md` — Changelog 5 tickets FE/BE
+- `CHANGELOG_QA03_QA04.md` — Changelog kiểm thử QA
+- `ENTRY_POPUP_ADVERTISEMENT.md` — Đặc tả tính năng Entry Popup
+- `LOCAL_SETUP_GUIDE.md` — Hướng dẫn khởi động local chi tiết
+
+---
+*Tài liệu này được duy trì chính thức cho dự án Nhà sách Trường Thành.*  
+*Để xem các công việc cần làm tiếp theo, xem:* 👉 [`docs/PENDING_TASKS.md`](PENDING_TASKS.md)

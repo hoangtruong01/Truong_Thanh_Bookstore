@@ -1,264 +1,420 @@
-# 📋 DANH MỤC CÔNG VIỆC CHƯA XONG & KẾ HOẠCH PHÁT TRIỂN (PENDING TASKS & ROADMAP)
-> **Dự án:** Nhà sách Trường Thành (Trường Thành Bookstore)  
-> **Phiên bản tài liệu:** 1.0 (Tổng hợp toàn bộ nợ kỹ thuật, cổng nghiệm thu môi trường thật & backlog sau Sprint 4)  
-> **Đối tượng:** Quản lý dự án (PM), Lập trình viên Backend / Frontend / Mobile & Thực tập sinh (Intern).  
-> **Mục tiêu:** Liệt kê minh bạch, chính xác toàn bộ các hạng mục công việc chưa hoàn thành, kèm theo độ ưu tiên, người phụ trách, tiêu chí nghiệm thu (Acceptance Criteria) và hướng dẫn chi tiết để bất kỳ thành viên nào cũng có thể nhận việc và làm tiếp ngay.
+# 📋 DANH MỤC TASK CHƯA LÀM — TRƯỜNG THÀNH BOOKSTORE
+> **Cập nhật:** 2026-09-12  
+> **Mục đích:** Tổng hợp tất cả task chưa hoàn thành, chia theo mức độ ưu tiên, mô tả chi tiết nghiệp vụ và kỹ thuật để bất kỳ developer/AI nào cũng nhận việc được ngay.  
+> **Tham khảo:** Kiến trúc và nghiệp vụ dự án xem tại [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md)
 
 ---
 
-## 📑 MỤC LỤC
-1. [📊 Bảng Dashboard Tổng hợp Công việc Chưa Hoàn thành](#1--bảng-dashboard-tổng-hợp-công-việc-chưa-hoàn-thành)
-2. [🚪 Nhóm 1: Các Cổng Nghiệm thu Môi trường Thật (Production Release Gates)](#2--nhóm-1-các-cổng-nghiệm-thu-môi-trường-thật-production-release-gates)
-3. [💳 Nhóm 2: Tích hợp Đối tác Bên Thứ Ba (Cần Tài khoản Sandbox)](#3--nhóm-2-tích-hợp-đối-tác-bên-thứ-ba-cần-tài-khoản-sandbox)
-4. [🛠️ Nhóm 3: Nợ Kỹ thuật & Cải tiến Mã nguồn (Technical Debt - Thích hợp cho Intern)](#4-️-nhóm-3-nợ-kỹ-thuật--cải-tiến-mã-nguồn-technical-debt---thích-hợp-cho-intern)
-5. [📘 Hướng dẫn Dành cho Intern / Lập trình viên Mới Nhận Việc](#5--hướng-dẫn-dành-cho-intern--lập-trình-viên-mới-nhận-việc)
+## 📊 Tổng Quan Nhanh
+
+| Mã | Tên Task | Phân Hệ | Priority | Trạng Thái | Độ Khó |
+| :---: | :--- | :---: | :---: | :---: | :---: |
+| **FE-08** | Tích hợp ImageUploader vào Admin CMS | Frontend | P2 | 🟢 Làm ngay | Dễ |
+| **FE-09** | Focus Trap & Phím tắt FormModal | Frontend | P3 | 🟢 Làm ngay | Dễ |
+| **TECHDEBT-01** | Giảm ~1.808 ESLint Warnings Backend | Backend | P2 | 🟢 Làm ngay | Dễ |
+| **PAY-01** | Xác thực Sandbox VNPay & MoMo | Backend / QA | P1 | 🟡 Chờ Keys | Vừa |
+| **SHIPPING-01** | Tích hợp Vận đơn GHN Sandbox | Backend / FE | P2 | 🟡 Chờ Token | Vừa |
+| **MOBILE-01** | Ký số App & Push Notification thật | Mobile | P1 | 🔴 Chờ Chứng chỉ | Khó |
+| **MOBILE-02** | E2E Mua hàng Thiết bị thật | Mobile / QA | P2 | 🔴 Chờ MOBILE-01 | Vừa |
+| **RELIABILITY-01** | Transactional Outbox Pattern | Backend | P3 | 🔵 Backlog | Khó |
+| **INFRA-01** | Multi-instance + Redis phân tán | DevOps | P3 | 🔵 Cần cloud | Vừa |
+| **PM-01** | Go/No-Go Gate Phát hành | PM | P0 | 🔴 Chờ Phase 2 | Vừa |
+
+> **Chú thích:** 🟢 Làm ngay (không phụ thuộc) | 🟡 Chờ tài khoản bên thứ ba | 🔴 Chờ chứng chỉ/thiết bị | 🔵 Ưu tiên thấp
 
 ---
 
-## 1. 📊 Bảng Dashboard Tổng hợp Công việc Chưa Hoàn thành
-
-| Mã Task | Tên Công Việc | Phân Hệ | Priority | Trạng thái Hiện tại | Độ khó | Thích hợp cho Intern? |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: |
-| **QA-03** | Kiểm thử Đua tranh Tồn kho & Concurrency Invariants | QA / Backend | **P1** | ✅ Hoàn thành Test Suite (`orders.race-condition.spec.ts` 5/5 PASS) | Vừa | ❌ (Dành cho QA Lead) |
-| **MOBILE-01** | Ký AAB/IPA & Cấu hình Push FCM/APNs trên máy thật | Mobile / DevOps | **P1** | Mã nguồn đã pass test; Cần chứng chỉ thật | Khó | ❌ (Cần Account Store) |
-| **MOBILE-02** | Kiểm thử Toàn trình E2E luồng mua hàng trên Thiết bị thật | Mobile / QA | **P2** | 42 unit/widget test PASS; Cần máy thật | Vừa | ⚠️ (Cần điện thoại/máy ảo) |
-| **PM-01** | Quy trình Duyệt Phát hành Chính thức (Go/No-Go Gate) | PM / DevOps | **P0** | Chờ hoàn tất các Gate kỹ thuật | Vừa | ❌ (Dành cho PM/Lead) |
-| **PAY-01** | Xác thực Giao dịch Sandbox Cổng VNPay & MoMo | Backend / QA | **P2** | Mã nguồn xử lý chữ ký đã xong; Chờ keys | Dễ/Vừa | ✅ (Khi có merchant test) |
-| **SHIPPING-01**| Tích hợp Vận đơn Sandbox Giao Hàng Nhanh (GHN) | Backend / FE | **P2** | DTO/Service đã viết; Chờ GHN Token/Shop ID | Dễ/Vừa | ✅ (Khi có shop test) |
-| **FE-04** | Tích hợp `ImageUploader.vue` vào các trang Admin CMS | Frontend Web | **P2** | Component đã hoàn chỉnh; Các trang cần gắn | **Dễ** | ⭐⭐⭐ **(Rất thích hợp)** |
-| **A11Y-01** | Bổ sung Focus Trap & Phím tắt bàn phím cho Modal | Frontend Web | **P3** | Cần xử lý trải nghiệm trợ năng bàn phím | **Dễ** | ⭐⭐⭐ **(Rất thích hợp)** |
-| **TECHDEBT-02**| Xử lý 1.808 ESLint Warnings & Chuẩn hóa Types Backend| Backend | **P2** | 0 errors (1.808 warnings <= 1.816) | **Dễ** | ⭐⭐⭐ **(Rất thích hợp)** |
-| **RELIABILITY-01**| Transactional Outbox Pattern cho sự kiện sau commit | Backend | **P3** | Hiện tại là best-effort bắn socket sau commit | Khó | ⚠️ (Cần kinh nghiệm BE) |
-| **INFRA-01** | Kiểm thử Cụm Multi-instance Backend chia sẻ Redis | DevOps / BE | **P3** | Mã nguồn đã dùng Redis; Cần test tải cụm | Vừa | ❌ (Cần môi trường cloud) |
+## 🟢 TASK LÀM NGAY — Không Phụ Thuộc Bên Ngoài
 
 ---
 
-## 2. 🚪 Nhóm 1: Các Cổng Nghiệm thu Môi trường Thật (Production Release Gates)
+### FE-08: Tích Hợp `ImageUploader.vue` Vào Admin CMS
+
+**Priority:** P2 | **Độ khó:** Dễ | **Phân hệ:** Frontend | **Phù hợp Intern:** ⭐⭐⭐
+
+#### Nghiệp vụ
+Hệ thống Admin CMS hiện có một component upload ảnh tái sử dụng cao cấp [`ImageUploader.vue`](../frontend/src/components/ImageUploader.vue) (đã có test tự động). Component hỗ trợ kéo thả ảnh, xem trước preview grid, kiểm tra dung lượng tối đa, định dạng MIME và nhập link ảnh ngoài. Tuy nhiên, một số trang Admin cũ vẫn dùng `<input type="file">` đơn giản, gây ra trải nghiệm không đồng nhất cho người quản trị.
+
+#### Yêu cầu kỹ thuật
+1. **Trang quản trị sản phẩm** [`Products.vue`](../frontend/src/pages/admin/Products.vue):
+   - Tìm phần upload ảnh sản phẩm → Thay bằng:
+     ```vue
+     <ImageUploader v-model="form.images" :max-files="5" :max-size-m-b="5" />
+     ```
+   - Đảm bảo `form.images` là mảng URL string tương thích với API backend `POST /products`.
+
+2. **Trang quản trị banner** [`Banners.vue`](../frontend/src/pages/admin/Banners.vue):
+   - Thay upload ảnh banner bằng:
+     ```vue
+     <ImageUploader v-model="form.image" :max-files="1" :max-size-m-b="2" />
+     ```
+
+3. Kiểm tra trang Landing Pages xem có upload ảnh nào chưa dùng component này không.
+
+#### Kiểm tra sau khi làm
+```bash
+cd frontend
+npm run test:unit     # Tất cả test phải PASS
+npm run typecheck     # 0 errors
+npm run build         # Build thành công
+```
+
+#### Tiêu chí nghiệm thu
+- [ ] Upload ảnh đồng nhất trên mọi trang Admin (kéo thả, preview, thông báo lỗi rõ ràng).
+- [ ] Ảnh vượt `maxFiles` hoặc `maxSizeMB` → Hiển thị thông báo lỗi.
+- [ ] Build và test pass 100%.
 
 ---
 
-### Task: QA-03 — Benchmark Chịu Tải & Đo Đạc Truy Vấn Aggregation Staging
-- **Vai trò chính:** QA + Backend
-- **Độ ưu tiên:** P1 | **Mức độ:** Cần cho Release Production
-- **Bối cảnh hiện tại:**
-  - Bộ kịch bản load test (`scripts/load/catalog-search.load.js` và `concurrent-orders.load.js`) đã được xây dựng và pass trên loopback cục bộ.
-  - Công cụ trích xuất pipeline OrdersService (`scripts/load/report-explain.cjs`) đã hoàn thành.
-  - Đã có test kiểm tra tính chính xác doanh thu thuần (`reports.accuracy.spec.ts` 6/6 pass).
-- **Phần còn thiếu cần thực hiện:**
-  1. Triển khai backend lên môi trường Staging có cấu hình phần cứng tương đương Production.
-  2. Nạp tập dữ liệu mẫu đủ lớn (ít nhất 10.000 sản phẩm, 50.000 đơn hàng lịch sử).
-  3. Chạy script load test với 50–100 người dùng đồng thời trong 15 phút.
-  4. Thu thập báo cáo `explain("executionStats")` của MongoDB cho các pipeline tính doanh thu `/reports/overview` và `/reports/revenue-chart`.
-- **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - [ ] Latency p95 của các endpoint đọc danh mục và tìm kiếm sách duy trì `< 300ms`.
-  - [ ] Không có truy vấn aggregation nào quét toàn bộ bảng (`COLLSCAN`) mà không dùng index trên tập dữ liệu lớn.
-  - [ ] Không phát sinh lỗi bán vượt tồn kho (overselling) khi chạy checkout đồng thời trên sản phẩm có số lượng tồn ít.
+### FE-09: Focus Trap & Phím Tắt Bàn Phím Cho `FormModal.vue`
 
----
+**Priority:** P3 | **Độ khó:** Dễ | **Phân hệ:** Frontend | **Phù hợp Intern:** ⭐⭐⭐
 
-### Task: MOBILE-01 — Đóng Gói Ký Số & Kích Hoạt Push Notification Máy Thật
-- **Vai trò chính:** Mobile + DevOps
-- **Độ ưu tiên:** P1 | **Mức độ:** Cần cho Mobile Release
-- **Bối cảnh hiện tại:**
-  - Ứng dụng Flutter đã vượt qua 42/42 tests và `flutter analyze` 0 issue.
-  - Đã xử lý cách ly lỗi khởi tạo push khỏi luồng đăng nhập, hỗ trợ cold-start từ notification deeplink mở đơn hàng, kiểm tra `API_URL` HTTPS hợp lệ lúc khởi động.
-  - Đã cấu hình `Runner.entitlements` cho iOS (hỗ trợ APS Environment development/production).
-- **Phần còn thiếu cần thực hiện:**
-  1. Cấu hình file `mobile/android/key.properties` thật từ script `mobile/scripts/generate-keystore.ps1` (hoặc `.sh`).
-  2. Tạo chứng chỉ Apple Developer và Provisioning Profile cho bundle identifier `vn.truongthanh.bookstore`.
-  3. Cung cấp file `google-services.json` (Android) và `GoogleService-Info.plist` (iOS) thật từ Google Firebase Console của dự án.
-  4. Đóng gói bản ký chính thức: Android App Bundle (`flutter build appbundle --release`) và iOS Archive (`flutter build ipa --release`).
-  5. Cài đặt file build lên ít nhất 1 thiết bị Android thật và 1 thiết bị iPhone thật.
-- **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - [ ] Khi Admin duyệt đơn hoặc chuyển trạng thái trên Web CMS, điện thoại nhận được Push Notification trong vòng 3 giây khi app đang ở background hoặc khóa màn hình.
-  - [ ] Khi chạm vào thông báo lúc app đang tắt hoàn toàn (cold-start), ứng dụng mở thẳng vào màn hình Chi tiết đơn hàng (`OrderDetailScreen`) sau khi xác thực session.
-  - [ ] Build thành công file `.aab` và `.ipa` có chữ ký hợp lệ sẵn sàng tải lên Google Play Console & TestFlight.
+#### Nghiệp vụ
+[`FormModal.vue`](../frontend/src/components/FormModal.vue) là component popup dùng cho tất cả form thêm/sửa dữ liệu trong Admin CMS (sản phẩm, danh mục, voucher, banner...). Hiện tại có 2 vấn đề trợ năng:
+- Phím `Tab` có thể nhảy ra ngoài modal, focus vào các element phía sau (overlay).
+- Phím `Escape` đôi khi chưa đóng modal nhanh chóng.
 
----
+Người dùng quản trị nhập liệu nhiều bằng bàn phím sẽ bị phiền khi Tab nhảy ra ngoài, hoặc không thể đóng modal bằng Escape.
 
-### Task: MOBILE-02 — Kiểm Thử Toàn Trình Mua Hàng Trên Thiết Bị Di Động Thật
-- **Vai trò chính:** Mobile + QA
-- **Độ ưu tiên:** P2
-- **Bối cảnh hiện tại:** Toàn bộ luồng contract API và state machine đã có mock tests trong `mobile/test/`.
-- **Phần còn thiếu cần thực hiện:**
-  1. Cài đặt ứng dụng trên thiết bị di động thật (hoặc máy ảo Android Emulator / iOS Simulator) kết nối tới Backend Staging/Local.
-  2. Thực hiện kịch bản người dùng thực tế:
-     - Đăng ký tài khoản mới ➔ Tìm kiếm sách ➔ Thêm vào giỏ hàng ➔ Chọn địa chỉ ➔ Nhập điểm Loyalty / Áp Voucher ➔ Chọn thanh toán COD ➔ Bấm Đặt hàng.
-  3. Thử nghiệm tình huống mất mạng (bật Airplane mode) trong lúc thanh toán: kiểm tra ứng dụng có giữ đúng `Idempotency-Key` khi bấm thử lại hay không.
-  4. Kiểm tra hiển thị danh sách đơn hàng có phân trang (Infinite scroll / Pull to refresh).
-- **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - [ ] Không có hiện tượng crash hoặc đứng hình (freeze) trên giao diện.
-  - [ ] Không tạo 2 đơn hàng trùng lặp khi thử lại do mất mạng.
-  - [ ] Dữ liệu giỏ hàng và đơn hàng đồng bộ hoàn hảo với Web Storefront.
-
----
-
-### Task: PM-01 — Hoàn Thiện Quy Trình Nghiệm Thu & Cổng Quyết Định Go / No-Go
-- **Vai trò chính:** Project Manager (PM)
-- **Độ ưu tiên:** P0 (Điều phối phát hành)
-- **Nội dung:**
-  - Tổ chức rà soát lần cuối toàn bộ các tiêu chí Production Definition of Done.
-  - Ban hành quyết định chính thức: Có thể phát hành trước bản Web Storefront hỗ trợ COD & Chuyển khoản VietQR, trong khi chờ cấp tài khoản Apple Developer và Merchant Keys online.
-- **Nguyên tắc No-Go:** Không cho phép release nếu bất kỳ kiểm thử bảo mật nào bị fail hoặc database chưa kích hoạt cơ chế transaction replica set an toàn.
-
----
-
-## 3. 💳 Nhóm 2: Tích hợp Đối tác Bên Thứ Ba (Cần Tài khoản Sandbox)
-
----
-
-### Task: PAY-01 — Xác Thực Giao Dịch Thật Cổng Thanh Toán VNPay & MoMo
-- **Vai trò chính:** Backend + QA
-- **Độ ưu tiên:** P2 (Blocker nếu muốn mở tính năng thanh toán thẻ online)
-- **Bối cảnh hiện tại:**
-  - Mã nguồn trong `backend/src/modules/payments/providers/payment.providers.ts` đã triển khai đầy đủ thuật toán sinh chữ ký SHA-512 cho VNPay 2.1.0 và HMAC-SHA256 cho MoMo.
-  - Các test case kiểm tra chữ ký và format tham số đã pass 100% trong `payment.providers.spec.ts`.
-- **Phần còn thiếu cần thực hiện:**
-  1. Nhận thông tin tài khoản Test Merchant từ VNPay Sandbox (`vnp_TmnCode`, `vnp_HashSecret`) và MoMo Developer Portal (`partnerCode`, `accessKey`, `secretKey`).
-  2. Điền thông tin vào `backend/.env`.
-  3. Tạo đơn hàng và thực hiện giao dịch thử bằng thẻ test ATM/Visa của VNPay và ứng dụng ví MoMo Sandbox.
-  4. Kiểm tra endpoint Webhook / IPN (`/api/payments/vnpay-ipn` và `/api/payments/momo-ipn`) nhận kết quả, đối soát số tiền khớp với đơn hàng và tự động chuyển trạng thái đơn sang `CONFIRMED` + `paymentStatus: PAID`.
-- **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - [ ] Thanh toán thành công trên cổng test ➔ Đơn hàng cập nhật `PAID` và bắn thông báo tức thì tới khách hàng.
-  - [ ] Giả mạo chữ ký IPN hoặc sai số tiền ➔ Backend từ chối với HTTP 400 và không duyệt đơn.
-
----
-
-### Task: SHIPPING-01 — Tích Hợp Đồng Bộ Vận Đơn Giao Hàng Nhanh (GHN)
-- **Vai trò chính:** Backend + Frontend
-- **Độ ưu tiên:** P2
-- **Bối cảnh hiện tại:** Kiến trúc hệ thống đã có state `SHIPPING` và trường lưu mã vận đơn `trackingNumber`.
-- **Phần còn thiếu cần thực hiện:**
-  1. Đăng ký tài khoản trên cổng thử nghiệm GHN Sandbox (`https://dev-online-gateway.ghn.vn`).
-  2. Lấy API Token và Shop ID điền vào `.env`.
-  3. Hoàn thiện Service gọi API tạo đơn giao hàng (`/shiip/public-api/v2/shipping-order/create`) khi Admin chuyển đơn sang `SHIPPING`.
-  4. Hiển thị mã tra cứu vận đơn và liên kết theo dõi bưu tá trên giao diện chi tiết đơn hàng của Web và Mobile.
-- **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - [ ] Khi Admin bấm "Giao Hàng Nhanh", hệ thống tự động sinh mã vận đơn thật từ GHN (ví dụ: `ED1234567VN`).
-  - [ ] Khách hàng bấm vào mã vận đơn có thể mở trang tra cứu lộ trình của GHN.
-
----
-
-## 4. 🛠️ Nhóm 3: Nợ Kỹ thuật & Cải tiến Mã nguồn (Technical Debt - Thích hợp cho Intern)
-
----
-
-### Task: FE-04 — Tích Hợp `ImageUploader.vue` Vào Các Trang Quản Trị Admin CMS
-- **Vai trò chính:** Frontend Developer / Intern
-- **Độ ưu tiên:** P2 | **Độ khó:** Dễ
-- **Bối cảnh hiện tại:**
-  - Component tái sử dụng cao cấp [`frontend/src/components/ImageUploader.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/components/ImageUploader.vue) đã được xây dựng hoàn chỉnh và có bộ test tự động riêng (`ImageUploader.spec.ts`). Hỗ trợ kéo thả ảnh, xem trước (preview grid), kiểm tra dung lượng tối đa, định dạng MIME và nhập link ảnh ngoài.
-  - Tuy nhiên, một số trang Admin CMS cũ vẫn đang dùng thẻ `<input type="file">` đơn giản hoặc chưa dùng chung component này.
-- **Công việc cần làm:**
-  1. Mở trang quản trị sản phẩm: `frontend/src/pages/admin/Products.vue`.
-  2. Thay thế phần upload ảnh sản phẩm bằng component `<ImageUploader v-model="form.images" :max-files="5" :max-size-m-b="5" />`.
-  3. Tương tự, kiểm tra và tích hợp vào trang quản trị Banner (`frontend/src/pages/admin/Banners.vue`).
-  4. Chạy kiểm tra build: `npm run build` và test: `npm run test:unit`.
-- **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - [ ] Giao diện tải ảnh trên trang Admin đồng bộ, kéo thả mượt mà, xem trước ảnh sắc nét.
-  - [ ] `npm run build` ở frontend pass 0 lỗi.
-
----
-
-### Task: A11Y-01 — Cải Thiện Trợ Năng Bàn Phím & Focus Trap Cho `FormModal.vue`
-- **Vai trò chính:** Frontend Developer / Intern
-- **Độ ưu tiên:** P3 | **Độ khó:** Dễ
-- **Bối cảnh hiện tại:**
-  - Component [`frontend/src/components/FormModal.vue`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/frontend/src/components/FormModal.vue) dùng để hiển thị popup thêm/sửa dữ liệu trên toàn bộ trang Admin.
-  - Hiện tại, khi mở modal, phím `Tab` vẫn có thể nhảy ra ngoài các phần tử phía sau nền (background), và bấm phím `Escape` đôi khi chưa đóng modal nhanh.
-- **Công việc cần làm:**
-  1. Thêm xử lý phím `Escape` (`@keydown.esc="closeModal"`).
-  2. Cài đặt cơ chế Focus Trap (khóa con trỏ bàn phím chỉ luân chuyển giữa các input bên trong modal khi modal đang mở).
-  3. Tự động focus vào ô nhập liệu đầu tiên khi modal vừa xuất hiện.
-  4. Chạy `npm run test:unit` để kiểm tra không bị lỗi hồi quy.
-- **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - [ ] Bấm phím `Tab` liên tục trên modal chỉ chạy vòng quanh các nút/ô nhập trong modal.
-  - [ ] Bấm phím `Escape` đóng modal an toàn.
-
----
-
-### Task: TECHDEBT-02 — Chuẩn Hóa Kiểu Dữ Liệu & Giảm Cảnh Báo ESLint Backend
-- **Vai trò chính:** Backend Developer / Intern
-- **Độ ưu tiên:** P2 | **Độ khó:** Dễ (Cần sự tỉ mỉ)
-- **Bối cảnh hiện tại:**
-  - Backend NestJS hiện tại đạt **0 errors** và **1.808 warnings** (ngân sách giới hạn là 1.816).
-  - Phần lớn warnings xuất phát từ việc dùng kiểu `any` trong các file mock test hoặc các tham số callback Mongoose/ExcelJS.
-- **Công việc cần làm:**
-  1. Chạy lệnh: `npm run lint` để quan sát danh sách các cảnh báo `@typescript-eslint/no-explicit-any`.
-  2. Chọn các module nghiệp vụ cụ thể (ví dụ: `src/modules/categories/`, `src/modules/banners/`, `src/modules/promotions/`).
-  3. Thay thế kiểu `any` bằng interface hoặc generic type cụ thể (ví dụ: `Record<string, unknown>`, `FilterQuery<Product>`, DTO classes).
-  4. Đảm bảo số lượng warnings giảm dần mà không làm hỏng code (chạy `npm test` sau mỗi lần sửa).
-- **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - [ ] Số lượng warnings giảm xuống dưới 1.500 (hoặc thấp hơn).
-  - [ ] Toàn bộ 445 unit tests vẫn **PASS 100%** (bao gồm 20 tests mới cho module Banners/Popup).
-
----
-
-### ✅ Hạng mục Đã Hoàn Thành: Entry Popup Advertisement (Quảng Cáo Mở Website)
-- **Mã tính năng:** `FEAT-ENTRY-POPUP`
-- **Trạng thái:** **HOÀN THÀNH 100%** (Full-stack Backend + Frontend + Admin CMS)
-- **Tài liệu đặc tả:** [`docs/ENTRY_POPUP_ADVERTISEMENT.md`](file:///d:/Truong_Thanh_app/Truong_thanh_store/Truong_Thanh_Bookstore/docs/ENTRY_POPUP_ADVERTISEMENT.md)
-- **Kiểm thử:** 445/445 backend tests pass, 65/65 frontend tests pass, 0 lint errors, build clean.
-
----
-
-### Task: RELIABILITY-01 — Áp Dụng Transactional Outbox Pattern Cho Thông Báo
-- **Vai trò chính:** Backend Lead / Senior Developer
-- **Độ ưu tiên:** P3 | **Độ khó:** Nâng cao
-- **Bối cảnh hiện tại:**
-  - Trong `OrdersService`, sau khi Transaction MongoDB commit thành công, hệ thống gọi bắn Socket.IO, gửi FCM push notification và đồng bộ Google Sheets.
-  - Nếu ứng dụng bị mất điện hoặc crash đúng vào tích tắc giữa commit DB và gửi thông báo, sự kiện thông báo có thể bị thất lạc mà không được thử lại (best-effort).
-- **Công việc cần làm:**
-  1. Tạo collection `OutboxEvents` trong MongoDB.
-  2. Lưu bản ghi sự kiện cùng session với Transaction đặt hàng.
-  3. Xây dựng Worker/Cron quét các event ở trạng thái `PENDING` trong Outbox và phát đi. Khi gửi thành công thì chuyển `SENT`.
-- **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - [ ] Không bao giờ bị mất thông báo đơn hàng ngay cả khi server khởi động lại đột ngột.
-
----
-
-### Task: INFRA-01 — Kiểm Thử Cụm Đa Instance Backend với Redis Phân Tán
-- **Vai trò chính:** DevOps / Backend
-- **Độ ưu tiên:** P3
-- **Nội dung:**
-  - Triển khai 2–3 container Backend API cùng kết nối vào 1 container Redis chung qua Docker Compose.
-  - Gửi request đăng xuất ở Node A ➔ Gửi tiếp request dùng token cũ tới Node B ➔ Kiểm tra Node B từ chối ngay lập tức qua Redis key `bl:jti:{jti}`.
-  - Kiểm tra Rate Limiting giới hạn chung đúng ngưỡng trên toàn cụm.
-
----
-
-## 5. 📘 Hướng dẫn Dành cho Intern / Lập trình viên Mới Nhận Việc
-
-Nếu bạn là Thực tập sinh hoặc Lập trình viên mới tham gia dự án, đây là lộ trình khuyến nghị để bạn bắt đầu mà không bị ngợp:
-
-### 🌟 Bước 1: Khởi động với các Task Nhẹ nhàng (Tuần đầu tiên)
-- **Nên chọn ngay:**
-  1. 👉 **Task FE-04:** Tích hợp `ImageUploader.vue` vào các trang Admin CMS. (Giúp bạn làm quen với cấu trúc Vue 3, Pinia và Component tái sử dụng).
-  2. 👉 **Task A11Y-01:** Cải thiện phím tắt và Focus Trap cho `FormModal.vue`.
-  3. 👉 **Task TECHDEBT-02:** Rà soát và sửa 30–50 cảnh báo `any` trong các module backend đơn giản như `categories` hoặc `banners`. (Giúp bạn hiểu sâu cấu trúc DTO và Schema Mongoose).
-
-### 🚀 Bước 2: Nâng cao với Logic Nghiệp vụ (Tuần thứ hai)
-- **Nên chọn:**
-  1. 👉 **Task MOBILE-02:** Chạy thử ứng dụng Flutter trên máy ảo/điện thoại thật, trải nghiệm và sửa các lỗi hiển thị giao diện nhỏ nếu có.
-  2. 👉 **Task PAY-01 / SHIPPING-01:** Xin tài khoản Sandbox từ Lead để kiểm thử giao dịch thật và viết tài liệu kết nối.
-
-### 📋 Quy trình Nộp Mã Nguồn (Git Workflow)
-1. **Tạo nhánh mới từ `main`:**
-   ```bash
-   git checkout main
-   git pull origin main
-   git checkout -b feature/FE-04-integrate-image-uploader
+#### Yêu cầu kỹ thuật
+1. **Focus Trap** — Khóa phím Tab/Shift+Tab xoay vòng bên trong modal:
+   ```typescript
+   function handleTabKey(e: KeyboardEvent) {
+     const focusable = modal.value?.querySelectorAll(
+       'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+     );
+     if (!focusable?.length) return;
+     const first = focusable[0] as HTMLElement;
+     const last = focusable[focusable.length - 1] as HTMLElement;
+     if (e.shiftKey && document.activeElement === first) {
+       e.preventDefault(); last.focus();
+     } else if (!e.shiftKey && document.activeElement === last) {
+       e.preventDefault(); first.focus();
+     }
+   }
    ```
-2. **Lập trình & Chạy kiểm thử cục bộ:**
-   - Nếu làm Frontend: Chạy `npm run test:unit` và `npm run build`.
-   - Nếu làm Backend: Chạy `npm test` và `npm run lint`.
-3. **Commit code rõ ràng theo chuẩn Conventional Commits:**
-   ```bash
-   git commit -m "feat(admin): integrate ImageUploader component into Products and Banners pages"
+
+2. **Phím Escape** — `@keydown.esc="closeModal"` trên container modal.
+
+3. **Auto-focus** — Dùng `nextTick(() => firstInput.focus())` khi modal mở.
+
+4. **Trả lại focus** — Lưu `document.activeElement` trước khi mở modal, restore khi đóng.
+
+5. **Viết test:**
+   ```typescript
+   it('traps focus within modal when open')
+   it('closes on Escape key')
+   it('auto-focuses first input on open')
+   it('restores focus to trigger element on close')
    ```
-4. **Đẩy nhánh lên GitHub và tạo Pull Request (PR):**
-   - Đính kèm hình ảnh / video minh chứng kết quả hoạt động trên máy bạn.
-   - Tag Mentor hoặc Lead vào review code.
+
+#### Kiểm tra sau khi làm
+```bash
+cd frontend && npm run test:unit
+```
+
+#### Tiêu chí nghiệm thu
+- [ ] Tab chỉ xoay vòng bên trong modal (không nhảy ra ngoài).
+- [ ] Escape đóng modal an toàn.
+- [ ] Modal mở → auto-focus input đầu tiên.
+- [ ] Modal đóng → focus trả về element gốc.
 
 ---
-*Tài liệu này được cập nhật định kỳ theo tiến độ dự án. Khi hoàn thành một task, hãy cập nhật trạng thái tương ứng tại tài liệu này.*
+
+### TECHDEBT-01: Giảm Cảnh Báo ESLint Backend (1.808 Warnings → < 1.500)
+
+**Priority:** P2 | **Độ khó:** Dễ (tỉ mỉ) | **Phân hệ:** Backend | **Phù hợp Intern:** ⭐⭐⭐
+
+#### Nghiệp vụ
+Backend NestJS hiện đạt **0 errors** nhưng có **~1.808 warnings** (ngân sách giới hạn `--max-warnings 1950`). Phần lớn warnings là `@typescript-eslint/no-explicit-any` — sử dụng kiểu `any` thay vì kiểu dữ liệu cụ thể. Điều này làm giảm khả năng phát hiện lỗi tại compile-time và tăng rủi ro runtime errors.
+
+**Mục tiêu:** Giảm xuống dưới **1.500 warnings** bằng cách thay thế `any` bằng kiểu dữ liệu chính xác.
+
+#### Yêu cầu kỹ thuật
+1. Chạy `cd backend && npm run lint` → Quan sát danh sách warnings.
+
+2. **Sửa theo thứ tự module (dễ → khó):**
+
+   | STT | Module | Ước tính warnings | Ghi chú |
+   |:---:|:---|:---:|:---|
+   | 1 | `src/modules/categories/` | ~20 | Ít file, đơn giản nhất |
+   | 2 | `src/modules/banners/` | ~30 | Ít phụ thuộc |
+   | 3 | `src/modules/promotions/` | ~40 | Logic rõ ràng |
+   | 4 | `src/modules/reviews/` | ~30 | Ít type phức tạp |
+   | 5 | `src/modules/products/` | ~80 | Nhiều file nhưng pattern lặp |
+
+3. **Kỹ thuật thay thế `any`:**
+   ```typescript
+   // ❌ Trước:
+   const data: any = await this.model.find(filter);
+   
+   // ✅ Sau (chọn 1 trong các cách):
+   const data = await this.model.find(filter);                    // để TS tự suy luận
+   const data: Record<string, unknown> = ...;                    // khi không rõ shape
+   const data: FilterQuery<Product> = ...;                       // khi biết rõ type
+   ```
+
+4. **Quy tắc:** KHÔNG thêm `// eslint-disable` mới. Phải sửa đúng cách.
+
+5. Sau mỗi module, chạy:
+   ```bash
+   npm test           # Không hỏng code
+   npm run lint       # Đếm warnings còn lại
+   ```
+
+#### Tiêu chí nghiệm thu
+- [ ] Warnings < 1.500.
+- [ ] Toàn bộ unit tests PASS 100%.
+- [ ] Không thêm `// eslint-disable` mới.
+
+---
+
+## 🟡 TASK CHỜ TÀI KHOẢN SANDBOX BÊN THỨ BA
+
+---
+
+### PAY-01: Xác Thực Giao Dịch Sandbox VNPay & MoMo
+
+**Priority:** P1 | **Độ khó:** Vừa | **Phân hệ:** Backend / QA  
+**Blocker:** Cần tài khoản Test Merchant từ VNPay Sandbox và MoMo Developer Portal
+
+#### Nghiệp vụ
+Hệ thống hiện hỗ trợ thanh toán COD và Chuyển khoản VietQR. Để mở thêm thanh toán trực tuyến (thẻ ATM/Visa qua VNPay, ví điện tử MoMo), cần xác thực giao dịch thật trên môi trường sandbox của từng cổng.
+
+**Code đã sẵn sàng:**
+- [`payment.providers.ts`](../backend/src/modules/payments/providers/payment.providers.ts): Thuật toán chữ ký SHA-512 (VNPay 2.1.0) và HMAC-SHA256 (MoMo) đã triển khai đầy đủ.
+- [`payment.providers.spec.ts`](../backend/src/modules/payments/providers/payment.providers.spec.ts): Test chữ ký và format tham số pass 100%.
+
+#### Khi có Merchant Keys, thực hiện:
+1. Điền vào `backend/.env`:
+   ```env
+   VNPAY_TMN_CODE=your_vnpay_tmn_code
+   VNPAY_HASH_SECRET=your_vnpay_hash_secret
+   MOMO_PARTNER_CODE=your_momo_partner_code
+   MOMO_ACCESS_KEY=your_momo_access_key
+   MOMO_SECRET_KEY=your_momo_secret_key
+   ENABLED_PAYMENT_METHODS=COD,BANK_TRANSFER,VNPAY,MOMO
+   ```
+2. Tạo đơn hàng test → Chọn thanh toán VNPay/MoMo → Hoàn tất giao dịch trên cổng sandbox.
+3. Kiểm tra endpoint Webhook/IPN:
+   - `POST /api/payments/vnpay-ipn` — VNPay gọi khi giao dịch hoàn tất.
+   - `POST /api/payments/momo-ipn` — MoMo gọi khi giao dịch hoàn tất.
+4. Xác nhận: Đơn hàng chuyển `paymentStatus: PAID`, `orderStatus: CONFIRMED`, thông báo bắn tới khách.
+
+#### Tiêu chí nghiệm thu
+- [ ] Thanh toán sandbox thành công → Đơn `PAID` + notification realtime.
+- [ ] Giả mạo chữ ký IPN → HTTP 400, không duyệt đơn.
+- [ ] Sai số tiền IPN → Đơn đóng băng `MANUAL_REQUIRED`.
+- [ ] Gọi IPN trùng 3 lần → Xử lý idempotent, không cộng doanh thu/điểm nhiều lần.
+
+---
+
+### SHIPPING-01: Tích Hợp Vận Đơn Sandbox Giao Hàng Nhanh (GHN)
+
+**Priority:** P2 | **Độ khó:** Vừa | **Phân hệ:** Backend / Frontend  
+**Blocker:** Cần đăng ký tài khoản GHN Sandbox (`https://dev-online-gateway.ghn.vn`)
+
+#### Nghiệp vụ
+Khi Admin duyệt đơn hàng và chuyển trạng thái sang `SHIPPING`, hệ thống cần tự động tạo vận đơn trên GHN để:
+- Admin nhận mã vận đơn (ví dụ: `ED1234567VN`) lưu vào Order.
+- Khách hàng xem được mã vận đơn và link tra cứu lộ trình giao hàng trên trang Chi tiết đơn.
+
+**Code đã sẵn sàng:**
+- Order Schema đã có trường `trackingNumber`.
+- State machine đã hỗ trợ `PROCESSING → SHIPPING`.
+
+#### Khi có GHN Token, thực hiện:
+1. Điền vào `backend/.env`:
+   ```env
+   GHN_TOKEN=your_ghn_sandbox_token
+   GHN_SHOP_ID=your_ghn_shop_id
+   GHN_API_URL=https://dev-online-gateway.ghn.vn
+   ```
+2. Tạo/hoàn thiện `ShippingService` gọi API GHN:
+   - Endpoint: `POST /shiip/public-api/v2/shipping-order/create`
+   - Payload: Tên/SĐT/Địa chỉ người nhận, danh sách sản phẩm, trọng lượng ước tính.
+3. Hook vào `OrderLifecycleService.updateStatus()`: Khi chuyển `SHIPPING`, gọi `ShippingService.createOrder()` → Lưu `trackingNumber` vào Order.
+4. Frontend [`OrderDetail.vue`](../frontend/src/pages/customer/OrderDetail.vue): Hiển thị mã vận đơn + link `https://tracking.ghn.vn?order_code={trackingNumber}`.
+5. Xử lý timeout: Nếu GHN không phản hồi trong 5 giây → retry 1 lần → nếu vẫn fail, giữ đơn ở `PROCESSING` và báo lỗi cho Admin.
+
+#### Tiêu chí nghiệm thu
+- [ ] Admin bấm "Giao hàng" → Sinh mã vận đơn GHN thật.
+- [ ] Khách bấm mã vận đơn → Mở trang GHN tra cứu lộ trình.
+- [ ] GHN timeout → Đơn giữ `PROCESSING`, Admin nhận thông báo lỗi.
+
+---
+
+## 🔴 TASK CHỜ CHỨNG CHỈ DEVELOPER & THIẾT BỊ THẬT
+
+---
+
+### MOBILE-01: Đóng Gói Ký Số & Push Notification Thiết Bị Thật
+
+**Priority:** P1 | **Độ khó:** Khó | **Phân hệ:** Mobile / DevOps  
+**Blocker:** Apple Developer Account, Google Play Console, Firebase Console thật
+
+#### Nghiệp vụ
+Ứng dụng di động Flutter cần được đóng gói ký số chính thức để:
+- Cài đặt lên thiết bị thật (Android + iPhone).
+- Nhận Push Notification khi đơn hàng đổi trạng thái (FCM cho Android, APNs cho iOS).
+- Sẵn sàng tải lên Google Play Store và Apple TestFlight.
+
+**Code đã sẵn sàng:** Flutter app 42/42 tests pass, `flutter analyze` 0 issue, đã xử lý cách ly lỗi push, cold-start deeplink, APS entitlements.
+
+#### Khi có chứng chỉ, thực hiện:
+1. **Android:** Chạy `mobile/scripts/generate-keystore.ps1` → Cấu hình `mobile/android/key.properties`.
+2. **iOS:** Tạo App ID `vn.truongthanh.bookstore` + Provisioning Profile + APNs key trên Apple Developer.
+3. **Firebase:** Tạo project → Tải `google-services.json` (Android) + `GoogleService-Info.plist` (iOS).
+4. **Backend:** Cấu hình `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` trong `.env`.
+5. **Build:**
+   ```bash
+   flutter build appbundle --release     # Android
+   flutter build ipa --release           # iOS
+   ```
+
+#### Tiêu chí nghiệm thu
+- [ ] Push notification nhận trong ≤ 3 giây (background + lock screen).
+- [ ] Chạm notification lúc app tắt (cold-start) → Mở Chi tiết đơn hàng.
+- [ ] `.aab` + `.ipa` chữ ký hợp lệ, tải được lên Play Console / TestFlight.
+
+---
+
+### MOBILE-02: Kiểm Thử E2E Luồng Mua Hàng Trên Thiết Bị Thật
+
+**Priority:** P2 | **Độ khó:** Vừa | **Phân hệ:** Mobile / QA  
+**Phụ thuộc:** MOBILE-01
+
+#### Nghiệp vụ
+Sau khi có build ký, cần kiểm thử toàn bộ luồng mua hàng thực tế trên thiết bị thật để đảm bảo:
+- Trải nghiệm không crash/freeze.
+- Idempotency key hoạt động khi mất mạng giữa chừng.
+- Dữ liệu đồng bộ chính xác giữa Web và Mobile.
+
+#### Kịch bản kiểm thử:
+1. **Luồng chính:** Đăng ký → Tìm sách → Thêm giỏ hàng → Chọn địa chỉ → Áp Voucher/Điểm → COD → Đặt hàng.
+2. **Mất mạng:** Bật Airplane mode lúc thanh toán → Bật lại mạng → Bấm thử lại → Kiểm tra không tạo đơn trùng.
+3. **Hiển thị:** Infinite scroll danh sách đơn, pull-to-refresh, dark/light mode, landscape.
+
+#### Tiêu chí nghiệm thu
+- [ ] Không crash/freeze trong toàn bộ luồng.
+- [ ] Không tạo đơn trùng khi retry mất mạng.
+- [ ] Giỏ hàng + đơn hàng đồng bộ Web ↔ Mobile.
+- [ ] Pull-to-refresh cập nhật danh sách mới nhất.
+
+---
+
+## 🔵 TASK BACKLOG — ƯU TIÊN THẤP (P3)
+
+---
+
+### RELIABILITY-01: Transactional Outbox Pattern Cho Thông Báo
+
+**Priority:** P3 | **Độ khó:** Khó | **Phân hệ:** Backend  
+**Phù hợp:** Senior Backend Developer
+
+#### Nghiệp vụ
+Hiện tại sau khi MongoDB Transaction commit thành công (tạo đơn/đổi trạng thái), hệ thống bắn Socket.IO + FCM notification + Google Sheets sync theo kiểu **best-effort**. Nếu server crash ngay sau commit nhưng trước khi gửi notification → **thông báo bị mất** và không được retry.
+
+Mẫu Outbox Pattern giải quyết bằng cách lưu sự kiện cần gửi vào cùng Transaction với dữ liệu nghiệp vụ, sau đó Worker/Cron quét và gửi.
+
+#### Yêu cầu kỹ thuật
+1. **Schema `OutboxEvent`:**
+   ```typescript
+   eventType: 'ORDER_CREATED' | 'ORDER_STATUS_UPDATED' | 'STOCK_ALERT'
+   payload: Record<string, unknown>
+   status: 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED'
+   retryCount: number (default 0)
+   maxRetries: number (default 5)
+   ```
+2. **Lưu Outbox cùng Transaction:** Thay vì bắn socket ngay → Tạo OutboxEvent document cùng `session` MongoDB.
+3. **Worker quét Outbox:** Cron 10 giây → Tìm `{ status: PENDING, retryCount < maxRetries }` → Dispatch → Cập nhật `SENT`/`FAILED`.
+4. **Cleanup:** Cron hàng ngày xóa `SENT` cũ > 7 ngày.
+
+#### Tiêu chí nghiệm thu
+- [ ] Server restart → notification vẫn được gửi (Worker pickup từ Outbox).
+- [ ] Event FAILED sau max retries → đánh dấu cho Admin review.
+- [ ] Toàn bộ unit tests PASS.
+
+---
+
+### INFRA-01: Kiểm Thử Cụm Đa Instance Backend + Redis Phân Tán
+
+**Priority:** P3 | **Độ khó:** Vừa | **Phân hệ:** DevOps / Backend  
+**Cần:** Môi trường cloud hoặc nhiều container Docker
+
+#### Nghiệp vụ
+Khi deploy production với nhiều instance backend (load balancing), cần đảm bảo:
+- Token blacklist (logout/đổi mật khẩu) có hiệu lực trên tất cả node.
+- Rate limiting đếm đúng ngưỡng toàn cụm (không reset khi request đổi node).
+- WebSocket notification hoạt động xuyên node qua Redis adapter.
+
+#### Kịch bản kiểm thử
+1. Deploy 2–3 container Backend API + 1 Redis chung (Docker Compose).
+2. **Token Blacklist:** Logout ở Node A → Gửi token cũ tới Node B → Node B từ chối (`bl:jti:{jti}`).
+3. **Rate Limiting:** 5 request login sai phân bổ đều 3 node → Request thứ 6 bị `429`.
+4. **WebSocket:** Khách kết nối Node A, Admin duyệt đơn ở Node B → Khách vẫn nhận notification.
+
+#### Tiêu chí nghiệm thu
+- [ ] Token blacklist hoạt động xuyên node.
+- [ ] Rate limit đúng ngưỡng toàn cụm.
+- [ ] WebSocket notification xuyên node.
+
+---
+
+### PM-01: Go/No-Go Gate Phát Hành Chính Thức
+
+**Priority:** P0 (khi Phase 2 hoàn tất) | **Phân hệ:** PM / DevOps  
+**Phụ thuộc:** PAY-01 + MOBILE-01
+
+#### Nghiệp vụ
+Đây là cổng quyết định cuối cùng trước khi phát hành sản phẩm ra công chúng.
+
+#### Checklist Go/No-Go
+- [ ] **Bảo mật:** Toàn bộ test QA-01 + QA-02 pass trên staging.
+- [ ] **Thanh toán:** ≥ 1 cổng online (VNPay hoặc MoMo) xác nhận sandbox OK.
+- [ ] **Mobile:** Build ký tải lên TestFlight / Internal Testing thành công.
+- [ ] **Database:** MongoDB Replica Set + Transaction hoạt động trên staging.
+- [ ] **Monitoring:** Sentry DSN được cấu hình, ghi nhận lỗi 500 chính xác.
+- [ ] **Performance:** p95 latency < 300ms cho endpoint đọc sản phẩm trên staging.
+
+#### Nguyên tắc No-Go
+- ❌ Không release nếu bất kỳ test bảo mật nào fail.
+- ❌ Không release nếu database chưa kích hoạt replica set.
+
+---
+
+## 📘 Hướng Dẫn Cho Intern / Developer Mới
+
+### Nên bắt đầu với task nào?
+
+| Tuần | Task | Lý do |
+| :---: | :--- | :--- |
+| **Tuần 1** | `FE-08` (ImageUploader) | Làm quen Vue 3 Composition API, component tái sử dụng |
+| **Tuần 1** | `FE-09` (Focus Trap) | Hiểu DOM manipulation + keyboard events |
+| **Tuần 1** | `TECHDEBT-01` (ESLint) | Hiểu DTO & Mongoose Schema, sửa 30-50 warnings/ngày |
+| **Tuần 2** | `PAY-01` (nếu có keys) | Kiểm thử giao dịch thật, viết tài liệu kết nối |
+| **Tuần 2** | `MOBILE-02` (nếu có build) | Chạy app trên máy ảo, sửa lỗi UI nhỏ |
+
+### Quy trình Git khi nhận task
+
+```bash
+# 1. Tạo nhánh mới từ dev
+git checkout dev && git pull origin dev
+git checkout -b feature/FE-08-image-uploader-admin
+
+# 2. Code & Test
+cd frontend && npm run test:unit && npm run build   # FE tasks
+cd backend && npm test && npm run lint              # BE tasks
+
+# 3. Commit theo chuẩn Conventional Commits
+git commit -m "feat(admin): integrate ImageUploader into Products and Banners pages"
+
+# 4. Push & tạo Pull Request
+git push origin feature/FE-08-image-uploader-admin
+# → Đính kèm screenshot/video → Tag Lead review
+```
+
+---
+
+*Tài liệu này cập nhật theo tiến độ dự án. Khi hoàn thành task, đánh dấu ✅ tại đây.*
