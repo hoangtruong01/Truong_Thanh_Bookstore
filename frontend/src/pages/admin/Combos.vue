@@ -8,8 +8,8 @@
       </div>
       <button
         v-if="!showForm"
-        @click="openCreateForm"
         class="bg-[#dc2626] hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2 cursor-pointer"
+        @click="openCreateForm"
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
         <span>Thêm Combo mới</span>
@@ -64,10 +64,10 @@
                   <div class="font-bold text-slate-800">{{ combo.name }}</div>
                 </td>
                 <td class="py-4 px-6">
-                  <div class="text-sm font-bold text-[#dc2626]" v-if="combo.comboPrice">
+                  <div v-if="combo.comboPrice" class="text-sm font-bold text-[#dc2626]">
                     {{ formatCurrency(combo.comboPrice) }}
                   </div>
-                  <div class="text-xs text-slate-400 font-normal mt-0.5" v-if="combo.products && combo.products.length">
+                  <div v-if="combo.products && combo.products.length" class="text-xs text-slate-400 font-normal mt-0.5">
                     Tổng giá bán lẻ: {{ formatCurrency(getComboRetailTotal(combo)) }}
                   </div>
                   <span v-else class="text-xs text-slate-400 font-medium italic">Không định giá</span>
@@ -89,10 +89,10 @@
                   </span>
                 </td>
                 <td class="py-4 px-6 text-right space-x-3 whitespace-nowrap">
-                  <button @click="openEditForm(combo)" class="text-blue-600 hover:text-blue-800 inline-block font-extrabold cursor-pointer">
+                  <button class="text-blue-600 hover:text-blue-800 inline-block font-extrabold cursor-pointer" @click="openEditForm(combo)">
                     Sửa
                   </button>
-                  <button @click="deleteCombo(combo._id)" class="text-red-500 hover:text-red-700 inline-block font-extrabold cursor-pointer">
+                  <button class="text-red-500 hover:text-red-700 inline-block font-extrabold cursor-pointer" @click="deleteCombo(combo._id)">
                     Xóa
                   </button>
                 </td>
@@ -108,10 +108,10 @@
           <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
             {{ isEditing ? 'Cập nhật Combo' : 'Thêm Combo mới' }}
           </h3>
-          <button @click="showForm = false" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">&times;</button>
+          <button class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer" @click="showForm = false">&times;</button>
         </div>
 
-        <form @submit.prevent="handleSubmit" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="handleSubmit">
           <div>
             <label class="text-xs font-bold text-slate-700">Tên Combo *</label>
             <input
@@ -186,8 +186,8 @@
                 />
                 <button
                   type="button"
-                  @click="addOptionItem"
                   class="bg-slate-900 hover:bg-[#dc2626] text-white text-xs font-bold px-4 py-2 rounded-xl cursor-pointer transition-colors"
+                  @click="addOptionItem"
                 >
                   Thêm
                 </button>
@@ -203,8 +203,8 @@
                   <span>{{ opt }}</span>
                   <button
                     type="button"
-                    @click="removeOptionItem(idx)"
                     class="w-4 h-4 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 font-extrabold text-[10px] cursor-pointer"
+                    @click="removeOptionItem(idx)"
                   >
                     &times;
                   </button>
@@ -225,10 +225,10 @@
                 <input
                   v-model="productSearchText"
                   type="text"
-                  @focus="showProductDropdown = true"
-                  @blur="handleSearchBlur"
                   placeholder="Gõ tìm sản phẩm (theo Tên hoặc SKU)..."
                   class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] text-slate-700 font-semibold placeholder:text-slate-400"
+                  @focus="showProductDropdown = true"
+                  @blur="handleSearchBlur"
                 />
                 
                 <!-- Autocomplete Dropdown List -->
@@ -239,8 +239,8 @@
                   <div
                     v-for="prod in filteredSearchProducts"
                     :key="prod._id"
-                    @mousedown.prevent="selectSearchProduct(prod)"
                     class="p-2.5 text-left text-xs hover:bg-slate-50 cursor-pointer flex justify-between items-center transition-colors font-medium text-slate-700"
+                    @mousedown.prevent="selectSearchProduct(prod)"
                   >
                     <div>
                       <div class="font-bold text-slate-800">{{ prod.name }}</div>
@@ -254,8 +254,8 @@
               </div>
               <button
                 type="button"
-                @click="addProductToCombo"
                 class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl cursor-pointer transition-colors flex-shrink-0"
+                @click="addProductToCombo"
               >
                 Thêm
               </button>
@@ -287,8 +287,8 @@
                     <td class="p-2.5 text-center">
                       <button
                         type="button"
-                        @click="removeProductFromCombo(prod._id)"
                         class="text-red-500 hover:text-red-700 text-sm font-bold cursor-pointer"
+                        @click="removeProductFromCombo(prod._id)"
                       >
                         &times;
                       </button>
@@ -313,25 +313,25 @@
             </div>
             <div class="flex items-center gap-1.5">
               <button 
-                @click="currentPage = Math.max(1, currentPage - 1)" 
-                :disabled="currentPage === 1"
+                :disabled="currentPage === 1" 
                 class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                @click="currentPage = Math.max(1, currentPage - 1)"
               >
                 Trước
               </button>
               <button 
                 v-for="page in visiblePages" 
                 :key="page"
-                @click="currentPage = page"
                 class="w-8 h-8 rounded-lg font-bold transition-colors cursor-pointer"
                 :class="currentPage === page ? 'bg-[#dc2626] text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-600'"
+                @click="currentPage = page"
               >
                 {{ page }}
               </button>
               <button 
-                @click="currentPage = Math.min(totalPages, currentPage + 1)" 
-                :disabled="currentPage === totalPages"
+                :disabled="currentPage === totalPages" 
                 class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                @click="currentPage = Math.min(totalPages, currentPage + 1)"
               >
                 Sau
               </button>
@@ -345,11 +345,11 @@
               <label class="text-xs font-bold text-slate-700">Giá mua Combo ưu đãi *</label>
               <input
                 :value="formatNumberWithDots(form.comboPrice)"
-                @input="handleComboPriceInput"
                 type="text"
                 required
                 placeholder="Nhập giá mua combo..."
                 class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:bg-white text-slate-700 font-black"
+                @input="handleComboPriceInput"
               />
             </div>
             
@@ -365,9 +365,9 @@
 
           <div class="flex items-center gap-2 pt-2">
             <input
-              type="checkbox"
               id="status-checkbox"
               v-model="form.status"
+              type="checkbox"
               class="w-4 h-4 text-[#dc2626] border-slate-350 focus:ring-[#dc2626] rounded cursor-pointer"
             />
             <label for="status-checkbox" class="text-xs font-bold text-slate-700 cursor-pointer">Kích hoạt hoạt động</label>
@@ -376,8 +376,8 @@
           <div class="flex gap-3 pt-4 border-t border-slate-100">
             <button
               type="button"
-              @click="showForm = false"
               class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+              @click="showForm = false"
             >
               Hủy
             </button>

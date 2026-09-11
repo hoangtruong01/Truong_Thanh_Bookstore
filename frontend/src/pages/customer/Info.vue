@@ -13,13 +13,13 @@
           <button
             v-for="tab in tabs"
             :key="tab.id"
-            @click="activeTab = tab.id"
             class="w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-between group/item"
             :class="
               activeTab === tab.id
                 ? 'bg-[#dc2626] text-white shadow-md'
                 : 'text-slate-750 hover:bg-slate-50'
             "
+            @click="activeTab = tab.id"
           >
             <span>{{ tab.title }}</span>
             <svg
@@ -199,7 +199,7 @@
               </div>
 
               <!-- Inline Contact Form -->
-              <form @submit.prevent="submitFeedback" class="space-y-3">
+              <form class="space-y-3" @submit.prevent="submitFeedback">
                 <div>
                   <label class="text-[10px] font-bold text-slate-700">Họ và tên của bạn</label>
                   <input

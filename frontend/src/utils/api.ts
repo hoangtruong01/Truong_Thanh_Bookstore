@@ -2,7 +2,6 @@ import axios from 'axios'
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { useToast, createToastInterface } from 'vue-toastification'
 import router from '@/router'
-import { showErrorToast, showWarningToast, showSuccessToast } from '@/utils/errorHandler'
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -55,7 +54,6 @@ function extractErrorMessage(data: any): string {
 
 // Variables for FE-02 Singleton Silent Token Refresh Queue
 let refreshPromise: Promise<any> | null = null
-let hasNotifiedExpired = false
 
 const toastThrottleMap = new Map<string, number>()
 function showThrottledToast(msg: string, type: 'error' | 'warning' = 'error', cooldownMs = 3000) {
@@ -126,14 +124,7 @@ api.interceptors.response.use(
           localStorage.removeItem('user')
           window.dispatchEvent(new CustomEvent('auth-session-expired'))
           notifySessionExpired()
-
-          const currentRoute = router.currentRoute.value
-          const requiresAuth = currentRoute?.matched?.some(
-            (r) => r.meta?.requiresAuth || r.meta?.requiresAdmin
-          )
-          if (requiresAuth && currentRoute.name !== 'Login' && currentRoute.name !== 'Register') {
-            router.push({ name: 'Login', query: { redirect: currentRoute.fullPath } })
-          }
+          handleSessionExpiredRedirect(originalRequest.skipAuthRedirect)
         }
         return Promise.reject(errorData || error)
       }
@@ -175,13 +166,7 @@ api.interceptors.response.use(
             notifySessionExpired()
           }
 
-          const currentRoute = router.currentRoute.value
-          const requiresAuth = currentRoute?.matched?.some(
-            (r) => r.meta?.requiresAuth || r.meta?.requiresAdmin
-          )
-          if (requiresAuth && currentRoute.name !== 'Login' && currentRoute.name !== 'Register') {
-            router.push({ name: 'Login', query: { redirect: currentRoute.fullPath } })
-          }
+          handleSessionExpiredRedirect(originalRequest.skipAuthRedirect)
 
           return Promise.reject(errorData || refreshErr)
         }

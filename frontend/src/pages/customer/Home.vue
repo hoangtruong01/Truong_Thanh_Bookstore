@@ -87,8 +87,8 @@
                 <!-- Prev/Next Arrows -->
                 <button
                   v-if="mainSliderBanners.length > 1"
-                  @click="heroSlidePrev"
                   class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full z-20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer backdrop-blur-xs"
+                  @click="heroSlidePrev"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
@@ -96,8 +96,8 @@
                 </button>
                 <button
                   v-if="mainSliderBanners.length > 1"
-                  @click="heroSlideNext"
                   class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full z-20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer backdrop-blur-xs"
+                  @click="heroSlideNext"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -109,9 +109,9 @@
                   <button
                     v-for="(_, idx) in mainSliderBanners"
                     :key="idx"
-                    @click="heroSlideGoTo(idx)"
                     class="h-2 rounded-full transition-all duration-300 cursor-pointer"
                     :class="heroSlideIndex === idx ? 'bg-white w-6 shadow-md' : 'bg-white/50 w-2 hover:bg-white/70'"
+                    @click="heroSlideGoTo(idx)"
                   ></button>
                 </div>
               </div>
@@ -359,8 +359,8 @@
                 <div
                   v-for="(prod, n) in page"
                   :key="prod._id + '-' + pageIdx + '-' + n"
-                  @click="goToDetail(prod._id)"
                   class="bg-white border border-slate-100/80 rounded-[2rem] p-5 space-y-4 shadow-xs hover:shadow-xl hover:border-orange-200 transition-all duration-300 relative group flex flex-col justify-between cursor-pointer"
+                  @click="goToDetail(prod._id)"
                 >
                   <!-- Badge -->
                   <div
@@ -407,9 +407,9 @@
                         width="320"
                         height="320"
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 240px"
-                        @error="handleImageError(prod._id)"
                         class="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300 relative z-10 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.06)]"
                         :alt="prod.name"
+                        @error="handleImageError(prod._id)"
                       />
                       <!-- Fallback SVG -->
                       <div
@@ -621,8 +621,8 @@
 
                   <!-- Action Button -->
                   <button
-                    @click.stop="addToCart(prod)"
                     class="w-full mt-3 bg-gradient-to-r from-orange-500 to-[#dc2626] hover:from-orange-600 hover:to-[#b91c1c] text-white font-extrabold py-2.5 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer text-[10px] uppercase tracking-wider"
+                    @click.stop="addToCart(prod)"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -648,9 +648,9 @@
           <!-- Navigation Arrows -->
           <button
             v-if="dealPages.length > 1"
-            @click="prevPage"
             class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-800 p-3 rounded-full shadow-lg border border-slate-100/50 z-20 transition-all hover:scale-110 active:scale-95 cursor-pointer hidden md:flex items-center justify-center"
             aria-label="Previous page"
+            @click="prevPage"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -669,9 +669,9 @@
           </button>
           <button
             v-if="dealPages.length > 1"
-            @click="nextPage"
             class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-800 p-3 rounded-full shadow-lg border border-slate-100/50 z-20 transition-all hover:scale-110 active:scale-95 cursor-pointer hidden md:flex items-center justify-center"
             aria-label="Next page"
+            @click="nextPage"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -694,10 +694,10 @@
             <button
               v-for="(_, idx) in dealPages"
               :key="idx"
-              @click="setPage(idx)"
               class="h-2.5 rounded-full transition-all duration-300 cursor-pointer"
               :class="currentPageIndex === idx ? 'bg-[#dc2626] w-8' : 'bg-slate-300 w-2.5 hover:bg-slate-400'"
               :aria-label="'Trang ' + (idx + 1)"
+              @click="setPage(idx)"
             ></button>
           </div>
         </div>
@@ -804,8 +804,8 @@
       subtitle="Mọi người yêu thích"
       :products="bestSelling"
       :loading="loadingBest"
-      viewAllLink="/products"
-      buttonLabel="Xem Thêm Sản Phẩm"
+      view-all-link="/products"
+      button-label="Xem Thêm Sản Phẩm"
       @add-to-cart="addToCart"
     />
 
@@ -815,8 +815,8 @@
       subtitle="Bộ sưu tập mới"
       :products="newProducts"
       :loading="loadingNew"
-      viewAllLink="/products?sort=newest"
-      buttonLabel="Khám Phá Bộ Sưu Tập Mới"
+      view-all-link="/products?sort=newest"
+      button-label="Khám Phá Bộ Sưu Tập Mới"
       @add-to-cart="addToCart"
     />
 
@@ -826,8 +826,8 @@
       subtitle="Bộ sưu tập nổi bật"
       :products="textbookProducts"
       :loading="loadingTextbook"
-      :viewAllLink="'/products?category=' + getCategoryIdBySlug('sach-giao-khoa')"
-      buttonLabel="Khám Phá Sách Giáo Khoa"
+      :view-all-link="'/products?category=' + getCategoryIdBySlug('sach-giao-khoa')"
+      button-label="Khám Phá Sách Giáo Khoa"
       @add-to-cart="addToCart"
     />
 
@@ -837,8 +837,8 @@
       subtitle="Bộ sưu tập nổi bật"
       :products="referenceProducts"
       :loading="loadingReference"
-      :viewAllLink="'/products?category=' + getCategoryIdBySlug('sach-tham-khao')"
-      buttonLabel="Khám Phá Sách Tham Khảo"
+      :view-all-link="'/products?category=' + getCategoryIdBySlug('sach-tham-khao')"
+      button-label="Khám Phá Sách Tham Khảo"
       @add-to-cart="addToCart"
     />
 
@@ -922,8 +922,8 @@
       subtitle="Bộ sưu tập nổi bật"
       :products="toyProducts"
       :loading="loadingToy"
-      :viewAllLink="'/products?category=' + getCategoryIdBySlug('do-choi')"
-      buttonLabel="Khám Phá Đồ Chơi"
+      :view-all-link="'/products?category=' + getCategoryIdBySlug('do-choi')"
+      button-label="Khám Phá Đồ Chơi"
       @add-to-cart="addToCart"
     />
 
@@ -933,8 +933,8 @@
       subtitle="Bộ sưu tập nổi bật"
       :products="comicProducts"
       :loading="loadingComic"
-      :viewAllLink="'/products?category=' + getCategoryIdBySlug('truyen-tranh')"
-      buttonLabel="Khám Phá Truyện Tranh"
+      :view-all-link="'/products?category=' + getCategoryIdBySlug('truyen-tranh')"
+      button-label="Khám Phá Truyện Tranh"
       @add-to-cart="addToCart"
     />
 
@@ -944,8 +944,8 @@
       subtitle="Bộ sưu tập nổi bật"
       :products="comboProducts"
       :loading="loadingCombo"
-      :viewAllLink="'/products?category=' + getCategoryIdBySlug('combo')"
-      buttonLabel="Khám Phá Combo"
+      :view-all-link="'/products?category=' + getCategoryIdBySlug('combo')"
+      button-label="Khám Phá Combo"
       @add-to-cart="addToCart"
     />
 
@@ -955,8 +955,8 @@
       subtitle="Bộ sưu tập nổi bật"
       :products="giftProducts"
       :loading="loadingGift"
-      :viewAllLink="'/products?category=' + getCategoryIdBySlug('do-luu-niem')"
-      buttonLabel="Khám Phá Đồ Lưu Niệm"
+      :view-all-link="'/products?category=' + getCategoryIdBySlug('do-luu-niem')"
+      button-label="Khám Phá Đồ Lưu Niệm"
       @add-to-cart="addToCart"
     />
   </div>

@@ -9,10 +9,10 @@
       <div class="flex items-center gap-2.5 flex-wrap">
         <!-- Download Template Button -->
         <button
-          @click="downloadTemplate"
           :disabled="downloadingTemplate"
           class="border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-bold py-2 px-3.5 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           title="Tải file Excel mẫu chuẩn cấu trúc để nhập sản phẩm"
+          @click="downloadTemplate"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-emerald-600">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -22,10 +22,10 @@
 
         <!-- Export Excel Button -->
         <button
-          @click="exportExcel"
           :disabled="exporting"
           class="border border-red-200 text-[#dc2626] bg-white hover:bg-red-50 font-bold py-2 px-3.5 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           title="Xuất toàn bộ danh sách sản phẩm hiện tại ra file Excel"
+          @click="exportExcel"
         >
           <svg v-if="!exporting" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
           <svg v-else class="animate-spin w-4 h-4 text-[#dc2626]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -34,9 +34,9 @@
 
         <!-- Import Excel Button -->
         <button
-          @click="openImportModal"
           class="border border-red-200 text-[#dc2626] bg-white hover:bg-red-50 font-bold py-2 px-3.5 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
           title="Nhập sản phẩm từ file Excel"
+          @click="openImportModal"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>
           <span>Nhập Excel</span>
@@ -104,8 +104,8 @@
           icon="📦"
           title="Không tìm thấy sản phẩm nào"
           description="Vui lòng thử điều chỉnh bộ lọc hoặc bấm tạo sản phẩm mới."
-          actionText="+ Thêm sản phẩm mới"
-          actionTo="/admin/products/create"
+          action-text="+ Thêm sản phẩm mới"
+          action-to="/admin/products/create"
         />
       </div>
 
@@ -185,7 +185,7 @@
                 <router-link :to="`/admin/products/${prod._id}/edit`" class="text-blue-600 hover:text-blue-800 inline-block font-extrabold">
                   Sửa
                 </router-link>
-                <button @click="deleteProduct(prod._id)" class="text-red-500 hover:text-red-700 inline-block font-extrabold cursor-pointer">
+                <button class="text-red-500 hover:text-red-700 inline-block font-extrabold cursor-pointer" @click="deleteProduct(prod._id)">
                   Xóa
                 </button>
               </td>
@@ -198,9 +198,9 @@
     <!-- Pagination -->
     <div v-if="totalPages > 1" class="flex justify-center items-center gap-2">
       <button
-        @click="changePage(currentPage - 1)"
         :disabled="currentPage === 1"
         class="w-10 h-10 border border-slate-200 rounded-xl flex items-center justify-center hover:bg-slate-50 transition-colors disabled:opacity-50 text-xs font-bold"
+        @click="changePage(currentPage - 1)"
       >
         Trước
       </button>
@@ -208,9 +208,9 @@
         Trang {{ currentPage }} / {{ totalPages }}
       </span>
       <button
-        @click="changePage(currentPage + 1)"
         :disabled="currentPage === totalPages"
         class="w-10 h-10 border border-slate-200 rounded-xl flex items-center justify-center hover:bg-slate-50 transition-colors disabled:opacity-50 text-xs font-bold"
+        @click="changePage(currentPage + 1)"
       >
         Sau
       </button>
@@ -239,8 +239,8 @@
             </div>
           </div>
           <button
-            @click="closeImportModal"
             class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
+            @click="closeImportModal"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
           </button>
@@ -262,9 +262,9 @@
                 </div>
               </div>
               <button
-                @click="downloadTemplate"
                 :disabled="downloadingTemplate"
                 class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3.5 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 shadow-xs disabled:opacity-50"
+                @click="downloadTemplate"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                 <span>{{ downloadingTemplate ? 'Đang tải...' : 'Tải file mẫu (.xlsx)' }}</span>
@@ -273,14 +273,14 @@
 
             <!-- Drag & Drop Zone -->
             <div
-              @dragover.prevent="isDragging = true"
-              @dragleave.prevent="isDragging = false"
-              @drop.prevent="handleDrop"
-              @click="triggerFileInput"
               :class="[
                 'border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3',
                 isDragging ? 'border-[#dc2626] bg-red-50/50 scale-[0.99]' : 'border-slate-300 hover:border-red-400 bg-slate-50/50 hover:bg-red-50/20'
               ]"
+              @dragover.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleDrop"
+              @click="triggerFileInput"
             >
               <input
                 ref="fileInputRef"
@@ -315,8 +315,8 @@
                     </div>
                   </div>
                   <button
-                    @click.stop="clearSelectedFile"
                     class="text-xs text-red-500 hover:text-red-700 font-bold px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors cursor-pointer shrink-0"
+                    @click.stop="clearSelectedFile"
                   >
                     Đổi file khác
                   </button>
@@ -352,13 +352,13 @@
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <!-- Card Thêm Mới Thành Công -->
               <div
-                @click="activeResultTab = 'created'"
                 :class="[
                   'p-4 rounded-2xl border transition-all cursor-pointer text-center space-y-1',
                   activeResultTab === 'created'
                     ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-500/20 shadow-xs'
                     : 'bg-white border-slate-200 hover:bg-slate-50'
                 ]"
+                @click="activeResultTab = 'created'"
               >
                 <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Thêm mới thành công</p>
                 <p class="text-2xl font-black text-emerald-600">{{ importResult.summary.createdCount }}</p>
@@ -367,13 +367,13 @@
 
               <!-- Card Đã Bỏ Qua / Trùng Lặp -->
               <div
-                @click="activeResultTab = 'skipped'"
                 :class="[
                   'p-4 rounded-2xl border transition-all cursor-pointer text-center space-y-1',
                   activeResultTab === 'skipped'
                     ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-500/20 shadow-xs'
                     : 'bg-white border-slate-200 hover:bg-slate-50'
                 ]"
+                @click="activeResultTab = 'skipped'"
               >
                 <p class="text-[10px] font-bold uppercase tracking-wider text-amber-700">Bỏ qua (Đã tồn tại)</p>
                 <p class="text-2xl font-black text-amber-600">{{ importResult.summary.skippedCount }}</p>
@@ -382,13 +382,13 @@
 
               <!-- Card Lỗi Dòng -->
               <div
-                @click="activeResultTab = 'errors'"
                 :class="[
                   'p-4 rounded-2xl border transition-all cursor-pointer text-center space-y-1',
                   activeResultTab === 'errors'
                     ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-500/20 shadow-xs'
                     : 'bg-white border-slate-200 hover:bg-slate-50'
                 ]"
+                @click="activeResultTab = 'errors'"
               >
                 <p class="text-[10px] font-bold uppercase tracking-wider text-rose-700">Dòng bị lỗi</p>
                 <p class="text-2xl font-black text-rose-600">{{ importResult.summary.errorCount }}</p>
@@ -399,29 +399,29 @@
             <!-- Tab Switcher -->
             <div class="flex items-center gap-2 border-b border-slate-200 pb-2">
               <button
-                @click="activeResultTab = 'created'"
                 :class="[
                   'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5',
                   activeResultTab === 'created' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
                 ]"
+                @click="activeResultTab = 'created'"
               >
                 <span>Thêm mới ({{ importResult.summary.createdCount }})</span>
               </button>
               <button
-                @click="activeResultTab = 'skipped'"
                 :class="[
                   'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5',
                   activeResultTab === 'skipped' ? 'bg-amber-600 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
                 ]"
+                @click="activeResultTab = 'skipped'"
               >
                 <span>Bỏ qua do đã có ({{ importResult.summary.skippedCount }})</span>
               </button>
               <button
-                @click="activeResultTab = 'errors'"
                 :class="[
                   'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5',
                   activeResultTab === 'errors' ? 'bg-rose-600 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
                 ]"
+                @click="activeResultTab = 'errors'"
               >
                 <span>Dòng bị lỗi ({{ importResult.summary.errorCount }})</span>
               </button>
@@ -516,16 +516,16 @@
           <!-- Khi đang ở bước chọn file -->
           <template v-if="!importResult">
             <button
-              @click="closeImportModal"
               :disabled="importing"
               class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200/70 transition-colors cursor-pointer disabled:opacity-50"
+              @click="closeImportModal"
             >
               Hủy
             </button>
             <button
-              @click="handleImportExcel"
               :disabled="!selectedFile || importing"
               class="bg-[#dc2626] hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition-all flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              @click="handleImportExcel"
             >
               <svg v-if="importing" class="animate-spin w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
               <span>{{ importing ? 'Đang phân tích & nhập dữ liệu...' : 'Bắt đầu tải lên & Xử lý' }}</span>
@@ -535,14 +535,14 @@
           <!-- Khi đã có kết quả báo cáo -->
           <template v-else>
             <button
-              @click="resetImportForm"
               class="border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer"
+              @click="resetImportForm"
             >
               Nhập tiếp file khác
             </button>
             <button
-              @click="finishImport"
               class="bg-[#dc2626] hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition-all cursor-pointer shadow-xs"
+              @click="finishImport"
             >
               Hoàn tất & Cập nhật danh sách
             </button>
@@ -719,7 +719,9 @@ async function downloadTemplate() {
         const txt = await err.response.data.text()
         const json = JSON.parse(txt)
         if (json.message) msg = json.message
-      } catch {}
+      } catch {
+        // Ignore fallback json parse error
+      }
     }
     toast.error(msg)
   } finally {
@@ -757,7 +759,9 @@ async function exportExcel() {
         const txt = await err.response.data.text()
         const json = JSON.parse(txt)
         if (json.message) msg = json.message
-      } catch {}
+      } catch {
+        // Ignore fallback json parse error
+      }
     }
     toast.error(msg)
   } finally {

@@ -9,8 +9,8 @@
     <!-- FilterBar with tabs and search -->
     <FilterBar
       v-model="orderQuery"
+      v-model:active-tab="currentTab"
       :tabs="tabs"
-      v-model:activeTab="currentTab"
       placeholder="Tìm kiếm theo mã đơn, tên khách hàng, số điện thoại..."
       @tab-change="onTabChange"
     />
@@ -71,8 +71,8 @@
           <template #cell(actions)="{ row }">
             <button
               type="button"
-              @click.stop="selectOrder(row)"
               class="text-[#dc2626] hover:text-red-700 font-extrabold cursor-pointer"
+              @click.stop="selectOrder(row)"
             >
               Chi tiết
             </button>
@@ -179,9 +179,9 @@
               </select>
               <button
                 type="button"
-                @click="updateStatus"
                 :disabled="updatingStatus || newStatus === selectedOrder.orderStatus"
                 class="bg-[#dc2626] hover:bg-red-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                @click="updateStatus"
               >
                 <svg v-if="updatingStatus" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

@@ -9,7 +9,7 @@
         <p class="text-xs text-slate-400">Chào mừng bạn quay lại hệ thống văn phòng phẩm</p>
       </div>
 
-      <form @submit.prevent="handleLogin" class="space-y-4">
+      <form class="space-y-4" @submit.prevent="handleLogin">
         <div>
           <label class="text-xs font-bold text-slate-700">Địa chỉ Email</label>
           <input
@@ -18,12 +18,12 @@
             required
             autofocus
             placeholder="name@example.com"
-            @blur="isEmailDirty = true"
-            @input="isEmailDirty = true"
             :class="[
               'w-full mt-1 bg-slate-50 border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:bg-white',
               emailError ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-[#dc2626]'
             ]"
+            @blur="isEmailDirty = true"
+            @input="isEmailDirty = true"
           />
           <p v-if="emailError" class="text-[11px] text-red-500 mt-1 font-bold">{{ emailError }}</p>
         </div>
@@ -42,9 +42,9 @@
             />
             <button
               type="button"
-              @click="showPassword = !showPassword"
               class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer p-1 rounded"
               title="Hiện/Ẩn mật khẩu"
+              @click="showPassword = !showPassword"
             >
               <!-- Eye open icon -->
               <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">

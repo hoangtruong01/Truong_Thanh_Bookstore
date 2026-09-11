@@ -11,6 +11,14 @@ import { UsersModule } from '../users/users.module';
 import { CartModule } from '../cart/cart.module';
 import { InventoryModule } from '../inventory/inventory.module';
 
+import {
+  CheckoutService,
+  OrderLifecycleService,
+  OrderInventoryService,
+  OrderLoyaltyService,
+  OrderNotificationService,
+} from './services';
+
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
@@ -22,7 +30,24 @@ import { InventoryModule } from '../inventory/inventory.module';
     InventoryModule,
   ],
   controllers: [OrdersController],
-  providers: [OrdersService, OrderScheduleService],
-  exports: [OrdersService, OrderScheduleService, MongooseModule],
+  providers: [
+    OrdersService,
+    OrderScheduleService,
+    CheckoutService,
+    OrderLifecycleService,
+    OrderInventoryService,
+    OrderLoyaltyService,
+    OrderNotificationService,
+  ],
+  exports: [
+    OrdersService,
+    OrderScheduleService,
+    CheckoutService,
+    OrderLifecycleService,
+    OrderInventoryService,
+    OrderLoyaltyService,
+    OrderNotificationService,
+    MongooseModule,
+  ],
 })
 export class OrdersModule {}

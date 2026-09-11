@@ -208,6 +208,9 @@ OrderSchema.index({ orderStatus: 1 });
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ revenueRecognizedAt: -1 });
 OrderSchema.index({ promotionCode: 1 });
+// BE-06: Specialized Compound Indexes for auto-cancelling expired orders and 2h warnings (IXSCAN)
+OrderSchema.index({ orderStatus: 1, paymentMethod: 1, createdAt: 1 });
+OrderSchema.index({ orderStatus: 1, autoCancelWarningSentAt: 1, createdAt: 1 });
 // BE-10: each phone can occupy only a bounded set of pending guest slots.
 // The slot is released automatically when orderStatus leaves PENDING because
 // the document no longer participates in this partial unique index.

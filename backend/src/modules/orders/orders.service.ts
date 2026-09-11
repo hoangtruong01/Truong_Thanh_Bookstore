@@ -1,18 +1,13 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
-  ConflictException,
-  Logger,
   ForbiddenException,
+  Logger,
   Optional,
-  ServiceUnavailableException,
-  HttpException,
-  HttpStatus,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { ClientSession, Model, Types } from 'mongoose';
-import { createHash, randomBytes, timingSafeEqual } from 'crypto';
+import { Model } from 'mongoose';
+import { createHash, timingSafeEqual } from 'crypto';
 import { Order, OrderDocument } from './schemas/order.schema';
 import * as PDFDocument from 'pdfkit';
 import * as fs from 'fs';
@@ -22,6 +17,7 @@ import {
   UpdateOrderStatusDto,
   OrderQueryDto,
   CheckoutPreviewDto,
+  CancelOrderDto,
 } from './dto/order.dto';
 import { ProductsService } from '../products/products.service';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
@@ -29,7 +25,6 @@ import {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
-  RefundStatus,
   StaffPermission,
   UserRole,
 } from '../../common/enums';
@@ -40,15 +35,24 @@ import { EmailService } from '../email/email.service';
 import { UsersService } from '../users/users.service';
 import { CartService } from '../cart/cart.service';
 import { InventoryService } from '../inventory/inventory.service';
-import { InventoryTransactionType } from '../../common/enums';
-
-// FIX-C03: Shipping fee threshold (must match frontend)
-const FREE_SHIPPING_THRESHOLD = 299000;
-const SHIPPING_FEE = 30000;
+import {
+  CheckoutService,
+  OrderLifecycleService,
+  OrderInventoryService,
+  OrderLoyaltyService,
+  OrderNotificationService,
+} from './services';
 
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
+
+  // Sub-services (BE-05 Architecture)
+  public readonly checkoutService: CheckoutService;
+  public readonly orderLifecycleService: OrderLifecycleService;
+  public readonly orderInventoryService: OrderInventoryService;
+  public readonly orderLoyaltyService: OrderLoyaltyService;
+  public readonly orderNotificationService: OrderNotificationService;
 
   constructor(
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
@@ -60,15 +64,58 @@ export class OrdersService {
     private usersService: UsersService,
     @Optional() private cartService?: CartService,
     @Optional() private inventoryService?: InventoryService,
-  ) {}
+    @Optional() checkoutService?: CheckoutService,
+    @Optional() orderLifecycleService?: OrderLifecycleService,
+    @Optional() orderInventoryService?: OrderInventoryService,
+    @Optional() orderLoyaltyService?: OrderLoyaltyService,
+    @Optional() orderNotificationService?: OrderNotificationService,
+  ) {
+    // Fallback instantiation ensures 100% backward-compatibility for unit tests
+    this.orderInventoryService =
+      orderInventoryService ??
+      new OrderInventoryService(this.productsService, this.inventoryService);
 
+    this.orderLoyaltyService =
+      orderLoyaltyService ??
+      new OrderLoyaltyService(this.usersService, this.notificationsService);
+
+    this.orderNotificationService =
+      orderNotificationService ??
+      new OrderNotificationService(
+        this.notificationsService,
+        this.emailService,
+        this.configService,
+      );
+
+    this.checkoutService =
+      checkoutService ??
+      new CheckoutService(
+        this.orderModel,
+        this.productsService,
+        this.configService,
+        this.promotionsService,
+        this.usersService,
+        this.orderInventoryService,
+        this.orderLoyaltyService,
+        this.orderNotificationService,
+        this.cartService,
+      );
+
+    this.orderLifecycleService =
+      orderLifecycleService ??
+      new OrderLifecycleService(
+        this.orderModel,
+        this.productsService,
+        this.promotionsService,
+        this.orderInventoryService,
+        this.orderLoyaltyService,
+        this.orderNotificationService,
+      );
+  }
+
+  // --- Helper methods ---
   private generateOrderCode(): string {
-    const now = new Date();
-    const y = now.getFullYear().toString().slice(-2);
-    const m = (now.getMonth() + 1).toString().padStart(2, '0');
-    const d = now.getDate().toString().padStart(2, '0');
-    const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
-    return `TT${y}${m}${d}${rand}`;
+    return this.checkoutService.generateOrderCode();
   }
 
   private hashSecret(value: string): string {
@@ -105,237 +152,18 @@ export class OrdersService {
     };
   }
 
-  private isTransientTransactionError(error: unknown): boolean {
-    const message = error instanceof Error ? error.message : String(error);
-    const hasLabel =
-      typeof (error as { hasErrorLabel?: unknown })?.hasErrorLabel ===
-        'function' &&
-      Boolean(
-        (error as { hasErrorLabel: (label: string) => boolean }).hasErrorLabel(
-          'TransientTransactionError',
-        ),
-      );
-    const code = (error as { code?: unknown })?.code;
-    const codeName = (error as { codeName?: unknown })?.codeName;
-    return (
-      hasLabel ||
-      /Unable to acquire|WriteConflict/i.test(message) ||
-      code === 112 ||
-      codeName === 'WriteConflict'
-    );
-  }
-
-  private isTransactionUnsupported(error: unknown): boolean {
-    const message = error instanceof Error ? error.message : String(error);
-    return /Transaction numbers are only allowed|replica set|mongos|retryable writes|retryWrites|standalone/i.test(
-      message,
-    );
-  }
-
   private getEnabledPaymentMethods(): PaymentMethod[] {
-    const configured = this.configService
-      .get<string>('ENABLED_PAYMENT_METHODS')
-      ?.split(',')
-      .map((value) => value.trim().toUpperCase())
-      .filter((value): value is PaymentMethod =>
-        Object.values(PaymentMethod).includes(value as PaymentMethod),
-      );
-    return configured?.length ? configured : [PaymentMethod.COD];
+    return this.checkoutService.getEnabledPaymentMethods();
   }
 
+  // --- Delegation to OrderNotificationService ---
   async syncToGoogleSheet(order: any) {
-    try {
-      const webappUrl = this.configService.get<string>(
-        'GOOGLE_SHEET_WEBAPP_URL',
-      );
-      if (!webappUrl) {
-        return;
-      }
-
-      // Format items to readable string
-      const itemsText = order.items
-        ? order.items
-            .map((item: any) => `${item.name} (x${item.quantity})`)
-            .join(', ')
-        : '';
-
-      // Format Date in GMT+7
-      const dateText = order.createdAt
-        ? new Date(order.createdAt).toLocaleString('vi-VN', {
-            timeZone: 'Asia/Ho_Chi_Minh',
-          })
-        : new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-
-      // Translate Status
-      let statusLabel = order.orderStatus;
-      switch (order.orderStatus) {
-        case 'PENDING':
-          statusLabel = 'Chờ xử lý';
-          break;
-        case 'CONFIRMED':
-          statusLabel = 'Đã xác nhận';
-          break;
-        case 'PROCESSING':
-          statusLabel = 'Đang xử lý';
-          break;
-        case 'SHIPPING':
-          statusLabel = 'Đang giao';
-          break;
-        case 'DELIVERED':
-        case 'COMPLETED':
-          statusLabel = 'Hoàn thành';
-          break;
-        case 'RETURNED':
-          statusLabel = 'Đã hoàn trả';
-          break;
-        case 'CANCELLED':
-          statusLabel = 'Hủy đơn';
-          break;
-      }
-
-      const payload = {
-        orderCode: order.orderCode,
-        createdAt: dateText,
-        customerName: order.customerName || 'Khách vãng lai',
-        phone: order.phone || '',
-        shippingAddress: order.shippingAddress || '',
-        items: itemsText,
-        total: order.total || 0,
-        status: statusLabel,
-        note: order.note || '',
-      };
-
-      const response = await fetch(webappUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        this.logger.error(
-          `Google Sheet Sync Error: Status ${response.status}, ${text}`,
-        );
-      } else {
-        await response.json();
-        this.logger.log('Google Sheet Sync success');
-      }
-    } catch (error) {
-      this.logger.error('Failed to sync order to Google Sheet:', error);
-    }
+    return this.orderNotificationService.syncToGoogleSheet(order);
   }
 
+  // --- Delegation to CheckoutService ---
   async checkoutPreview(dto: CheckoutPreviewDto, userId?: string) {
-    const warnings: string[] = [];
-    const verifiedItems: Array<{
-      product: string;
-      name: string;
-      price: number;
-      originalPrice: number;
-      quantity: number;
-      stock: number;
-      image: string;
-      subtotal: number;
-    }> = [];
-
-    for (const item of dto.items) {
-      const product = await this.productsService.findById(item.product);
-      if (
-        !product ||
-        (product as any).isDeleted === true ||
-        ((product as any).status && (product as any).status !== 'ACTIVE')
-      ) {
-        warnings.push(
-          `Sản phẩm "${item.name || item.product}" hiện không khả dụng.`,
-        );
-        continue;
-      }
-
-      const availableStock = (product as any).stock ?? 0;
-      let effectiveQty = item.quantity;
-      if (availableStock < item.quantity) {
-        if (availableStock <= 0) {
-          warnings.push(`Sản phẩm "${product.name}" đã hết hàng.`);
-          continue;
-        } else {
-          effectiveQty = availableStock;
-          warnings.push(
-            `Sản phẩm "${product.name}" chỉ còn ${availableStock} trong kho. Đã tự động điều chỉnh số lượng.`,
-          );
-        }
-      }
-
-      const effectivePrice =
-        (product as any).discountPrice > 0
-          ? (product as any).discountPrice
-          : (product as any).price;
-
-      if (item.price && item.price !== effectivePrice) {
-        warnings.push(`Giá sản phẩm "${product.name}" đã thay đổi.`);
-      }
-
-      verifiedItems.push({
-        product: product._id.toString(),
-        name: product.name,
-        price: effectivePrice,
-        originalPrice: (product as any).price,
-        quantity: effectiveQty,
-        stock: availableStock,
-        image: (product as any).images?.[0] || item.image || '',
-        subtotal: effectivePrice * effectiveQty,
-      });
-    }
-
-    const subtotal = verifiedItems.reduce((sum, i) => sum + i.subtotal, 0);
-    const isEligibleForFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
-    const shippingFee =
-      subtotal === 0 ? 0 : isEligibleForFreeShipping ? 0 : SHIPPING_FEE;
-    const amountNeededForFreeShipping = Math.max(
-      0,
-      FREE_SHIPPING_THRESHOLD - subtotal,
-    );
-
-    let discount = 0;
-    let appliedPromotion: any = null;
-    if (dto.promotionCode && subtotal > 0) {
-      try {
-        const promoResult = await this.promotionsService.apply(
-          { code: dto.promotionCode, orderTotal: subtotal },
-          userId,
-          false,
-          dto.customerEmail,
-          dto.phone,
-        );
-        discount = promoResult.discount || 0;
-        appliedPromotion = {
-          code: dto.promotionCode.toUpperCase(),
-          discount,
-        };
-      } catch (err: any) {
-        warnings.push(
-          err.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện.',
-        );
-      }
-    }
-
-    const total = Math.max(0, subtotal + shippingFee - discount);
-
-    return {
-      items: verifiedItems,
-      itemCount: verifiedItems.reduce((sum, i) => sum + i.quantity, 0),
-      subtotal,
-      shippingFee,
-      freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
-      isEligibleForFreeShipping,
-      amountNeededForFreeShipping,
-      discount,
-      appliedPromotion,
-      total,
-      warnings,
-      isValidForCheckout: verifiedItems.length > 0 && warnings.length === 0,
-    };
+    return this.checkoutService.checkoutPreview(dto, userId);
   }
 
   async create(
@@ -343,7 +171,7 @@ export class OrdersService {
     userId?: string,
     clientIp?: string,
   ): Promise<any> {
-    return this.createAtomic(dto, userId, clientIp);
+    return this.checkoutService.create(dto, userId, clientIp);
   }
 
   private async createAtomic(
@@ -351,488 +179,18 @@ export class OrdersService {
     userId?: string,
     clientIp?: string,
   ): Promise<any> {
-    const paymentMethod = dto.paymentMethod || PaymentMethod.COD;
-    if (!this.getEnabledPaymentMethods().includes(paymentMethod)) {
-      throw new BadRequestException(
-        'Phương thức thanh toán này chưa được kích hoạt. Vui lòng chọn thanh toán khi nhận hàng.',
-      );
-    }
-    if (!userId && paymentMethod !== PaymentMethod.COD) {
-      throw new BadRequestException(
-        'Khách vãng lai chỉ có thể thanh toán khi nhận hàng. Vui lòng đăng nhập để dùng thanh toán trực tuyến.',
-      );
-    }
-
-    const guestAccessToken = userId
-      ? undefined
-      : dto.idempotencyKey || randomBytes(32).toString('base64url');
-    const idempotencyKeyHash = dto.idempotencyKey
-      ? this.hashSecret(dto.idempotencyKey)
-      : undefined;
-
-    if (idempotencyKeyHash) {
-      const existingQuery = this.orderModel.findOne({
-        idempotencyKeyHash,
-        ...(userId
-          ? { customer: userId }
-          : { customer: null, phone: dto.phone }),
-      });
-      if (existingQuery?.exec) {
-        const existing = await existingQuery.exec();
-        if (existing) {
-          const existingResult = existing.toObject
-            ? existing.toObject()
-            : existing;
-          return guestAccessToken
-            ? { ...existingResult, guestAccessToken }
-            : existingResult;
-        }
-      }
-    }
-
-    const guestProtection = userId
-      ? undefined
-      : await this.checkGuestCheckoutProtection(dto, clientIp);
-
-    const productIds = dto.items.map((item) => item.product);
-    const products = await this.productsService.findByIds(productIds);
-    const productMap = new Map(products.map((p) => [p._id.toString(), p]));
-
-    const verifiedItems: Array<{
-      product: string;
-      name: string;
-      price: number;
-      quantity: number;
-      image: string;
-      category?: string;
-      categoryName: string;
-    }> = [];
-    for (const item of dto.items) {
-      const product = productMap.get(item.product);
-      if (!product) {
-        throw new BadRequestException(
-          `Sản phẩm không tồn tại: ${item.product}`,
-        );
-      }
-      if (product.stock < item.quantity) {
-        throw new BadRequestException(
-          `Sản phẩm "${product.name}" chỉ còn ${product.stock} sản phẩm trong kho`,
-        );
-      }
-      const populatedCategory = product.category as unknown as {
-        _id?: { toString(): string };
-        name?: string;
-      };
-      const categoryId = populatedCategory?._id
-        ? populatedCategory._id.toString()
-        : product.category?.toString();
-      verifiedItems.push({
-        product: item.product,
-        name: product.name,
-        price:
-          product.discountPrice > 0 ? product.discountPrice : product.price,
-        quantity: item.quantity,
-        image: product.images?.[0] || item.image || '',
-        category: categoryId,
-        categoryName: populatedCategory?.name || 'KhÃ¡c',
-      });
-    }
-
-    const subtotal = verifiedItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
-    const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-    const orderCode = this.generateOrderCode();
-
-    const persist = async (session?: ClientSession): Promise<OrderDocument> => {
-      const deductedItems: Array<{ product: string; quantity: number }> = [];
-      let promotionConsumed = false;
-      let loyaltyPointsSpent = 0;
-      let loyaltyDiscount = 0;
-      try {
-        let discount = 0;
-        if (dto.promotionCode) {
-          const promoResult = await this.promotionsService.apply(
-            { code: dto.promotionCode, orderTotal: subtotal },
-            userId,
-            true,
-            dto.customerEmail,
-            dto.phone,
-            session,
-          );
-          discount = promoResult.discount;
-          promotionConsumed = true;
-        }
-
-        // PRODUCT-01: Loyalty Point Spending at Checkout
-        if (dto.loyaltyPointsUsed && dto.loyaltyPointsUsed > 0) {
-          if (!userId) {
-            throw new BadRequestException(
-              'Chỉ khách hàng có tài khoản mới có thể sử dụng điểm thưởng Loyalty',
-            );
-          }
-          if (dto.loyaltyPointsUsed < 1000) {
-            throw new BadRequestException(
-              'Mức tiêu điểm tối thiểu là 1.000 điểm (tương đương 100.000 VNĐ)',
-            );
-          }
-          const maxAllowedLoyaltyDiscount = Math.floor(subtotal * 0.2);
-          loyaltyDiscount = dto.loyaltyPointsUsed * 100;
-          if (loyaltyDiscount > maxAllowedLoyaltyDiscount) {
-            throw new BadRequestException(
-              'Số điểm thưởng sử dụng vượt quá hạn mức tối đa cho phép (20% giá trị đơn hàng)',
-            );
-          }
-
-          const updatedUser = await this.usersService.spendLoyaltyPoints(
-            userId,
-            dto.loyaltyPointsUsed,
-            session,
-          );
-          if (!updatedUser) {
-            throw new BadRequestException(
-              'Số điểm thưởng trong tài khoản không đủ để thực hiện giao dịch',
-            );
-          }
-          loyaltyPointsSpent = dto.loyaltyPointsUsed;
-        }
-
-        for (const item of verifiedItems) {
-          if (session) {
-            await this.productsService.deductStock(
-              item.product,
-              item.quantity,
-              session,
-            );
-            await this.productsService.incrementSold(
-              item.product,
-              item.quantity,
-              session,
-            );
-          } else {
-            await this.productsService.deductStock(item.product, item.quantity);
-            await this.productsService.incrementSold(
-              item.product,
-              item.quantity,
-            );
-          }
-          deductedItems.push({
-            product: item.product,
-            quantity: item.quantity,
-          });
-          if (this.inventoryService) {
-            await this.inventoryService.recordExternalMovement(
-              item.product,
-              InventoryTransactionType.SALE,
-              item.quantity,
-              orderCode,
-              undefined,
-              session,
-            );
-          }
-        }
-
-        const order = new this.orderModel({
-          orderCode,
-          customer: userId || null,
-          guestAccessTokenHash: guestAccessToken
-            ? this.hashSecret(guestAccessToken)
-            : undefined,
-          idempotencyKeyHash,
-          guestPhoneKey: guestProtection?.phoneKey,
-          guestPendingSlot: guestProtection?.slot,
-          items: verifiedItems,
-          shippingAddress: dto.shippingAddress,
-          phone: dto.phone,
-          note: dto.note,
-          paymentMethod,
-          customerName: dto.customerName,
-          customerEmail: dto.customerEmail?.trim().toLowerCase(),
-          subtotal,
-          shippingFee,
-          discount,
-          loyaltyPointsUsed: loyaltyPointsSpent,
-          loyaltyDiscount,
-          total: Math.max(
-            0,
-            subtotal + shippingFee - discount - loyaltyDiscount,
-          ),
-          promotionCode: dto.promotionCode?.toUpperCase(),
-          orderSource: dto.orderSource || 'WEB',
-          landingPageId: dto.landingPageId || undefined,
-          timeline: [
-            {
-              status: OrderStatus.PENDING,
-              note:
-                dto.orderSource === 'LANDING_PAGE'
-                  ? 'Đơn hàng được tạo từ Landing Page, chờ xác nhận.'
-                  : 'Đơn hàng được tạo thành công, chờ xác nhận.',
-              createdAt: new Date(),
-            },
-          ],
-        });
-        try {
-          return await order.save(session ? { session } : undefined);
-        } catch (error) {
-          if (!userId && this.isGuestPendingSlotConflict(error)) {
-            throw new HttpException(
-              'Số điện thoại này đang có quá nhiều đơn chờ xác nhận. Vui lòng hoàn tất hoặc hủy đơn hiện tại trước khi đặt thêm.',
-              HttpStatus.TOO_MANY_REQUESTS,
-            );
-          }
-          throw error;
-        }
-      } catch (error) {
-        if (!session) {
-          if (loyaltyPointsSpent > 0 && userId) {
-            await this.usersService
-              .refundLoyaltyPoints(userId, loyaltyPointsSpent)
-              .catch((rollbackError) =>
-                this.logger.error(
-                  'Loyalty points rollback failed',
-                  rollbackError,
-                ),
-              );
-          }
-          for (const deducted of deductedItems.reverse()) {
-            await this.productsService
-              .updateStock(deducted.product, deducted.quantity)
-              .catch((rollbackError) =>
-                this.logger.error('Stock rollback failed', rollbackError),
-              );
-            await this.productsService
-              .incrementSold(deducted.product, -deducted.quantity)
-              .catch((rollbackError) =>
-                this.logger.error(
-                  'Sold counter rollback failed',
-                  rollbackError,
-                ),
-              );
-          }
-          if (promotionConsumed && dto.promotionCode) {
-            await this.promotionsService
-              .releaseUsage(
-                dto.promotionCode,
-                userId,
-                dto.customerEmail,
-                dto.phone,
-              )
-              .catch((rollbackError) =>
-                this.logger.error('Promotion rollback failed', rollbackError),
-              );
-          }
-          if (this.inventoryService) {
-            await this.inventoryService
-              .deleteTransactionsByReference(orderCode)
-              .catch((rollbackError) =>
-                this.logger.error(
-                  'Inventory ledger rollback failed',
-                  rollbackError,
-                ),
-              );
-          }
-        }
-        throw error;
-      }
-    };
-
-    let savedOrder: OrderDocument;
-    const connection = (this.orderModel as any).db;
-    if (connection?.startSession) {
-      const session: ClientSession = await connection.startSession();
-      try {
-        let transactionResult: OrderDocument | undefined;
-        await session.withTransaction(async () => {
-          transactionResult = await persist(session);
-        });
-        if (!transactionResult) {
-          throw new Error('Order transaction completed without a result');
-        }
-        savedOrder = transactionResult;
-      } catch (error) {
-        if (!this.isTransactionUnsupported(error)) throw error;
-        this.logger.warn(
-          'MongoDB transactions are unavailable; using compensated checkout mode.',
-        );
-        savedOrder = await persist();
-      } finally {
-        await session.endSession();
-      }
-    } else {
-      savedOrder = await persist();
-    }
-
-    if (userId) {
-      if (this.cartService) {
-        await this.cartService
-          .clearCart(userId)
-          .catch((err) =>
-            this.logger.error('Failed to clear cart after order creation', err),
-          );
-      }
-
-      await this.notificationsService
-        .create({
-          userId,
-          title: 'Đặt hàng thành công',
-          message: `Đơn hàng #${savedOrder.orderCode} trị giá ${savedOrder.total.toLocaleString('vi-VN')}đ đã được tiếp nhận.`,
-          type: 'order',
-          meta: {
-            orderId: savedOrder._id.toString(),
-            orderCode: savedOrder.orderCode,
-          },
-        })
-        .catch((error) =>
-          this.logger.error('Failed to create order notification', error),
-        );
-      // BE-05: Loyalty points are NOT awarded on order creation (PENDING).
-      // Points will be awarded when the order reaches DELIVERED or COMPLETED status.
-    }
-
-    this.syncToGoogleSheet(savedOrder).catch((error) =>
-      this.logger.error('Sheet sync failed', error),
-    );
-
-    let emailRecipient: string | undefined = savedOrder.customerEmail;
-    if (!emailRecipient && userId) {
-      const user = await this.usersService.findById(userId).catch(() => null);
-      emailRecipient = user?.email;
-    }
-    if (emailRecipient) {
-      this.emailService
-        .sendOrderConfirmationEmail(emailRecipient, savedOrder)
-        .catch((error) =>
-          this.logger.error('Failed to send confirmation email', error),
-        );
-    }
-
-    const result = savedOrder.toObject ? savedOrder.toObject() : savedOrder;
-    return guestAccessToken ? { ...result, guestAccessToken } : result;
+    return this.checkoutService.createAtomic(dto, userId, clientIp);
   }
 
-  private async checkGuestCheckoutProtection(
-    dto: CreateOrderDto,
-    clientIp?: string,
-  ): Promise<{ phoneKey: string; slot: number }> {
-    const phoneKey = this.normalizeGuestPhone(dto.phone);
-    const configuredLimit = Number(
-      this.configService.get<string>('GUEST_PENDING_ORDER_LIMIT') || 3,
-    );
-    const limit = Number.isInteger(configuredLimit)
-      ? Math.min(10, Math.max(1, configuredLimit))
-      : 3;
-    const configuredThreshold = Number(
-      this.configService.get<string>('GUEST_CAPTCHA_THRESHOLD') || 2,
-    );
-    const captchaThreshold = Number.isInteger(configuredThreshold)
-      ? Math.min(limit, Math.max(0, configuredThreshold))
-      : 2;
-
-    const countQuery = this.orderModel.countDocuments({
-      customer: null,
-      orderStatus: OrderStatus.PENDING,
-      $or: [{ guestPhoneKey: phoneKey }, { phone: dto.phone }],
-    });
-    const pendingCount = countQuery?.exec ? await countQuery.exec() : 0;
-
-    if (pendingCount >= limit) {
-      throw new HttpException(
-        'Số điện thoại này đang có quá nhiều đơn chờ xác nhận. Vui lòng hoàn tất hoặc hủy đơn hiện tại trước khi đặt thêm.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-    if (pendingCount >= captchaThreshold) {
-      await this.verifyTurnstile(dto.captchaToken, clientIp);
-    }
-
-    return { phoneKey, slot: pendingCount };
-  }
-
-  private normalizeGuestPhone(phone: string): string {
-    const digits = (phone || '').replace(/\D/g, '');
-    return digits.startsWith('84') && digits.length === 11
-      ? `0${digits.slice(2)}`
-      : digits;
-  }
-
-  private async verifyTurnstile(
-    token?: string,
-    clientIp?: string,
-  ): Promise<void> {
-    const secret = this.configService.get<string>('TURNSTILE_SECRET_KEY');
-    if (!secret) {
-      throw new ServiceUnavailableException(
-        'Xác minh chống spam chưa được cấu hình. Vui lòng liên hệ cửa hàng.',
-      );
-    }
-    if (!token) {
-      throw new BadRequestException(
-        'Vui lòng hoàn tất xác minh chống spam trước khi tiếp tục.',
-      );
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    try {
-      const body = new URLSearchParams({ secret, response: token });
-      if (clientIp) body.set('remoteip', clientIp);
-      const response = await fetch(
-        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-        { method: 'POST', body, signal: controller.signal },
-      );
-      if (!response.ok) {
-        throw new ServiceUnavailableException(
-          'Không thể xác minh chống spam. Vui lòng thử lại.',
-        );
-      }
-      const result = (await response.json()) as {
-        success?: boolean;
-        hostname?: string;
-      };
-      const allowedHosts = (
-        this.configService.get<string>('TURNSTILE_ALLOWED_HOSTNAMES') || ''
-      )
-        .split(',')
-        .map((host) => host.trim().toLowerCase())
-        .filter(Boolean);
-      if (
-        !result.success ||
-        (allowedHosts.length > 0 &&
-          (!result.hostname ||
-            !allowedHosts.includes(result.hostname.toLowerCase())))
-      ) {
-        throw new BadRequestException(
-          'Xác minh chống spam không hợp lệ hoặc đã hết hạn.',
-        );
-      }
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof ServiceUnavailableException
-      ) {
-        throw error;
-      }
-      throw new ServiceUnavailableException(
-        'Không thể xác minh chống spam. Vui lòng thử lại.',
-      );
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
-  private isGuestPendingSlotConflict(error: unknown): boolean {
-    const candidate = error as { code?: number; keyPattern?: object };
-    return (
-      candidate?.code === 11000 &&
-      Boolean(candidate.keyPattern) &&
-      Object.prototype.hasOwnProperty.call(
-        candidate.keyPattern,
-        'guestPendingSlot',
-      )
+  // For backward-compatibility with tests inspecting guest checkout protection
+  private checkGuestCheckoutProtection(dto: CreateOrderDto, clientIp?: string) {
+    return (this.checkoutService as any).checkGuestCheckoutProtection(
+      dto,
+      clientIp,
     );
   }
 
+  // --- Order Query APIs ---
   async findAll(query: OrderQueryDto): Promise<PaginatedResult<OrderDocument>> {
     const { page = 1, limit = 10, status, search } = query;
     const filter: any = {};
@@ -965,639 +323,62 @@ export class OrdersService {
     return paginate(data, total, page, limit);
   }
 
+  // --- Delegation to OrderLifecycleService ---
   async updateStatus(
     id: string,
     dto: UpdateOrderStatusDto,
+    actor?: { _id: string; role?: string; permissions?: string[] },
   ): Promise<OrderDocument> {
-    const database = this.orderModel.db;
-    if (!database?.startSession) {
-      return this.updateStatusInternal(id, dto);
-    }
-
-    const maxRetries = 3;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      const session = await database.startSession();
-      try {
-        session.startTransaction();
-        const afterCommit: Array<() => Promise<void>> = [];
-        const result = await this.updateStatusInternal(
-          id,
-          dto,
-          session,
-          afterCommit,
-        );
-        await session.commitTransaction();
-        for (const effect of afterCommit) {
-          await effect().catch((error) =>
-            this.logger.error('Post-commit order notification failed', error),
-          );
-        }
-        return result;
-      } catch (error: unknown) {
-        if (session.inTransaction()) await session.abortTransaction();
-        if (this.isTransactionUnsupported(error)) {
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : 'Unknown transaction error';
-          this.logger.error(
-            `Order status transaction is unavailable: ${errorMessage}`,
-          );
-          throw new ServiceUnavailableException(
-            'Cập nhật trạng thái đơn hàng yêu cầu MongoDB replica set để bảo đảm toàn vẹn dữ liệu',
-          );
-        }
-
-        if (this.isTransientTransactionError(error) && attempt < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
-          continue;
-        }
-        throw error;
-      } finally {
-        await session.endSession();
-      }
-    }
-    throw new ServiceUnavailableException(
-      'Không thể hoàn tất cập nhật trạng thái đơn hàng do xung đột dữ liệu',
-    );
+    return this.orderLifecycleService.updateStatus(id, dto, actor);
   }
 
   private async updateStatusInternal(
     id: string,
     dto: UpdateOrderStatusDto,
-    session?: ClientSession,
-    afterCommit?: Array<() => Promise<void>>,
+    session?: any,
+    afterCommit?: any,
   ): Promise<OrderDocument> {
-    const orderQuery = this.orderModel.findById(id);
-    if (session) orderQuery.session(session);
-    const order = await orderQuery.exec();
-    if (!order) throw new NotFoundException('Order not found');
-
-    const oldStatus = order.orderStatus;
-    const allowedTransitions: Record<string, OrderStatus[]> = {
-      [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
-      [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
-      [OrderStatus.PROCESSING]: [OrderStatus.SHIPPING, OrderStatus.CANCELLED],
-      [OrderStatus.SHIPPING]: [OrderStatus.DELIVERED, OrderStatus.RETURNED],
-      [OrderStatus.DELIVERED]: [
-        OrderStatus.COMPLETED,
-        OrderStatus.RETURN_REQUESTED,
-        OrderStatus.RETURNED,
-      ],
-      [OrderStatus.RETURN_REQUESTED]: [
-        OrderStatus.RETURNED,
-        OrderStatus.DELIVERED,
-      ],
-      [OrderStatus.COMPLETED]: [
-        OrderStatus.RETURN_REQUESTED,
-        OrderStatus.RETURNED,
-      ],
-      [OrderStatus.RETURNED]: [],
-      [OrderStatus.CANCELLED]: [],
-    };
-    if (!allowedTransitions[oldStatus]?.includes(dto.orderStatus)) {
-      throw new BadRequestException(
-        `Không thể chuyển trạng thái từ ${oldStatus} sang ${dto.orderStatus}`,
-      );
-    }
-    if (
-      (dto.orderStatus === OrderStatus.DELIVERED ||
-        dto.orderStatus === OrderStatus.COMPLETED) &&
-      (order.paymentMethod || PaymentMethod.COD) !== PaymentMethod.COD &&
-      order.paymentStatus !== PaymentStatus.PAID
-    ) {
-      throw new BadRequestException(
-        'Đơn hàng thanh toán trực tuyến/chuyển khoản phải được xác nhận đã thanh toán trước khi giao thành công',
-      );
-    }
-    order.orderStatus = dto.orderStatus;
-    if (dto.orderStatus === OrderStatus.DELIVERED) {
-      order.deliveredAt ||= new Date();
-    }
-
-    if (!order.timeline) {
-      order.timeline = [];
-    }
-
-    let timelineNote = dto.note || `Trạng thái đơn hàng: ${dto.orderStatus}`;
-    if (!dto.note) {
-      switch (dto.orderStatus) {
-        case OrderStatus.PENDING:
-          timelineNote = 'Đơn hàng đang chờ xử lý.';
-          break;
-        case OrderStatus.CONFIRMED:
-          timelineNote = 'Cửa hàng đã xác nhận đơn hàng của bạn.';
-          break;
-        case OrderStatus.PROCESSING:
-          timelineNote = 'Đơn hàng đang được đóng gói và chuẩn bị bàn giao.';
-          break;
-        case OrderStatus.SHIPPING:
-          timelineNote = 'Đơn hàng đang được vận chuyển đến địa chỉ nhận.';
-          break;
-        case OrderStatus.DELIVERED:
-        case OrderStatus.COMPLETED:
-          timelineNote = 'Giao hàng thành công. Đơn hàng hoàn tất.';
-          break;
-        case OrderStatus.RETURN_REQUESTED:
-          timelineNote =
-            'Khách hàng đã gửi yêu cầu trả hàng, đang chờ cửa hàng xem xét phê duyệt.';
-          break;
-        case OrderStatus.RETURNED:
-          timelineNote = 'Đơn hàng đã được tiếp nhận hoàn trả và hoàn kho.';
-          break;
-        case OrderStatus.CANCELLED:
-          timelineNote = 'Đơn hàng đã bị hủy bỏ.';
-          break;
-      }
-    }
-
-    order.timeline.push({
-      status: dto.orderStatus,
-      note: timelineNote,
-      createdAt: new Date(),
-    });
-
-    // BE-01 Invariance Rule: When cancelled or returned, if payment was PAID, automatically set refundStatus
-    if (
-      (dto.orderStatus === OrderStatus.CANCELLED ||
-        dto.orderStatus === OrderStatus.RETURNED) &&
-      order.paymentStatus === PaymentStatus.PAID &&
-      order.refundStatus === RefundStatus.NONE
-    ) {
-      order.refundStatus = RefundStatus.REQUESTED;
-      order.refundAmount = order.total;
-      order.refundReason ||=
-        dto.note ||
-        `Tự động khởi tạo yêu cầu hoàn tiền cho đơn hàng ${dto.orderStatus === OrderStatus.CANCELLED ? 'đã hủy' : 'hoàn trả'}`;
-    }
-
-    // If cancelled, restore stock
-    if (
-      (dto.orderStatus === OrderStatus.CANCELLED ||
-        dto.orderStatus === OrderStatus.RETURNED) &&
-      !order.inventoryRestoredAt
-    ) {
-      for (const item of order.items) {
-        if (item.product) {
-          await this.productsService.updateStock(
-            item.product.toString(),
-            item.quantity,
-            session,
-          );
-          await this.productsService.incrementSold(
-            item.product.toString(),
-            -item.quantity,
-            session,
-          );
-          if (this.inventoryService) {
-            await this.inventoryService.recordExternalMovement(
-              item.product.toString(),
-              InventoryTransactionType.RETURN,
-              item.quantity,
-              `${dto.orderStatus}:${order._id.toString()}`,
-              order._id.toString(),
-              session,
-            );
-          }
-        }
-      }
-      order.inventoryRestoredAt = new Date();
-
-      // BE-05: Deduct loyalty points ONLY if loyalty points were already awarded
-      if (order.customer && order.loyaltyAwarded) {
-        const points =
-          order.loyaltyPointsAwarded ||
-          Math.floor((order.subtotal || order.total) / 1000);
-        if (points > 0) {
-          try {
-            await this.usersService.deductLoyaltyPoints(
-              order.customer.toString(),
-              points,
-              session,
-            );
-            order.loyaltyAwarded = false;
-          } catch (error) {
-            // A transactional status update must roll back as one unit.
-            if (session) throw error;
-            this.logger.error(
-              `Failed to deduct loyalty points for user ${order.customer.toString()}`,
-              error,
-            );
-          }
-        }
-      }
-
-      // PRODUCT-01: Refund spent loyalty points if order was cancelled or returned
-      if (
-        order.customer &&
-        (order.loyaltyPointsUsed || 0) > 0 &&
-        !order.loyaltyPointsRefunded
-      ) {
-        try {
-          await this.usersService.refundLoyaltyPoints(
-            order.customer.toString(),
-            order.loyaltyPointsUsed,
-            session,
-          );
-          order.loyaltyPointsRefunded = true;
-        } catch (error) {
-          if (session) throw error;
-          this.logger.error(
-            `Failed to refund spent loyalty points for user ${order.customer.toString()}`,
-            error,
-          );
-        }
-      }
-    }
-
-    // BE-05: Award loyalty points only when order is DELIVERED or COMPLETED
-    if (
-      dto.orderStatus === OrderStatus.DELIVERED &&
-      order.customer &&
-      !order.loyaltyAwarded
-    ) {
-      const merchandiseAmount =
-        order.subtotal ?? order.total - (order.shippingFee || 0);
-      const points = Math.floor(
-        Math.max(
-          0,
-          merchandiseAmount -
-            (order.discount || 0) -
-            (order.loyaltyDiscount || 0),
-        ) / 1000,
-      );
-      if (points > 0) {
-        const customerId = order.customer.toString();
-        try {
-          const res = await this.usersService.addLoyaltyPoints(
-            customerId,
-            points,
-            session,
-          );
-          order.loyaltyAwarded = true;
-          order.loyaltyPointsAwarded = points;
-
-          if (res) {
-            const notifyLoyalty = async () => {
-              // Loyalty points notification
-              const totalUserPoints = res.user?.loyaltyPoints ?? points;
-              await this.notificationsService
-                .create({
-                  userId: customerId,
-                  title: '🪙 Tích điểm thành công',
-                  message: `Bạn được cộng +${points.toLocaleString('vi-VN')} điểm từ đơn hàng #${order.orderCode}. Tổng tích lũy: ${totalUserPoints} điểm.`,
-                  type: 'loyalty',
-                  meta: {
-                    points,
-                    totalPoints: totalUserPoints,
-                    orderCode: order.orderCode,
-                  },
-                })
-                .catch((err) =>
-                  this.logger.error(
-                    'Failed to create loyalty notification',
-                    err,
-                  ),
-                );
-
-              // Tier upgrade notification
-              if (res.tierUpgraded) {
-                const tierNameMap: any = {
-                  BRONZE: 'ĐỒNG',
-                  SILVER: 'BẠC',
-                  GOLD: 'VÀNG',
-                  DIAMOND: 'KIM CƯƠNG',
-                };
-                const tierVN = tierNameMap[res.newTier] || res.newTier;
-                this.notificationsService
-                  .create({
-                    userId: customerId,
-                    title: `🏆 Chúc mừng nâng hạng ${tierVN}`,
-                    message: `Chúc mừng bạn đã thăng hạng thành viên ${tierVN}! Mở khóa thêm nhiều quyền lợi và ưu đãi độc quyền.`,
-                    type: 'tier',
-                    meta: { newTier: res.newTier, oldTier: res.oldTier },
-                  })
-                  .catch((err) =>
-                    this.logger.error(
-                      'Failed to create tier notification',
-                      err,
-                    ),
-                  );
-              }
-            };
-            if (afterCommit) afterCommit.push(notifyLoyalty);
-            else await notifyLoyalty();
-          }
-        } catch (error) {
-          if (session) throw error;
-          this.logger.error(
-            `Failed to award loyalty points for user ${customerId}`,
-            error,
-          );
-        }
-      }
-    }
-
-    if (
-      dto.orderStatus === OrderStatus.CANCELLED &&
-      order.promotionCode &&
-      !order.promotionUsageReleasedAt
-    ) {
-      await this.promotionsService.releaseUsage(
-        order.promotionCode,
-        order.customer?.toString(),
-        order.customerEmail,
-        order.phone,
-        session,
-      );
-      order.promotionUsageReleasedAt = new Date();
-    }
-
-    // If completed, mark as paid
-    if (
-      (dto.orderStatus === OrderStatus.DELIVERED ||
-        dto.orderStatus === OrderStatus.COMPLETED) &&
-      order.paymentMethod === PaymentMethod.COD
-    ) {
-      order.paymentStatus = PaymentStatus.PAID;
-      order.revenueRecognizedAt ||= new Date();
-    }
-
-    // BE-01: Invariance Rule: If a PAID order is cancelled or returned, refundStatus MUST become REQUESTED
-    if (
-      (dto.orderStatus === OrderStatus.CANCELLED ||
-        dto.orderStatus === OrderStatus.RETURNED) &&
-      order.paymentStatus === PaymentStatus.PAID
-    ) {
-      if (
-        !order.refundStatus ||
-        order.refundStatus === RefundStatus.NONE ||
-        order.refundStatus === RefundStatus.FAILED
-      ) {
-        order.refundStatus = RefundStatus.REQUESTED;
-        order.refundAmount = order.total;
-        order.refundReason ||=
-          dto.note || 'Yêu cầu hoàn tiền sau khi đơn hàng hủy/hoàn trả';
-      }
-    }
-
-    const savedOrder = await order.save(session ? { session } : undefined);
-
-    const notifyStatus = async () => {
-      savedOrder.$session?.(null);
-      // Sync to Google Sheet (async)
-      this.syncToGoogleSheet(savedOrder).catch((err) =>
-        this.logger.error('Sheet sync failed', err),
-      );
-
-      if (savedOrder.customer && savedOrder.orderStatus !== oldStatus) {
-        const customerId = savedOrder.customer.toString();
-
-        // Ensure customer is populated to get email
-        if (
-          typeof savedOrder.customer === 'object' &&
-          !(savedOrder.customer as any).email
-        ) {
-          await savedOrder.populate('customer', 'fullName email');
-        }
-
-        const customerObj = savedOrder.customer as any;
-        const customerEmail = customerObj?.email || savedOrder.customerEmail;
-
-        let statusText = '';
-        switch (savedOrder.orderStatus) {
-          case OrderStatus.CONFIRMED:
-            statusText = 'đã được xác nhận và đang được chuẩn bị';
-            break;
-          case OrderStatus.PROCESSING:
-            statusText = 'đang được đóng gói và chuẩn bị bàn giao';
-            break;
-          case OrderStatus.SHIPPING:
-            statusText = 'đang được giao đến bạn';
-            break;
-          case OrderStatus.DELIVERED:
-          case OrderStatus.COMPLETED:
-            statusText = 'đã giao thành công. Cảm ơn bạn đã mua sắm!';
-            break;
-          case OrderStatus.RETURNED:
-            statusText = 'đã được hoàn trả';
-            break;
-          case OrderStatus.CANCELLED:
-            statusText = 'đã bị hủy';
-            break;
-        }
-        if (statusText) {
-          this.notificationsService
-            .create({
-              userId: customerId,
-              title: `Cập nhật đơn hàng #${savedOrder.orderCode}`,
-              message: `Đơn hàng #${savedOrder.orderCode} của bạn ${statusText}.`,
-              type: 'order',
-              meta: {
-                orderId: savedOrder._id.toString(),
-                orderCode: savedOrder.orderCode,
-              },
-            })
-            .catch((err) =>
-              this.logger.error(
-                'Failed to create customer notification for status change',
-                err,
-              ),
-            );
-
-          // If completed, trigger review invitation notification
-          if (
-            savedOrder.orderStatus === OrderStatus.DELIVERED ||
-            savedOrder.orderStatus === OrderStatus.COMPLETED
-          ) {
-            this.notificationsService
-              .create({
-                userId: customerId,
-                title: `⭐ Đánh giá sản phẩm đơn hàng #${savedOrder.orderCode}`,
-                message: `Đơn hàng #${savedOrder.orderCode} đã hoàn tất! Hãy để lại đánh giá để chia sẻ cảm nhận và nhận thêm ưu đãi nhé.`,
-                type: 'review',
-                meta: {
-                  orderId: savedOrder._id.toString(),
-                  orderCode: savedOrder.orderCode,
-                },
-              })
-              .catch((err) =>
-                this.logger.error(
-                  'Failed to create review invite notification',
-                  err,
-                ),
-              );
-          }
-
-          // Send email notification (async)
-          if (customerEmail) {
-            this.emailService
-              .sendOrderStatusEmail(customerEmail, savedOrder, statusText)
-              .catch((err) => {
-                this.logger.error(
-                  `Failed to send order status email to ${customerEmail}:`,
-                  err,
-                );
-              });
-          }
-        }
-      }
-    };
-    if (afterCommit) afterCommit.push(notifyStatus);
-    else await notifyStatus();
-    return savedOrder;
+    return this.orderLifecycleService.updateStatusInternal(
+      id,
+      dto,
+      session,
+      afterCommit,
+    );
   }
 
-  // FIX-C01 & BA-01: Cancel with ownership and role-based policy check
   async cancel(
     id: string,
-    userId?: string,
-    reason?: string,
+    reasonOrDto?: string | CancelOrderDto,
   ): Promise<OrderDocument> {
-    const order = await this.orderModel.findById(id).exec();
-    if (!order) throw new NotFoundException('Order not found');
-
-    if (
-      userId &&
-      order.customer &&
-      order.customer.toString() !== userId.toString()
-    ) {
-      throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này');
-    }
-
-    if (order.orderStatus === OrderStatus.PROCESSING) {
-      throw new BadRequestException(
-        'Đơn hàng đang được đóng gói trong kho, khách hàng không thể tự hủy. Vui lòng liên hệ CSKH.',
-      );
-    }
-
-    if (
-      order.orderStatus !== OrderStatus.PENDING &&
-      order.orderStatus !== OrderStatus.CONFIRMED
-    ) {
-      throw new BadRequestException(
-        'Không thể hủy đơn hàng ở trạng thái hiện tại',
-      );
-    }
-
-    return this.updateStatus(id, {
-      orderStatus: OrderStatus.CANCELLED,
-      note: reason || 'Hủy đơn hàng',
-    });
+    return this.orderLifecycleService.cancel(id, reasonOrDto);
   }
 
   async cancelForActor(
     id: string,
-    actor: { _id: string; role: string; permissions?: string[] },
-    reason?: string,
+    actor: { _id: string; role?: string; permissions?: string[] },
+    reasonOrDto?: string | CancelOrderDto,
   ): Promise<OrderDocument> {
-    const order = await this.orderModel.findById(id).exec();
-    if (!order) throw new NotFoundException('Order not found');
-
-    const actorRole = actor.role.toUpperCase();
-    const isAdmin = actorRole === 'SUPER_ADMIN' || actorRole === 'ADMIN';
-    const isAuthorizedStaff =
-      actorRole === 'STAFF' &&
-      actor.permissions?.includes(StaffPermission.MANAGE_ORDERS);
-    const isOwner =
-      actorRole === 'CUSTOMER' &&
-      !!order.customer &&
-      order.customer.toString() === actor._id.toString();
-
-    if (!isAdmin && !isAuthorizedStaff && !isOwner) {
-      throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này');
-    }
-
-    if (order.orderStatus === OrderStatus.PROCESSING) {
-      if (isOwner && !isAdmin && !isAuthorizedStaff) {
-        throw new BadRequestException(
-          'Đơn hàng đang được đóng gói trong kho, khách hàng không thể tự hủy. Vui lòng liên hệ CSKH.',
-        );
-      }
-    } else if (
-      order.orderStatus !== OrderStatus.PENDING &&
-      order.orderStatus !== OrderStatus.CONFIRMED
-    ) {
-      throw new BadRequestException(
-        'Không thể hủy đơn hàng ở trạng thái hiện tại',
-      );
-    }
-
-    const cancelNote =
-      reason || (isOwner ? 'Khách hàng hủy đơn' : 'Quản trị viên hủy đơn');
-    return this.updateStatus(id, {
-      orderStatus: OrderStatus.CANCELLED,
-      note: cancelNote,
-    });
+    return this.orderLifecycleService.cancelForActor(id, actor, reasonOrDto);
   }
 
   async cancelGuest(
     id: string,
-    accessToken?: string,
-    reason?: string,
+    guestAccessToken?: string,
+    reasonOrDto?: string | CancelOrderDto,
   ): Promise<OrderDocument> {
-    const order = await this.findGuestById(id, accessToken);
-    if (
-      order.orderStatus !== OrderStatus.PENDING &&
-      order.orderStatus !== OrderStatus.CONFIRMED
-    ) {
-      throw new BadRequestException(
-        'Chỉ có thể hủy đơn hàng ở trạng thái Chờ xử lý hoặc Đã xác nhận',
-      );
-    }
-    return this.updateStatus(id, {
-      orderStatus: OrderStatus.CANCELLED,
-      note: reason || 'Khách vãng lai hủy đơn hàng',
-    });
+    return this.orderLifecycleService.cancelGuest(
+      id,
+      guestAccessToken,
+      reasonOrDto,
+    );
   }
 
-  // BA-01 & BE-01: Return & Refund Flows
   async requestReturn(
     id: string,
     actor: { _id: string; role?: string },
     dto: { reason: string },
   ): Promise<OrderDocument> {
-    const order = await this.orderModel.findById(id).exec();
-    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
-
-    const actorRole = (actor.role || 'CUSTOMER').toUpperCase();
-    const isAdmin = actorRole === 'SUPER_ADMIN' || actorRole === 'ADMIN';
-    const isOwner =
-      !!order.customer && order.customer.toString() === actor._id.toString();
-    if (!isAdmin && !isOwner) {
-      throw new ForbiddenException(
-        'Bạn không có quyền yêu cầu trả đơn hàng này',
-      );
-    }
-
-    if (
-      order.orderStatus !== OrderStatus.DELIVERED &&
-      order.orderStatus !== OrderStatus.COMPLETED
-    ) {
-      throw new BadRequestException(
-        'Chỉ có thể yêu cầu trả hàng đối với đơn đã giao thành công',
-      );
-    }
-
-    // Check 7 days limit
-    const deliveredTime = order.deliveredAt
-      ? order.deliveredAt.getTime()
-      : order.updatedAt
-        ? order.updatedAt.getTime()
-        : Date.now();
-    const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
-    if (Date.now() - deliveredTime > sevenDaysInMs) {
-      throw new BadRequestException(
-        'Đã quá thời hạn 7 ngày kể từ khi nhận hàng. Không thể yêu cầu đổi trả.',
-      );
-    }
-
-    order.returnReason = dto.reason;
-    order.returnRequestedAt = new Date();
-    return this.updateStatus(id, {
-      orderStatus: OrderStatus.RETURN_REQUESTED,
-      note: `Khách yêu cầu trả hàng: ${dto.reason}`,
-    });
+    return this.orderLifecycleService.requestReturn(id, actor, dto);
   }
 
   async approveReturn(
@@ -1605,25 +386,7 @@ export class OrdersService {
     actor: { _id: string; role?: string; permissions?: string[] },
     note?: string,
   ): Promise<OrderDocument> {
-    const order = await this.orderModel.findById(id).exec();
-    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
-
-    if (
-      order.orderStatus !== OrderStatus.RETURN_REQUESTED &&
-      order.orderStatus !== OrderStatus.DELIVERED
-    ) {
-      throw new BadRequestException(
-        'Chỉ có thể duyệt hoàn trả đơn hàng ở trạng thái Yêu cầu trả hàng hoặc Đã giao',
-      );
-    }
-
-    const approveNote =
-      note ||
-      'Cửa hàng đã duyệt yêu cầu hoàn trả sách và tiếp nhận nhập lại kho';
-    return this.updateStatus(id, {
-      orderStatus: OrderStatus.RETURNED,
-      note: approveNote,
-    });
+    return this.orderLifecycleService.approveReturn(id, actor, note);
   }
 
   async rejectReturn(
@@ -1631,19 +394,7 @@ export class OrdersService {
     actor: { _id: string; role?: string; permissions?: string[] },
     dto: { reason: string },
   ): Promise<OrderDocument> {
-    const order = await this.orderModel.findById(id).exec();
-    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
-
-    if (order.orderStatus !== OrderStatus.RETURN_REQUESTED) {
-      throw new BadRequestException(
-        'Chỉ có thể từ chối yêu cầu trả hàng khi đơn đang ở trạng thái Chờ duyệt trả hàng',
-      );
-    }
-
-    return this.updateStatus(id, {
-      orderStatus: OrderStatus.DELIVERED,
-      note: `Từ chối trả hàng: ${dto.reason}`,
-    });
+    return this.orderLifecycleService.rejectReturn(id, actor, dto);
   }
 
   async processRefund(
@@ -1651,73 +402,21 @@ export class OrdersService {
     actor: { _id: string; role?: string; permissions?: string[] },
     dto?: { reason?: string; amount?: number },
   ): Promise<OrderDocument> {
-    const order = await this.orderModel.findById(id).exec();
-    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
-
-    if (
-      order.orderStatus !== OrderStatus.CANCELLED &&
-      order.orderStatus !== OrderStatus.RETURNED
-    ) {
-      throw new BadRequestException(
-        'Chỉ có thể hoàn tiền cho đơn hàng đã hủy hoặc đã hoàn trả',
-      );
-    }
-
-    if (order.refundStatus === RefundStatus.REFUNDED) {
-      throw new ConflictException('Đơn hàng này đã được hoàn tiền trước đó');
-    }
-
-    // BE-01: Atomic conditional lock against double-refund
-    const lockedOrder = await this.orderModel
-      .findOneAndUpdate(
-        {
-          _id: new Types.ObjectId(id),
-          refundStatus: {
-            $in: [
-              RefundStatus.NONE,
-              RefundStatus.REQUESTED,
-              RefundStatus.FAILED,
-              RefundStatus.MANUAL_REQUIRED,
-            ],
-          },
-        },
-        {
-          $set: {
-            refundStatus: RefundStatus.PROCESSING,
-          },
-        },
-        { returnDocument: 'after' },
-      )
-      .exec();
-
-    if (!lockedOrder) {
-      throw new ConflictException(
-        'Giao dịch hoàn tiền đang được xử lý bởi tiến trình khác hoặc đã hoàn tất',
-      );
-    }
-
-    const refundAmount =
-      dto?.amount ?? lockedOrder.refundAmount ?? lockedOrder.total;
-    const refundRef = `REF-${randomBytes(4).toString('hex').toUpperCase()}`;
-
-    lockedOrder.refundStatus = RefundStatus.REFUNDED;
-    lockedOrder.refundAmount = refundAmount;
-    lockedOrder.refundReason =
-      dto?.reason || lockedOrder.refundReason || 'Hoàn tiền thành công';
-    lockedOrder.refundedAt = new Date();
-    lockedOrder.refundTransactionRef = refundRef;
-    if (actor?._id) lockedOrder.refundActor = new Types.ObjectId(actor._id);
-    lockedOrder.paymentStatus = PaymentStatus.REFUNDED;
-
-    lockedOrder.timeline.push({
-      status: OrderStatus.CANCELLED,
-      note: `Hoàn tất hoàn tiền ${refundAmount.toLocaleString('vi-VN')}đ qua ${lockedOrder.paymentMethod}. Mã tham chiếu: ${refundRef}.`,
-      createdAt: new Date(),
-    });
-
-    return lockedOrder.save();
+    return this.orderLifecycleService.processRefund(id, actor, dto);
   }
 
+  // --- Auto-Cancel Operations (BE-06 & BE-05) ---
+  async handleAutoCancelOrders(): Promise<number> {
+    return this.orderLifecycleService.handleAutoCancelOrders((id, dto) =>
+      this.updateStatus(id, dto),
+    );
+  }
+
+  async handleAutoCancelWarnings(): Promise<number> {
+    return this.orderLifecycleService.handleAutoCancelWarnings();
+  }
+
+  // --- Reporting & Analytics ---
   async count(filter: any = {}): Promise<number> {
     return this.orderModel.countDocuments(filter).exec();
   }
@@ -1948,7 +647,6 @@ export class OrdersService {
       prevStart = new Date(now.getTime() - 2 * durationMs);
       prevEnd = new Date(currentStart.getTime() - 1);
     } else {
-      // Default: 'month' (last 30 days)
       const durationMs = 30 * 24 * 60 * 60 * 1000;
       currentStart = new Date(now.getTime() - durationMs);
       prevStart = new Date(now.getTime() - 2 * durationMs);
@@ -2009,302 +707,145 @@ export class OrdersService {
   async generateInvoicePdf(order: any): Promise<any> {
     const doc = new PDFDocument({ margin: 50 });
     const winFont = 'C:\\Windows\\Fonts\\Arial.ttf';
-    let fontName = 'Helvetica'; // safe fallback, always available in pdfkit
+    let fontName = 'Helvetica';
     if (fs.existsSync(winFont)) {
       doc.registerFont('Arial', winFont);
       fontName = 'Arial';
     }
-    doc.font(fontName);
 
     // Header
-    doc.fontSize(16).text('VĂN PHÒNG PHẨM TRƯỜNG THÀNH', { align: 'center' });
-    doc.fontSize(10).text('Địa chỉ: Chợ Chanh - Nhân Hà, Ninh Bình, Việt Nam', {
-      align: 'center',
-    });
+    doc
+      .font(fontName)
+      .fontSize(20)
+      .text('NHÀ SÁCH TRƯỜNG THÀNH', 50, 50, { align: 'center' });
     doc
       .fontSize(10)
-      .text('Điện thoại: 0982938316 | Email: giaoductruongthanh@gmail.com', {
-        align: 'center',
-      });
-    doc.moveDown(1);
-
-    // Invoice Title
-    doc
-      .fontSize(14)
       .text('HÓA ĐƠN BÁN HÀNG', { align: 'center', underline: true });
+    doc.moveDown();
+
+    // Order Meta Info
     doc
       .fontSize(10)
-      .text(`Mã đơn hàng: #${order.orderCode}`, { align: 'center' });
-    doc
-      .fontSize(10)
-      .text(`Ngày đặt: ${new Date(order.createdAt).toLocaleString('vi-VN')}`, {
+      .text(`Mã đơn hàng: #${order.orderCode}`)
+      .text(
+        `Ngày đặt: ${new Date(order.createdAt).toLocaleDateString('vi-VN')}`,
+      )
+      .text(`Khách hàng: ${order.customerName || 'N/A'}`)
+      .text(`Điện thoại: ${order.phone || 'N/A'}`)
+      .text(`Địa chỉ giao hàng: ${order.shippingAddress || 'N/A'}`)
+      .text(`Phương thức thanh toán: ${order.paymentMethod || 'COD'}`);
+
+    // Generate and insert Order QR Code
+    try {
+      const qrData = `ORDER:${order.orderCode}|TOTAL:${order.total}|CUSTOMER:${order.phone || ''}`;
+      const qrDataUrl = await QRCode.toDataURL(qrData, {
+        margin: 1,
+        width: 80,
+      });
+      const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, '');
+      const qrBuffer = Buffer.from(qrBase64, 'base64');
+      doc.image(qrBuffer, 460, 70, { width: 75, height: 75 });
+      doc.fontSize(8).text('Quét mã tra cứu', 460, 150, {
+        width: 75,
         align: 'center',
       });
-    doc.moveDown(1.5);
+    } catch (qrErr) {
+      this.logger.warn(
+        `Failed to generate QR for invoice #${order.orderCode}`,
+        qrErr,
+      );
+    }
 
-    // Customer Info
-    doc.fontSize(11).text('THÔNG TIN KHÁCH HÀNG', { underline: true });
-    doc
-      .fontSize(10)
-      .text(`Họ và tên: ${order.customerName || 'Khách vãng lai'}`);
-    doc.fontSize(10).text(`Số điện thoại: ${order.phone}`);
-    doc.fontSize(10).text(`Email: ${order.customerEmail || 'N/A'}`);
-    doc.fontSize(10).text(`Địa chỉ nhận hàng: ${order.shippingAddress}`);
-    doc.moveDown(1.5);
+    doc.moveDown();
 
     // Table Header
-    doc.fontSize(11).text('DANH SÁCH SẢN PHẨM', { underline: true });
-    doc.moveDown(0.5);
-
-    const startX = 50;
-    let startY = doc.y;
-
-    doc.fontSize(9);
-    doc.text('STT', startX, startY);
-    doc.text('Tên sản phẩm', startX + 30, startY);
-    doc.text('Đơn giá', startX + 280, startY, { width: 60, align: 'right' });
-    doc.text('SL', startX + 350, startY, { width: 30, align: 'center' });
-    doc.text('Thành tiền', startX + 390, startY, { width: 80, align: 'right' });
-
+    const tableTop = 220;
     doc
-      .moveTo(startX, startY + 15)
-      .lineTo(500, startY + 15)
-      .stroke();
+      .font(fontName)
+      .fontSize(10)
+      .text('STT', 50, tableTop, { bold: true } as any)
+      .text('Tên sản phẩm', 80, tableTop, { bold: true } as any)
+      .text('Số lượng', 300, tableTop, { align: 'right', bold: true } as any)
+      .text('Đơn giá', 380, tableTop, { align: 'right', bold: true } as any)
+      .text('Thành tiền', 460, tableTop, { align: 'right', bold: true } as any);
 
-    startY += 20;
+    doc.rect(50, tableTop + 15, 500, 1).fill('#cccccc');
 
-    order.items.forEach((item: any, index: number) => {
-      doc.text((index + 1).toString(), startX, startY);
-      doc.text(item.name, startX + 30, startY, { width: 240 });
-      doc.text(item.price.toLocaleString('vi-VN') + 'đ', startX + 280, startY, {
-        width: 60,
-        align: 'right',
-      });
-      doc.text(item.quantity.toString(), startX + 350, startY, {
-        width: 30,
-        align: 'center',
-      });
-      doc.text(
-        (item.price * item.quantity).toLocaleString('vi-VN') + 'đ',
-        startX + 390,
-        startY,
-        { width: 80, align: 'right' },
-      );
-
-      const textHeight = doc.heightOfString(item.name, { width: 240 });
-      startY += Math.max(15, textHeight) + 5;
+    // Table Items
+    let y = tableTop + 25;
+    order.items?.forEach((item: any, index: number) => {
+      doc
+        .fontSize(9)
+        .text((index + 1).toString(), 50, y)
+        .text(item.name || 'Sản phẩm', 80, y, { width: 200 })
+        .text(item.quantity.toString(), 300, y, { align: 'right' })
+        .text(`${item.price.toLocaleString('vi-VN')} đ`, 380, y, {
+          align: 'right',
+        })
+        .text(
+          `${(item.price * item.quantity).toLocaleString('vi-VN')} đ`,
+          460,
+          y,
+          { align: 'right' },
+        );
+      y += 20;
     });
 
-    doc.moveTo(startX, startY).lineTo(500, startY).stroke();
-    startY += 10;
+    // Summary calculation
+    y += 10;
+    doc.rect(50, y, 500, 1).fill('#cccccc');
+    y += 10;
 
-    // Generate QR Code data URL dynamically
-    let qrDataUrl = '';
-    try {
-      const orderIdStr = order._id ? order._id.toString() : '';
-      const qrText = `${this.configService.get('FRONTEND_URL') || 'http://localhost:5173'}/my-orders/${orderIdStr}`;
-      qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 100 });
-    } catch (err) {
-      this.logger.error('Failed to generate QR Code for invoice:', err);
-    }
-
-    // Summary Info
-    doc.fontSize(10);
-
-    // Draw QR code if generated
-    if (qrDataUrl) {
-      doc.image(qrDataUrl, startX, startY, { width: 80 });
-      doc.fontSize(7).text('Quét tra cứu đơn hàng', startX, startY + 85, {
-        width: 80,
-        align: 'center',
-      });
-    }
-
-    doc.text('Cộng tiền hàng:', startX + 280, startY, {
-      width: 100,
-      align: 'left',
-    });
-    doc.text(
-      order.subtotal.toLocaleString('vi-VN') + 'đ',
-      startX + 390,
-      startY,
-      { width: 80, align: 'right' },
-    );
-
-    startY += 15;
-    doc.text('Phí vận chuyển:', startX + 280, startY, {
-      width: 100,
-      align: 'left',
-    });
-    doc.text(
-      order.shippingFee === 0
-        ? 'Miễn phí'
-        : order.shippingFee.toLocaleString('vi-VN') + 'đ',
-      startX + 390,
-      startY,
-      { width: 80, align: 'right' },
-    );
-
-    if (order.discount > 0) {
-      startY += 15;
-      doc.text('Giảm giá:', startX + 280, startY, {
-        width: 100,
-        align: 'left',
-      });
-      doc.text(
-        '-' + order.discount.toLocaleString('vi-VN') + 'đ',
-        startX + 390,
-        startY,
-        { width: 80, align: 'right' },
-      );
-    }
-
-    const loyaltyDiscount = Number(order.loyaltyDiscount) || 0;
-    if (loyaltyDiscount > 0) {
-      startY += 15;
-      doc.text('Điểm thưởng:', startX + 280, startY, {
-        width: 100,
-        align: 'left',
-      });
-      doc.text(
-        '-' + loyaltyDiscount.toLocaleString('vi-VN') + 'đ',
-        startX + 390,
-        startY,
-        { width: 80, align: 'right' },
-      );
-    }
-    startY += 20;
-    doc.fontSize(11).font(fontName);
-    doc.text('TỔNG CỘNG:', startX + 280, startY, { width: 100, align: 'left' });
-    doc.text(order.total.toLocaleString('vi-VN') + 'đ', startX + 390, startY, {
-      width: 80,
-      align: 'right',
-    });
-
-    doc.moveDown(3);
     doc
       .fontSize(10)
-      .text(
-        'Cảm ơn quý khách đã tin tưởng và mua sắm tại Trường Thành Bookstore!',
-        { align: 'center' },
-      );
+      .text('Tạm tính:', 350, y)
+      .text(`${(order.subtotal || 0).toLocaleString('vi-VN')} đ`, 460, y, {
+        align: 'right',
+      });
+    y += 18;
 
+    doc
+      .text('Phí vận chuyển:', 350, y)
+      .text(`${(order.shippingFee || 0).toLocaleString('vi-VN')} đ`, 460, y, {
+        align: 'right',
+      });
+    y += 18;
+
+    if (order.discount && order.discount > 0) {
+      doc
+        .text(`Giảm giá (${order.promotionCode || 'Khuyến mãi'}):`, 300, y)
+        .text(`-${order.discount.toLocaleString('vi-VN')} đ`, 460, y, {
+          align: 'right',
+        });
+      y += 18;
+    }
+
+    if (order.loyaltyDiscount && order.loyaltyDiscount > 0) {
+      doc
+        .text(`Điểm thưởng (${order.loyaltyPointsUsed || 0} điểm):`, 300, y)
+        .text(`-${order.loyaltyDiscount.toLocaleString('vi-VN')} đ`, 460, y, {
+          align: 'right',
+        });
+      y += 18;
+    }
+
+    doc
+      .fontSize(11)
+      .text('TỔNG THANH TOÁN:', 320, y, { bold: true } as any)
+      .text(`${order.total.toLocaleString('vi-VN')} đ`, 460, y, {
+        align: 'right',
+        bold: true,
+      } as any);
+
+    // Footer note
+    doc
+      .fontSize(9)
+      .text('Cảm ơn quý khách đã mua sắm tại Nhà Sách Trường Thành!', 50, 700, {
+        align: 'center',
+        italic: true,
+      } as any);
+
+    doc.end();
     return doc;
-  }
-
-  /**
-   * BE-05: Auto-cancels PENDING orders exceeding their deadline
-   * - COD orders: deadline 48 hours
-   * - Online/Bank Transfer orders: deadline 24 hours
-   * Restores inventory atomically, rolls back sold count, releases voucher usage,
-   * updates timeline, and notifies the customer.
-   */
-  async handleAutoCancelOrders(): Promise<number> {
-    const now = Date.now();
-    const pendingOrders = await this.orderModel
-      .find({
-        orderStatus: OrderStatus.PENDING,
-      })
-      .exec();
-
-    let cancelledCount = 0;
-
-    for (const order of pendingOrders) {
-      const createdAtMs = new Date(order.createdAt).getTime();
-      const isCod = order.paymentMethod === PaymentMethod.COD;
-      const timeoutMs = isCod ? 48 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-
-      if (now - createdAtMs >= timeoutMs) {
-        try {
-          await this.updateStatus(order._id.toString(), {
-            orderStatus: OrderStatus.CANCELLED,
-            note: 'Đơn hàng tự động hủy do quá hạn thanh toán/xác nhận',
-          });
-          cancelledCount++;
-          this.logger.log(
-            `Đã tự động hủy đơn hàng #${order.orderCode} do quá hạn (${isCod ? '48h COD' : '24h Online'})`,
-          );
-        } catch (error: any) {
-          this.logger.error(
-            `Lỗi khi tự động hủy đơn hàng #${order.orderCode}: ${error.message || error}`,
-          );
-        }
-      }
-    }
-
-    return cancelledCount;
-  }
-
-  /**
-   * BE-05: Sends a warning notification 2 hours prior to auto-cancellation
-   * for PENDING orders that have not yet received a warning.
-   */
-  async handleAutoCancelWarnings(): Promise<number> {
-    const now = Date.now();
-    const pendingOrders = await this.orderModel
-      .find({
-        orderStatus: OrderStatus.PENDING,
-        autoCancelWarningSentAt: { $exists: false },
-      })
-      .exec();
-
-    let warningsCount = 0;
-
-    for (const order of pendingOrders) {
-      const createdAtMs = new Date(order.createdAt).getTime();
-      const isCod = order.paymentMethod === PaymentMethod.COD;
-      const timeoutMs = isCod ? 48 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-      const warningThresholdMs = timeoutMs - 2 * 60 * 60 * 1000; // 2 hours before expiration
-      const elapsedMs = now - createdAtMs;
-
-      if (elapsedMs >= warningThresholdMs && elapsedMs < timeoutMs) {
-        try {
-          if (order.customer) {
-            await this.notificationsService
-              .create({
-                userId: order.customer.toString(),
-                title: `⚠️ Nhắc nhở đơn hàng #${order.orderCode} sắp hết hạn`,
-                message: `Đơn hàng #${order.orderCode} của bạn sẽ tự động bị hủy sau 2 giờ nữa nếu chưa được hoàn tất thanh toán hoặc xác nhận.`,
-                type: 'order',
-                meta: {
-                  orderId: order._id.toString(),
-                  orderCode: order.orderCode,
-                },
-              })
-              .catch((err) =>
-                this.logger.error(
-                  'Lỗi khi gửi thông báo cảnh báo đơn hàng',
-                  err,
-                ),
-              );
-          }
-
-          if (order.customerEmail) {
-            await this.emailService
-              .sendMail(
-                order.customerEmail,
-                `[Trường Thành Bookstore] Nhắc nhở: Đơn hàng #${order.orderCode} sắp hết hạn`,
-                `<p>Xin chào ${order.customerName || 'Quý khách'},</p>` +
-                  `<p>Đơn hàng <strong>#${order.orderCode}</strong> trị giá <strong>${order.total.toLocaleString('vi-VN')}đ</strong> sắp hết thời hạn thanh toán/xác nhận.</p>` +
-                  `<p>Đơn hàng sẽ tự động bị hủy sau <strong>2 giờ nữa</strong> nếu chưa được thanh toán hoặc xác nhận.</p>` +
-                  `<p>Trân trọng,<br/>Trường Thành Bookstore</p>`,
-              )
-              .catch((err) =>
-                this.logger.error('Lỗi khi gửi email cảnh báo đơn hàng', err),
-              );
-          }
-
-          order.autoCancelWarningSentAt = new Date();
-          await order.save();
-          warningsCount++;
-        } catch (error: any) {
-          this.logger.error(
-            `Lỗi khi xử lý cảnh báo đơn hàng #${order.orderCode}: ${error.message || error}`,
-          );
-        }
-      }
-    }
-
-    return warningsCount;
   }
 }

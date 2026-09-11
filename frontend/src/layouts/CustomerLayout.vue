@@ -21,9 +21,9 @@
         <div class="flex items-center justify-between h-20 gap-4">
           <!-- Mobile Menu Toggle (UX-05) -->
           <button
-            @click="mobileMenuOpen = !mobileMenuOpen"
             class="md:hidden text-slate-700 hover:text-[#dc2626] transition-colors cursor-pointer flex-shrink-0"
             aria-label="Menu"
+            @click="mobileMenuOpen = !mobileMenuOpen"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -130,14 +130,14 @@
                       v-for="cat in parentCategories"
                       :key="cat._id"
                       type="button"
-                      @mouseenter="activeParent = cat"
-                      @click="navigateToCategory(cat._id)"
                       class="w-full text-left px-4 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-between group/item"
                       :class="
                         activeParent?._id === cat._id
                           ? 'bg-[#dc2626] text-white shadow-md'
                           : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                       "
+                      @mouseenter="activeParent = cat"
+                      @click="navigateToCategory(cat._id)"
                     >
                       <span
                         class="truncate text-slate-700"
@@ -184,8 +184,8 @@
                         </h3>
                         <button
                           type="button"
-                          @click="navigateToCategory(activeParent._id)"
                           class="text-[11px] font-bold text-[#dc2626] hover:text-[#b91c1c] transition-colors cursor-pointer"
+                          @click="navigateToCategory(activeParent._id)"
                         >
                           Xem tất cả &gt;
                         </button>
@@ -203,8 +203,8 @@
                         >
                           <router-link
                             :to="`/products?category=${sub._id}`"
-                            @click="showMenu = false"
                             class="text-xs font-black text-slate-800 hover:text-[#dc2626] transition-colors block"
+                            @click="showMenu = false"
                           >
                             {{ sub.name }}
                           </router-link>
@@ -229,8 +229,8 @@
                             v-for="prod in activeParent.products.slice(0, 4)"
                             :key="prod._id"
                             :to="`/products?q=${encodeURIComponent(prod.name)}`"
-                            @click="showMenu = false"
                             class="flex items-center gap-3 p-2.5 rounded-2xl border border-slate-100 hover:border-slate-200 hover:shadow-xs transition-all group/prod cursor-pointer"
+                            @click="showMenu = false"
                           >
                             <img
                               :src="
@@ -297,10 +297,10 @@
                   <input
                     v-model="searchQuery"
                     type="text"
-                    @focus="showDropdown = true"
-                    @blur="handleBlur"
                     placeholder="Tìm bút, sổ tay, giấy A4, kẹp giấy..."
                     class="w-full bg-slate-100 border border-slate-200 rounded-full py-2.5 pl-5 pr-20 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:border-transparent transition-all placeholder:text-slate-400"
+                    @focus="showDropdown = true"
+                    @blur="handleBlur"
                   />
                   <button
                     type="submit"
@@ -342,8 +342,8 @@
                         v-for="keyword in popularSearches"
                         :key="keyword"
                         type="button"
-                        @mousedown="selectSuggestion(keyword)"
                         class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs px-3.5 py-1.5 rounded-full transition-colors cursor-pointer border border-slate-200/50 dark:border-slate-700"
+                        @mousedown="selectSuggestion(keyword)"
                       >
                         {{ keyword }}
                       </button>
@@ -354,20 +354,20 @@
                   <div v-if="searchHistory.length > 0">
                     <div class="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center justify-between">
                       <span class="flex items-center gap-1.5"><span>⏱️</span> {{ $t('search.history') }}</span>
-                      <button @mousedown="clearAllHistory" class="text-[10px] font-black text-red-500 hover:underline hover:text-red-600 cursor-pointer">Xóa tất cả</button>
+                      <button class="text-[10px] font-black text-red-500 hover:underline hover:text-red-600 cursor-pointer" @mousedown="clearAllHistory">Xóa tất cả</button>
                     </div>
                     <div class="space-y-1">
                       <div
                         v-for="(item, idx) in searchHistory"
                         :key="item"
-                        @mousedown="selectSuggestion(item)"
                         class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer group/history"
+                        @mousedown="selectSuggestion(item)"
                       >
                         <span class="text-xs text-slate-600 dark:text-slate-400 font-medium group-hover/history:text-[#dc2626]">{{ item }}</span>
                         <button
-                          @mousedown="removeHistoryItem(idx, $event)"
                           class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 text-xs"
                           title="Xóa"
+                          @mousedown="removeHistoryItem(idx, $event)"
                         >
                           ✕
                         </button>
@@ -390,8 +390,8 @@
                         v-for="cat in suggestedCategories"
                         :key="cat._id"
                         :to="`/products?category=${cat._id}`"
-                        @mousedown="showDropdown = false"
                         class="bg-red-50 hover:bg-red-100 text-[#dc2626] font-bold text-xs px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-red-200/60"
+                        @mousedown="showDropdown = false"
                       >
                         {{ cat.name }}
                       </router-link>
@@ -423,8 +423,8 @@
                       <div
                         v-for="tag in (suggestedKeywords.length > 0 ? suggestedKeywords : suggestions)"
                         :key="tag"
-                        @mousedown="selectSuggestion(tag)"
                         class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs px-3.5 py-2 rounded-xl transition-colors cursor-pointer select-none"
+                        @mousedown="selectSuggestion(tag)"
                       >
                         {{ tag }}
                       </div>
@@ -459,8 +459,8 @@
                       <div
                         v-for="prod in searchResults"
                         :key="prod._id"
-                        @mousedown="selectProduct(prod._id)"
                         class="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent hover:border-slate-100 dark:hover:border-slate-800 transition-all cursor-pointer group"
+                        @mousedown="selectProduct(prod._id)"
                       >
                         <img
                           :src="
@@ -503,9 +503,9 @@
             <!-- Notifications -->
             <div id="customer-notification-dropdown-container" class="relative hidden md:block">
               <button
-                @click="toggleCustomerNotifications"
                 class="relative text-slate-700 hover:text-[#dc2626] transition-colors cursor-pointer p-1"
                 title="Thông báo"
+                @click="toggleCustomerNotifications"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -539,8 +539,8 @@
                   <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Thông báo của bạn</span>
                   <button 
                     v-if="customerUnreadCount > 0" 
-                    @click="markAllCustomerAsRead" 
-                    class="text-[10px] font-extrabold text-[#dc2626] hover:underline cursor-pointer"
+                    class="text-[10px] font-extrabold text-[#dc2626] hover:underline cursor-pointer" 
+                    @click="markAllCustomerAsRead"
                   >
                     Đọc tất cả
                   </button>
@@ -555,15 +555,16 @@
                     Không có thông báo nào.
                   </div>
                   <div 
-                    v-else
-                    v-for="item in customerNotifications" 
+                    v-for="item in customerNotifications"
+                    v-else 
                     :key="item._id" 
-                    @click="handleCustomerNotificationClick(item)"
                     class="p-3.5 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer text-left"
                     :class="{'bg-red-50/5 font-semibold': !customerReadIds.includes(item._id)}"
+                    @click="handleCustomerNotificationClick(item)"
                   >
                     <!-- Icon -->
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-xs" :class="{
+                    <div
+class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-xs" :class="{
                       'bg-red-50 text-red-600 border border-red-100': item.type === 'order',
                       'bg-orange-50 text-orange-600 border border-orange-100': item.type === 'promotion',
                       'bg-amber-50 text-amber-600 border border-amber-100': item.type === 'loyalty' || item.type === 'tier',
@@ -655,8 +656,8 @@
                         {{ $t('nav.admin') }}
                       </router-link>
                       <button
-                        @click="showProfile = true"
                         class="w-full text-left block px-4 py-2 hover:bg-slate-100 cursor-pointer"
+                        @click="showProfile = true"
                       >
                         Thông tin tài khoản
                       </button>
@@ -679,8 +680,8 @@
                         {{ $t('nav.wishlist') }}
                       </router-link>
                       <button
-                        @click="authStore.logout"
                         class="w-full text-left block px-4 py-2 hover:bg-red-50 text-red-600 cursor-pointer"
+                        @click="authStore.logout"
                       >
                         Đăng xuất
                       </button>
@@ -720,11 +721,11 @@
               </button>
               <div class="absolute right-0 top-full pt-2 hidden group-hover/lang:block z-50">
                 <div class="w-24 bg-white border border-slate-200 rounded-xl shadow-lg py-1 text-slate-700 text-xs font-bold">
-                  <button @click="changeLocale('vi')" class="w-full text-left px-3 py-2 hover:bg-slate-100 cursor-pointer flex items-center justify-between">
+                  <button class="w-full text-left px-3 py-2 hover:bg-slate-100 cursor-pointer flex items-center justify-between" @click="changeLocale('vi')">
                     <span>Tiếng Việt</span>
                     <span v-if="currentLocale === 'vi'">✓</span>
                   </button>
-                  <button @click="changeLocale('en')" class="w-full text-left px-3 py-2 hover:bg-slate-100 cursor-pointer flex items-center justify-between">
+                  <button class="w-full text-left px-3 py-2 hover:bg-slate-100 cursor-pointer flex items-center justify-between" @click="changeLocale('en')">
                     <span>English</span>
                     <span v-if="currentLocale === 'en'">✓</span>
                   </button>
@@ -733,7 +734,7 @@
             </div>
 
             <!-- Dark Mode Toggle -->
-            <button @click="toggleDarkMode" class="text-slate-700 hover:text-[#dc2626] transition-colors p-1 cursor-pointer" :title="$t('theme.' + (isDarkMode ? 'light' : 'dark'))">
+            <button class="text-slate-700 hover:text-[#dc2626] transition-colors p-1 cursor-pointer" :title="$t('theme.' + (isDarkMode ? 'light' : 'dark'))" @click="toggleDarkMode">
               <span v-if="isDarkMode">☀️</span>
               <span v-else>🌙</span>
             </button>
@@ -748,10 +749,10 @@
             <input
               v-model="searchQuery"
               type="text"
-              @focus="showDropdown = true"
-              @blur="handleBlur"
               placeholder="Tìm kiếm sản phẩm..."
               class="w-full bg-slate-100 border border-slate-200 rounded-full py-2 pl-4 pr-12 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:border-transparent transition-all placeholder:text-slate-400"
+              @focus="showDropdown = true"
+              @blur="handleBlur"
             />
             <button
               type="submit"
@@ -793,8 +794,8 @@
                   v-for="keyword in popularSearches"
                   :key="keyword"
                   type="button"
-                  @mousedown="selectSuggestion(keyword)"
                   class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] px-2.5 py-1.5 rounded-full transition-colors cursor-pointer border border-slate-200/50 dark:border-slate-700"
+                  @mousedown="selectSuggestion(keyword)"
                 >
                   {{ keyword }}
                 </button>
@@ -805,20 +806,20 @@
             <div v-if="searchHistory.length > 0">
               <div class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center justify-between">
                 <span class="flex items-center gap-1"><span>⏱️</span> {{ $t('search.history') }}</span>
-                <button @mousedown="clearAllHistory" class="text-[9px] font-black text-red-500 hover:underline cursor-pointer">Xóa tất cả</button>
+                <button class="text-[9px] font-black text-red-500 hover:underline cursor-pointer" @mousedown="clearAllHistory">Xóa tất cả</button>
               </div>
               <div class="space-y-1">
                 <div
                   v-for="(item, idx) in searchHistory"
                   :key="item"
-                  @mousedown="selectSuggestion(item)"
                   class="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer group/history"
+                  @mousedown="selectSuggestion(item)"
                 >
                   <span class="text-[11px] text-slate-600 dark:text-slate-400 font-medium truncate group-hover/history:text-[#dc2626]">{{ item }}</span>
                   <button
-                    @mousedown="removeHistoryItem(idx, $event)"
                     class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 text-[10px]"
                     title="Xóa"
+                    @mousedown="removeHistoryItem(idx, $event)"
                   >
                     ✕
                   </button>
@@ -838,8 +839,8 @@
                 <div
                   v-for="tag in suggestions"
                   :key="tag"
-                  @mousedown="selectSuggestion(tag)"
                   class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-[10px] px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer select-none"
+                  @mousedown="selectSuggestion(tag)"
                 >
                   {{ tag }}
                 </div>
@@ -855,8 +856,8 @@
                 <div
                   v-for="prod in searchResults"
                   :key="prod._id"
-                  @mousedown="selectProduct(prod._id)"
                   class="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent hover:border-slate-100 dark:hover:border-slate-800 transition-all cursor-pointer group"
+                  @mousedown="selectProduct(prod._id)"
                 >
                   <img
                     :src="prod.images && prod.images[0] ? prod.images[0] : 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=100'"
@@ -898,8 +899,8 @@
               v-for="cat in parentCategories"
               :key="cat._id"
               type="button"
-              @click="navigateToCategory(cat._id)"
               class="text-left px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+              @click="navigateToCategory(cat._id)"
             >
               {{ cat.name }}
             </button>
@@ -916,8 +917,8 @@
           </router-link>
           <template v-if="authStore.isAuthenticated">
             <button
-              @click="showProfile = true"
               class="w-full text-left flex items-center gap-2 text-xs font-bold text-slate-700 px-1 cursor-pointer"
+              @click="showProfile = true"
             >
               👤 Thông tin tài khoản
             </button>
@@ -947,8 +948,8 @@
               ⚙️ Quản trị Admin
             </router-link>
             <button
-              @click="authStore.logout"
               class="text-left flex items-center gap-2 text-xs font-bold text-red-600 px-1 cursor-pointer"
+              @click="authStore.logout"
             >
               🚪 Đăng xuất
             </button>
@@ -964,13 +965,13 @@
           
           <!-- Mobile Dark Mode & Language Toggles -->
           <div class="border-t border-slate-100 pt-3 flex items-center justify-between px-1">
-            <button @click="toggleDarkMode" class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer">
+            <button class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer" @click="toggleDarkMode">
               <span v-if="isDarkMode">☀️ Chế độ sáng</span>
               <span v-else>🌙 Chế độ tối</span>
             </button>
             <div class="flex gap-2">
-              <button @click="changeLocale('vi')" class="text-xs font-bold px-2.5 py-1 rounded-md" :class="currentLocale === 'vi' ? 'bg-[#dc2626] text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'">VI</button>
-              <button @click="changeLocale('en')" class="text-xs font-bold px-2.5 py-1 rounded-md" :class="currentLocale === 'en' ? 'bg-[#dc2626] text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'">EN</button>
+              <button class="text-xs font-bold px-2.5 py-1 rounded-md" :class="currentLocale === 'vi' ? 'bg-[#dc2626] text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'" @click="changeLocale('vi')">VI</button>
+              <button class="text-xs font-bold px-2.5 py-1 rounded-md" :class="currentLocale === 'en' ? 'bg-[#dc2626] text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'" @click="changeLocale('en')">EN</button>
             </div>
           </div>
         </div>
@@ -1005,7 +1006,7 @@
           </div>
 
           <!-- Newsletter Form -->
-          <form @submit.prevent="handleNewsletter" class="space-y-3 pt-2 flex flex-col items-center lg:items-start w-full max-w-md">
+          <form class="space-y-3 pt-2 flex flex-col items-center lg:items-start w-full max-w-md" @submit.prevent="handleNewsletter">
             <div class="flex flex-col sm:flex-row gap-2 w-full justify-center lg:justify-start">
               <input
                 v-model="newsletterEmail"
@@ -1481,7 +1482,7 @@
       
       <!-- Mobile Search Bar (FIX-3.6) -->
       <div class="px-4 pb-3 md:hidden">
-        <form @submit.prevent="handleSearch" class="relative w-full">
+        <form class="relative w-full" @submit.prevent="handleSearch">
           <input
             v-model="searchQuery"
             type="text"
@@ -1500,7 +1501,7 @@
     </footer>
 
     <!-- Profile Modal -->
-    <ProfileModal :isOpen="showProfile" @close="showProfile = false" />
+    <ProfileModal :is-open="showProfile" @close="showProfile = false" />
     
     <!-- FAQ Chatbot Widget -->
     <ChatWidget />

@@ -57,7 +57,7 @@ test.describe('Kịch bản 2: Add Cart -> COD Checkout -> My Orders -> PDF Invo
     });
 
     // 2. Mock order placement
-    let createdOrderId = 'ord_test_cod_001';
+    const createdOrderId = 'ord_test_cod_001';
     await page.route('**/api/orders*', async (route) => {
       if (route.request().method() === 'POST') {
         const postData = route.request().postDataJSON();

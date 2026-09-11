@@ -12,13 +12,13 @@
         <button
           v-for="preset in rangePresets"
           :key="preset.value"
-          @click="selectPreset(preset.value)"
           :class="[
             'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all',
             selectedRange === preset.value
               ? 'bg-white text-blue-700 shadow-sm'
               : 'text-slate-600 hover:text-slate-900'
           ]"
+          @click="selectPreset(preset.value)"
         >
           {{ preset.label }}
         </button>
@@ -34,8 +34,8 @@
         <span>{{ errorMessage }}</span>
       </div>
       <button
-        @click="loadAllReports"
         class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg transition-colors"
+        @click="loadAllReports"
       >
         Thử lại
       </button>
@@ -55,8 +55,8 @@
             <input
               v-model="startDate"
               type="date"
-              @change="onCustomDateChange"
               class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
+              @change="onCustomDateChange"
             />
           </div>
           <div>
@@ -64,13 +64,13 @@
             <input
               v-model="endDate"
               type="date"
-              @change="onCustomDateChange"
               class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
+              @change="onCustomDateChange"
             />
           </div>
           <button
-            @click="applyCustomDateFilter"
             class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-4 rounded-xl transition-colors text-xs uppercase tracking-wider shadow-md shadow-blue-500/20"
+            @click="applyCustomDateFilter"
           >
             Lọc theo ngày
           </button>

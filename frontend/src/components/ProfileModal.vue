@@ -14,8 +14,8 @@
           Hồ sơ cá nhân
         </h3>
         <button
-          @click="closeModal"
           class="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+          @click="closeModal"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -42,8 +42,8 @@
 
             <!-- Upload Overlay Button -->
             <button
-              @click="triggerFileInput"
               class="absolute inset-0 bg-slate-900/60 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer text-white text-[10px] font-bold"
+              @click="triggerFileInput"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mb-1">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
@@ -54,8 +54,8 @@
           </div>
 
           <input
-            type="file"
             ref="fileInput"
+            type="file"
             accept="image/*"
             class="hidden"
             @change="handleFileChange"
@@ -71,8 +71,8 @@
           <div>
             <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Họ và tên</label>
             <input
-              type="text"
               v-model="form.fullName"
+              type="text"
               placeholder="Nhập họ và tên..."
               class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:border-[#dc2626] transition-all font-medium text-slate-700"
             />
@@ -93,8 +93,8 @@
           <div>
             <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Số điện thoại</label>
             <input
-              type="tel"
               v-model="form.phone"
+              type="tel"
               placeholder="Nhập số điện thoại..."
               class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:border-[#dc2626] transition-all font-medium text-slate-700"
             />
@@ -132,15 +132,15 @@
       <!-- Footer Actions -->
       <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
         <button
-          @click="closeModal"
           class="px-4.5 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all cursor-pointer"
+          @click="closeModal"
         >
           Hủy bỏ
         </button>
         <button
-          @click="saveProfile"
           :disabled="saving"
           class="px-5 py-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+          @click="saveProfile"
         >
           <span v-if="saving" class="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span>
           <span>Lưu thông tin</span>

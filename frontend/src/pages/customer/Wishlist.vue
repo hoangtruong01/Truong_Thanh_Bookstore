@@ -23,7 +23,7 @@
       icon="❤️"
       title="Chưa có sản phẩm yêu thích"
       description="Hãy thả tim những sản phẩm bạn thích để lưu lại và tìm kiếm dễ dàng hơn khi cần nhé."
-      actionText="Khám phá sản phẩm"
+      action-text="Khám phá sản phẩm"
       @action="$router.push('/products')"
     />
 
@@ -37,15 +37,15 @@
         <!-- Quick Action Overlay -->
         <div class="mt-2 flex gap-2">
           <button
-            @click="handleMoveToCart(prod)"
             class="flex-1 py-2 px-3 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 text-[#dc2626] rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+            @click="handleMoveToCart(prod)"
           >
             <span>🛒 Chuyển vào giỏ</span>
           </button>
           <button
-            @click="handleRemoveFromWishlist(prod)"
             class="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 rounded-xl transition-colors cursor-pointer"
             title="Xóa khỏi yêu thích"
+            @click="handleRemoveFromWishlist(prod)"
           >
             🗑️
           </button>

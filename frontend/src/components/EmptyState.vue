@@ -92,8 +92,8 @@
         <button
           v-else-if="actionText"
           type="button"
-          @click="$emit('action')"
           class="inline-flex items-center justify-center bg-[#dc2626] hover:bg-[#b91c1c] text-white font-extrabold py-3 px-8 rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-red-500/20 active:scale-95 cursor-pointer"
+          @click="$emit('action')"
         >
           {{ actionText }}
         </button>
