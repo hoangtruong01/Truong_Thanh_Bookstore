@@ -42,6 +42,10 @@ export class NotificationsGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
   private readonly logger = new Logger(NotificationsGateway.name);
+  private readonly connections = new Map<
+    Socket,
+    { token: string; userId: string }
+  >();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -71,36 +75,42 @@ export class NotificationsGateway
       : undefined;
   }
 
+  private async authenticate(token: string) {
+    const payload = await this.jwtService.verifyAsync<{
+      sub: string;
+      type?: string;
+      jti?: string;
+      tokenVersion?: number;
+    }>(token);
+    if (
+      payload.type !== 'access' ||
+      !payload.sub ||
+      !payload.jti ||
+      typeof payload.tokenVersion !== 'number'
+    ) {
+      throw new Error('Invalid access token claims');
+    }
+    if (
+      (payload.jti &&
+        (await this.tokenBlacklistService.isJtiBlacklisted(payload.jti))) ||
+      (await this.tokenBlacklistService.isTokenBlacklisted(token))
+    ) {
+      throw new Error('Revoked token');
+    }
+    const user = await this.usersService.findById(payload.sub);
+    if (!user?.status) throw new Error('Inactive user');
+    if (payload.tokenVersion !== (user.tokenVersion ?? 0)) {
+      throw new Error('Stale token version');
+    }
+
+    return user;
+  }
+
   async handleConnection(client: Socket) {
     try {
       const token = this.extractToken(client);
       if (!token) throw new Error('Missing token');
-      const payload = await this.jwtService.verifyAsync<{
-        sub: string;
-        type?: string;
-        jti?: string;
-        tokenVersion?: number;
-      }>(token);
-      if (
-        payload.type !== 'access' ||
-        !payload.sub ||
-        !payload.jti ||
-        typeof payload.tokenVersion !== 'number'
-      ) {
-        throw new Error('Invalid access token claims');
-      }
-      if (
-        (payload.jti &&
-          (await this.tokenBlacklistService.isJtiBlacklisted(payload.jti))) ||
-        (await this.tokenBlacklistService.isTokenBlacklisted(token))
-      ) {
-        throw new Error('Revoked token');
-      }
-      const user = await this.usersService.findById(payload.sub);
-      if (!user?.status) throw new Error('Inactive user');
-      if (payload.tokenVersion !== (user.tokenVersion ?? 0)) {
-        throw new Error('Stale token version');
-      }
+      const user = await this.authenticate(token);
 
       const userId = user._id.toString();
       client.data.userId = userId;
@@ -125,6 +135,8 @@ export class NotificationsGateway
       }
 
       this.logger.log(`Authenticated notification client ${client.id}`);
+      if (client.connected !== false)
+        this.connections.set(client, { token, userId });
     } catch {
       this.logger.warn(
         `Rejected unauthenticated notification client ${client.id}`,
@@ -134,31 +146,57 @@ export class NotificationsGateway
   }
 
   handleDisconnect(client: Socket) {
+    this.connections.delete(client);
     this.logger.log(`Notification client disconnected: ${client.id}`);
   }
 
-  sendNotificationToUser(userId: string, notification: unknown) {
-    if (this.server) {
-      this.server
-        .to(`user:${userId}`)
-        .emit('notification_received', notification);
-    }
+  async sendNotificationToUser(userId: string, notification: unknown) {
+    await this.deliver(notification, userId);
   }
 
-  sendAlertToAdmins(alert: unknown) {
-    if (this.server) {
-      const room =
-        (alert as { type?: string })?.type === 'stock'
-          ? 'admin:inventory'
-          : 'admin:orders';
-      this.server.to(room).emit('admin_alert', alert);
-      this.server.to(room).emit('notification_received', alert);
-    }
+  async sendAlertToAdmins(alert: unknown) {
+    const permission =
+      (alert as { type?: string })?.type === 'stock'
+        ? StaffPermission.MANAGE_INVENTORY
+        : StaffPermission.MANAGE_ORDERS;
+    await this.deliver(alert, undefined, permission);
   }
 
-  broadcastNotification(notification: unknown) {
-    if (this.server) {
-      this.server.emit('notification_received', notification);
-    }
+  async broadcastNotification(notification: unknown) {
+    await this.deliver(notification);
+  }
+
+  private async deliver(
+    notification: unknown,
+    userId?: string,
+    permission?: StaffPermission,
+  ) {
+    await Promise.all(
+      [...this.connections].map(async ([client, session]) => {
+        if (userId && session.userId !== userId) return;
+        try {
+          // Validate again immediately before delivery: room membership can be
+          // stale after logout, account suspension or a staff permission change.
+          const user = await this.authenticate(session.token);
+          if (!this.connections.has(client) || client.connected === false)
+            return;
+          if (
+            permission &&
+            user.role !== UserRole.ADMIN &&
+            user.role !== UserRole.SUPER_ADMIN &&
+            !(
+              user.role === UserRole.STAFF &&
+              user.permissions?.includes(permission)
+            )
+          )
+            return;
+          if (permission) client.emit('admin_alert', notification);
+          client.emit('notification_received', notification);
+        } catch {
+          this.connections.delete(client);
+          client.disconnect(true);
+        }
+      }),
+    );
   }
 }

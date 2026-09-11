@@ -412,7 +412,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 child: OutlinedButton(
                   onPressed: () async {
                     final auth = Provider.of<AuthProvider>(context, listen: false);
-                    if (auth.token == null) return;
 
                     final confirm = await showDialog<bool>(
                       context: context,
@@ -428,7 +427,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
                     if (confirm == true && context.mounted) {
                       final success = await Provider.of<OrderProvider>(context, listen: false)
-                          .cancelOrder(order.id, auth.token!);
+                          .cancelOrder(order.id, auth.token);
                       if (success && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Hủy đơn hàng thành công')),

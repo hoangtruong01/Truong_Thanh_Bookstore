@@ -384,9 +384,8 @@ export class CheckoutService {
           return await order.save(session ? { session } : undefined);
         } catch (error) {
           if (!userId && this.isGuestPendingSlotConflict(error)) {
-            throw new HttpException(
-              'Số điện thoại này đang có quá nhiều đơn chờ xác nhận. Vui lòng hoàn tất hoặc hủy đơn hiện tại trước khi đặt thêm.',
-              HttpStatus.TOO_MANY_REQUESTS,
+            throw new ConflictException(
+              'Một đơn hàng khác vừa được tạo cho số điện thoại này. Vui lòng thử lại với cùng yêu cầu đặt hàng.',
             );
           }
           throw error;
@@ -512,7 +511,20 @@ export class CheckoutService {
       await this.verifyTurnstile(dto.captchaToken, clientIp);
     }
 
-    return { phoneKey, slot: pendingCount };
+    const occupiedSlots = await this.orderModel
+      .distinct('guestPendingSlot', {
+        customer: null,
+        orderStatus: OrderStatus.PENDING,
+        guestPhoneKey: phoneKey,
+      })
+      .exec();
+    const occupied = new Set(occupiedSlots);
+    for (let slot = 0; slot < limit; slot++) {
+      if (!occupied.has(slot)) return { phoneKey, slot };
+    }
+    throw new ConflictException(
+      'Các đơn chờ xác nhận vừa thay đổi. Vui lòng thử lại.',
+    );
   }
 
   private normalizeGuestPhone(phone: string): string {

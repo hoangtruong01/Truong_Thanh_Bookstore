@@ -47,7 +47,10 @@ export class NotificationsService {
 
     try {
       if (data.userId) {
-        this.gateway.sendNotificationToUser(dto.userId!, savedNotification);
+        await this.gateway.sendNotificationToUser(
+          dto.userId!,
+          savedNotification,
+        );
         void this.fcmPushService
           .sendToUser(
             dto.userId!,
@@ -56,9 +59,9 @@ export class NotificationsService {
           )
           .catch(() => undefined);
       } else if (data.type === 'stock') {
-        this.gateway.sendAlertToAdmins(savedNotification);
+        await this.gateway.sendAlertToAdmins(savedNotification);
       } else {
-        this.gateway.broadcastNotification(savedNotification);
+        await this.gateway.broadcastNotification(savedNotification);
       }
     } catch {
       // Ignore socket emit failures gracefully
@@ -259,7 +262,7 @@ export class NotificationsService {
 
     // Broadcast alert to admin room
     try {
-      this.gateway.sendAlertToAdmins({
+      await this.gateway.sendAlertToAdmins({
         id: `order-event-${order._id}-${Date.now()}`,
         type: 'order',
         title: adminTitle,

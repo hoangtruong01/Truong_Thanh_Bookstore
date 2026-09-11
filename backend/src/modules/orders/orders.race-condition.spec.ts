@@ -113,6 +113,9 @@ describe('QA-03: Inventory Race Condition & Concurrency Invariant Tests', () => 
   (mockOrderModel as any).countDocuments = jest
     .fn()
     .mockReturnValue({ exec: jest.fn().mockResolvedValue(0) });
+  (mockOrderModel as any).distinct = jest
+    .fn()
+    .mockReturnValue({ exec: jest.fn().mockResolvedValue([]) });
   (mockOrderModel as any).db = {
     startSession: undefined, // Non-transaction mode triggers application-level atomic fallback & rollback
   };

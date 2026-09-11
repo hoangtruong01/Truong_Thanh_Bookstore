@@ -18,9 +18,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final auth = Provider.of<AuthProvider>(context, listen: false);
       if (auth.isAuthenticated && auth.token != null) {
         Provider.of<OrderProvider>(context, listen: false).fetchMyOrders(auth.token!);
+      } else {
+        Provider.of<OrderProvider>(context, listen: false).fetchGuestOrders();
       }
     });
   }
@@ -29,41 +32,36 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final orderProv = Provider.of<OrderProvider>(context);
-
-    if (!auth.isAuthenticated) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('ĐƠN HÀNG CỦA TÔI')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.lock_outline_rounded, size: 70, color: Color(0xFF94A3B8)),
-                SizedBox(height: 16),
-                Text('Đăng nhập để xem lịch sử đơn hàng', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                SizedBox(height: 8),
-                Text('Quản lý đơn hàng, theo dõi giao nhận và mã giảm giá.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final orders = auth.isAuthenticated ? orderProv.myOrders : orderProv.guestOrders;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('ĐƠN HÀNG CỦA TÔI'),
+        actions: [IconButton(
+          tooltip: 'Tải lại đơn hàng',
+          icon: const Icon(Icons.refresh),
+          onPressed: orderProv.isLoading ? null : () {
+            if (auth.token != null) {
+              orderProv.fetchMyOrders(auth.token!);
+            } else {
+              orderProv.fetchGuestOrders();
+            }
+          },
+        )],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
           if (auth.token != null) {
             await orderProv.fetchMyOrders(auth.token!);
+          } else {
+            await orderProv.fetchGuestOrders();
           }
         },
         child: orderProv.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : orderProv.myOrders.isEmpty
+            : !auth.isAuthenticated && orderProv.guestOrdersError != null
+                ? Center(child: Text(orderProv.guestOrdersError!))
+                : orders.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -76,11 +74,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-                    itemCount: orderProv.myOrders.length,
+                    itemCount: orders.length,
                     separatorBuilder: (context, index) => const SizedBox(height: 12),
 
                     itemBuilder: (context, index) {
-                      final order = orderProv.myOrders[index];
+                      final order = orders[index];
                       return Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(

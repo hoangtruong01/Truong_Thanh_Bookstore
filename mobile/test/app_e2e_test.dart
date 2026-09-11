@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile/main.dart';
 import 'package:mobile/models/product_model.dart';
 import 'package:mobile/models/promotion_model.dart';
@@ -8,6 +9,7 @@ import 'package:mobile/providers/auth_provider.dart';
 import 'package:mobile/widgets/glass_bottom_navigation.dart';
 
 void main() {
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   final mockProduct1 = ProductModel(
     id: 'prod1',
     name: 'Bút bi Thiên Long TL-027',

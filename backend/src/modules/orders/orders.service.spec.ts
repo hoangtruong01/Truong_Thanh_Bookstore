@@ -46,6 +46,7 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
   mockOrderModel.findOne = jest.fn();
   mockOrderModel.findById = jest.fn();
   mockOrderModel.countDocuments = jest.fn();
+  mockOrderModel.distinct = jest.fn();
   mockOrderModel.aggregate = jest.fn();
 
   const mockProductsService = {
@@ -89,6 +90,9 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     mockOrderModel.countDocuments.mockReset();
+    mockOrderModel.distinct
+      .mockReset()
+      .mockReturnValue({ exec: jest.fn().mockResolvedValue([]) });
     mockConfigService.get.mockReset().mockReturnValue('');
     delete (mockOrderModel as any).db;
     mockProductsService.findById.mockResolvedValue(mockProduct);
@@ -111,6 +115,27 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
   });
 
   describe('BE-10: guest checkout abuse protection', () => {
+    it('reuses a released middle slot instead of colliding with the pending count', async () => {
+      mockOrderModel.countDocuments.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(2),
+      });
+      mockOrderModel.distinct.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([0, 2]),
+      });
+      mockConfigService.get.mockImplementation((key: string) =>
+        key === 'GUEST_CAPTCHA_THRESHOLD' ? '3' : '',
+      );
+      await expect(
+        (ordersService as any).checkGuestCheckoutProtection({
+          phone: '0901234567',
+        }),
+      ).resolves.toEqual({ phoneKey: '0901234567', slot: 1 });
+      expect(mockOrderModel.distinct).toHaveBeenCalledWith('guestPendingSlot', {
+        customer: null,
+        orderStatus: OrderStatus.PENDING,
+        guestPhoneKey: '0901234567',
+      });
+    });
     it('rejects a phone that already reached the pending-order limit', async () => {
       mockOrderModel.countDocuments.mockReturnValueOnce({
         exec: jest.fn().mockResolvedValue(3),
@@ -128,6 +153,9 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     });
 
     it('requires and verifies Turnstile after the suspicious threshold', async () => {
+      mockOrderModel.distinct.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue([0]),
+      });
       mockOrderModel.countDocuments.mockReturnValueOnce({
         exec: jest.fn().mockResolvedValue(1),
       });
