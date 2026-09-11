@@ -114,8 +114,24 @@ export class OrderLifecycleService {
     }
 
     const database = (this.orderModel as any).db;
+    const afterCommit: Array<() => Promise<void>> = [];
+
     if (!database?.startSession) {
-      return this.updateStatusInternal(id, dto);
+      const updatedOrder = await this.updateStatusInternal(
+        id,
+        dto,
+        undefined,
+        afterCommit,
+      );
+      for (const fn of afterCommit) {
+        await fn().catch((err) =>
+          this.logger.error(
+            `Failed to execute post-commit order action: ${err.message}`,
+            err.stack,
+          ),
+        );
+      }
+      return updatedOrder;
     }
 
     const session: ClientSession = await database.startSession();
@@ -123,9 +139,22 @@ export class OrderLifecycleService {
       if (typeof session.startTransaction === 'function') {
         session.startTransaction();
       }
-      const updatedOrder = await this.updateStatusInternal(id, dto, session);
+      const updatedOrder = await this.updateStatusInternal(
+        id,
+        dto,
+        session,
+        afterCommit,
+      );
       if (typeof session.commitTransaction === 'function') {
         await session.commitTransaction();
+      }
+      for (const fn of afterCommit) {
+        await fn().catch((err) =>
+          this.logger.error(
+            `Failed to execute post-commit order action: ${err.message}`,
+            err.stack,
+          ),
+        );
       }
       return updatedOrder;
     } catch (error) {
@@ -201,6 +230,14 @@ export class OrderLifecycleService {
       );
     }
 
+    if (
+      (dto.orderStatus === OrderStatus.DELIVERED ||
+        dto.orderStatus === OrderStatus.COMPLETED) &&
+      (order.paymentMethod || PaymentMethod.COD) === PaymentMethod.COD
+    ) {
+      order.paymentStatus = PaymentStatus.PAID;
+    }
+
     order.orderStatus = dto.orderStatus;
     if (dto.orderStatus === OrderStatus.DELIVERED) {
       order.deliveredAt ||= new Date();
@@ -270,8 +307,8 @@ export class OrderLifecycleService {
     ) {
       await this.orderInventoryService.restoreOrderStock(
         order.items,
-        order.orderCode,
-        dto.note,
+        order.orderCode || `${dto.orderStatus}:${order._id.toString()}`,
+        order._id.toString(),
         session,
       );
       order.inventoryRestoredAt = new Date();

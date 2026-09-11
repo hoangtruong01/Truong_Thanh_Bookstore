@@ -1,5 +1,5 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
-import { ClientSession } from 'mongoose';
+import { ClientSession, Types } from 'mongoose';
 import { ProductsService } from '../../products/products.service';
 import { InventoryService } from '../../inventory/inventory.service';
 import { InventoryTransactionType } from '../../../common/enums';
@@ -84,8 +84,8 @@ export class OrderInventoryService {
    */
   async restoreOrderStock(
     items: Array<{ product: any; quantity: number }>,
-    orderCode: string,
-    reason?: string,
+    reference: string,
+    orderId?: string,
     session?: ClientSession,
   ): Promise<void> {
     for (const item of items) {
@@ -115,8 +115,8 @@ export class OrderInventoryService {
           productId,
           InventoryTransactionType.RETURN,
           item.quantity,
-          orderCode,
-          reason || 'Hoàn tồn kho từ đơn hàng hủy/trả',
+          reference,
+          orderId && Types.ObjectId.isValid(orderId) ? orderId : undefined,
           session,
         );
       }
