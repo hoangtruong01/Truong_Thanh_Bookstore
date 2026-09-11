@@ -8,6 +8,7 @@ import '../../core/utils/formatters.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/order_provider.dart';
+import '../order/order_detail_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -138,6 +139,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
             ),
             actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  Navigator.of(context).pushReplacement(MaterialPageRoute(
+                    builder: (_) => OrderDetailScreen(orderId: createdOrder.id),
+                  ));
+                },
+                child: const Text('Xem đơn hàng'),
+              ),
               TextButton(
                 onPressed: () {
                   Navigator.of(ctx).pop();

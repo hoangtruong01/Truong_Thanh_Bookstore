@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -46,7 +47,10 @@ export class NotificationsService {
 
     try {
       if (data.userId) {
-        this.gateway.sendNotificationToUser(dto.userId!, savedNotification);
+        await this.gateway.sendNotificationToUser(
+          dto.userId!,
+          savedNotification,
+        );
         void this.fcmPushService
           .sendToUser(
             dto.userId!,
@@ -54,8 +58,10 @@ export class NotificationsService {
             { type: data.type, ...data.meta },
           )
           .catch(() => undefined);
+      } else if (data.type === 'stock') {
+        await this.gateway.sendAlertToAdmins(savedNotification);
       } else {
-        this.gateway.broadcastNotification(savedNotification);
+        await this.gateway.broadcastNotification(savedNotification);
       }
     } catch {
       // Ignore socket emit failures gracefully
@@ -64,7 +70,11 @@ export class NotificationsService {
     return savedNotification;
   }
 
-  async findByUser(userId: string, query: NotificationQueryDto = {}) {
+  async findByUser(
+    userId: string,
+    query: NotificationQueryDto = {},
+    includeStock = false,
+  ) {
     if (!Types.ObjectId.isValid(userId)) {
       throw new BadRequestException('ID người dùng không hợp lệ');
     }
@@ -72,6 +82,7 @@ export class NotificationsService {
     const userObjectId = new Types.ObjectId(userId);
     const filter: any = {
       $or: [{ userId: userObjectId }, { userId: null }],
+      ...(!includeStock ? { $and: [{ type: { $ne: 'stock' } }] } : {}),
     };
 
     if (query.type) {
@@ -91,7 +102,7 @@ export class NotificationsService {
         .lean()
         .exec(),
       this.notificationModel.countDocuments(filter).exec(),
-      this.getUnreadCount(userId),
+      this.getUnreadCount(userId, includeStock),
     ]);
 
     const formattedItems = items.map((item: any) => {
@@ -118,12 +129,13 @@ export class NotificationsService {
     };
   }
 
-  async getUnreadCount(userId: string): Promise<number> {
+  async getUnreadCount(userId: string, includeStock = false): Promise<number> {
     if (!Types.ObjectId.isValid(userId)) return 0;
     const userObjectId = new Types.ObjectId(userId);
 
     const count = await this.notificationModel
       .countDocuments({
+        ...(!includeStock ? { type: { $ne: 'stock' } } : {}),
         $or: [
           { userId: userObjectId, isRead: false },
           { userId: null, readBy: { $ne: userObjectId } },
@@ -134,7 +146,7 @@ export class NotificationsService {
     return count;
   }
 
-  async markAsRead(id: string, userId: string) {
+  async markAsRead(id: string, userId: string, includeStock = false) {
     if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(userId)) {
       throw new BadRequestException('ID không hợp lệ');
     }
@@ -142,6 +154,9 @@ export class NotificationsService {
     const notif = await this.notificationModel.findById(id).exec();
     if (!notif) {
       throw new NotFoundException('Không tìm thấy thông báo');
+    }
+    if (notif.type === 'stock' && !includeStock) {
+      throw new ForbiddenException('Bạn không có quyền xem thông báo kho');
     }
 
     const userObjectId = new Types.ObjectId(userId);
@@ -163,7 +178,7 @@ export class NotificationsService {
     return { success: true, message: 'Đã đánh dấu đã đọc' };
   }
 
-  async markAllAsRead(userId: string) {
+  async markAllAsRead(userId: string, includeStock = false) {
     if (!Types.ObjectId.isValid(userId)) {
       throw new BadRequestException('ID người dùng không hợp lệ');
     }
@@ -173,12 +188,20 @@ export class NotificationsService {
     await Promise.all([
       // Mark direct notifications
       this.notificationModel.updateMany(
-        { userId: userObjectId, isRead: false },
+        {
+          userId: userObjectId,
+          isRead: false,
+          ...(!includeStock ? { type: { $ne: 'stock' } } : {}),
+        },
         { $set: { isRead: true } },
       ),
       // Mark global broadcast notifications
       this.notificationModel.updateMany(
-        { userId: null, readBy: { $ne: userObjectId } },
+        {
+          userId: null,
+          readBy: { $ne: userObjectId },
+          ...(!includeStock ? { type: { $ne: 'stock' } } : {}),
+        },
         { $addToSet: { readBy: userObjectId } },
       ),
     ]);
@@ -239,7 +262,7 @@ export class NotificationsService {
 
     // Broadcast alert to admin room
     try {
-      this.gateway.sendAlertToAdmins({
+      await this.gateway.sendAlertToAdmins({
         id: `order-event-${order._id}-${Date.now()}`,
         type: 'order',
         title: adminTitle,
@@ -267,12 +290,6 @@ export class NotificationsService {
       type: 'stock',
       meta: { productId: product._id, currentStock, sku: product.sku },
     });
-
-    try {
-      this.gateway.sendAlertToAdmins(notification);
-    } catch {
-      // Ignore
-    }
 
     return notification;
   }

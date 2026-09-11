@@ -1,9 +1,17 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Kịch bản 1: Auth Lifecycle & Token Revocation', () => {
-  test('Register -> Login -> Logout -> Verify old token revocation', async ({ page }) => {
+test.describe('Kịch bản 1: Browser Auth Lifecycle', () => {
+  test('Login -> Logout -> protected route redirect with mocked API', async ({ page }) => {
     // 1. Mock auth and background home endpoints for reliable CI execution
     let isTokenValid = false;
+
+    await page.route('**/api/auth/refresh', async (route) => {
+      await route.fulfill({
+        status: isTokenValid ? 200 : 401,
+        contentType: 'application/json',
+        body: JSON.stringify(isTokenValid ? { success: true } : { message: 'Unauthorized' }),
+      });
+    });
 
     await page.route('**/api/banners/**', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
@@ -100,11 +108,10 @@ test.describe('Kịch bản 1: Auth Lifecycle & Token Revocation', () => {
     const passwordInput = page.locator('input[type="password"]').first();
     const submitBtn = page.locator('button[type="submit"]').first();
 
-    if (await emailInput.isVisible()) {
-      await emailInput.fill('newbie@truongthanh.vn');
-      await passwordInput.fill('Password123!');
-      await submitBtn.click();
-    }
+    await expect(emailInput).toBeVisible();
+    await emailInput.fill('newbie@truongthanh.vn');
+    await passwordInput.fill('Password123!');
+    await submitBtn.click();
 
     // 4. Browser session stores only non-sensitive user state. Auth tokens stay
     // in HttpOnly cookies and must never be visible to JavaScript.

@@ -37,6 +37,9 @@ const INSECURE_DEFAULT_SECRETS = [
   'your_jwt_secret_key_here',
   'default_secret',
   'changeme',
+  'local-development-access-secret-32-chars-minimum',
+  'local-development-refresh-secret-32-chars-minimum',
+  'local-development-reset-secret-32-chars-minimum',
 ];
 
 const SUPPORTED_PAYMENT_METHODS = new Set([
@@ -369,7 +372,8 @@ export function validateEnv(
         const constraints = err.constraints
           ? Object.values(err.constraints).join(', ')
           : 'Giá trị không hợp lệ';
-        return `  - [${err.property}]: ${constraints} (Giá trị nhận được: "${err.value}")`;
+        // Startup errors reach deployment logs; never print environment values.
+        return `  - [${err.property}]: ${constraints}`;
       })
       .join('\n');
 

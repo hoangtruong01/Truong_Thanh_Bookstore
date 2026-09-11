@@ -37,6 +37,9 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
   mockOrderModel.findOne = jest.fn();
   mockOrderModel.findById = jest.fn();
   mockOrderModel.countDocuments = jest.fn();
+  mockOrderModel.distinct = jest
+    .fn()
+    .mockReturnValue({ exec: jest.fn().mockResolvedValue([]) });
 
   const mockProductsService = {
     findById: jest.fn().mockResolvedValue(mockProduct),

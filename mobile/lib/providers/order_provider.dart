@@ -2,20 +2,40 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/constants/api_constants.dart';
 import '../models/order_model.dart';
 import '../models/cart_item_model.dart';
 
 class OrderProvider with ChangeNotifier {
-  OrderProvider({http.Client? client}) : _client = client;
+  OrderProvider({http.Client? client, FlutterSecureStorage? storage})
+      : _client = client, _storage = storage ?? const FlutterSecureStorage();
   final http.Client? _client;
+  final FlutterSecureStorage _storage;
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+  String _guestTokenKey(String orderId) => 'guest_order_token_$orderId';
   List<OrderModel> _myOrders = [];
+  List<OrderModel> _guestOrders = [];
+  String? _guestOrdersError;
   bool _isLoading = false;
   bool _placingOrder = false;
   Map<String, dynamic>? _lastPaymentAction;
   String? _pendingIdempotencyKey;
 
   List<OrderModel> get myOrders => _myOrders;
+  List<OrderModel> get guestOrders => List.unmodifiable(_guestOrders);
+  String? get guestOrdersError => _guestOrdersError;
   bool get isLoading => _isLoading;
   Map<String, dynamic>? get lastPaymentAction => _lastPaymentAction;
 
@@ -78,6 +98,10 @@ class OrderProvider with ChangeNotifier {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final order = OrderModel.fromJson(body['data']);
+        final guestToken = body['data']['guestAccessToken'];
+        if (!isAuth && guestToken is String && guestToken.isNotEmpty) {
+          await _storage.write(key: _guestTokenKey(order.id), value: guestToken);
+        }
         _pendingIdempotencyKey = null;
         _lastPaymentAction = null;
         if (isAuth && paymentMethod != 'COD') {
@@ -144,15 +168,48 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> cancelOrder(String orderId, String token) async {
+  Future<void> fetchGuestOrders() async {
+    _isLoading = true;
+    _guestOrdersError = null;
+    _guestOrders = [];
+    notifyListeners();
     try {
+      final stored = await _storage.readAll().timeout(const Duration(seconds: 5));
+      final orders = <OrderModel>[];
+      for (final key in stored.keys.where((key) => key.startsWith('guest_order_token_'))) {
+        if (_disposed) return;
+        final order = await fetchOrderById(key.substring('guest_order_token_'.length), null);
+        if (order != null) {
+          orders.add(order);
+        } else {
+          _guestOrdersError = 'Một số đơn chưa tải được. Vui lòng thử lại.';
+        }
+      }
+      _guestOrders = orders.reversed.toList();
+    } catch (_) {
+      _guestOrdersError = 'Không thể đọc danh sách đơn trên thiết bị. Vui lòng thử lại.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> cancelOrder(String orderId, String? token) async {
+    try {
+      final guestToken = await _storage.read(key: _guestTokenKey(orderId));
+      if ((guestToken == null || guestToken.isEmpty) && (token == null || token.isEmpty)) return false;
+      final isGuest = guestToken != null && guestToken.isNotEmpty;
       final response = await (_client?.delete ?? http.delete)(
-        Uri.parse('${ApiConstants.orders}/$orderId'),
-        headers: {'Authorization': 'Bearer $token'},
+        Uri.parse('${ApiConstants.orders}/${isGuest ? 'guest/' : ''}$orderId'),
+        headers: isGuest ? {'x-guest-order-token': guestToken} : {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
-        await fetchMyOrders(token);
+        if (isGuest) {
+          await fetchGuestOrders();
+        } else if (token != null) {
+          await fetchMyOrders(token);
+        }
         return true;
       }
     } catch (e) {
@@ -163,17 +220,22 @@ class OrderProvider with ChangeNotifier {
 
   Future<OrderModel?> fetchOrderById(String orderId, String? token) async {
     try {
+      final guestToken = await _storage.read(key: _guestTokenKey(orderId));
+      final isGuest = guestToken != null && guestToken.isNotEmpty;
+      if (!isGuest && (token == null || token.isEmpty)) return null;
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
-      if (token != null && token.isNotEmpty) {
+      if (isGuest) {
+        headers['x-guest-order-token'] = guestToken;
+      } else if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
 
       final response = await (_client?.get ?? http.get)(
-        Uri.parse('${ApiConstants.orders}/$orderId'),
+        Uri.parse('${ApiConstants.orders}/${isGuest ? 'guest/' : ''}$orderId'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);

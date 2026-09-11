@@ -474,9 +474,18 @@ describe('QA-02: Payment & Order Safety Verification Suite', () => {
         deliveredAt: twoDaysAgo,
       });
 
-      orderModel.findById.mockReturnValue({
-        exec: jest.fn().mockResolvedValue(mockOrder),
+      // Separate document instances reproduce the real Mongoose re-query.
+      const reloadedOrder = createMockOrderDoc({
+        _id: orderId,
+        customer: customerId,
+        orderStatus: OrderStatus.DELIVERED,
+        paymentStatus: PaymentStatus.PAID,
+        total: 120000,
+        deliveredAt: twoDaysAgo,
       });
+      orderModel.findById
+        .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(mockOrder) })
+        .mockReturnValue({ exec: jest.fn().mockResolvedValue(reloadedOrder) });
 
       const returnedOrder = await ordersService.requestReturn(
         orderId.toString(),
@@ -486,6 +495,7 @@ describe('QA-02: Payment & Order Safety Verification Suite', () => {
 
       expect(returnedOrder.orderStatus).toBe(OrderStatus.RETURN_REQUESTED);
       expect(returnedOrder.returnReason).toBe('Sách bị in nhầm trang');
+      expect(returnedOrder.returnRequestedAt).toBeInstanceOf(Date);
     });
 
     it('BE-01: Anti Double-Refund atomic lock prevents duplicate refunds', async () => {
@@ -505,11 +515,11 @@ describe('QA-02: Payment & Order Safety Verification Suite', () => {
         exec: jest.fn().mockResolvedValue(mockOrder),
       });
 
-      // First refund attempt: succeeds in atomic transition to PROCESSING
+      // Without a settlement integration, queue manual review without claiming a transfer.
       orderModel.findOneAndUpdate.mockReturnValueOnce({
         exec: jest.fn().mockResolvedValue({
           ...mockOrder,
-          refundStatus: RefundStatus.PROCESSING,
+          refundStatus: RefundStatus.MANUAL_REQUIRED,
         }),
       });
 
@@ -522,8 +532,9 @@ describe('QA-02: Payment & Order Safety Verification Suite', () => {
         },
       );
 
-      expect(firstRefund.refundStatus).toBe(RefundStatus.REFUNDED);
-      expect(firstRefund.refundTransactionRef).toBeDefined();
+      expect(firstRefund.refundStatus).toBe(RefundStatus.MANUAL_REQUIRED);
+      expect(firstRefund.refundTransactionRef).toBeUndefined();
+      expect(firstRefund.paymentStatus).toBe(PaymentStatus.PAID);
 
       // Second concurrent/duplicate refund attempt: order is already REFUNDED
       const alreadyRefundedOrder = createMockOrderDoc({

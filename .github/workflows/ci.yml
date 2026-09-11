@@ -110,6 +110,9 @@ jobs:
       - name: 🧪 Run Frontend Unit Tests
         run: npm run test:unit
 
+      - name: Lint Frontend
+        run: npm run lint
+
       - name: 🏗️ Type Check & Build Production Bundle
         run: npm run build
 

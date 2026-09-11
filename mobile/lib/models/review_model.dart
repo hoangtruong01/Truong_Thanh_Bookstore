@@ -61,7 +61,7 @@ class ReviewModel {
       adminReplyAt: json['adminReplyAt'] != null
           ? DateTime.tryParse(json['adminReplyAt'].toString())
           : null,
-      isApproved: json['isApproved'] != false,
+      isApproved: (json['isVisible'] ?? json['isApproved']) != false,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
           : null,
@@ -98,7 +98,7 @@ class RatingBreakdownModel {
   });
 
   factory RatingBreakdownModel.fromJson(Map<String, dynamic> json) {
-    final rawCounts = json['counts'] as Map<String, dynamic>? ?? {};
+    final rawCounts = (json['breakdown'] ?? json['counts']) as Map<String, dynamic>? ?? {};
     final rawPercentages = json['percentages'] as Map<String, dynamic>? ?? {};
 
     final Map<int, int> counts = {};
@@ -110,8 +110,8 @@ class RatingBreakdownModel {
     }
 
     return RatingBreakdownModel(
-      total: (json['total'] as num?)?.toInt() ?? 0,
-      average: (json['average'] as num?)?.toDouble() ?? 0.0,
+      total: ((json['totalReviews'] ?? json['total']) as num?)?.toInt() ?? 0,
+      average: ((json['averageRating'] ?? json['average']) as num?)?.toDouble() ?? 0.0,
       counts: counts,
       percentages: percentages,
     );

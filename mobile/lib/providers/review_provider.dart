@@ -5,6 +5,20 @@ import '../core/constants/api_constants.dart';
 import '../models/review_model.dart';
 
 class ReviewProvider with ChangeNotifier {
+  ReviewProvider({http.Client? client}) : _client = client;
+  final http.Client? _client;
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
   List<ReviewModel> _reviews = [];
   RatingBreakdownModel? _breakdown;
   bool _canUserReview = false;
@@ -22,13 +36,15 @@ class ReviewProvider with ChangeNotifier {
   Future<void> fetchReviews(String productId) async {
     _isLoading = true;
     _errorMessage = null;
+    _reviews = [];
+    _breakdown = null;
     notifyListeners();
 
     try {
-      final res = await http.get(
+      final res = await (_client?.get ?? http.get)(
         Uri.parse(ApiConstants.getReviews(productId)),
         headers: {'Content-Type': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (res.statusCode == 200) {
         final body = json.decode(res.body);
@@ -36,11 +52,13 @@ class ReviewProvider with ChangeNotifier {
         if (data is List) {
           _reviews = data.map((item) => ReviewModel.fromJson(item)).toList();
         }
+      } else {
+        _errorMessage = 'Không thể tải đánh giá. Vui lòng thử lại.';
       }
 
       await fetchRatingBreakdown(productId);
     } catch (e) {
-      _errorMessage = 'Lỗi tải đánh giá: $e';
+      _errorMessage = 'Không thể tải đánh giá. Vui lòng thử lại.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -49,10 +67,10 @@ class ReviewProvider with ChangeNotifier {
 
   Future<void> fetchRatingBreakdown(String productId) async {
     try {
-      final res = await http.get(
+      final res = await (_client?.get ?? http.get)(
         Uri.parse(ApiConstants.getRatingBreakdown(productId)),
         headers: {'Content-Type': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (res.statusCode == 200) {
         final body = json.decode(res.body);
@@ -66,6 +84,8 @@ class ReviewProvider with ChangeNotifier {
   }
 
   Future<void> checkCanReview(String productId, String? token) async {
+    _canUserReview = false;
+    _canReviewReason = 'Chưa thể xác minh quyền đánh giá. Vui lòng thử lại.';
     if (token == null || token.isEmpty) {
       _canUserReview = false;
       _canReviewReason = 'Vui lòng đăng nhập để đánh giá';
@@ -74,23 +94,27 @@ class ReviewProvider with ChangeNotifier {
     }
 
     try {
-      final res = await http.get(
+      final res = await (_client?.get ?? http.get)(
         Uri.parse(ApiConstants.canReview(productId)),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (res.statusCode == 200) {
         final body = json.decode(res.body);
         final data = body['data'] ?? body;
-        _canUserReview = data['canReview'] == true;
-        _canReviewReason = data['reason']?.toString();
+        _canUserReview = data['canReview'] == true && data['hasReviewed'] != true;
+        _canReviewReason = data['hasReviewed'] == true
+            ? 'Bạn đã đánh giá sản phẩm này'
+            : data['reason']?.toString();
         notifyListeners();
       }
     } catch (e) {
       debugPrint('Lỗi kiểm tra canReview: $e');
+    } finally {
+      notifyListeners();
     }
   }
 
@@ -107,18 +131,17 @@ class ReviewProvider with ChangeNotifier {
     }
 
     try {
-      final res = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/reviews'),
+      final res = await (_client?.post ?? http.post)(
+        Uri.parse(ApiConstants.getReviews(productId)),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
         body: json.encode({
-          'product': productId,
           'rating': rating,
           'content': content,
         }),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (res.statusCode == 200 || res.statusCode == 201) {
         await fetchReviews(productId);
@@ -128,12 +151,13 @@ class ReviewProvider with ChangeNotifier {
         return true;
       } else {
         final body = json.decode(res.body);
-        _errorMessage = body['message'] ?? 'Không thể gửi đánh giá';
+        final message = body['message'];
+        _errorMessage = message is List ? message.join('; ') : message?.toString() ?? 'Không thể gửi đánh giá';
         notifyListeners();
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Lỗi gửi đánh giá: $e';
+      _errorMessage = 'Không thể gửi đánh giá. Vui lòng kiểm tra kết nối và thử lại.';
       notifyListeners();
       return false;
     }
