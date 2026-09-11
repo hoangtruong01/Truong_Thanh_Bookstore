@@ -9,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
-import { randomBytes } from 'crypto';
 import { Order, OrderDocument } from '../schemas/order.schema';
 import { UpdateOrderStatusDto, CancelOrderDto } from '../dto/order.dto';
 import {
@@ -25,6 +24,8 @@ import { PromotionsService } from '../../promotions/promotions.service';
 import { OrderInventoryService } from './order-inventory.service';
 import { OrderLoyaltyService } from './order-loyalty.service';
 import { OrderNotificationService } from './order-notification.service';
+
+type OrderStatusChange = UpdateOrderStatusDto & { returnReason?: string };
 
 @Injectable()
 export class OrderLifecycleService {
@@ -68,7 +69,7 @@ export class OrderLifecycleService {
 
   async updateStatus(
     id: string,
-    dto: UpdateOrderStatusDto,
+    dto: OrderStatusChange,
     actor?: { _id: string; role?: string; permissions?: string[] },
   ): Promise<OrderDocument> {
     if (
@@ -181,7 +182,7 @@ export class OrderLifecycleService {
 
   async updateStatusInternal(
     id: string,
-    dto: UpdateOrderStatusDto,
+    dto: OrderStatusChange,
     session?: ClientSession,
     afterCommit?: Array<() => Promise<void>>,
   ): Promise<OrderDocument> {
@@ -239,6 +240,10 @@ export class OrderLifecycleService {
     }
 
     order.orderStatus = dto.orderStatus;
+    if (dto.orderStatus === OrderStatus.RETURN_REQUESTED) {
+      order.returnReason = dto.returnReason || dto.note;
+      order.returnRequestedAt = new Date();
+    }
     if (dto.orderStatus === OrderStatus.DELIVERED) {
       order.deliveredAt ||= new Date();
     }
@@ -517,10 +522,9 @@ export class OrderLifecycleService {
       );
     }
 
-    order.returnReason = dto.reason;
-    order.returnRequestedAt = new Date();
     return this.updateStatus(id, {
       orderStatus: OrderStatus.RETURN_REQUESTED,
+      returnReason: dto.reason,
       note: `Khách yêu cầu trả hàng: ${dto.reason}`,
     });
   }
@@ -576,6 +580,16 @@ export class OrderLifecycleService {
     actor: { _id: string; role?: string; permissions?: string[] },
     dto?: { reason?: string; amount?: number },
   ): Promise<OrderDocument> {
+    if (
+      actor.role !== UserRole.ADMIN &&
+      actor.role !== UserRole.SUPER_ADMIN &&
+      !(
+        actor.role === UserRole.STAFF &&
+        actor.permissions?.includes(StaffPermission.MANAGE_ORDERS)
+      )
+    ) {
+      throw new ForbiddenException('Bạn không có quyền xử lý hoàn tiền');
+    }
     const order = await this.orderModel.findById(id).exec();
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
 
@@ -592,22 +606,63 @@ export class OrderLifecycleService {
       throw new ConflictException('Đơn hàng này đã được hoàn tiền trước đó');
     }
 
+    if (order.paymentStatus !== PaymentStatus.PAID) {
+      throw new BadRequestException(
+        'Chỉ có thể hoàn tiền cho đơn đã thanh toán',
+      );
+    }
+    const refundAmount = dto?.amount ?? order.refundAmount ?? order.total;
+    if (
+      !Number.isFinite(refundAmount) ||
+      refundAmount <= 0 ||
+      refundAmount > order.total
+    ) {
+      throw new BadRequestException(
+        'Số tiền hoàn phải lớn hơn 0 và không vượt quá số tiền đã thanh toán',
+      );
+    }
+    if (order.refundStatus === RefundStatus.MANUAL_REQUIRED) {
+      if (refundAmount !== order.refundAmount) {
+        throw new ConflictException(
+          'Yêu cầu hoàn tiền đang chờ đối soát thủ công',
+        );
+      }
+      return order;
+    }
+
+    // No provider refund API or verified manual settlement exists yet. Record
+    // the request atomically without claiming money has been transferred.
     const lockedOrder = await this.orderModel
       .findOneAndUpdate(
         {
           _id: new Types.ObjectId(id),
+          orderStatus: order.orderStatus,
+          paymentStatus: PaymentStatus.PAID,
+          total: order.total,
           refundStatus: {
             $in: [
               RefundStatus.NONE,
               RefundStatus.REQUESTED,
               RefundStatus.FAILED,
-              RefundStatus.MANUAL_REQUIRED,
             ],
           },
         },
         {
           $set: {
-            refundStatus: RefundStatus.PROCESSING,
+            refundStatus: RefundStatus.MANUAL_REQUIRED,
+            refundAmount,
+            refundReason:
+              dto?.reason ||
+              order.refundReason ||
+              'Chờ đối soát và hoàn tiền thủ công',
+            refundActor: new Types.ObjectId(actor._id),
+          },
+          $push: {
+            timeline: {
+              status: order.orderStatus,
+              note: `Yêu cầu hoàn tiền ${refundAmount.toLocaleString('vi-VN')}đ đang chờ xử lý thủ công; chưa xác nhận chuyển tiền.`,
+              createdAt: new Date(),
+            },
           },
         },
         { returnDocument: 'after' },
@@ -620,26 +675,7 @@ export class OrderLifecycleService {
       );
     }
 
-    const refundAmount =
-      dto?.amount ?? lockedOrder.refundAmount ?? lockedOrder.total;
-    const refundRef = `REF-${randomBytes(4).toString('hex').toUpperCase()}`;
-
-    lockedOrder.refundStatus = RefundStatus.REFUNDED;
-    lockedOrder.refundAmount = refundAmount;
-    lockedOrder.refundReason =
-      dto?.reason || lockedOrder.refundReason || 'Hoàn tiền thành công';
-    lockedOrder.refundedAt = new Date();
-    lockedOrder.refundTransactionRef = refundRef;
-    if (actor?._id) lockedOrder.refundActor = new Types.ObjectId(actor._id);
-    lockedOrder.paymentStatus = PaymentStatus.REFUNDED;
-
-    lockedOrder.timeline.push({
-      status: OrderStatus.CANCELLED,
-      note: `Hoàn tất hoàn tiền ${refundAmount.toLocaleString('vi-VN')}đ qua ${lockedOrder.paymentMethod}. Mã tham chiếu: ${refundRef}.`,
-      createdAt: new Date(),
-    });
-
-    return lockedOrder.save();
+    return lockedOrder;
   }
 
   /**

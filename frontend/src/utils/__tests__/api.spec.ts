@@ -80,7 +80,7 @@ describe('API Utils - FE-02 Singleton Token Refresh Queue & FE-03 Error Handling
   })
 
   it('clears session and dispatches auth-session-expired if refresh fails', async () => {
-    vi.spyOn(axios, 'post').mockRejectedValueOnce(new Error('Refresh Token Revoked'))
+    vi.spyOn(axios, 'post').mockRejectedValueOnce({ response: { status: 401 } })
 
     const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent')
     localStorage.setItem('user', JSON.stringify({ id: 1 }))
@@ -109,6 +109,33 @@ describe('API Utils - FE-02 Singleton Token Refresh Queue & FE-03 Error Handling
 
     await expect(responseErrorHandler(error)).rejects.toEqual({ message: 'Wrong credentials' })
     expect(axiosPostSpy).not.toHaveBeenCalled()
+  })
+
+  it('refreshes an expired profile session during hydration with a bounded timeout', async () => {
+    const refresh = vi.spyOn(axios, 'post').mockResolvedValueOnce({ status: 200 })
+    api.defaults.adapter = async (config) => ({
+      data: { data: { _id: 'customer-1' } }, status: 200, statusText: 'OK', headers: {}, config,
+    })
+    const result = await responseErrorHandler({
+      config: { url: '/auth/me', headers: {}, skipAuthRedirect: true },
+      response: { status: 401, data: { message: 'Unauthorized' } },
+    })
+    expect(result.data._id).toBe('customer-1')
+    expect(refresh).toHaveBeenCalledWith(expect.stringContaining('/auth/refresh'), {},
+      expect.objectContaining({ timeout: 15000, withCredentials: true }))
+  })
+
+  it.each([undefined, 429, 503])('preserves session when refresh is temporarily unavailable (%s)', async (status) => {
+    const refreshError = { response: status ? { status } : undefined, code: 'ECONNABORTED' }
+    vi.spyOn(axios, 'post').mockRejectedValueOnce(refreshError)
+    const dispatch = vi.spyOn(window, 'dispatchEvent')
+    localStorage.setItem('user', 'existing-session')
+    await expect(responseErrorHandler({
+      config: { url: '/auth/me', headers: {}, skipAuthRedirect: true },
+      response: { status: 401, data: { message: 'Unauthorized' } },
+    })).rejects.toBe(refreshError)
+    expect(localStorage.getItem('user')).toBe('existing-session')
+    expect(dispatch.mock.calls.some(([event]) => event.type === 'auth-session-expired')).toBe(false)
   })
 
   it('handles network offline / timeout errors with standard messaging', async () => {

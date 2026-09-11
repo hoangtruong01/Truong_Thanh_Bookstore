@@ -83,6 +83,7 @@ api.interceptors.response.use(
   (response) => (response.data?.data !== undefined ? response.data : response),
   async (error: AxiosError) => {
     const originalRequest = (error.config || {}) as CustomRequestConfig
+    const skipGlobalToast = originalRequest.skipGlobalToast || originalRequest.skipGlobalErrorHandler
     const url = originalRequest.url || ''
 
     // 1. Handle network errors or server offline
@@ -92,7 +93,7 @@ api.interceptors.response.use(
         ? 'Yêu cầu kết nối quá hạn (Timeout). Vui lòng thử lại.'
         : 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng hoặc thử lại sau.'
 
-      if (!originalRequest.skipGlobalToast) {
+      if (!skipGlobalToast) {
         showThrottledToast(errorMsg, 'error', 3000)
       }
 
@@ -114,7 +115,7 @@ api.interceptors.response.use(
         url.includes('/auth/refresh') ||
         url.includes('/auth/forgot-password') ||
         url.includes('/auth/reset-password') ||
-        url.includes('/auth/me')
+        url.includes('/auth/verify-otp')
 
       // If already an auth endpoint, do not attempt to refresh
       if (isAuthEndpoint) {
@@ -123,7 +124,7 @@ api.interceptors.response.use(
           localStorage.removeItem('refreshToken')
           localStorage.removeItem('user')
           window.dispatchEvent(new CustomEvent('auth-session-expired'))
-          notifySessionExpired()
+          if (!skipGlobalToast) notifySessionExpired()
           handleSessionExpiredRedirect(originalRequest.skipAuthRedirect)
         }
         return Promise.reject(errorData || error)
@@ -141,6 +142,7 @@ api.interceptors.response.use(
               {},
               {
                 withCredentials: true,
+                timeout: 15000,
                 headers: {
                   'Content-Type': 'application/json',
                   'X-Requested-With': 'XMLHttpRequest',
@@ -157,12 +159,16 @@ api.interceptors.response.use(
           await refreshPromise
           return api(originalRequest)
         } catch (refreshErr: any) {
+          // An unavailable server does not prove that the session was revoked.
+          if (![401, 403].includes(refreshErr?.response?.status)) {
+            return Promise.reject(refreshErr)
+          }
           localStorage.removeItem('token')
           localStorage.removeItem('refreshToken')
           localStorage.removeItem('user')
           window.dispatchEvent(new CustomEvent('auth-session-expired'))
 
-          if (!originalRequest.skipGlobalToast) {
+          if (!skipGlobalToast) {
             notifySessionExpired()
           }
 
@@ -174,7 +180,7 @@ api.interceptors.response.use(
     }
 
     // 3. FE-03: Global HTTP Error UX handling
-    if (!originalRequest.skipGlobalToast) {
+    if (!skipGlobalToast) {
       if (status === 400) {
         const msg = extractErrorMessage(errorData) || 'Dữ liệu yêu cầu không hợp lệ.'
         showThrottledToast(msg, 'warning', 1500)

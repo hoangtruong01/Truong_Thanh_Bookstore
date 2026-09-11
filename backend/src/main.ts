@@ -94,6 +94,8 @@ async function bootstrap() {
       'x-client-platform',
       'X-Requested-With',
       'X-Correlation-ID',
+      'X-Request-ID',
+      'X-Guest-Order-Token',
     ],
     exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Correlation-ID'],
     maxAge: 86400, // 24 hours preflight cache

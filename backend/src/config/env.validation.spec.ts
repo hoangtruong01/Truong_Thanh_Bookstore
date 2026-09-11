@@ -27,6 +27,35 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
   };
 
   describe('Valid Configuration', () => {
+    it('does not expose invalid secret values in startup errors', () => {
+      const invalidSecret = 'private-value';
+      let message = '';
+      try {
+        validateEnv({ ...validBaseConfig, JWT_SECRET: invalidSecret });
+      } catch (error) {
+        message = (error as Error).message;
+      }
+      expect(message).toContain('JWT_SECRET');
+      expect(message).not.toContain(invalidSecret);
+    });
+    it.each([
+      ['JWT_SECRET', 'local-development-access-secret-32-chars-minimum'],
+      [
+        'JWT_REFRESH_SECRET',
+        'local-development-refresh-secret-32-chars-minimum',
+      ],
+      ['JWT_RESET_SECRET', 'local-development-reset-secret-32-chars-minimum'],
+    ])(
+      'rejects the public Compose default for %s in production',
+      (key, value) => {
+        expect(() =>
+          validateEnv({ ...validProductionConfig, [key]: value }),
+        ).toThrow();
+        expect(() =>
+          validateEnv({ ...validBaseConfig, [key]: value }),
+        ).not.toThrow();
+      },
+    );
     it('should validate and transform a completely valid configuration', () => {
       const result = validateEnv(validBaseConfig);
       expect(result).toBeDefined();

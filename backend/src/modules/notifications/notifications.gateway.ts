@@ -9,6 +9,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { TokenBlacklistService } from '../auth/token-blacklist.service';
+import { StaffPermission, UserRole } from '../../common/enums';
 
 @WebSocketGateway({
   cors: {
@@ -76,9 +77,18 @@ export class NotificationsGateway
       if (!token) throw new Error('Missing token');
       const payload = await this.jwtService.verifyAsync<{
         sub: string;
+        type?: string;
         jti?: string;
         tokenVersion?: number;
       }>(token);
+      if (
+        payload.type !== 'access' ||
+        !payload.sub ||
+        !payload.jti ||
+        typeof payload.tokenVersion !== 'number'
+      ) {
+        throw new Error('Invalid access token claims');
+      }
       if (
         (payload.jti &&
           (await this.tokenBlacklistService.isJtiBlacklisted(payload.jti))) ||
@@ -88,11 +98,7 @@ export class NotificationsGateway
       }
       const user = await this.usersService.findById(payload.sub);
       if (!user?.status) throw new Error('Inactive user');
-      if (
-        payload.tokenVersion !== undefined &&
-        user.tokenVersion !== undefined &&
-        payload.tokenVersion < user.tokenVersion
-      ) {
+      if (payload.tokenVersion !== (user.tokenVersion ?? 0)) {
         throw new Error('Stale token version');
       }
 
@@ -101,11 +107,21 @@ export class NotificationsGateway
       client.data.role = user.role;
       await client.join(`user:${userId}`);
 
-      if (['ADMIN', 'STAFF', 'SUPER_ADMIN'].includes(user.role)) {
-        await client.join('admin');
-        this.logger.log(
-          `Client ${client.id} (Role: ${user.role}) joined admin notification room`,
-        );
+      const isAdmin =
+        user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN;
+      if (
+        isAdmin ||
+        (user.role === UserRole.STAFF &&
+          user.permissions?.includes(StaffPermission.MANAGE_ORDERS))
+      ) {
+        await client.join('admin:orders');
+      }
+      if (
+        isAdmin ||
+        (user.role === UserRole.STAFF &&
+          user.permissions?.includes(StaffPermission.MANAGE_INVENTORY))
+      ) {
+        await client.join('admin:inventory');
       }
 
       this.logger.log(`Authenticated notification client ${client.id}`);
@@ -131,8 +147,12 @@ export class NotificationsGateway
 
   sendAlertToAdmins(alert: unknown) {
     if (this.server) {
-      this.server.to('admin').emit('admin_alert', alert);
-      this.server.to('admin').emit('notification_received', alert);
+      const room =
+        (alert as { type?: string })?.type === 'stock'
+          ? 'admin:inventory'
+          : 'admin:orders';
+      this.server.to(room).emit('admin_alert', alert);
+      this.server.to(room).emit('notification_received', alert);
     }
   }
 

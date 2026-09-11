@@ -4,6 +4,8 @@
 > **Vị trí lưu trữ:** `docs/SECURITY_LOCAL_MVP_PLAN.md`  
 > **Mục tiêu:** Định hình rõ ràng phạm vi công việc, triệt tiêu lỗ hổng bảo mật, giải quyết bất đồng bộ thanh toán, chuẩn hóa môi trường phát triển nội bộ trước khi thực hiện giai đoạn Deploy/Production.
 
+> **Đối chiếu audit 2026-09-11:** Các dấu hoàn thành bên dưới là trạng thái kế hoạch cũ, không phải chứng nhận nghiệm thu toàn hệ thống. Xem [báo cáo audit và bằng chứng kiểm thử](AUDIT_2026-09-11.md). Đã sửa lỗi hoàn tiền báo thành công giả, lưu yêu cầu trả hàng, phân quyền thông báo, khôi phục phiên web và đánh giá mobile. Hoàn tiền thực tế hiện chỉ được ghi nhận `MANUAL_REQUIRED`; chưa có tích hợp chuyển tiền/xác nhận đối soát. MongoDB replica-set E2E, chạy Docker đầy đủ và sandbox thanh toán vẫn cần xác minh.
+
 ---
 
 ## 📑 MỤC LỤC

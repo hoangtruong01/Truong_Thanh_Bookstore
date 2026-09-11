@@ -7,6 +7,8 @@ import '../../models/product_model.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/wishlist_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/review_provider.dart';
 import '../checkout/checkout_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -23,30 +25,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _currentImageIndex = 0;
   final PageController _pageController = PageController();
 
-  final List<Map<String, dynamic>> _mockReviews = [
-    {
-      'user': 'Trần Văn Hoàng',
-      'rating': 5,
-      'date': '10/08/2026',
-      'comment': 'Sản phẩm giao nhanh, đóng gói rất cẩn thận. Viết rất êm tay!',
-    },
-    {
-      'user': 'Nguyễn Thị Mai',
-      'rating': 5,
-      'date': '08/08/2026',
-      'comment': 'Chất lượng chính hãng Thiên Long, ủng hộ Trường Thành Store dài dài.',
-    },
-    {
-      'user': 'Lê Quốc Bảo',
-      'rating': 4,
-      'date': '05/08/2026',
-      'comment': 'Hàng đẹp đúng như hình mô tả. Phí ship rẻ.',
-    },
-  ];
+  final ReviewProvider _reviewProvider = ReviewProvider();
+  bool _submittingReview = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _reviewProvider.addListener(_onReviewsChanged);
+    _reviewProvider.fetchReviews(widget.product.id);
+  }
+
+  void _onReviewsChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _reviewProvider.removeListener(_onReviewsChanged);
+    _reviewProvider.dispose();
     super.dispose();
   }
 
@@ -70,11 +67,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  void _showAddReviewDialog() {
+  Future<void> _showAddReviewDialog() async {
+    if (_submittingReview) return;
+    setState(() => _submittingReview = true);
+    final token = context.read<AuthProvider>().token;
+    await _reviewProvider.checkCanReview(widget.product.id, token);
+    if (!mounted) return;
+    if (!_reviewProvider.canUserReview) {
+      setState(() => _submittingReview = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_reviewProvider.canReviewReason ?? 'Bạn cần mua sản phẩm trước khi đánh giá.'),
+      ));
+      return;
+    }
     int selectedStars = 5;
-    final textController = TextEditingController();
+    String reviewContent = '';
 
-    showDialog(
+    final shouldSubmit = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -103,7 +112,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
-                controller: textController,
+                onChanged: (value) => reviewContent = value,
                 maxLines: 3,
                 decoration: const InputDecoration(
                   hintText: 'Chia sẻ cảm nhận của bạn về sản phẩm này...',
@@ -120,19 +129,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              if (textController.text.isNotEmpty) {
-                setState(() {
-                  _mockReviews.insert(0, {
-                    'user': 'Tôi (Khách hàng)',
-                    'rating': selectedStars,
-                    'date': 'Hôm nay',
-                    'comment': textController.text,
-                  });
-                });
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã gửi đánh giá thành công! Cảm ơn bạn.')),
-                );
+              if (reviewContent.trim().length >= 2) {
+                Navigator.pop(ctx, true);
               }
             },
             child: const Text('Gửi đánh giá'),
@@ -140,6 +138,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ],
       ),
     );
+    if (!mounted) return;
+    if (shouldSubmit != true) {
+      setState(() => _submittingReview = false);
+      return;
+    }
+    final saved = await _reviewProvider.submitReview(
+      productId: widget.product.id,
+      rating: selectedStars,
+      content: reviewContent.trim(),
+      token: token,
+    );
+    if (!mounted) return;
+    setState(() => _submittingReview = false);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(saved
+          ? 'Đã gửi đánh giá thành công! Cảm ơn bạn.'
+          : _reviewProvider.errorMessage ?? 'Không thể gửi đánh giá. Vui lòng thử lại.'),
+    ));
   }
 
   @override
@@ -435,27 +451,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     children: [
                       const Text('ĐÁNH GIÁ TỪ KHÁCH HÀNG ⭐', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                       TextButton(
-                        onPressed: _showAddReviewDialog,
+                        onPressed: _submittingReview ? null : _showAddReviewDialog,
                         child: const Text('+ Viết đánh giá', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 12)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
+                  if (_reviewProvider.isLoading || _submittingReview)
+                    const LinearProgressIndicator(),
+                  if (_reviewProvider.errorMessage != null) ...[
+                    Text(_reviewProvider.errorMessage!),
+                    TextButton(
+                      onPressed: _reviewProvider.isLoading ? null : () => _reviewProvider.fetchReviews(product.id),
+                      child: const Text('Thử lại'),
+                    ),
+                  ] else if (!_reviewProvider.isLoading && _reviewProvider.reviews.isEmpty)
+                    const Text('Chưa có đánh giá cho sản phẩm này.'),
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _mockReviews.length,
+                    itemCount: _reviewProvider.reviews.length,
                     separatorBuilder: (context, index) => const Divider(height: 20),
                     itemBuilder: (context, index) {
-                      final rev = _mockReviews[index];
+                      final rev = _reviewProvider.reviews[index];
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(rev['user'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                              Text(rev['date'], style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                              Text(rev.user.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text(Formatters.formatDate(rev.createdAt?.toIso8601String()), style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
                             ],
                           ),
                           const SizedBox(height: 4),
@@ -463,14 +489,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             children: List.generate(
                               5,
                               (i) => Icon(
-                                i < (rev['rating'] as int) ? Icons.star_rounded : Icons.star_border_rounded,
+                                i < rev.rating ? Icons.star_rounded : Icons.star_border_rounded,
                                 size: 14,
                                 color: const Color(0xFFFFB703),
                               ),
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Text(rev['comment'], style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                          Text(rev.content, style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
                         ],
                       );
                     },

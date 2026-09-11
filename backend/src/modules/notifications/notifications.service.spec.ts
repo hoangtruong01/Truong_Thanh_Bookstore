@@ -9,8 +9,8 @@ import { FcmPushService } from './fcm-push.service';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
-  let mockNotificationModel: any;
-  let mockGateway: any;
+  let mockNotificationModel: Record<string, jest.Mock>;
+  let mockGateway: Record<string, jest.Mock>;
 
   const mockUserId = new Types.ObjectId().toString();
   const mockNotificationId = new Types.ObjectId().toString();
@@ -102,7 +102,7 @@ describe('NotificationsService', () => {
         },
       ];
 
-      (mockNotificationModel.find as jest.Mock).mockReturnValue({
+      mockNotificationModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           skip: jest.fn().mockReturnValue({
             limit: jest.fn().mockReturnValue({
@@ -114,7 +114,7 @@ describe('NotificationsService', () => {
         }),
       });
 
-      (mockNotificationModel.countDocuments as jest.Mock)
+      mockNotificationModel.countDocuments
         .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(1) }) // total
         .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(1) }); // unread
 
@@ -138,7 +138,7 @@ describe('NotificationsService', () => {
         save: jest.fn().mockResolvedValue(true),
       };
 
-      (mockNotificationModel.findById as jest.Mock).mockReturnValue({
+      mockNotificationModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockDoc),
       });
 
@@ -149,7 +149,7 @@ describe('NotificationsService', () => {
     });
 
     it('should mark all notifications as read for user', async () => {
-      (mockNotificationModel.updateMany as jest.Mock).mockResolvedValue({
+      mockNotificationModel.updateMany.mockResolvedValue({
         modifiedCount: 3,
       });
 
@@ -184,6 +184,28 @@ describe('NotificationsService', () => {
       const result = await service.sendLowStockAlert(mockProduct, 3);
       expect(result.title).toContain('Cảnh báo sắp hết hàng');
       expect(mockGateway.sendAlertToAdmins).toHaveBeenCalled();
+      expect(mockGateway.sendAlertToAdmins).toHaveBeenCalledTimes(1);
+      expect(mockGateway.broadcastNotification).not.toHaveBeenCalled();
     });
+  });
+
+  it('excludes internal stock alerts from customer unread counts', async () => {
+    mockNotificationModel.countDocuments.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(0),
+    });
+    await service.getUnreadCount(mockUserId);
+    expect(mockNotificationModel.countDocuments).toHaveBeenCalledWith(
+      expect.objectContaining({ type: { $ne: 'stock' } }),
+    );
+  });
+
+  it('does not let a customer mark a stock alert as read by guessing its ID', async () => {
+    mockNotificationModel.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ userId: null, type: 'stock' }),
+    });
+    await expect(
+      service.markAsRead(mockNotificationId, mockUserId),
+    ).rejects.toThrow('Bạn không có quyền');
+    expect(mockNotificationModel.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 });

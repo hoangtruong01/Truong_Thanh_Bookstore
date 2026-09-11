@@ -18,7 +18,7 @@ import {
 } from './dto/create-notification.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { UserRole } from '../../common/enums';
+import { StaffPermission, UserRole } from '../../common/enums';
 import { RegisterDeviceTokenDto } from './dto/device-token.dto';
 import { FcmPushService } from './fcm-push.service';
 
@@ -27,6 +27,17 @@ import { FcmPushService } from './fcm-push.service';
 @UseGuards(AuthGuard('jwt'))
 @ApiBearerAuth()
 export class NotificationsController {
+  private canReadStock(user: {
+    role?: string;
+    permissions?: string[];
+  }): boolean {
+    return (
+      user.role === UserRole.ADMIN ||
+      user.role === UserRole.SUPER_ADMIN ||
+      (user.role === UserRole.STAFF &&
+        !!user.permissions?.includes(StaffPermission.MANAGE_INVENTORY))
+    );
+  }
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly fcmPushService: FcmPushService,
@@ -66,14 +77,21 @@ export class NotificationsController {
     @Query() query: NotificationQueryDto,
   ) {
     const userId = req.user._id.toString();
-    return this.notificationsService.findByUser(userId, query);
+    return this.notificationsService.findByUser(
+      userId,
+      query,
+      this.canReadStock(req.user),
+    );
   }
 
   @Get('unread-count')
   @ApiOperation({ summary: 'Lấy số lượng thông báo chưa đọc của người dùng' })
   async getUnreadCount(@Request() req: any) {
     const userId = req.user._id.toString();
-    const count = await this.notificationsService.getUnreadCount(userId);
+    const count = await this.notificationsService.getUnreadCount(
+      userId,
+      this.canReadStock(req.user),
+    );
     return { unreadCount: count };
   }
 
@@ -81,7 +99,11 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Đánh dấu một thông báo là đã đọc' })
   async markAsRead(@Param('id') id: string, @Request() req: any) {
     const userId = req.user._id.toString();
-    return this.notificationsService.markAsRead(id, userId);
+    return this.notificationsService.markAsRead(
+      id,
+      userId,
+      this.canReadStock(req.user),
+    );
   }
 
   @Patch('read-all')
@@ -90,7 +112,10 @@ export class NotificationsController {
   })
   async markAllAsRead(@Request() req: any) {
     const userId = req.user._id.toString();
-    return this.notificationsService.markAllAsRead(userId);
+    return this.notificationsService.markAllAsRead(
+      userId,
+      this.canReadStock(req.user),
+    );
   }
 
   @Post('broadcast')
