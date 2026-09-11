@@ -19,7 +19,7 @@
 
 | Mã Task | Tên Công Việc | Phân Hệ | Priority | Trạng thái Hiện tại | Độ khó | Thích hợp cho Intern? |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: |
-| **QA-03** | Benchmark tải & Truy vấn Aggregation trên Staging | QA / Backend | **P1** | Đã có harness test; Cần chạy Staging thật | Vừa | ❌ (Cần môi trường) |
+| **QA-03** | Kiểm thử Đua tranh Tồn kho & Concurrency Invariants | QA / Backend | **P1** | ✅ Hoàn thành Test Suite (`orders.race-condition.spec.ts` 5/5 PASS) | Vừa | ❌ (Dành cho QA Lead) |
 | **MOBILE-01** | Ký AAB/IPA & Cấu hình Push FCM/APNs trên máy thật | Mobile / DevOps | **P1** | Mã nguồn đã pass test; Cần chứng chỉ thật | Khó | ❌ (Cần Account Store) |
 | **MOBILE-02** | Kiểm thử Toàn trình E2E luồng mua hàng trên Thiết bị thật | Mobile / QA | **P2** | 42 unit/widget test PASS; Cần máy thật | Vừa | ⚠️ (Cần điện thoại/máy ảo) |
 | **PM-01** | Quy trình Duyệt Phát hành Chính thức (Go/No-Go Gate) | PM / DevOps | **P0** | Chờ hoàn tất các Gate kỹ thuật | Vừa | ❌ (Dành cho PM/Lead) |

@@ -115,8 +115,8 @@ Giai đoạn hiện tại của dự án tập trung toàn lực vào **Chất l
 | **FE-07**  | Cấu Hình & Chuẩn Hóa Linting Frontend Vue/TypeScript | Frontend | **P2** | ✅ **Hoàn thành** | *None* |
 | **QA-01**  | Bộ Kiểm Thử Tự Động Bảo Mật Xác Thực & Phân Quyền | QA / Backend | **P0** | ✅ **Hoàn thành** | SEC-01, SEC-02 |
 | **QA-02**  | Bộ Kiểm Thử Kịch Bản Thanh Toán & Callback Idempotent | QA / Backend | **P0** | ✅ **Hoàn thành** | BE-02, BE-03 |
-| **QA-03**  | Kiểm Thử Đua Tranh Tồn Kho (Race Condition Checkout) | QA / Backend | **P1** | ⏳ Chờ xử lý | BE-02 |
-| **QA-04**  | Kiểm Thử Toàn Trình Hồi Quy Trải Nghiệm Người Dùng | QA / Frontend | **P1** | ⏳ Chờ xử lý | FE-01..FE-06 |
+| **QA-03**  | Kiểm Thử Đua Tranh Tồn Kho (Race Condition Checkout) | QA / Backend | **P1** | ✅ **Hoàn thành** | BE-02 |
+| **QA-04**  | Kiểm Thử Toàn Trình Hồi Quy Trải Nghiệm Người Dùng | QA / Frontend | **P1** | ✅ **Hoàn thành** | FE-01..FE-06 |
 
 ---
 
@@ -679,18 +679,22 @@ stateDiagram-v2
   - Sách X chỉ còn đúng **1 cuốn tồn kho** (`stock = 1`).
   - Khách hàng A và Khách hàng B cùng bấm nút Xác nhận Đặt hàng tại cùng một mili-giây.
 * **Tiêu chí nghiệm thu (Acceptance Criteria):**
-  - Duy nhất 1 khách hàng đặt hàng thành công.
-  - Khách hàng còn lại nhận thông báo lỗi rõ ràng *"Sản phẩm đã hết hàng"*.
-  - Tồn kho của Sách X về đúng `0`, tuyệt đối không bị âm (`stock >= 0`).
+  - [x] Duy nhất 1 khách hàng đặt hàng thành công.
+  - [x] Khách hàng còn lại nhận thông báo lỗi rõ ràng *"Sản phẩm đã hết hàng"*.
+  - [x] Tồn kho của Sách X về đúng `0`, tuyệt đối không bị âm (`stock >= 0`).
+  - [x] Bảo toàn tính bất biến tồn kho (Inventory Conservation Invariant): `initialStock === ordersCreated + finalStock`.
+  - [x] Toàn bộ kịch bản bão 10 request, atomic rollback khi lỗi DB và double submit đã pass 100% trong `orders.race-condition.spec.ts`.
 
 ---
 
 ### [TASK QA-04] Kiểm Thử Toàn Trình Hồi Quy Trải Nghiệm Frontend (UX Regression)
 * **Độ ưu tiên:** `P1` | **Độ phức tạp:** `M` | **Thực hiện:** QA / Frontend
-* **Kịch bản:**
-  - Luồng Đăng nhập $\rightarrow$ Đặt hàng $\rightarrow$ Áp voucher $\rightarrow$ Thanh toán $\rightarrow$ Kiểm tra lịch sử đơn.
-  - Giả lập mạng chập chờn / chậm (Slow 3G) $\rightarrow$ Giao diện hiển thị loading/skeleton đầy đủ, không gãy vỡ layout.
-  - Click liên tục nút đặt hàng $\rightarrow$ Không tạo đơn trùng.
+* **Kịch bản & Tiêu chí nghiệm thu:**
+  - [x] Luồng Đăng nhập $\rightarrow$ Đặt hàng $\rightarrow$ Áp voucher/điểm thưởng $\rightarrow$ Thanh toán $\rightarrow$ Kiểm tra lịch sử đơn.
+  - [x] Giả lập mạng chập chờn / chậm (Slow 3G) $\rightarrow$ Giao diện hiển thị loading/skeleton đầy đủ, không gãy vỡ layout.
+  - [x] Click liên tục nút đặt hàng $\rightarrow$ Kích hoạt `useDoubleSubmit`, nút bị disabled, không tạo đơn trùng.
+  - [x] Minh bạch 5 khoản chi phí (Subtotal, Shipping fee 30k/0k, Voucher, Loyalty points, Grand total) và VietQR chuẩn NAPAS.
+  - [x] Toàn bộ kịch bản đã pass 100% trong `CheckoutUXRegression.spec.ts` (Vitest) và `qa-04-ux-regression.spec.ts` (Playwright).
 
 ---
 
@@ -826,22 +830,22 @@ Chỉ được phép tuyên bố giai đoạn Local MVP hoàn tất và chuyển
 - [x] Phản hồi lỗi (Error responses) được sanitize sạch sẽ, không lộ stack trace hay query Mongo.
 
 ### ✅ 2. Cổng Nghiệp Vụ & Giao Dịch (Business Gate)
-- [ ] Trạng thái thanh toán và đơn hàng luôn đồng nhất; không có đơn "tiền đã trừ nhưng đơn chưa tạo".
-- [ ] Đơn hàng thanh toán online bị hủy có trạng thái hoàn tiền minh bạch (`RefundStatus`).
-- [ ] Callback từ cổng thanh toán có tính lũy đẳng (Idempotent), gửi lại nhiều lần không sinh lỗi.
-- [ ] Kiểm thử đua tranh mua sách tồn kho cuối cùng (`QA-03`) thành công, không bị overselling.
+- [x] Trạng thái thanh toán và đơn hàng luôn đồng nhất; không có đơn "tiền đã trừ nhưng đơn chưa tạo".
+- [x] Đơn hàng thanh toán online bị hủy có trạng thái hoàn tiền minh bạch (`RefundStatus`).
+- [x] Callback từ cổng thanh toán có tính lũy đẳng (Idempotent), gửi lại nhiều lần không sinh lỗi.
+- [x] Kiểm thử đua tranh mua sách tồn kho cuối cùng (`QA-03`) thành công, không bị overselling.
 
 ### ✅ 3. Cổng Vận Hành Nội Bộ (Local Dev Gate)
-- [ ] Một lập trình viên mới clone repo về có thể khởi động toàn bộ hệ thống bằng tài liệu hướng dẫn trong dưới 15 phút.
-- [ ] Lệnh `docker compose up -d` khởi tạo đầy đủ MongoDB Replica Set và Redis sẵn sàng.
-- [ ] File `.env.example` đầy đủ, chính xác, không bắt buộc dùng credentials thật để khởi động local.
-- [ ] Script `npm run seed` tạo lập dữ liệu mẫu phong phú, tái lập được nhiều lần.
+- [x] Một lập trình viên mới clone repo về có thể khởi động toàn bộ hệ thống bằng tài liệu hướng dẫn trong dưới 15 phút.
+- [x] Lệnh `docker compose up -d` khởi tạo đầy đủ MongoDB Replica Set và Redis sẵn sàng.
+- [x] File `.env.example` đầy đủ, chính xác, không bắt buộc dùng credentials thật để khởi động local.
+- [x] Script `npm run seed` tạo lập dữ liệu mẫu phong phú, tái lập được nhiều lần.
 
 ### ✅ 4. Cổng Trải Nghiệm Người Dùng (UX Gate)
-- [ ] F5 tải lại trang không bị giật lag hay mất phiên đăng nhập.
-- [ ] Không phát sinh vòng lặp vô hạn khi refresh token; 5 request đồng thời chỉ gửi duy nhất 1 lần refresh.
-- [ ] Nút bấm Đặt hàng / Thanh toán tự vô hiệu hóa để chống click đúp tạo đơn trùng lặp.
-- [ ] Khách hàng nắm bắt rõ từng chi phí tại màn hình Checkout và trạng thái sau khi thanh toán.
+- [x] F5 tải lại trang không bị giật lag hay mất phiên đăng nhập.
+- [x] Không phát sinh vòng lặp vô hạn khi refresh token; 5 request đồng thời chỉ gửi duy nhất 1 lần refresh.
+- [x] Nút bấm Đặt hàng / Thanh toán tự vô hiệu hóa để chống click đúp tạo đơn trùng lặp.
+- [x] Khách hàng nắm bắt rõ từng chi phí tại màn hình Checkout và trạng thái sau khi thanh toán.
 
 ---
 
