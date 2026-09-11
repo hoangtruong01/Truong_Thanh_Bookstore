@@ -10,7 +10,7 @@
       </div>
 
       <!-- Step 1: Request OTP -->
-      <form v-if="step === 1" @submit.prevent="handleRequestOtp" class="space-y-4">
+      <form v-if="step === 1" class="space-y-4" @submit.prevent="handleRequestOtp">
         <div>
           <label class="text-xs font-bold text-slate-700">Địa chỉ Email</label>
           <input
@@ -37,7 +37,7 @@
       </form>
 
       <!-- Step 2: Verify OTP & Reset Password -->
-      <form v-else @submit.prevent="handleResetPassword" class="space-y-4">
+      <form v-else class="space-y-4" @submit.prevent="handleResetPassword">
         <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800 space-y-1">
           <p class="font-bold">Mã OTP đã được gửi!</p>
           <p>Vui lòng kiểm tra email của bạn để lấy mã OTP.</p>
@@ -81,8 +81,8 @@
 
         <button
           type="button"
-          @click="step = 1"
           class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-6 rounded-xl transition-colors text-center text-xs"
+          @click="step = 1"
         >
           Quay lại nhập Email
         </button>

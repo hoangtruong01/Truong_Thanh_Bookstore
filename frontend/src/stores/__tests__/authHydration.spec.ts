@@ -24,7 +24,7 @@ describe('Auth Hydration (FE-01)', () => {
 
   it('hydrates user session successfully on initAuth when /auth/me returns valid user', async () => {
     const mockUser = { _id: 'u123', email: 'user@truongthanh.vn', role: 'CUSTOMER', fullName: 'Nguyen Van A' }
-    // @ts-ignore
+    // @ts-expect-error mock method
     authService.getProfile.mockResolvedValueOnce({ data: mockUser })
 
     const store = useAuthStore()
@@ -44,7 +44,7 @@ describe('Auth Hydration (FE-01)', () => {
   })
 
   it('handles guest session (401 or null) gracefully without throwing or redirecting', async () => {
-    // @ts-ignore
+    // @ts-expect-error mock method
     authService.getProfile.mockRejectedValueOnce({
       response: { status: 401, data: { message: 'Unauthorized' } }
     })
@@ -61,7 +61,7 @@ describe('Auth Hydration (FE-01)', () => {
 
   it('is idempotent: subsequent calls return immediately without duplicate network calls', async () => {
     const mockUser = { _id: 'u456', email: 'admin@truongthanh.vn', role: 'ADMIN' }
-    // @ts-ignore
+    // @ts-expect-error mock method
     authService.getProfile.mockResolvedValueOnce({ data: mockUser })
 
     const store = useAuthStore()
@@ -81,7 +81,7 @@ describe('Auth Hydration (FE-01)', () => {
       resolver = resolve
     })
 
-    // @ts-ignore
+    // @ts-expect-error mock method
     authService.getProfile.mockReturnValueOnce(delayedPromise)
 
     const store = useAuthStore()

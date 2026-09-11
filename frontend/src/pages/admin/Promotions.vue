@@ -7,9 +7,9 @@
         <p class="text-xs text-slate-500 font-medium">Tạo mã giảm giá theo phần trăm hoặc số tiền cố định, quy định giá trị đơn hàng tối thiểu.</p>
       </div>
       <button
-        @click="openCreateForm"
         type="button"
         class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
+        @click="openCreateForm"
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -71,8 +71,8 @@
       <template #cell(actions)="{ row }">
         <button
           type="button"
-          @click="deletePromotion(row._id)"
           class="text-red-500 hover:text-red-700 font-bold cursor-pointer"
+          @click="deletePromotion(row._id)"
         >
           Xóa
         </button>
@@ -90,7 +90,7 @@
       :loading="saving"
       @confirm="handleSubmit"
     >
-      <form @submit.prevent="handleSubmit" class="space-y-4">
+      <form class="space-y-4" @submit.prevent="handleSubmit">
         <div>
           <label class="text-xs font-bold text-slate-700">Mã giảm giá (Coupon Code) *</label>
           <input

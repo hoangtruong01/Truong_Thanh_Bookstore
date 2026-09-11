@@ -3,9 +3,9 @@
     <!-- Chat Button -->
     <button
       v-if="!isOpen"
-      @click="isOpen = true"
       class="bg-[#dc2626] hover:bg-[#b91c1c] text-white p-4 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center cursor-pointer group relative"
       aria-label="Mở chat hỗ trợ"
+      @click="isOpen = true"
     >
       <span class="absolute -top-1 -right-1 flex h-3 w-3">
         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -38,8 +38,8 @@
           </div>
         </div>
         <button
-          @click="isOpen = false"
           class="text-white/80 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-lg cursor-pointer"
+          @click="isOpen = false"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -88,8 +88,8 @@
           <button
             v-for="faq in faqOptions"
             :key="faq.id"
-            @click="selectFaq(faq)"
             class="text-left text-xs bg-white hover:bg-slate-100 text-slate-700 font-bold px-3 py-2 rounded-xl border border-slate-200 transition-all cursor-pointer hover:border-[#dc2626]/40"
+            @click="selectFaq(faq)"
           >
             💡 {{ faq.question }}
           </button>
@@ -97,7 +97,7 @@
       </div>
 
       <!-- Chat Input -->
-      <form @submit.prevent="sendMessage" class="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+      <form class="p-3 bg-white border-t border-slate-200 flex items-center gap-2" @submit.prevent="sendMessage">
         <input
           v-model="inputText"
           type="text"

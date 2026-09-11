@@ -34,9 +34,9 @@
           <button 
             v-if="order.orderStatus === 'PENDING'"
             type="button"
-            @click="handleCancelOrder"
             :disabled="isCancelling"
             class="border border-red-200 text-red-600 hover:bg-red-50 font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            @click="handleCancelOrder"
           >
             <svg v-if="isCancelling" class="animate-spin h-3.5 w-3.5 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -46,9 +46,9 @@
           </button>
           <button 
             type="button"
-            @click="downloadInvoice"
             :disabled="isDownloadingInvoice"
             class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+            @click="downloadInvoice"
           >
             <svg v-if="isDownloadingInvoice" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -77,20 +77,59 @@
 
           <div class="space-y-2">
             <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider">Thanh toán & Vận chuyển</h4>
-            <div class="text-xs text-slate-600 space-y-1">
+            <div class="text-xs text-slate-600 space-y-1.5">
               <p><strong>Phương thức:</strong> {{ getPaymentMethodLabel(order.paymentMethod) }}</p>
-              <p>
+              <div class="flex items-center gap-2 py-0.5">
                 <strong>Trạng thái thanh toán:</strong>
-                <span :class="['ml-1 font-bold', order.paymentStatus === 'PAID' ? 'text-green-600' : 'text-amber-600']">
-                  {{ order.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán' }}
+                <span :class="['px-2.5 py-0.5 rounded-full text-[11px] font-bold border', getPaymentStatusBadgeStyle(order.paymentStatus)]">
+                  {{ getPaymentStatusLabel(order.paymentStatus) }}
                 </span>
-              </p>
+              </div>
               <p v-if="order.promotionCode"><strong>Mã giảm giá đã dùng:</strong> <span class="font-mono text-red-600 font-bold">{{ order.promotionCode }}</span></p>
               <p v-if="order.trackingCode">
                 <strong>Mã vận đơn {{ order.shippingProvider }}:</strong>
                 <span class="ml-1 font-mono font-bold text-blue-700">{{ order.trackingCode }}</span>
               </p>
               <p v-if="order.shippingStatus"><strong>Trạng thái đối tác:</strong> {{ order.shippingStatus }}</p>
+
+              <!-- Retry Payment / Payment Instructions for Pending Online Orders -->
+              <div v-if="order.orderStatus === 'PENDING' && order.paymentStatus !== 'PAID' && order.paymentMethod !== 'COD'" class="mt-3 pt-3 border-t border-slate-200/60 space-y-2">
+                <div v-if="order.paymentMethod === 'BANK_TRANSFER'" class="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+                  <p class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <span>🏦</span> Hướng dẫn chuyển khoản ngân hàng
+                  </p>
+                  <div class="text-[11px] text-slate-700 space-y-1">
+                    <p>Ngân hàng: <strong>MB Bank (Quân Đội)</strong></p>
+                    <p>Số tài khoản: <strong class="font-mono text-slate-900">0345678999</strong></p>
+                    <p>Chủ tài khoản: <strong>NHÀ SÁCH TRƯỜNG THÀNH</strong></p>
+                    <p>Số tiền: <strong class="text-red-600 font-bold">{{ formatCurrency(order.total) }}</strong></p>
+                    <p>Nội dung CK: <strong class="font-mono text-red-600 bg-red-100/60 px-1 py-0.5 rounded">{{ order.orderCode }}</strong></p>
+                  </div>
+                  <div class="mt-2 text-center">
+                    <img
+                      :src="`https://img.vietqr.io/image/MB-0345678999-compact2.png?amount=${order.total}&addInfo=${encodeURIComponent(order.orderCode)}&accountName=TRUONG%20THANH%20BOOKSTORE`"
+                      alt="VietQR Chuyển Khoản"
+                      class="w-36 h-36 mx-auto rounded-lg border border-slate-200 bg-white p-1"
+                    />
+                    <p class="text-[10px] text-slate-400 mt-1">Quét mã QR bằng ứng dụng ngân hàng</p>
+                  </div>
+                </div>
+
+                <div v-else class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    :disabled="isRetryingPayment"
+                    class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    @click="handleRetryOnlinePayment"
+                  >
+                    <svg v-if="isRetryingPayment" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>{{ isRetryingPayment ? 'Đang kết nối...' : 'Thanh toán trực tuyến ngay' }}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -114,8 +153,8 @@
             <p class="text-[10.5px] text-slate-500">Gửi liên kết theo dõi đơn hàng này cho bạn bè hoặc người thân của bạn.</p>
             <div class="flex gap-2">
               <button 
-                @click="copyTrackingLink"
                 class="bg-white hover:bg-slate-100 text-slate-700 font-bold py-1.5 px-3 border border-slate-200 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                @click="copyTrackingLink"
               >
                 <span>🔗</span> Sao chép liên kết
               </button>
@@ -205,8 +244,10 @@ import { formatCurrency, formatDate, getStatusLabel } from '@/utils/helpers'
 import type { Order } from '@/types'
 import { computed } from 'vue'
 import { useToast } from 'vue-toastification'
+import { paymentService } from '@/services/payment.service'
 
 const toast = useToast()
+const isRetryingPayment = ref(false)
 
 const trackingUrl = computed(() => {
   if (!order.value) return ''
@@ -223,7 +264,7 @@ const isGuestOrder = computed(() => route.name === 'GuestOrderDetail')
 const guestAccessToken = computed(() =>
   localStorage.getItem(`guest-order-token:${route.params.id as string}`) || '',
 )
-const order = ref<any | null>(null)
+const order = ref<Order | any | null>(null)
 const loading = ref(true)
 const error = ref('')
 
@@ -231,8 +272,56 @@ function getPaymentMethodLabel(method: string) {
   switch (method) {
     case 'COD': return 'Thanh toán khi nhận hàng (COD)'
     case 'BANK_TRANSFER': return 'Chuyển khoản ngân hàng'
+    case 'VNPAY': return 'Cổng thanh toán VNPay'
+    case 'MOMO': return 'Ví điện tử MoMo'
     case 'EWALLET': return 'Ví điện tử'
-    default: return method
+    default: return method || 'Chưa xác định'
+  }
+}
+
+function getPaymentStatusLabel(status: string) {
+  switch (status) {
+    case 'PAID': return 'Đã thanh toán'
+    case 'UNPAID':
+    case 'PENDING': return 'Chưa thanh toán'
+    case 'FAILED': return 'Thanh toán thất bại'
+    case 'REFUNDED': return 'Đã hoàn tiền'
+    default: return status || 'Chưa thanh toán'
+  }
+}
+
+function getPaymentStatusBadgeStyle(status: string) {
+  switch (status) {
+    case 'PAID': return 'bg-green-50 text-green-700 border-green-200'
+    case 'UNPAID':
+    case 'PENDING': return 'bg-amber-50 text-amber-700 border-amber-200'
+    case 'FAILED': return 'bg-red-50 text-red-700 border-red-200'
+    case 'REFUNDED': return 'bg-purple-50 text-purple-700 border-purple-200'
+    default: return 'bg-slate-50 text-slate-700 border-slate-200'
+  }
+}
+
+async function handleRetryOnlinePayment() {
+  if (!order.value || isRetryingPayment.value) return
+  isRetryingPayment.value = true
+  try {
+    const returnUrl = window.location.href
+    const res: any = await paymentService.create(
+      order.value._id,
+      order.value.paymentMethod,
+      returnUrl,
+    )
+    const action = res.data?.data?.action || res.data?.action
+    if (action?.instructions) {
+      toast.info(action.instructions, { timeout: 10000 })
+    }
+    if (action?.redirectUrl) {
+      window.location.assign(action.redirectUrl)
+    }
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Không thể khởi tạo cổng thanh toán. Vui lòng thử lại sau.')
+  } finally {
+    isRetryingPayment.value = false
   }
 }
 
@@ -269,7 +358,7 @@ async function downloadInvoice() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-  } catch (err) {
+  } catch (_err) {
     toast.error('Không thể tải hóa đơn. Vui lòng thử lại sau.')
   } finally {
     isDownloadingInvoice.value = false

@@ -10,23 +10,23 @@
         <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
           <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
             <span>Danh mục</span>
-            <span v-if="selectedCategory" @click="selectCategory('')" class="text-[10px] font-bold text-[#dc2626] hover:underline cursor-pointer">
+            <span v-if="selectedCategory" class="text-[10px] font-bold text-[#dc2626] hover:underline cursor-pointer" @click="selectCategory('')">
               Xóa chọn
             </span>
           </h3>
           <div class="space-y-1 max-h-64 overflow-y-auto pr-1">
             <button
-              @click="selectCategory('')"
               class="w-full text-left text-xs font-bold py-1.5 px-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-between"
               :class="[!selectedCategory ? 'bg-red-50 text-[#dc2626]' : 'text-slate-600 hover:bg-slate-50']"
+              @click="selectCategory('')"
             >
               <span>Tất cả sản phẩm</span>
             </button>
             <div v-for="cat in categories" :key="cat._id" class="space-y-1">
               <button
-                @click="selectCategory(cat._id)"
                 class="w-full text-left text-xs font-semibold py-1.5 px-2.5 rounded-xl transition-all cursor-pointer flex justify-between items-center"
                 :class="[selectedCategory === cat._id ? 'bg-red-50 text-[#dc2626] font-bold' : 'text-slate-600 hover:bg-slate-50']"
+                @click="selectCategory(cat._id)"
               >
                 <span class="truncate">{{ cat.name }}</span>
               </button>
@@ -41,7 +41,7 @@
               <span class="w-1.5 h-3 bg-[#dc2626] rounded-full"></span>
               {{ activeSubOptions.label }}
             </span>
-            <span v-if="selectedSubOption" @click="toggleSubOption('')" class="text-[10px] font-bold text-slate-400 hover:text-[#dc2626] cursor-pointer">
+            <span v-if="selectedSubOption" class="text-[10px] font-bold text-slate-400 hover:text-[#dc2626] cursor-pointer" @click="toggleSubOption('')">
               Xóa
             </span>
           </h3>
@@ -51,13 +51,13 @@
             <button
               v-for="opt in activeSubOptions.options"
               :key="opt"
-              @click="toggleSubOption(opt)"
               class="h-8 text-[11px] font-bold rounded-xl border transition-all cursor-pointer flex items-center justify-center"
               :class="[
                 selectedSubOption === opt
                   ? 'bg-[#dc2626] border-[#dc2626] text-white shadow-xs font-extrabold'
                   : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-100'
               ]"
+              @click="toggleSubOption(opt)"
             >
               {{ opt.replace('Lớp ', '') }}
             </button>
@@ -68,13 +68,13 @@
             <button
               v-for="opt in activeSubOptions.options"
               :key="opt"
-              @click="toggleSubOption(opt)"
               class="px-2.5 py-1 text-[11px] font-semibold rounded-full border transition-all cursor-pointer flex items-center justify-center"
               :class="[
                 selectedSubOption === opt
                   ? 'bg-[#dc2626] border-[#dc2626] text-white shadow-xs font-bold'
                   : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-100'
               ]"
+              @click="toggleSubOption(opt)"
             >
               {{ opt }}
             </button>
@@ -90,7 +90,6 @@
             <button
               v-for="preset in pricePresets"
               :key="preset.label"
-              @click="applyPricePreset(preset.min, preset.max)"
               type="button"
               class="px-2 py-1.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer text-center truncate"
               :class="[
@@ -98,6 +97,7 @@
                   ? 'bg-red-50 border-red-200 text-[#dc2626] font-extrabold'
                   : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
               ]"
+              @click="applyPricePreset(preset.min, preset.max)"
             >
               {{ preset.label }}
             </button>
@@ -125,8 +125,8 @@
               </div>
             </div>
             <button
-              @click="applyFilters"
               class="w-full bg-slate-900 hover:bg-[#dc2626] text-white font-bold py-2 px-3 rounded-xl text-xs transition-all cursor-pointer shadow-xs hover:shadow-md"
+              @click="applyFilters"
             >
               Áp dụng giá
             </button>
@@ -139,9 +139,9 @@
           <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
             <label v-for="br in availableBrands" :key="br" class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
               <input 
+                v-model="selectedBrands" 
                 type="checkbox" 
-                :value="br" 
-                v-model="selectedBrands"
+                :value="br"
                 class="rounded border-slate-300 text-[#dc2626] focus:ring-[#dc2626] w-3.5 h-3.5 cursor-pointer" 
               />
               <span class="truncate">{{ br }}</span>
@@ -155,9 +155,9 @@
           <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
             <label v-for="au in availableAuthors" :key="au" class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
               <input 
+                v-model="selectedAuthors" 
                 type="checkbox" 
-                :value="au" 
-                v-model="selectedAuthors"
+                :value="au"
                 class="rounded border-slate-300 text-[#dc2626] focus:ring-[#dc2626] w-3.5 h-3.5 cursor-pointer" 
               />
               <span class="truncate">{{ au }}</span>
@@ -171,9 +171,9 @@
           <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
             <label v-for="pub in availablePublishers" :key="pub" class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
               <input 
+                v-model="selectedPublishers" 
                 type="checkbox" 
-                :value="pub" 
-                v-model="selectedPublishers"
+                :value="pub"
                 class="rounded border-slate-300 text-[#dc2626] focus:ring-[#dc2626] w-3.5 h-3.5 cursor-pointer" 
               />
               <span class="truncate">{{ pub }}</span>
@@ -188,9 +188,9 @@
             <button 
               v-for="stars in [5, 4, 3]" 
               :key="stars"
-              @click="toggleRatingFilter(stars)"
               class="w-full text-left text-xs font-bold py-1.5 px-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
               :class="[selectedRating === stars ? 'bg-red-50 text-[#dc2626] border border-red-200/60' : 'text-slate-600 border border-transparent hover:bg-slate-50']"
+              @click="toggleRatingFilter(stars)"
             >
               <span class="text-amber-400 text-sm">★</span>
               <span>Từ {{ stars }} sao trở lên</span>
@@ -202,19 +202,19 @@
         <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
           <label class="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
             <input 
-              type="checkbox" 
               v-model="onlyInStock" 
-              @change="applyFilters"
-              class="rounded border-slate-300 text-[#dc2626] focus:ring-[#dc2626] w-3.5 h-3.5 cursor-pointer" 
+              type="checkbox" 
+              class="rounded border-slate-300 text-[#dc2626] focus:ring-[#dc2626] w-3.5 h-3.5 cursor-pointer"
+              @change="applyFilters" 
             />
             <span>Chỉ sản phẩm còn hàng</span>
           </label>
           <label class="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
             <input 
-              type="checkbox" 
               v-model="isDiscounted" 
-              @change="applyFilters"
-              class="rounded border-slate-300 text-[#dc2626] focus:ring-[#dc2626] w-3.5 h-3.5 cursor-pointer" 
+              type="checkbox" 
+              class="rounded border-slate-300 text-[#dc2626] focus:ring-[#dc2626] w-3.5 h-3.5 cursor-pointer"
+              @change="applyFilters" 
             />
             <span>Đang khuyến mãi 🔥</span>
           </label>
@@ -230,61 +230,61 @@
           <!-- Category Tag -->
           <span v-if="selectedCategoryName" class="inline-flex items-center gap-1 bg-red-50 text-[#dc2626] text-xs font-bold px-2.5 py-1 rounded-lg border border-red-200/60">
             Danh mục: {{ selectedCategoryName }}
-            <button @click="selectCategory('')" class="hover:text-red-800 ml-0.5 cursor-pointer">✕</button>
+            <button class="hover:text-red-800 ml-0.5 cursor-pointer" @click="selectCategory('')">✕</button>
           </span>
 
           <!-- Search Query Tag -->
           <span v-if="searchQuery" class="inline-flex items-center gap-1 bg-slate-100 text-slate-800 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-200">
             Từ khóa: "{{ searchQuery }}"
-            <button @click="clearSearch" class="hover:text-red-600 ml-0.5 cursor-pointer">✕</button>
+            <button class="hover:text-red-600 ml-0.5 cursor-pointer" @click="clearSearch">✕</button>
           </span>
 
           <!-- Price Tag -->
           <span v-if="minPrice || maxPrice" class="inline-flex items-center gap-1 bg-slate-100 text-slate-800 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-200">
             Giá: {{ formatPriceRangeText() }}
-            <button @click="clearPriceFilter" class="hover:text-red-600 ml-0.5 cursor-pointer">✕</button>
+            <button class="hover:text-red-600 ml-0.5 cursor-pointer" @click="clearPriceFilter">✕</button>
           </span>
 
           <!-- Brand Tags -->
           <span v-for="br in selectedBrands" :key="br" class="inline-flex items-center gap-1 bg-slate-100 text-slate-800 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-200">
             Thương hiệu: {{ br }}
-            <button @click="removeBrand(br)" class="hover:text-red-600 ml-0.5 cursor-pointer">✕</button>
+            <button class="hover:text-red-600 ml-0.5 cursor-pointer" @click="removeBrand(br)">✕</button>
           </span>
 
           <!-- Author Tags -->
           <span v-for="au in selectedAuthors" :key="au" class="inline-flex items-center gap-1 bg-slate-100 text-slate-800 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-200">
             Tác giả: {{ au }}
-            <button @click="removeAuthor(au)" class="hover:text-red-600 ml-0.5 cursor-pointer">✕</button>
+            <button class="hover:text-red-600 ml-0.5 cursor-pointer" @click="removeAuthor(au)">✕</button>
           </span>
 
           <!-- Publisher Tags -->
           <span v-for="pub in selectedPublishers" :key="pub" class="inline-flex items-center gap-1 bg-slate-100 text-slate-800 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-200">
             NXB: {{ pub }}
-            <button @click="removePublisher(pub)" class="hover:text-red-600 ml-0.5 cursor-pointer">✕</button>
+            <button class="hover:text-red-600 ml-0.5 cursor-pointer" @click="removePublisher(pub)">✕</button>
           </span>
 
           <!-- Rating Tag -->
           <span v-if="selectedRating" class="inline-flex items-center gap-1 bg-slate-100 text-slate-800 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-200">
             ⭐ ≥ {{ selectedRating }} sao
-            <button @click="selectedRating = null; applyFilters()" class="hover:text-red-600 ml-0.5 cursor-pointer">✕</button>
+            <button class="hover:text-red-600 ml-0.5 cursor-pointer" @click="selectedRating = null; applyFilters()">✕</button>
           </span>
 
           <!-- Stock Tag -->
           <span v-if="onlyInStock" class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-lg border border-emerald-200">
             Còn hàng
-            <button @click="onlyInStock = false; applyFilters()" class="hover:text-emerald-900 ml-0.5 cursor-pointer">✕</button>
+            <button class="hover:text-emerald-900 ml-0.5 cursor-pointer" @click="onlyInStock = false; applyFilters()">✕</button>
           </span>
 
           <!-- Deals Tag -->
           <span v-if="isDiscounted" class="inline-flex items-center gap-1 bg-orange-50 text-orange-700 text-xs font-bold px-2.5 py-1 rounded-lg border border-orange-200">
             Đang giảm giá
-            <button @click="isDiscounted = false; applyFilters()" class="hover:text-orange-900 ml-0.5 cursor-pointer">✕</button>
+            <button class="hover:text-orange-900 ml-0.5 cursor-pointer" @click="isDiscounted = false; applyFilters()">✕</button>
           </span>
 
           <!-- Clear All Button -->
           <button
-            @click="clearAllFilters"
             class="text-xs font-extrabold text-[#dc2626] hover:underline ml-auto cursor-pointer"
+            @click="clearAllFilters"
           >
             Xóa tất cả bộ lọc
           </button>
@@ -301,8 +301,8 @@
             <span class="text-xs text-slate-500 font-bold whitespace-nowrap">Sắp xếp theo:</span>
             <select
               v-model="sortBy"
-              @change="applyFilters"
               class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#dc2626] cursor-pointer"
+              @change="applyFilters"
             >
               <option value="newest">✨ Mới nhất</option>
               <option value="price_asc">💵 Giá: Thấp đến Cao</option>
@@ -331,8 +331,8 @@
                 v-for="kw in ['Bút bi', 'Sách giáo khoa', 'Tập vở', 'Deli', 'Thiên Long']"
                 :key="kw"
                 type="button"
-                @click="quickSearch(kw)"
                 class="bg-slate-100 hover:bg-red-50 hover:text-[#dc2626] text-slate-700 text-xs font-bold px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+                @click="quickSearch(kw)"
               >
                 {{ kw }}
               </button>
@@ -353,9 +353,9 @@
           <!-- Pagination -->
           <div v-if="totalPages > 1" class="flex justify-center items-center gap-2 pt-4">
             <button
-              @click="changePage(currentPage - 1)"
               :disabled="currentPage === 1"
               class="w-9 h-9 border border-slate-200 rounded-xl flex items-center justify-center hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              @click="changePage(currentPage - 1)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
             </button>
@@ -364,18 +364,18 @@
               <button
                 v-for="p in visiblePages"
                 :key="p"
-                @click="changePage(p)"
                 class="w-9 h-9 text-xs font-bold rounded-xl transition-all cursor-pointer"
                 :class="[p === currentPage ? 'bg-[#dc2626] text-white shadow-xs' : 'hover:bg-slate-100 text-slate-700 border border-slate-200']"
+                @click="changePage(p)"
               >
                 {{ p }}
               </button>
             </div>
 
             <button
-              @click="changePage(currentPage + 1)"
               :disabled="currentPage === totalPages"
               class="w-9 h-9 border border-slate-200 rounded-xl flex items-center justify-center hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              @click="changePage(currentPage + 1)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
             </button>

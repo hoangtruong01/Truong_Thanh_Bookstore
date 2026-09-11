@@ -48,12 +48,12 @@
           <tr
             v-for="(row, index) in items"
             :key="getRowKey(row, index)"
-            @click="onRowClick(row, index)"
             :class="[
               'transition-colors',
               clickable ? 'hover:bg-slate-50/70 cursor-pointer' : '',
               selectedRowKey && getRowKey(row, index) === selectedRowKey ? 'bg-red-50/40' : ''
             ]"
+            @click="onRowClick(row, index)"
           >
             <td
               v-for="col in columns"
@@ -84,9 +84,9 @@
       <div class="flex items-center gap-1.5">
         <button
           type="button"
-          @click="changePage(currentPage - 1)"
           :disabled="currentPage <= 1"
           class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-bold disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+          @click="changePage(currentPage - 1)"
         >
           Trước
         </button>
@@ -95,9 +95,9 @@
         </span>
         <button
           type="button"
-          @click="changePage(currentPage + 1)"
           :disabled="currentPage >= totalPages"
           class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-bold disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+          @click="changePage(currentPage + 1)"
         >
           Sau
         </button>

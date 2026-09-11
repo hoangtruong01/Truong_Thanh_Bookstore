@@ -9,8 +9,8 @@
         </p>
       </div>
       <button
-        @click="openCreateModal"
         class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-extrabold text-xs py-2.5 px-5 rounded-xl transition-all flex items-center gap-2 shadow-xs cursor-pointer"
+        @click="openCreateModal"
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -24,11 +24,11 @@
       <button
         v-for="pos in positionOptions"
         :key="pos.value"
-        @click="filterPosition = pos.value"
         class="text-xs font-bold px-4 py-2 rounded-lg border transition-all cursor-pointer"
         :class="filterPosition === pos.value
           ? 'bg-[#dc2626] text-white border-[#dc2626]'
           : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'"
+        @click="filterPosition = pos.value"
       >
         {{ pos.label }}
       </button>
@@ -111,9 +111,9 @@
         <!-- Actions -->
         <div class="p-4 pt-0 border-t border-slate-50 flex items-center justify-between mt-auto">
           <button
-            @click="toggleActive(banner)"
             class="text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
             :class="banner.isActive ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+            @click="toggleActive(banner)"
           >
             <span>{{ banner.isActive ? '👁️ Đang hiện' : '🙈 Đã ẩn' }}</span>
           </button>
@@ -122,9 +122,9 @@
             <!-- Preview Button (Especially useful for entry popups) -->
             <button
               v-if="banner.position === 'entry_popup'"
-              @click="openPreviewModal(banner)"
               class="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer"
               title="Xem thử Popup như trên storefront"
+              @click="openPreviewModal(banner)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
@@ -134,9 +134,9 @@
 
             <!-- Edit -->
             <button
-              @click="openEditModal(banner)"
               class="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer"
               title="Sửa banner"
+              @click="openEditModal(banner)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
@@ -144,9 +144,9 @@
             </button>
             <!-- Delete -->
             <button
-              @click="confirmDelete(banner)"
               class="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer"
               title="Xóa banner"
+              @click="confirmDelete(banner)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -163,8 +163,8 @@
       <h3 class="text-lg font-extrabold text-slate-800">Chưa có banner nào</h3>
       <p class="text-xs text-slate-500 mt-1 font-medium">Bắt đầu thêm banner hoặc popup quảng cáo cho website</p>
       <button
-        @click="openCreateModal"
         class="mt-4 bg-[#dc2626] hover:bg-[#b91c1c] text-white font-extrabold text-xs py-2.5 px-5 rounded-xl transition-all cursor-pointer"
+        @click="openCreateModal"
       >
         + Thêm Banner / Popup đầu tiên
       </button>
@@ -172,7 +172,7 @@
 
     <!-- Modal Create/Edit Banner -->
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div @click="showModal = false" class="absolute inset-0 bg-slate-900/50 backdrop-blur-xs"></div>
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-xs" @click="showModal = false"></div>
       <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
         <!-- Modal Header -->
         <div class="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 rounded-t-2xl z-10 flex items-center justify-between">
@@ -184,7 +184,7 @@
               Quảng cáo tự động xuất hiện phủ phía trên website khi khách hàng truy cập
             </p>
           </div>
-          <button @click="showModal = false" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+          <button class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer" @click="showModal = false">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
@@ -198,8 +198,8 @@
             <label class="block text-xs font-extrabold text-slate-700 mb-1.5">Vị trí hiển thị *</label>
             <select
               v-model="form.position"
-              @change="onPositionChange"
               class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] transition-all bg-white cursor-pointer"
+              @change="onPositionChange"
             >
               <option v-for="pos in positionOptions.slice(1)" :key="pos.value" :value="pos.value">
                 {{ pos.label }}
@@ -261,17 +261,17 @@
                 <!-- Edit / Remove Actions -->
                 <div class="absolute bottom-2 right-2 flex items-center gap-1.5">
                   <button
-                    @click="openCropperWithCurrentImage"
                     type="button"
                     class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-md transition-all cursor-pointer"
+                    @click="openCropperWithCurrentImage"
                   >
                     ✂️ Cắt lại
                   </button>
                   <button
-                    @click="form.imageUrl = ''; rawImageSrc = ''"
                     type="button"
                     class="bg-red-500 hover:bg-red-600 text-white p-1 rounded-lg shadow-md transition-all cursor-pointer"
                     title="Xóa ảnh"
+                    @click="form.imageUrl = ''; rawImageSrc = ''"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -294,16 +294,16 @@
 
                 <div class="absolute top-3 right-3 flex items-center gap-1.5 z-10">
                   <button
-                    @click="openCropperWithCurrentImage"
                     type="button"
                     class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-md transition-all flex items-center gap-1 cursor-pointer"
+                    @click="openCropperWithCurrentImage"
                   >
                     ✂️ Cắt / Căn chỉnh lại
                   </button>
                   <button
-                    @click="form.imageUrl = ''; rawImageSrc = ''"
                     type="button"
                     class="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-lg shadow-md transition-all cursor-pointer"
+                    @click="form.imageUrl = ''; rawImageSrc = ''"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -378,21 +378,21 @@
                   class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer text-xs font-bold transition-all"
                   :class="form.frequency === 'EVERY_VISIT' ? 'border-[#dc2626] bg-red-50/50 text-red-700 shadow-xs' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
                 >
-                  <input type="radio" v-model="form.frequency" value="EVERY_VISIT" class="accent-[#dc2626]" />
+                  <input v-model="form.frequency" type="radio" value="EVERY_VISIT" class="accent-[#dc2626]" />
                   <span>Mỗi lần truy cập</span>
                 </label>
                 <label
                   class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer text-xs font-bold transition-all"
                   :class="form.frequency === 'ONCE_PER_SESSION' ? 'border-[#dc2626] bg-red-50/50 text-red-700 shadow-xs' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
                 >
-                  <input type="radio" v-model="form.frequency" value="ONCE_PER_SESSION" class="accent-[#dc2626]" />
+                  <input v-model="form.frequency" type="radio" value="ONCE_PER_SESSION" class="accent-[#dc2626]" />
                   <span>Một lần / phiên</span>
                 </label>
                 <label
                   class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer text-xs font-bold transition-all"
                   :class="form.frequency === 'ONCE_PER_DAY' ? 'border-[#dc2626] bg-red-50/50 text-red-700 shadow-xs' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
                 >
-                  <input type="radio" v-model="form.frequency" value="ONCE_PER_DAY" class="accent-[#dc2626]" />
+                  <input v-model="form.frequency" type="radio" value="ONCE_PER_DAY" class="accent-[#dc2626]" />
                   <span>Một lần / ngày</span>
                 </label>
               </div>
@@ -425,10 +425,10 @@
                 <span class="text-[10px] text-slate-400 font-medium">Hiện nút Đóng (✕) và hỗ trợ phím ESC</span>
               </div>
               <button
-                @click="form.closeable = !form.closeable"
                 type="button"
                 class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
                 :class="form.closeable ? 'bg-emerald-500' : 'bg-slate-300'"
+                @click="form.closeable = !form.closeable"
               >
                 <div
                   class="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-xs transition-transform"
@@ -461,10 +461,10 @@
               </span>
             </div>
             <button
-              @click="form.isActive = !form.isActive"
               type="button"
               class="relative w-11 h-6 rounded-full transition-colors cursor-pointer"
               :class="form.isActive ? 'bg-emerald-500' : 'bg-slate-300'"
+              @click="form.isActive = !form.isActive"
             >
               <div
                 class="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-xs transition-transform"
@@ -488,17 +488,17 @@
         <!-- Modal Footer -->
         <div class="sticky bottom-0 bg-white border-t border-slate-100 px-6 py-4 rounded-b-2xl flex items-center justify-end gap-3">
           <button
-            @click="showModal = false"
             type="button"
             class="px-5 py-2.5 text-xs font-extrabold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all cursor-pointer"
+            @click="showModal = false"
           >
             Hủy
           </button>
           <button
-            @click="saveBanner"
             type="button"
             :disabled="saving || !form.title || !form.imageUrl"
             class="px-5 py-2.5 text-xs font-extrabold text-white bg-[#dc2626] hover:bg-[#b91c1c] rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            @click="saveBanner"
           >
             <svg v-if="saving" class="animate-spin w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -523,9 +523,9 @@
             👁️ Đang xem trước Popup ngoài Storefront
           </span>
           <button
-            @click="closePreviewModal"
             class="w-10 h-10 rounded-full bg-white/20 hover:bg-white text-white hover:text-slate-900 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all cursor-pointer"
             title="Đóng xem trước"
+            @click="closePreviewModal"
           >
             ✕
           </button>
@@ -543,8 +543,8 @@
         <!-- CTA Button -->
         <div class="mt-4 flex items-center justify-center w-full">
           <button
-            @click="closePreviewModal"
             class="bg-[#dc2626] text-white font-black text-sm sm:text-base px-10 py-3.5 rounded-2xl shadow-xl hover:bg-[#b91c1c] transition-all flex items-center gap-2 cursor-pointer"
+            @click="closePreviewModal"
           >
             <span>{{ previewingPopup.ctaLabel || 'MỞ / XEM NGAY' }}</span>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
@@ -557,7 +557,7 @@
 
     <!-- Interactive Image Cropper Modal -->
     <div v-if="showCropperModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div @click="closeCropperModal" class="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"></div>
+      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-xs" @click="closeCropperModal"></div>
       <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
         <!-- Header -->
         <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
@@ -569,7 +569,7 @@
               Vị trí: <span class="font-bold text-amber-400">{{ getPositionLabel(form.position) }}</span> — Tỷ lệ chuẩn: <span class="font-bold text-emerald-400">{{ currentPosInfo.ratioText }}</span>
             </p>
           </div>
-          <button @click="closeCropperModal" class="text-slate-400 hover:text-white transition-colors cursor-pointer">
+          <button class="text-slate-400 hover:text-white transition-colors cursor-pointer" @click="closeCropperModal">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
@@ -583,9 +583,9 @@
             <div class="text-xs font-bold text-slate-600 flex items-center gap-2">
               <span>Khung xem trước trực tiếp (Live Canvas):</span>
               <button
-                @click="autoFitCrop"
                 type="button"
                 class="text-[11px] font-extrabold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg hover:bg-amber-200 transition-all cursor-pointer"
+                @click="autoFitCrop"
               >
                 🪄 Tự động cắt khít tâm ảnh (Auto Cover)
               </button>
@@ -611,16 +611,16 @@
             <div>
               <div class="flex items-center justify-between text-xs font-extrabold text-slate-700 mb-1">
                 <span>🔍 Phóng to / Thu nhỏ: {{ Math.round(cropZoom * 100) }}%</span>
-                <button @click="cropZoom = 1; updateCanvas()" class="text-[10px] text-blue-600 hover:underline cursor-pointer">Đặt lại 100%</button>
+                <button class="text-[10px] text-blue-600 hover:underline cursor-pointer" @click="cropZoom = 1; updateCanvas()">Đặt lại 100%</button>
               </div>
               <input
                 v-model.number="cropZoom"
-                @input="updateCanvas"
                 type="range"
                 min="0.5"
                 max="3"
                 step="0.05"
                 class="w-full accent-[#dc2626] cursor-pointer"
+                @input="updateCanvas"
               />
             </div>
 
@@ -630,24 +630,24 @@
                 <span class="block text-xs font-bold text-slate-600 mb-1">↔️ Dịch chuyển Ngang (X)</span>
                 <input
                   v-model.number="cropOffsetX"
-                  @input="updateCanvas"
                   type="range"
                   min="-300"
                   max="300"
                   step="1"
                   class="w-full accent-slate-700 cursor-pointer"
+                  @input="updateCanvas"
                 />
               </div>
               <div>
                 <span class="block text-xs font-bold text-slate-600 mb-1">↕️ Dịch chuyển Dọc (Y)</span>
                 <input
                   v-model.number="cropOffsetY"
-                  @input="updateCanvas"
                   type="range"
                   min="-300"
                   max="300"
                   step="1"
                   class="w-full accent-slate-700 cursor-pointer"
+                  @input="updateCanvas"
                 />
               </div>
             </div>
@@ -663,16 +663,16 @@
 
           <div class="flex items-center gap-3">
             <button
-              @click="closeCropperModal"
               type="button"
               class="px-4 py-2 text-xs font-extrabold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all cursor-pointer"
+              @click="closeCropperModal"
             >
               Hủy
             </button>
             <button
-              @click="applyCroppedImage"
               type="button"
               class="px-5 py-2 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              @click="applyCroppedImage"
             >
               <span>✂️</span> Xác nhận Cắt & Áp dụng Banner
             </button>
@@ -683,21 +683,21 @@
 
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteConfirm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div @click="showDeleteConfirm = false" class="absolute inset-0 bg-slate-900/50 backdrop-blur-xs"></div>
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-xs" @click="showDeleteConfirm = false"></div>
       <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
         <div class="text-4xl mb-3">🗑️</div>
         <h3 class="text-lg font-black text-slate-900">Xóa banner?</h3>
         <p class="text-xs text-slate-500 mt-1 font-medium">Hành động này không thể hoàn tác</p>
         <div class="flex gap-3 mt-6">
           <button
-            @click="showDeleteConfirm = false"
             class="flex-1 px-4 py-2.5 text-xs font-extrabold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all cursor-pointer"
+            @click="showDeleteConfirm = false"
           >
             Hủy
           </button>
           <button
-            @click="deleteBanner"
             class="flex-1 px-4 py-2.5 text-xs font-extrabold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all cursor-pointer"
+            @click="deleteBanner"
           >
             Xóa
           </button>
@@ -969,8 +969,8 @@ function updateCanvas() {
   const img = loadedImgElement
   const imgRatio = img.width / img.height
 
-  let renderW = canvasWidth
-  let renderH = canvasHeight
+  let renderW: number
+  let renderH: number
 
   if (imgRatio > targetRatio) {
     renderH = canvasHeight

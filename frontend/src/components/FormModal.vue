@@ -40,9 +40,9 @@
               </div>
               <button
                 type="button"
-                @click="handleClose"
                 class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer focus:outline-none"
                 aria-label="Đóng"
+                @click="handleClose"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -60,17 +60,17 @@
               <slot name="footer">
                 <button
                   type="button"
-                  @click="handleClose"
                   :disabled="loading"
                   class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                  @click="handleClose"
                 >
                   {{ cancelText }}
                 </button>
                 <button
                   type="button"
-                  @click="handleSubmit"
                   :disabled="loading"
                   class="px-5 py-2 text-xs font-bold bg-[#dc2626] hover:bg-[#b91c1c] text-white rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  @click="handleSubmit"
                 >
                   <svg v-if="loading" class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

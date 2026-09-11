@@ -9,7 +9,7 @@
         <p class="text-xs text-slate-400">Đăng ký để nhận những ưu đãi và mua sắm dễ dàng hơn</p>
       </div>
 
-      <form @submit.prevent="handleRegister" class="space-y-4">
+      <form class="space-y-4" @submit.prevent="handleRegister">
         <div>
           <label class="text-xs font-bold text-slate-700">Họ và tên</label>
           <input
@@ -27,13 +27,13 @@
             v-model="email"
             type="email"
             required
-            @blur="isEmailDirty = true"
-            @input="isEmailDirty = true"
             placeholder="name@example.com"
             :class="[
               'w-full mt-1 bg-slate-50 border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:bg-white',
               emailError ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-[#dc2626]'
             ]"
+            @blur="isEmailDirty = true"
+            @input="isEmailDirty = true"
           />
           <p v-if="emailError" class="text-[11px] text-red-500 mt-1 font-bold">{{ emailError }}</p>
         </div>
@@ -44,9 +44,9 @@
             type="tel"
             placeholder="09xx xxx xxx"
             maxlength="10"
-            @input="onPhoneInput"
             class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
             :class="{ 'border-red-300 ring-1 ring-red-300': phone && !isPhoneValid }"
+            @input="onPhoneInput"
           />
           <p v-if="phone && !isPhoneValid" class="text-[10px] text-red-500 mt-1 font-medium">
             Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0
@@ -59,19 +59,19 @@
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
               required
-              @blur="isPasswordDirty = true"
-              @input="isPasswordDirty = true"
               placeholder="Tối thiểu 8 ký tự, có chữ hoa, số"
               :class="[
                 'w-full bg-slate-50 border rounded-xl pl-4 pr-12 py-2.5 text-sm focus:outline-none focus:ring-2 focus:bg-white',
                 isPasswordDirty && passwordErrors.length > 0 ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:ring-[#dc2626]'
               ]"
+              @blur="isPasswordDirty = true"
+              @input="isPasswordDirty = true"
             />
             <button
               type="button"
-              @click="showPassword = !showPassword"
               class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer p-1 rounded"
               title="Hiện/Ẩn mật khẩu"
+              @click="showPassword = !showPassword"
             >
               <!-- Eye open icon -->
               <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">

@@ -10,8 +10,8 @@
       icon="🔍"
       title="Không tìm thấy sản phẩm"
       description="Sản phẩm bạn đang tìm kiếm có thể đã bị xóa hoặc không còn khả dụng trên hệ thống."
-      actionText="Trở về danh sách sản phẩm"
-      actionTo="/products"
+      action-text="Trở về danh sách sản phẩm"
+      action-to="/products"
     />
 
     <div v-else class="space-y-12">
@@ -54,8 +54,8 @@
                   width="720"
                   height="720"
                   sizes="(max-width: 768px) 100vw, 50vw"
-                  @error="handleImageError(img)"
-                  class="w-full h-full object-contain p-4 relative z-10 filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.06)] group-hover:scale-105 transition-transform duration-300" 
+                  class="w-full h-full object-contain p-4 relative z-10 filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.06)] group-hover:scale-105 transition-transform duration-300"
+                  @error="handleImageError(img)" 
                 />
                 <div v-else :class="`w-full h-full ${getProductPlaceholder(product ? product.name : '').gradient} flex items-center justify-center`">
                   <svg v-if="getProductPlaceholder(product ? product.name : '').icon === 'pencil'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 text-white/90">
@@ -110,11 +110,11 @@
             <button
               v-for="(img, idx) in product.images"
               :key="idx"
-              @click="selectProductImage(img)"
               class="w-20 h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-slate-50"
               :class="[selectedImage === img ? 'border-[#dc2626]' : 'border-transparent opacity-70 hover:opacity-100']"
+              @click="selectProductImage(img)"
             >
-              <img v-if="!brokenImages[img]" :src="img" @error="handleImageError(img)" class="w-full h-full object-contain" />
+              <img v-if="!brokenImages[img]" :src="img" class="w-full h-full object-contain" @error="handleImageError(img)" />
               <div v-else :class="`w-full h-full ${getProductPlaceholder(product ? product.name : '').gradient} flex items-center justify-center text-white text-[10px] font-bold`">
                 Ảnh {{ idx + 1 }}
               </div>
@@ -135,9 +135,9 @@
                 {{ product.name }}
               </h1>
               <button
-                @click="onWishlistToggle"
                 class="w-10 h-10 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center text-slate-500 hover:text-red-500 hover:scale-105 active:scale-95 transition-all shadow-xs cursor-pointer flex-shrink-0"
                 :title="isWishlisted ? 'Xóa khỏi danh sách yêu thích' : 'Lưu sản phẩm yêu thích'"
+                @click="onWishlistToggle"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -217,8 +217,8 @@
             <div v-if="categoryDetail.products.length > 5" class="flex justify-center pt-1 border-t border-slate-100/50">
               <button 
                 type="button"
-                @click="showAllComboProducts = !showAllComboProducts"
                 class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-extrabold text-[#dc2626] hover:bg-[#dc2626]/5 active:scale-95 transition-all cursor-pointer focus:outline-none"
+                @click="showAllComboProducts = !showAllComboProducts"
               >
                 <span>{{ showAllComboProducts ? 'Thu gọn danh sách' : `Xem thêm ${categoryDetail.products.length - 5} sản phẩm` }}</span>
                 <svg 
@@ -251,9 +251,9 @@
             <div class="flex items-center gap-3">
               <div class="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-1">
                 <button
-                  @click="changeQuantity(-1)"
                   :disabled="quantity <= 1"
                   class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white text-slate-500 font-bold transition-colors disabled:opacity-50"
+                  @click="changeQuantity(-1)"
                 >
                   -
                 </button>
@@ -266,9 +266,9 @@
                   @change="validateQuantity"
                 />
                 <button
-                  @click="changeQuantity(1)"
                   :disabled="quantity >= product.stock"
                   class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white text-slate-500 font-bold transition-colors disabled:opacity-50"
+                  @click="changeQuantity(1)"
                 >
                   +
                 </button>
@@ -279,9 +279,9 @@
           <!-- Action Buttons -->
           <div class="flex gap-4 pt-4">
             <button
-              @click="addToCart()"
               :disabled="isAddingToCart || product.stock === 0"
               class="flex-1 bg-white hover:bg-slate-50 text-[#dc2626] border-2 border-[#dc2626] font-bold py-3.5 px-4 rounded-2xl transition-colors flex items-center justify-center gap-2 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-300 disabled:cursor-not-allowed text-sm uppercase tracking-wider cursor-pointer"
+              @click="addToCart()"
             >
               <svg v-if="isAddingToCart" class="animate-spin h-5 w-5 text-[#dc2626]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -291,9 +291,9 @@
               <span>{{ isAddingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng' }}</span>
             </button>
             <button
-              @click="buyNow()"
               :disabled="isBuyingNow || product.stock === 0"
               class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-4 rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed text-sm uppercase tracking-wider cursor-pointer"
+              @click="buyNow()"
             >
               <svg v-if="isBuyingNow" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -311,7 +311,7 @@
             <p class="text-xs text-slate-500 leading-relaxed font-medium">
               Sản phẩm này hiện tại đang tạm hết hàng. Vui lòng để lại email của bạn, chúng tôi sẽ tự động gửi thư thông báo ngay khi có hàng trở lại!
             </p>
-            <form @submit.prevent="handleStockAlertSubscribe" class="flex gap-2">
+            <form class="flex gap-2" @submit.prevent="handleStockAlertSubscribe">
               <input
                 v-model="stockAlertEmail"
                 type="email"
@@ -340,20 +340,20 @@
             </h3>
             <div class="flex flex-wrap gap-2.5">
               <button 
-                @click="shareOnFacebook"
                 class="bg-[#1877F2] text-white font-bold py-2 px-4 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer hover:opacity-90 active:scale-95 transition-all"
+                @click="shareOnFacebook"
               >
                 <span>📘</span> Facebook
               </button>
               <button 
-                @click="shareOnZalo"
                 class="bg-[#0068ff] text-white font-bold py-2 px-4 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer hover:opacity-90 active:scale-95 transition-all"
+                @click="shareOnZalo"
               >
                 <span>💬</span> Zalo
               </button>
               <button 
-                @click="copyProductLink"
                 class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                @click="copyProductLink"
               >
                 <span>🔗</span> Sao chép link
               </button>
@@ -368,8 +368,8 @@
             <div class="divide-y divide-slate-100">
               <!-- Item 1: Vận chuyển -->
               <button 
-                @click="activePolicy = 'delivery'"
                 class="w-full flex items-center justify-between py-3 text-left hover:bg-slate-50 rounded-xl px-2 -mx-2 transition-colors group focus:outline-none"
+                @click="activePolicy = 'delivery'"
               >
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-600 flex-shrink-0">
@@ -389,8 +389,8 @@
 
               <!-- Item 2: Đổi trả -->
               <button 
-                @click="activePolicy = 'return'"
                 class="w-full flex items-center justify-between py-3 text-left hover:bg-slate-50 rounded-xl px-2 -mx-2 transition-colors group focus:outline-none"
+                @click="activePolicy = 'return'"
               >
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-600 flex-shrink-0">
@@ -410,8 +410,8 @@
 
               <!-- Item 3: Khách sỉ -->
               <button 
-                @click="activePolicy = 'wholesale'"
                 class="w-full flex items-center justify-between py-3 text-left hover:bg-slate-50 rounded-xl px-2 -mx-2 transition-colors group focus:outline-none"
+                @click="activePolicy = 'wholesale'"
               >
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-600 flex-shrink-0">
@@ -508,8 +508,8 @@
           </div>
           <button 
             v-if="authStore.isAuthenticated"
-            @click="showReviewForm = !showReviewForm" 
-            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-95"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-95" 
+            @click="showReviewForm = !showReviewForm"
           >
             {{ showReviewForm ? 'Đóng form' : '+ Viết đánh giá' }}
           </button>
@@ -559,18 +559,18 @@
         <div class="flex flex-wrap items-center gap-2 pt-2 border-b border-slate-100 pb-4">
           <span class="text-xs font-bold text-slate-500 mr-2">Lọc theo số sao:</span>
           <button
-            @click="selectedRatingFilter = null"
             class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
             :class="[selectedRatingFilter === null ? 'bg-slate-800 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
+            @click="selectedRatingFilter = null"
           >
             Tất cả ({{ reviews.length }})
           </button>
           <button
             v-for="star in [5, 4, 3, 2, 1]"
             :key="star"
-            @click="selectedRatingFilter = star"
             class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
             :class="[selectedRatingFilter === star ? 'bg-yellow-500 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
+            @click="selectedRatingFilter = star"
           >
             <span>{{ star }}</span>
             <span>★</span>
@@ -590,8 +590,8 @@
                 v-for="star in 5" 
                 :key="star"
                 type="button"
-                @click="newReviewRating = star"
                 class="hover:scale-110 transition-transform focus:outline-none cursor-pointer"
+                @click="newReviewRating = star"
               >
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
@@ -634,16 +634,16 @@
           <div class="flex justify-end gap-3 pt-2">
             <button 
               type="button"
-              @click="showReviewForm = false"
               class="px-5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"
+              @click="showReviewForm = false"
             >
               Hủy
             </button>
             <button 
               type="button"
-              @click="submitReview"
               :disabled="isSubmittingReview"
               class="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-2 rounded-xl text-xs transition-colors cursor-pointer shadow-xs active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+              @click="submitReview"
             >
               <svg v-if="isSubmittingReview" class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -704,14 +704,14 @@
                 <div class="flex items-center gap-3">
                   <div v-if="canModifyReview(rev)" class="flex items-center gap-1.5">
                     <button 
-                      @click="startEditReview(rev)"
                       class="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg cursor-pointer focus:outline-none"
+                      @click="startEditReview(rev)"
                     >
                       Sửa
                     </button>
                     <button 
-                      @click="deleteReview(rev._id || rev.id)"
                       class="text-xs font-bold text-red-600 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg cursor-pointer focus:outline-none"
+                      @click="deleteReview(rev._id || rev.id)"
                     >
                       Xóa
                     </button>
@@ -741,8 +741,8 @@
                     v-for="star in 5" 
                     :key="star"
                     type="button"
-                    @click="editReviewRating = star"
                     class="hover:scale-110 transition-transform focus:outline-none cursor-pointer"
+                    @click="editReviewRating = star"
                   >
                     <svg 
                       xmlns="http://www.w3.org/2000/svg" 
@@ -782,15 +782,15 @@
               <div class="flex justify-end gap-3 pt-1">
                 <button 
                   type="button"
-                  @click="cancelEditReview"
                   class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"
+                  @click="cancelEditReview"
                 >
                   Hủy
                 </button>
                 <button 
                   type="button"
-                  @click="saveEditReview"
                   class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl text-xs transition-colors cursor-pointer"
+                  @click="saveEditReview"
                 >
                   Lưu thay đổi
                 </button>
@@ -851,8 +851,8 @@
             {{ policyDetails[activePolicy].title }}
           </h3>
           <button 
-            @click="activePolicy = null" 
-            class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors focus:outline-none"
+            class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors focus:outline-none" 
+            @click="activePolicy = null"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -886,8 +886,8 @@
         <!-- Modal Footer -->
         <div class="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
           <button 
-            @click="activePolicy = null" 
-            class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors focus:outline-none"
+            class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors focus:outline-none" 
+            @click="activePolicy = null"
           >
             Đóng
           </button>
@@ -907,9 +907,9 @@
           Ảnh {{ activeLightboxIndex + 1 }} / {{ product.images.length }} • {{ product.name }}
         </div>
         <button 
-          @click="closeLightbox"
           class="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
           title="Đóng (ESC)"
+          @click="closeLightbox"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -922,8 +922,8 @@
         <!-- Prev Button -->
         <button 
           v-if="product.images.length > 1"
-          @click="prevLightboxImage"
           class="absolute left-2 z-10 w-12 h-12 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
+          @click="prevLightboxImage"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
@@ -940,8 +940,8 @@
         <!-- Next Button -->
         <button 
           v-if="product.images.length > 1"
-          @click="nextLightboxImage"
           class="absolute right-2 z-10 w-12 h-12 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs"
+          @click="nextLightboxImage"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -954,9 +954,9 @@
         <button
           v-for="(thumb, tIdx) in product.images"
           :key="tIdx"
-          @click="activeLightboxIndex = tIdx"
           class="w-14 h-14 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white/10 cursor-pointer"
           :class="[activeLightboxIndex === tIdx ? 'border-red-500 scale-105 shadow-md' : 'border-transparent opacity-60 hover:opacity-100']"
+          @click="activeLightboxIndex = tIdx"
         >
           <img :src="thumb" class="w-full h-full object-contain p-1" />
         </button>

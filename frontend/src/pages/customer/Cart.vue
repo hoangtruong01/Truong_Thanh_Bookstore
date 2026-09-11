@@ -20,8 +20,8 @@
       icon="🛒"
       title="Giỏ hàng đang trống"
       description="Hãy lấp đầy giỏ hàng bằng những sản phẩm văn phòng phẩm chất lượng từ Trường Thành Stationery."
-      actionText="Khám phá sách ngay"
-      actionTo="/products"
+      action-text="Khám phá sách ngay"
+      action-to="/products"
     />
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -31,13 +31,13 @@
         <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <button
-              @click="toggleSelectAll"
               class="w-6 h-6 border-2 rounded-lg flex items-center justify-center transition-all cursor-pointer"
               :class="[
                 isAllSelected
                   ? 'bg-[#dc2626] border-[#dc2626] text-white'
                   : 'bg-white border-slate-300 hover:border-[#dc2626]'
               ]"
+              @click="toggleSelectAll"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -58,8 +58,8 @@
           
           <button
             v-if="isAnyItemSelected"
-            @click="removeSelectedItems"
             class="text-xs font-bold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1 cursor-pointer"
+            @click="removeSelectedItems"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
             Xóa đã chọn
@@ -70,13 +70,13 @@
           <!-- Checkbox -->
           <div class="flex items-center justify-center pr-1 sm:pr-2 flex-shrink-0">
             <button
-              @click="cartStore.toggleItemSelection(item.product._id)"
               class="w-6 h-6 border-2 rounded-lg flex items-center justify-center transition-all cursor-pointer"
               :class="[
                 item.selected !== false
                   ? 'bg-[#dc2626] border-[#dc2626] text-white'
                   : 'bg-white border-slate-300 hover:border-[#dc2626]'
               ]"
+              @click="cartStore.toggleItemSelection(item.product._id)"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -100,7 +100,7 @@
                 <h3 class="text-sm font-bold text-slate-800 hover:text-[#dc2626] transition-colors line-clamp-2">
                   <router-link :to="`/products/${item.product._id}`">{{ item.product.name }}</router-link>
                 </h3>
-                <button @click="cartStore.removeFromCart(item.product._id)" class="text-slate-400 hover:text-red-600 transition-colors cursor-pointer">
+                <button class="text-slate-400 hover:text-red-600 transition-colors cursor-pointer" @click="cartStore.removeFromCart(item.product._id)">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                 </button>
               </div>
@@ -121,16 +121,16 @@
               <!-- Quantity selector -->
               <div class="flex items-center border border-slate-200 rounded-lg bg-slate-50 p-0.5">
                 <button
-                  @click="cartStore.updateQuantity(item.product._id, item.quantity - 1)"
                   class="w-8 h-8 flex items-center justify-center rounded text-slate-500 font-bold hover:bg-white transition-colors cursor-pointer"
+                  @click="cartStore.updateQuantity(item.product._id, item.quantity - 1)"
                 >
                   -
                 </button>
                 <span class="w-10 text-center font-bold text-slate-800 text-xs">{{ item.quantity }}</span>
                 <button
-                  @click="cartStore.updateQuantity(item.product._id, item.quantity + 1)"
                   :disabled="item.quantity >= item.product.stock"
                   class="w-8 h-8 flex items-center justify-center rounded text-slate-500 font-bold hover:bg-white transition-colors disabled:opacity-30 cursor-pointer"
+                  @click="cartStore.updateQuantity(item.product._id, item.quantity + 1)"
                 >
                   +
                 </button>
@@ -180,9 +180,9 @@
               <p class="font-bold">Đã áp dụng: {{ cartStore.appliedPromotion.code }}</p>
               <p>Giảm {{ formatCurrency(cartStore.discountAmount) }}</p>
             </div>
-            <button @click="cartStore.removeCoupon" class="text-xs font-bold text-red-600 hover:underline cursor-pointer">Gỡ</button>
+            <button class="text-xs font-bold text-red-600 hover:underline cursor-pointer" @click="cartStore.removeCoupon">Gỡ</button>
           </div>
-          <form v-else @submit.prevent="handleApplyCoupon" class="flex gap-2">
+          <form v-else class="flex gap-2" @submit.prevent="handleApplyCoupon">
             <input
               v-model="couponCode"
               type="text"
@@ -224,9 +224,9 @@
                   <p class="text-[9px] text-slate-400 mt-0.5 font-medium">Đơn tối thiểu: {{ formatCurrency(promo.minOrderValue) }}</p>
                 </div>
                 <button 
-                  @click="applySuggestedCoupon(promo.code)"
                   :disabled="isApplyingCoupon || cartStore.subtotal < promo.minOrderValue"
                   class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2.5 rounded-lg text-[10px] transition-colors disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                  @click="applySuggestedCoupon(promo.code)"
                 >
                   <svg v-if="isApplyingCoupon" class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -264,12 +264,12 @@
           </div>
 
           <button
-            @click="proceedToCheckout"
             :class="[
               'w-full font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-md cursor-pointer',
               isAnyItemSelected && !isValidatingCheckout ? 'bg-[#dc2626] hover:bg-[#b91c1c] text-white shadow-red-500/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
             ]"
             :disabled="!isAnyItemSelected || isValidatingCheckout"
+            @click="proceedToCheckout"
           >
             <svg v-if="isValidatingCheckout" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

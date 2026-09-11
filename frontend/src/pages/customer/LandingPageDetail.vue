@@ -86,15 +86,15 @@
           <!-- Prev/Next navigation overlay -->
           <button
             v-if="page.images.length > 1"
-            @click="prevImage"
             class="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/40 hover:bg-slate-900/60 text-white flex items-center justify-center transition-all cursor-pointer z-10"
+            @click="prevImage"
           >
             ❮
           </button>
           <button
             v-if="page.images.length > 1"
-            @click="nextImage"
             class="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/40 hover:bg-slate-900/60 text-white flex items-center justify-center transition-all cursor-pointer z-10"
+            @click="nextImage"
           >
             ❯
           </button>
@@ -105,10 +105,10 @@
           <button
             v-for="(img, idx) in page.images"
             :key="idx"
-            @click="selectImageIdx(Number(idx))"
             class="w-11 h-11 rounded-lg border-2 overflow-hidden flex-shrink-0 cursor-pointer transition-all bg-slate-50"
             :class="currentImageIdx === idx ? '' : 'border-slate-200 opacity-60'"
             :style="{ borderColor: currentImageIdx === idx ? page.primaryColor : '' }"
+            @click="selectImageIdx(Number(idx))"
           >
             <img :src="img" class="w-full h-full object-contain" />
           </button>
@@ -134,9 +134,9 @@
       <!-- Floating Anchor Button -->
       <div class="fixed bottom-4 left-0 right-0 z-40 max-w-xl mx-auto px-4 pointer-events-none">
         <button
-          @click="scrollToForm"
           class="w-full py-4 rounded-2xl text-xs font-black uppercase text-white shadow-xl flex items-center justify-center gap-2 transition-all hover:scale-102 cursor-pointer pointer-events-auto active:scale-98 animate-bounce"
           :style="{ backgroundColor: page.primaryColor }"
+          @click="scrollToForm"
         >
           🎁 ĐẶT MUA CHO CON NGAY 🎁
         </button>
@@ -194,10 +194,10 @@
           <div
             v-for="(pkg, idx) in page.packages"
             :key="idx"
-            @click="selectPackage(pkg.name)"
             class="p-4.5 rounded-2xl border-2 bg-white relative flex items-center justify-between cursor-pointer transition-all hover:scale-101 shadow-xs text-slate-800"
             :class="selectedPackage === pkg.name ? 'ring-2' : ''"
             :style="{ borderColor: selectedPackage === pkg.name || pkg.isBestSeller ? page.primaryColor : '#e2e8f0', boxShadow: selectedPackage === pkg.name ? '0 0 0 2px ' + page.primaryColor : 'none' }"
+            @click="selectPackage(pkg.name)"
           >
             <!-- Ribbon Badge -->
             <span v-if="pkg.badge" class="absolute -top-2.5 left-4 text-[9px] font-black px-2.5 py-0.5 rounded-full text-white uppercase tracking-wider" :style="{ backgroundColor: page.primaryColor }">
@@ -247,7 +247,7 @@
           <p class="text-[10px] text-slate-400 font-semibold">Vui lòng điền đúng số điện thoại để chúng tôi liên hệ xác nhận đơn hàng.</p>
         </div>
 
-        <form @submit.prevent="handleSubmitOrder" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="handleSubmitOrder">
           <div>
             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Họ tên của bạn (*)</label>
             <input
@@ -350,8 +350,8 @@
           </div>
         </div>
         <button
-          @click="closeSuccessModal"
           class="w-full py-3 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
+          @click="closeSuccessModal"
         >
           Quay lại trang chủ
         </button>

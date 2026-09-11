@@ -12,8 +12,8 @@
       </div>
       <button
         type="button"
-        @click="fetchReviews"
         class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+        @click="fetchReviews"
       >
         <span>🔄</span>
         <span>Làm mới</span>
@@ -30,8 +30,8 @@
         <!-- Rating Filter -->
         <select
           v-model="filters.rating"
-          @change="handleFilterChange"
           class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+          @change="handleFilterChange"
         >
           <option :value="undefined">Tất cả mức sao</option>
           <option :value="5">⭐⭐⭐⭐⭐ (5 sao)</option>
@@ -44,8 +44,8 @@
         <!-- Visibility Filter -->
         <select
           v-model="filters.isVisible"
-          @change="handleFilterChange"
           class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+          @change="handleFilterChange"
         >
           <option :value="undefined">Tất cả trạng thái</option>
           <option :value="true">Đang hiển thị</option>
@@ -146,11 +146,11 @@
           <!-- Toggle visibility button -->
           <button
             type="button"
-            @click="toggleVisibility(row)"
             :class="[
               row.isVisible !== false ? 'text-amber-600 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-700',
               'font-bold cursor-pointer'
             ]"
+            @click="toggleVisibility(row)"
           >
             {{ row.isVisible !== false ? 'Ẩn' : 'Hiện' }}
           </button>
@@ -158,8 +158,8 @@
           <!-- Reply button -->
           <button
             type="button"
-            @click="openReplyModal(row)"
             class="text-[#dc2626] hover:text-[#b91c1c] font-bold cursor-pointer"
+            @click="openReplyModal(row)"
           >
             {{ row.adminReply ? 'Sửa trả lời' : 'Trả lời' }}
           </button>
@@ -167,8 +167,8 @@
           <!-- Delete button -->
           <button
             type="button"
-            @click="confirmDelete(row)"
             class="text-slate-400 hover:text-red-600 font-bold cursor-pointer"
+            @click="confirmDelete(row)"
           >
             Xóa
           </button>
@@ -203,7 +203,7 @@
 
     <!-- Confirm Delete Modal -->
     <ConfirmModal
-      :isOpen="showDeleteModal"
+      :is-open="showDeleteModal"
       title="Xóa đánh giá này?"
       message="Hành động này sẽ xóa vĩnh viễn đánh giá và tính toán lại điểm trung bình cho sản phẩm."
       variant="danger"

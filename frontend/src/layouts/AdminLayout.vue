@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex bg-slate-50 font-sans relative">
     <!-- Backdrop for mobile -->
-    <div v-if="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 md:hidden"></div>
+    <div v-if="sidebarOpen" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 md:hidden" @click="sidebarOpen = false"></div>
 
     <!-- Sidebar (Matches Screenshot: light background) -->
     <aside 
@@ -45,7 +45,7 @@
           <span>Về trang bán hàng</span>
         </router-link>
 
-        <button @click="handleLogout" class="flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-red-50 hover:bg-red-100 text-xs font-bold text-red-600 border border-red-100 transition-colors cursor-pointer">
+        <button class="flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-red-50 hover:bg-red-100 text-xs font-bold text-red-600 border border-red-100 transition-colors cursor-pointer" @click="handleLogout">
           <span>Đăng xuất</span>
         </button>
       </div>
@@ -57,8 +57,8 @@
       <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between md:justify-end px-8 flex-shrink-0">
         <!-- Mobile hamburger menu button -->
         <button 
-          @click="sidebarOpen = !sidebarOpen" 
-          class="md:hidden text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg hover:bg-slate-100 cursor-pointer"
+          class="md:hidden text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg hover:bg-slate-100 cursor-pointer" 
+          @click="sidebarOpen = !sidebarOpen"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
@@ -68,7 +68,7 @@
         <!-- Right User details -->
         <div class="flex items-center gap-5">
           <!-- Dark Mode Toggle -->
-          <button @click="toggleDarkMode" class="text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200 transition-colors p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" :title="isDarkMode ? 'Bật chế độ sáng' : 'Bật chế độ tối'">
+          <button class="text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200 transition-colors p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" :title="isDarkMode ? 'Bật chế độ sáng' : 'Bật chế độ tối'" @click="toggleDarkMode">
             <span v-if="isDarkMode">☀️</span>
             <span v-else>🌙</span>
           </button>
@@ -81,11 +81,11 @@
             </button>
             <div class="absolute right-0 top-full pt-2 hidden group-hover/lang:block z-50">
               <div class="w-24 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1 text-slate-700 dark:text-slate-350 text-xs font-bold">
-                <button @click="changeLocale('vi')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer flex items-center justify-between">
+                <button class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer flex items-center justify-between" @click="changeLocale('vi')">
                   <span>Tiếng Việt</span>
                   <span v-if="currentLocale === 'vi'">✓</span>
                 </button>
-                <button @click="changeLocale('en')" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer flex items-center justify-between">
+                <button class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer flex items-center justify-between" @click="changeLocale('en')">
                   <span>English</span>
                   <span v-if="currentLocale === 'en'">✓</span>
                 </button>
@@ -96,9 +96,9 @@
           <!-- Notification bell -->
           <div id="notification-dropdown-container" class="relative">
             <button 
+              class="relative text-slate-500 hover:text-slate-800 transition-colors cursor-pointer p-1.5 rounded-full hover:bg-slate-100"
+              title="Thông báo hệ thống" 
               @click="toggleNotifications"
-              class="relative text-slate-500 hover:text-slate-800 transition-colors cursor-pointer p-1.5 rounded-full hover:bg-slate-100" 
-              title="Thông báo hệ thống"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
@@ -122,8 +122,8 @@
                 <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Thông báo hệ thống</span>
                 <button 
                   v-if="unreadCount > 0" 
-                  @click="markAllAsRead" 
-                  class="text-[10px] font-extrabold text-[#dc2626] hover:underline cursor-pointer"
+                  class="text-[10px] font-extrabold text-[#dc2626] hover:underline cursor-pointer" 
+                  @click="markAllAsRead"
                 >
                   Đọc tất cả
                 </button>
@@ -137,12 +137,13 @@
                 <div 
                   v-for="item in notifications" 
                   :key="item.id" 
-                  @click="handleNotificationClick(item)"
                   class="p-3.5 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                   :class="{'bg-red-50/5 font-semibold': !readIds.includes(item.id)}"
+                  @click="handleNotificationClick(item)"
                 >
                   <!-- Icon indicator -->
-                  <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-xs" :class="{
+                  <div
+class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-xs" :class="{
                     'bg-red-100 text-red-600 border border-red-200': item.type === 'out_of_stock',
                     'bg-amber-50 text-amber-600 border border-amber-100': item.type === 'stock',
                     'bg-rose-100 text-rose-600 border border-rose-200': item.type === 'high_value_order',
@@ -180,7 +181,7 @@
           </div>
 
           <!-- Profile -->
-          <div @click="showProfile = true" class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-all select-none" title="Thông tin tài khoản">
+          <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-all select-none" title="Thông tin tài khoản" @click="showProfile = true">
             <div class="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white font-extrabold text-xs shadow-xs border border-slate-200 bg-[#f97316]">
               <img v-if="authStore.user?.avatar" :src="authStore.user.avatar" class="w-full h-full object-cover" />
               <span v-else>{{ adminInitials }}</span>
@@ -200,7 +201,7 @@
     </div>
 
     <!-- Profile Modal -->
-    <ProfileModal :isOpen="showProfile" @close="showProfile = false" />
+    <ProfileModal :is-open="showProfile" @close="showProfile = false" />
   </div>
 </template>
 

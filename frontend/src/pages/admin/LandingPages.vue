@@ -8,8 +8,8 @@
       </div>
       <div class="flex items-center gap-3">
         <button
-          @click="openCreateModal"
           class="flex items-center gap-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold py-2.5 px-5 rounded-xl shadow-md transition-all cursor-pointer"
+          @click="openCreateModal"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -83,9 +83,9 @@
                     </svg>
                   </a>
                   <button
-                    @click.stop="copyToClipboard(getFullLandingPageUrl(page.slug))"
                     class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer"
                     title="Sao chép link chia sẻ"
+                    @click.stop="copyToClipboard(getFullLandingPageUrl(page.slug))"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
@@ -106,10 +106,10 @@
               </td>
               <td class="py-4 px-6">
                 <button
-                  @click="togglePageStatus(page)"
                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer hover:scale-105"
                   :class="page.status ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'"
                   title="Click để chuyển trạng thái"
+                  @click="togglePageStatus(page)"
                 >
                   <span class="w-1.5 h-1.5 rounded-full" :class="page.status ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"></span>
                   <span>{{ page.status ? 'Hoạt động' : 'Tắt' }}</span>
@@ -118,18 +118,18 @@
               <td class="py-4 px-6 text-right">
                 <div class="flex items-center justify-end gap-2">
                   <button
-                    @click="openEditModal(page)"
                     class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
                     title="Chỉnh sửa"
+                    @click="openEditModal(page)"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                       <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                     </svg>
                   </button>
                   <button
-                    @click="deletePage(page._id)"
                     class="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
                     title="Xóa"
+                    @click="deletePage(page._id)"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                       <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -152,7 +152,7 @@
             <h2 class="text-base font-extrabold text-slate-800">{{ isEditing ? 'Cấu hình & Tối ưu Landing Page' : 'Tạo Landing Page Bằng AI (Gemini)' }}</h2>
             <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Setup giao diện bán hàng chuyển đổi cao chỉ với hình ảnh và prompt</p>
           </div>
-          <button @click="showModal = false" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+          <button class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer" @click="showModal = false">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
@@ -187,7 +187,7 @@
                       placeholder="VD: lich-cong-thuc-tieu-hoc"
                       class="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] transition-all"
                     />
-                    <button type="button" @click="isManuallyEditingSlug = false" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer" title="Đóng">
+                    <button type="button" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer" title="Đóng" @click="isManuallyEditingSlug = false">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                       </svg>
@@ -196,12 +196,12 @@
                   <!-- Chế độ xem trước link tự động -->
                   <div v-else class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-2">
                     <span class="text-[10px] text-slate-500 truncate flex-1 select-all font-mono leading-none">{{ getFullLandingPageUrl(form.slug) || 'Nhập tiêu đề để tạo link...' }}</span>
-                    <button v-if="form.slug" type="button" @click="copyToClipboard(getFullLandingPageUrl(form.slug))" class="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer flex-shrink-0" title="Sao chép đường dẫn">
+                    <button v-if="form.slug" type="button" class="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer flex-shrink-0" title="Sao chép đường dẫn" @click="copyToClipboard(getFullLandingPageUrl(form.slug))">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
                       </svg>
                     </button>
-                    <button v-if="!isEditing" type="button" @click="isManuallyEditingSlug = true" class="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer flex-shrink-0" title="Chỉnh sửa slug thủ công">
+                    <button v-if="!isEditing" type="button" class="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer flex-shrink-0" title="Chỉnh sửa slug thủ công" @click="isManuallyEditingSlug = true">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
                       </svg>
@@ -214,7 +214,7 @@
               <div class="space-y-2 border border-slate-200 p-3.5 rounded-xl bg-slate-50/50">
                 <div class="flex items-center justify-between">
                   <label class="block text-[11px] font-black text-slate-700 uppercase tracking-wider">Cấu hình Gói / Option Giá bán</label>
-                  <button v-if="!isEditing" type="button" @click="addPackage" class="text-[10px] font-black text-[#dc2626] hover:underline cursor-pointer flex items-center gap-1">
+                  <button v-if="!isEditing" type="button" class="text-[10px] font-black text-[#dc2626] hover:underline cursor-pointer flex items-center gap-1" @click="addPackage">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3 h-3">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
@@ -246,11 +246,11 @@
                             </div>
                           </label>
                           <input
+                            :id="'pkg-file-' + idx"
                             :disabled="isEditing"
                             type="file"
                             accept="image/*"
                             class="hidden"
-                            :id="'pkg-file-' + idx"
                             @change="handlePackageImageUpload($event, Number(idx))"
                           />
                         </td>
@@ -290,18 +290,18 @@
                         </td>
                         <td class="p-1.5 text-center">
                           <input
-                            type="checkbox"
                             v-model="pkg.isBestSeller"
+                            type="checkbox"
                             :disabled="isEditing"
-                            @change="onBestSellerChange(Number(idx))"
                             class="rounded-sm cursor-pointer disabled:cursor-not-allowed"
+                            @change="onBestSellerChange(Number(idx))"
                           />
                         </td>
                         <td v-if="!isEditing" class="p-1.5 text-center">
                           <button
                             type="button"
-                            @click="removePackage(Number(idx))"
                             class="text-slate-400 hover:text-red-600 transition-colors"
+                            @click="removePackage(Number(idx))"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 mx-auto">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -362,17 +362,17 @@
               </h3>
               <div v-if="!isEditing" class="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center bg-slate-50 hover:bg-slate-100/50 transition-colors">
                 <input
+                  ref="fileInput"
                   type="file"
                   multiple
                   accept="image/*"
                   class="hidden"
-                  ref="fileInput"
                   @change="handleImageUpload"
                 />
                 <button
                   type="button"
-                  @click="fileInput?.click()"
                   class="mx-auto flex flex-col items-center justify-center cursor-pointer"
+                  @click="fileInput?.click()"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-slate-400 mb-1.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -388,8 +388,8 @@
                   <img :src="img" class="w-full h-full object-contain" />
                   <button
                     v-if="!isEditing"
-                    @click="removeImage(Number(idx))"
                     class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    @click="removeImage(Number(idx))"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-2.5 h-2.5">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -419,9 +419,9 @@
               </div>
               <button
                 type="button"
-                @click="generateLandingPageAI"
                 :disabled="loadingAI || form.images.length === 0"
                 class="w-full py-2.5 rounded-lg text-xs font-bold text-white bg-[#dc2626] hover:bg-[#b91c1c] active:scale-98 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                @click="generateLandingPageAI"
               >
                 <span v-if="loadingAI" class="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span>
                 <span>{{ loadingAI ? 'Đang phân tích ảnh và thiết kế giao diện...' : 'Bắt đầu tạo giao diện AI' }}</span>
@@ -438,22 +438,22 @@
                 <div>
                   <label class="block text-[10px] font-bold text-slate-500 mb-1">Màu chủ đạo</label>
                   <div class="flex items-center gap-1.5">
-                    <input type="color" v-model="form.primaryColor" class="w-6 h-6 border-0 rounded-sm cursor-pointer" />
-                    <input type="text" v-model="form.primaryColor" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-[10px] focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
+                    <input v-model="form.primaryColor" type="color" class="w-6 h-6 border-0 rounded-sm cursor-pointer" />
+                    <input v-model="form.primaryColor" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-[10px] focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
                   </div>
                 </div>
                 <div>
                   <label class="block text-[10px] font-bold text-slate-500 mb-1">Màu nền</label>
                   <div class="flex items-center gap-1.5">
-                    <input type="color" v-model="form.backgroundColor" class="w-6 h-6 border-0 rounded-sm cursor-pointer" />
-                    <input type="text" v-model="form.backgroundColor" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-[10px] focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
+                    <input v-model="form.backgroundColor" type="color" class="w-6 h-6 border-0 rounded-sm cursor-pointer" />
+                    <input v-model="form.backgroundColor" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-[10px] focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
                   </div>
                 </div>
                 <div>
                   <label class="block text-[10px] font-bold text-slate-500 mb-1">Màu chữ</label>
                   <div class="flex items-center gap-1.5">
-                    <input type="color" v-model="form.textColor" class="w-6 h-6 border-0 rounded-sm cursor-pointer" />
-                    <input type="text" v-model="form.textColor" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-[10px] focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
+                    <input v-model="form.textColor" type="color" class="w-6 h-6 border-0 rounded-sm cursor-pointer" />
+                    <input v-model="form.textColor" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-[10px] focus:outline-none focus:ring-1 focus:ring-[#dc2626]" />
                   </div>
                 </div>
               </div>
@@ -464,11 +464,11 @@
               <div class="space-y-3">
                 <div class="flex items-center justify-between">
                   <label class="block text-[11px] font-bold text-slate-600">Đặc điểm / Lợi ích sản phẩm nổi bật</label>
-                  <button type="button" @click="addBenefit" class="text-xs font-bold text-[#dc2626] hover:underline cursor-pointer">+ Thêm lợi ích</button>
+                  <button type="button" class="text-xs font-bold text-[#dc2626] hover:underline cursor-pointer" @click="addBenefit">+ Thêm lợi ích</button>
                 </div>
                 <div class="space-y-2">
                   <div v-for="(bft, idx) in form.benefits" :key="idx" class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 relative group">
-                    <button @click="removeBenefit(Number(idx))" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <button class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" @click="removeBenefit(Number(idx))">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                       </svg>
@@ -483,11 +483,11 @@
               <div class="space-y-3">
                 <div class="flex items-center justify-between">
                   <label class="block text-[11px] font-bold text-slate-600">Đánh giá / Phản hồi khách hàng (Feedback)</label>
-                  <button type="button" @click="addTestimonial" class="text-xs font-bold text-[#dc2626] hover:underline cursor-pointer">+ Thêm phản hồi</button>
+                  <button type="button" class="text-xs font-bold text-[#dc2626] hover:underline cursor-pointer" @click="addTestimonial">+ Thêm phản hồi</button>
                 </div>
                 <div class="space-y-2">
                   <div v-for="(t, idx) in form.testimonials" :key="idx" class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 relative group font-sans">
-                    <button @click="removeTestimonial(Number(idx))" class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <button class="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" @click="removeTestimonial(Number(idx))">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                       </svg>
@@ -515,7 +515,7 @@
 
               <!-- Active Status -->
               <div class="flex items-center gap-2">
-                <input type="checkbox" v-model="form.status" id="status" class="rounded-sm" />
+                <input id="status" v-model="form.status" type="checkbox" class="rounded-sm" />
                 <label for="status" class="text-xs font-bold text-slate-600">Kích hoạt chế độ hoạt động công khai</label>
               </div>
             </div>
@@ -593,10 +593,10 @@
                   <button
                     v-for="(img, idx) in form.images"
                     :key="idx"
-                    @click="selectPreviewImageIdx(Number(idx))"
                     class="w-10 h-10 rounded-md border overflow-hidden flex-shrink-0 cursor-pointer transition-all bg-slate-50"
                     :class="currentPreviewImageIdx === idx ? 'border-2' : 'border-slate-200 opacity-60'"
                     :style="{ borderColor: currentPreviewImageIdx === idx ? form.primaryColor : '' }"
+                    @click="selectPreviewImageIdx(Number(idx))"
                   >
                     <img :src="img" class="w-full h-full object-contain" />
                   </button>
@@ -729,15 +729,15 @@
           <span class="text-[10px] text-slate-400 font-bold">Vui lòng kiểm tra kỹ đường dẫn slug và thông tin trước khi lưu.</span>
           <div class="flex items-center gap-3">
             <button
-              @click="showModal = false"
               class="px-5 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all cursor-pointer"
+              @click="showModal = false"
             >
               Hủy bỏ
             </button>
             <button
-              @click="saveLandingPage"
               :disabled="saving"
               class="px-6 py-2.5 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              @click="saveLandingPage"
             >
               <span v-if="saving" class="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span>
               <span>Lưu thông tin</span>
@@ -797,8 +797,8 @@ function generateSlug(text: string): string {
     .replace(/[đĐ]/g, 'd')
     .trim()
     .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-')
     .replace(/^-+/, '')
     .replace(/-+$/, '');
 }

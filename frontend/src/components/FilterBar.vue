@@ -10,16 +10,16 @@
         </span>
         <input
           :value="modelValue"
-          @input="onInput"
           type="text"
           :placeholder="placeholder"
           class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-9 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white text-slate-800 font-semibold transition-all placeholder:text-slate-400"
+          @input="onInput"
         />
         <button
           v-if="modelValue"
-          @click="clearSearch"
           type="button"
           class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+          @click="clearSearch"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -40,13 +40,13 @@
         v-for="tab in tabs"
         :key="tab.value"
         type="button"
-        @click="selectTab(tab.value)"
         :class="[
           activeTab === tab.value
             ? 'bg-[#dc2626] text-white shadow-xs'
             : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/80',
           'px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap'
         ]"
+        @click="selectTab(tab.value)"
       >
         {{ tab.label }}
         <span

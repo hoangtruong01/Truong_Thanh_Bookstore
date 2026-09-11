@@ -29,15 +29,14 @@
       <div class="flex gap-3 pt-2">
         <button
           type="button"
-          @click="handleCancel"
           :disabled="loading"
           class="flex-1 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer disabled:opacity-50"
+          @click="handleCancel"
         >
           {{ cancelText }}
         </button>
         <button
           type="button"
-          @click="handleConfirm"
           :disabled="loading"
           class="flex-1 py-3 px-4 rounded-xl text-xs font-black text-white transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
           :class="{
@@ -45,6 +44,7 @@
             'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20': variant === 'warning',
             'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20': variant === 'primary'
           }"
+          @click="handleConfirm"
         >
           <span v-if="loading" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
           <span>{{ confirmText }}</span>

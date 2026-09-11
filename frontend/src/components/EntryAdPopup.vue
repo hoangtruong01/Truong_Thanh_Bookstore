@@ -36,10 +36,10 @@
             >
               <button
                 type="button"
-                @click="closePopup"
                 class="group w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/20 hover:bg-white text-white hover:text-slate-900 backdrop-blur-md border border-white/30 shadow-lg flex items-center justify-center transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white active:scale-95"
                 aria-label="Đóng quảng cáo"
                 title="Đóng quảng cáo (ESC)"
+                @click="closePopup"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -77,8 +77,8 @@
             >
               <button
                 type="button"
-                @click="handleCtaClick"
                 class="bg-[#dc2626] hover:bg-[#b91c1c] active:bg-[#991b1b] text-white font-black text-sm sm:text-base px-8 sm:px-10 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl shadow-xl shadow-red-950/40 hover:shadow-red-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center gap-2 cursor-pointer border border-red-400/30 tracking-wide"
+                @click="handleCtaClick"
               >
                 <span>{{ popup.ctaLabel || 'MỞ / XEM NGAY' }}</span>
                 <svg

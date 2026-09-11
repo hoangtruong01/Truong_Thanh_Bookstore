@@ -9,14 +9,14 @@
     <!-- Tabs Switcher -->
     <div class="flex border-b border-slate-200 gap-6">
       <button
-        @click="activeTab = 'stock'"
         :class="['pb-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer', activeTab === 'stock' ? 'border-[#dc2626] text-slate-800' : 'border-transparent text-slate-400 hover:text-slate-600']"
+        @click="activeTab = 'stock'"
       >
         Kho hiện tại
       </button>
       <button
-        @click="activeTab = 'history'"
         :class="['pb-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer', activeTab === 'history' ? 'border-[#dc2626] text-slate-800' : 'border-transparent text-slate-400 hover:text-slate-600']"
+        @click="activeTab = 'history'"
       >
         Lịch sử nhập/xuất kho
       </button>
@@ -196,9 +196,9 @@
 
               <button
                 type="button"
-                @click="submitAdjustment"
                 :disabled="submittingAdjust || adjustQty <= 0"
                 class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+                @click="submitAdjustment"
               >
                 {{ submittingAdjust ? 'Đang cập nhật...' : 'Xác nhận điều chỉnh' }}
               </button>

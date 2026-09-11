@@ -1,7 +1,7 @@
 <template>
   <div
-    @click="goToDetail"
     class="bg-white border border-slate-200/80 rounded-2xl p-4 hover:shadow-md hover:border-slate-300 transition-all flex flex-col group relative cursor-pointer"
+    @click="goToDetail"
   >
     <!-- Discount / Flash Sale Badge -->
     <span v-if="product.isFlashSale" class="absolute top-6 left-6 bg-gradient-to-r from-amber-500 to-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md z-20 shadow-xs flex items-center gap-0.5">
@@ -13,8 +13,8 @@
 
     <!-- Wishlist Heart Button -->
     <button
-      @click.stop="onWishlistToggle"
       class="absolute top-6 right-6 w-8 h-8 bg-white/90 backdrop-blur-xs border border-slate-200/80 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:scale-105 active:scale-95 transition-all z-20 shadow-xs cursor-pointer"
+      @click.stop="onWishlistToggle"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -55,8 +55,8 @@
         width="320"
         height="320"
         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 240px"
-        @error="handleImageError"
-        class="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-500 relative z-10 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.06)]" 
+        class="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-500 relative z-10 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.06)]"
+        @error="handleImageError" 
       />
       
       <!-- Fallback Placeholder -->
@@ -121,9 +121,9 @@
 
     <!-- Add to Cart -->
     <button
-      @click.stop="handleAddToCart"
       :disabled="isAdding || product.stock === 0"
       class="mt-3 w-full bg-[#ffebd5] hover:bg-[#dc2626] text-[#c2410c] hover:text-white font-extrabold py-2 px-3 rounded-xl text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-[#fed7aa] cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+      @click.stop="handleAddToCart"
     >
       <svg v-if="isAdding" class="animate-spin h-3.5 w-3.5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
