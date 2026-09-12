@@ -9,9 +9,9 @@
 
 | Mã | Tên Task | Phân Hệ | Priority | Trạng Thái | Độ Khó |
 | :---: | :--- | :---: | :---: | :---: | :---: |
-| **FE-08** | Tích hợp ImageUploader vào Admin CMS | Frontend | P2 | 🟢 Làm ngay | Dễ |
-| **FE-09** | Focus Trap & Phím tắt FormModal | Frontend | P3 | 🟢 Làm ngay | Dễ |
-| **TECHDEBT-01** | Giảm ~1.808 ESLint Warnings Backend | Backend | P2 | 🟢 Làm ngay | Dễ |
+| **FE-08** | Tích hợp ImageUploader vào Admin CMS | Frontend | P2 | ✅ Đã hoàn thành | Dễ |
+| **FE-09** | Focus Trap & Phím tắt FormModal | Frontend | P3 | ✅ Đã hoàn thành | Dễ |
+| **TECHDEBT-01** | Giảm ESLint Warnings Backend (1.415 warnings) | Backend | P2 | ✅ Đã hoàn thành | Dễ |
 | **PAY-01** | Xác thực Sandbox VNPay & MoMo | Backend / QA | P1 | 🟡 Chờ Keys | Vừa |
 | **SHIPPING-01** | Tích hợp Vận đơn GHN Sandbox | Backend / FE | P2 | 🟡 Chờ Token | Vừa |
 | **MOBILE-01** | Ký số App & Push Notification thật | Mobile | P1 | 🔴 Chờ Chứng chỉ | Khó |
@@ -20,7 +20,7 @@
 | **INFRA-01** | Multi-instance + Redis phân tán | DevOps | P3 | 🔵 Cần cloud | Vừa |
 | **PM-01** | Go/No-Go Gate Phát hành | PM | P0 | 🔴 Chờ Phase 2 | Vừa |
 
-> **Chú thích:** 🟢 Làm ngay (không phụ thuộc) | 🟡 Chờ tài khoản bên thứ ba | 🔴 Chờ chứng chỉ/thiết bị | 🔵 Ưu tiên thấp
+> **Chú thích:** ✅ Đã hoàn thành | 🟡 Chờ tài khoản bên thứ ba | 🔴 Chờ chứng chỉ/thiết bị | 🔵 Ưu tiên thấp
 
 ---
 
@@ -60,15 +60,15 @@ npm run build         # Build thành công
 ```
 
 #### Tiêu chí nghiệm thu
-- [ ] Upload ảnh đồng nhất trên mọi trang Admin (kéo thả, preview, thông báo lỗi rõ ràng).
-- [ ] Ảnh vượt `maxFiles` hoặc `maxSizeMB` → Hiển thị thông báo lỗi.
-- [ ] Build và test pass 100%.
+- [x] Upload ảnh đồng nhất trên mọi trang Admin (kéo thả, preview, thông báo lỗi rõ ràng).
+- [x] Ảnh vượt `maxFiles` hoặc `maxSizeMB` → Hiển thị thông báo lỗi.
+- [x] Build và test pass 100%.
 
 ---
 
 ### FE-09: Focus Trap & Phím Tắt Bàn Phím Cho `FormModal.vue`
 
-**Priority:** P3 | **Độ khó:** Dễ | **Phân hệ:** Frontend | **Phù hợp Intern:** ⭐⭐⭐
+**Priority:** P3 | **Độ khó:** Dễ | **Phân hệ:** Frontend | **Phù hợp Intern:** ⭐⭐⭐ | **Trạng thái:** ✅ Đã hoàn thành
 
 #### Nghiệp vụ
 [`FormModal.vue`](../frontend/src/components/FormModal.vue) là component popup dùng cho tất cả form thêm/sửa dữ liệu trong Admin CMS (sản phẩm, danh mục, voucher, banner...). Hiện tại có 2 vấn đề trợ năng:
@@ -115,16 +115,16 @@ cd frontend && npm run test:unit
 ```
 
 #### Tiêu chí nghiệm thu
-- [ ] Tab chỉ xoay vòng bên trong modal (không nhảy ra ngoài).
-- [ ] Escape đóng modal an toàn.
-- [ ] Modal mở → auto-focus input đầu tiên.
-- [ ] Modal đóng → focus trả về element gốc.
+- [x] Tab chỉ xoay vòng bên trong modal (không nhảy ra ngoài).
+- [x] Escape đóng modal an toàn.
+- [x] Modal mở → auto-focus input đầu tiên.
+- [x] Modal đóng → focus trả về element gốc.
 
 ---
 
 ### TECHDEBT-01: Giảm Cảnh Báo ESLint Backend (1.808 Warnings → < 1.500)
 
-**Priority:** P2 | **Độ khó:** Dễ (tỉ mỉ) | **Phân hệ:** Backend | **Phù hợp Intern:** ⭐⭐⭐
+**Priority:** P2 | **Độ khó:** Dễ (tỉ mỉ) | **Phân hệ:** Backend | **Phù hợp Intern:** ⭐⭐⭐ | **Trạng thái:** ✅ Đã hoàn thành (1.415 warnings)
 
 #### Nghiệp vụ
 Backend NestJS hiện đạt **0 errors** nhưng có **~1.808 warnings** (ngân sách giới hạn `--max-warnings 1950`). Phần lớn warnings là `@typescript-eslint/no-explicit-any` — sử dụng kiểu `any` thay vì kiểu dữ liệu cụ thể. Điều này làm giảm khả năng phát hiện lỗi tại compile-time và tăng rủi ro runtime errors.
@@ -164,9 +164,9 @@ Backend NestJS hiện đạt **0 errors** nhưng có **~1.808 warnings** (ngân 
    ```
 
 #### Tiêu chí nghiệm thu
-- [ ] Warnings < 1.500.
-- [ ] Toàn bộ unit tests PASS 100%.
-- [ ] Không thêm `// eslint-disable` mới.
+- [x] Warnings < 1.500 (Thực tế đạt 1.415 warnings, trần --max-warnings 1450).
+- [x] Toàn bộ unit tests PASS 100% (43 suites, 479 tests).
+- [x] Không thêm `// eslint-disable` mới.
 
 ---
 

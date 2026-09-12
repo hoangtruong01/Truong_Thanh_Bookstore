@@ -318,19 +318,17 @@
             </div>
 
             <!-- Upload Zone -->
-            <label
-              v-else
-              class="flex flex-col items-center justify-center w-full aspect-[3/1] border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-[#dc2626] hover:bg-red-50/30 transition-all"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-slate-300 mb-2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
-              </svg>
-              <span class="text-xs font-bold text-slate-600">Click để chọn ảnh từ máy tính</span>
-              <span class="text-[10px] text-slate-400 mt-1">
-                {{ form.position === 'entry_popup' ? 'Hỗ trợ PNG, JPG, WEBP (tối đa 8MB) — giữ nguyên tỷ lệ ảnh gốc' : 'Hệ thống tự động mở công cụ Cắt & Căn chỉnh ảnh chuẩn' }}
-              </span>
-              <input type="file" accept="image/*" class="hidden" @change="handleImageFileSelected" />
-            </label>
+            <div v-else>
+              <ImageUploader
+                v-model="form.imageUrl"
+                :multiple="false"
+                :max-files="1"
+                :max-size-m-b="form.position === 'entry_popup' ? 8 : 4"
+                :allow-url-input="true"
+                label=""
+                @upload-file="onBannerFileSelected"
+              />
+            </div>
           </div>
 
           <!-- Title -->
@@ -711,6 +709,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useToast } from 'vue-toastification'
 import { bannerService } from '@/services/banner.service'
+import ImageUploader from '@/components/ImageUploader.vue'
 
 const toast = useToast()
 
@@ -894,10 +893,7 @@ function openEditModal(banner: any) {
   showModal.value = true
 }
 
-function handleImageFileSelected(event: Event) {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (!file) return
+function onBannerFileSelected(file: File) {
   if (file.size > 8 * 1024 * 1024) {
     toast.error('Kích thước file ảnh quá lớn (tối đa 8MB)')
     return
@@ -914,6 +910,13 @@ function handleImageFileSelected(event: Event) {
     }
   }
   reader.readAsDataURL(file)
+}
+
+function handleImageFileSelected(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  onBannerFileSelected(file)
 }
 
 function openCropperWithCurrentImage() {

@@ -8,6 +8,22 @@ import { Model, Types } from 'mongoose';
 import { Category, CategoryDocument } from './schemas/category.schema';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
 
+interface LeanCategoryItem {
+  _id: Types.ObjectId | string;
+  name: string;
+  slug: string;
+  description?: string;
+  image?: string;
+  parentId?: Types.ObjectId | string | null;
+  sortOrder?: number;
+  status?: boolean;
+  comboPrice?: number;
+  options?: string[];
+  optionsLabel?: string;
+  optionsType?: string;
+  products?: unknown[];
+}
+
 export interface CategoryTreeItem {
   _id: string;
   name: string;
@@ -47,7 +63,7 @@ export class CategoriesService {
     let slug = baseSlug || 'danh-muc';
     let counter = 1;
     while (true) {
-      const query: any = { slug };
+      const query: Record<string, unknown> = { slug };
       if (excludeId) {
         query._id = { $ne: excludeId };
       }
@@ -174,7 +190,7 @@ export class CategoriesService {
 
     const catMap = new Map<string, CategoryTreeItem>();
 
-    categories.forEach((cat: any) => {
+    (categories as unknown as LeanCategoryItem[]).forEach((cat) => {
       const catId = cat._id.toString();
       catMap.set(catId, {
         _id: catId,

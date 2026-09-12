@@ -15,7 +15,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --max-warnings 1950",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --max-warnings 1450",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "seed": "ts-node -r tsconfig-paths/register src/seeds/run-seed.ts",
     "seed:reset": "ts-node -r tsconfig-paths/register src/seeds/run-seed.ts --reset",

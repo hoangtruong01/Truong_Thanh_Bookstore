@@ -335,98 +335,14 @@
 
       <!-- Description & Image URLs -->
       <div class="space-y-4 border-t border-slate-100 pt-6">
-        <div class="space-y-3">
-          <label class="text-xs font-bold text-slate-700 block mb-1">Hình ảnh sản phẩm *</label>
-          
-          <!-- Tab Switcher -->
-          <div class="flex border-b border-slate-200 gap-4 mb-2">
-            <button
-              type="button"
-              :class="['pb-2 text-xs font-bold border-b-2 transition-all cursor-pointer', imageTab === 'url' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600']"
-              @click="imageTab = 'url'"
-            >
-              Nhập Link ảnh (URL)
-            </button>
-            <button
-              type="button"
-              :class="['pb-2 text-xs font-bold border-b-2 transition-all cursor-pointer', imageTab === 'upload' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600']"
-              @click="imageTab = 'upload'"
-            >
-              Tải ảnh thủ công (File)
-            </button>
-          </div>
-
-          <!-- Tab 1: URL input -->
-          <div v-if="imageTab === 'url'" class="space-y-2">
-            <div class="flex gap-2">
-              <input
-                v-model="tempUrl"
-                type="text"
-                placeholder="Nhập đường dẫn hình ảnh (https://...) rồi nhấn Thêm"
-                class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
-                @keydown.enter.prevent="addImageUrl"
-              />
-              <button
-                type="button"
-                class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                @click="addImageUrl"
-              >
-                Thêm
-              </button>
-            </div>
-            <p class="text-[10px] text-slate-400">Có thể nhập nhiều URL bằng cách thêm từng link.</p>
-          </div>
-
-          <!-- Tab 2: Manual upload input -->
-          <div v-if="imageTab === 'upload'" class="space-y-2">
-            <div
-              class="border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-2xl p-6 transition-all flex flex-col items-center justify-center cursor-pointer text-center bg-slate-50/50"
-              @click="triggerFileInput"
-              @dragover.prevent
-              @drop.prevent="handleFileDrop"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-slate-400 mb-2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
-              </svg>
-              <span class="text-xs font-bold text-slate-700">Kéo thả ảnh hoặc click để chọn ảnh</span>
-              <span class="text-[10px] text-slate-400 mt-1">Định dạng JPG, PNG, WEBP. Cho phép chọn nhiều ảnh.</span>
-              <input
-                ref="fileInput"
-                type="file"
-                multiple
-                accept="image/*"
-                class="hidden"
-                @change="handleFileSelect"
-              />
-            </div>
-          </div>
-
-          <!-- Images Preview Grid -->
-          <div v-if="imagesList.length > 0" class="space-y-2 pt-2">
-            <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Danh sách ảnh đã chọn ({{ imagesList.length }})</span>
-            <div class="grid grid-cols-4 sm:grid-cols-5 gap-3">
-              <div
-                v-for="(img, idx) in imagesList"
-                :key="idx"
-                class="relative aspect-square rounded-2xl overflow-hidden group border border-slate-200 bg-slate-50 shadow-xs flex items-center justify-center"
-              >
-                <img :src="img" class="w-full h-full object-contain" />
-                <div class="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <button
-                    type="button"
-                    class="bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow-md cursor-pointer transition-all hover:scale-110"
-                    title="Xóa ảnh"
-                    @click="removeImage(idx)"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ImageUploader
+          v-model="imagesList"
+          label="Hình ảnh sản phẩm *"
+          :multiple="true"
+          :max-images="6"
+          :max-size-m-b="5"
+          :allow-url-input="true"
+        />
 
         <div>
           <label class="text-xs font-bold text-slate-700">Mô tả sản phẩm</label>
@@ -470,6 +386,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { productService } from '@/services/product.service'
 import { categoryService } from '@/services/category.service'
+import ImageUploader from '@/components/ImageUploader.vue'
 import type { Category } from '@/types'
 
 const formatNumberWithDots = (val: string | number | undefined | null): string => {
@@ -518,11 +435,8 @@ function applyPercentageDiscount(percent: number) {
   }
 }
 
-// Image upload/URL states
-const imageTab = ref<'url' | 'upload'>('url')
-const tempUrl = ref('')
+// Image state
 const imagesList = ref<string[]>([])
-const fileInput = ref<HTMLInputElement | null>(null)
 
 const form = reactive({
   name: '',
@@ -779,57 +693,4 @@ async function handleSubmit() {
   }
 }
 
-// Image handling helper functions
-function addImageUrl() {
-  if (tempUrl.value.trim()) {
-    imagesList.value.push(tempUrl.value.trim())
-    tempUrl.value = ''
-    toast.success('Đã thêm link ảnh thành công')
-  }
-}
-
-function removeImage(idx: number) {
-  imagesList.value.splice(idx, 1)
-  toast.success('Đã xóa ảnh')
-}
-
-function triggerFileInput() {
-  fileInput.value?.click()
-}
-
-function handleFileSelect(e: Event) {
-  const files = (e.target as HTMLInputElement).files
-  if (files) {
-    processFiles(files)
-  }
-}
-
-function handleFileDrop(e: DragEvent) {
-  const files = e.dataTransfer?.files
-  if (files) {
-    processFiles(files)
-  }
-}
-
-function processFiles(files: FileList) {
-  let count = 0
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i]
-    if (!file.type.startsWith('image/')) {
-      toast.warning(`File ${file.name} không phải định dạng ảnh và đã bị bỏ qua.`)
-      continue
-    }
-    count++
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      if (event.target?.result && typeof event.target.result === 'string') {
-        imagesList.value.push(event.target.result)
-      }
-    }
-    reader.readAsDataURL(file)
-  }
-  if (count > 0) {
-    toast.success(`Đang xử lý ${count} ảnh...`)
-  }
-}
 </script>

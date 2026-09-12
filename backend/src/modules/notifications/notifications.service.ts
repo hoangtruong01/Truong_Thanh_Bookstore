@@ -14,8 +14,47 @@ import {
   CreateNotificationDto,
   NotificationQueryDto,
 } from './dto/create-notification.dto';
+
+export interface NotificationOrderPayload {
+  _id?: { toString(): string } | string;
+  orderCode?: string;
+  customer?: { toString(): string } | string | null;
+  total?: number;
+  customerName?: string;
+  paymentMethod?: string;
+  orderStatus?: string;
+}
+
+export interface NotificationProductPayload {
+  _id?: { toString(): string } | string;
+  name?: string;
+  sku?: string;
+}
+
+interface LeanNotificationItem {
+  _id: Types.ObjectId | string;
+  title: string;
+  message: string;
+  type: string;
+  meta?: Record<string, unknown>;
+  userId?: Types.ObjectId | string | null;
+  isRead?: boolean;
+  readBy?: Array<Types.ObjectId | string>;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 import { NotificationsGateway } from './notifications.gateway';
 import { FcmPushService } from './fcm-push.service';
+
+interface NotificationCreateData {
+  title: string;
+  message: string;
+  type: string;
+  meta: Record<string, string | number | boolean | null | undefined>;
+  isRead: boolean;
+  readBy: string[];
+  userId: Types.ObjectId | null;
+}
 
 @Injectable()
 export class NotificationsService {
@@ -27,20 +66,22 @@ export class NotificationsService {
   ) {}
 
   async create(dto: CreateNotificationDto): Promise<NotificationDocument> {
-    const data: any = {
+    const data: NotificationCreateData = {
       title: dto.title,
       message: dto.message,
       type: dto.type || 'order',
-      meta: dto.meta || {},
+      meta:
+        (dto.meta as Record<
+          string,
+          string | number | boolean | null | undefined
+        >) || {},
       isRead: false,
       readBy: [],
+      userId:
+        dto.userId && Types.ObjectId.isValid(dto.userId)
+          ? new Types.ObjectId(dto.userId)
+          : null,
     };
-
-    if (dto.userId && Types.ObjectId.isValid(dto.userId)) {
-      data.userId = new Types.ObjectId(dto.userId);
-    } else {
-      data.userId = null;
-    }
 
     const notification = new this.notificationModel(data);
     const savedNotification = await notification.save();
@@ -80,7 +121,7 @@ export class NotificationsService {
     }
 
     const userObjectId = new Types.ObjectId(userId);
-    const filter: any = {
+    const filter: Record<string, unknown> = {
       $or: [{ userId: userObjectId }, { userId: null }],
       ...(!includeStock ? { $and: [{ type: { $ne: 'stock' } }] } : {}),
     };
@@ -105,19 +146,21 @@ export class NotificationsService {
       this.getUnreadCount(userId, includeStock),
     ]);
 
-    const formattedItems = items.map((item: any) => {
-      let isRead = false;
-      if (item.userId) {
-        isRead = !!item.isRead;
-      } else if (item.readBy && Array.isArray(item.readBy)) {
-        isRead = item.readBy.some((id: any) => id.toString() === userId);
-      }
+    const formattedItems = (items as unknown as LeanNotificationItem[]).map(
+      (item) => {
+        let isRead = false;
+        if (item.userId) {
+          isRead = !!item.isRead;
+        } else if (item.readBy && Array.isArray(item.readBy)) {
+          isRead = item.readBy.some((id) => id.toString() === userId);
+        }
 
-      return {
-        ...item,
-        isRead,
-      };
-    });
+        return {
+          ...item,
+          isRead,
+        };
+      },
+    );
 
     return {
       items: formattedItems,
@@ -210,7 +253,7 @@ export class NotificationsService {
   }
 
   async sendOrderNotification(
-    order: any,
+    order: NotificationOrderPayload,
     eventType: 'CREATED' | 'STATUS_UPDATED' | 'PAID' | 'CANCELLED',
   ) {
     const orderCode =
@@ -262,8 +305,9 @@ export class NotificationsService {
 
     // Broadcast alert to admin room
     try {
+      const orderIdStr = order._id ? order._id.toString() : '';
       await this.gateway.sendAlertToAdmins({
-        id: `order-event-${order._id}-${Date.now()}`,
+        id: `order-event-${orderIdStr}-${Date.now()}`,
         type: 'order',
         title: adminTitle,
         message: adminMessage,
@@ -275,7 +319,10 @@ export class NotificationsService {
     }
   }
 
-  async sendLowStockAlert(product: any, currentStock: number) {
+  async sendLowStockAlert(
+    product: NotificationProductPayload,
+    currentStock: number,
+  ) {
     const isOutOfStock = currentStock <= 0;
     const title = isOutOfStock
       ? 'Cảnh báo hết sạch hàng'

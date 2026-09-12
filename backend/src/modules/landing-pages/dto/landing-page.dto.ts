@@ -13,6 +13,63 @@ import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsMongoObjectId, IsPhoneNumberVN } from '../../../common/validators';
 
+export class LandingPageBenefitDto {
+  @IsString()
+  title: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  icon?: string;
+}
+
+export class LandingPagePackageDto {
+  @IsString()
+  name: string;
+
+  @IsNumber()
+  price: number;
+
+  @IsOptional()
+  @IsNumber()
+  originalPrice?: number;
+
+  @IsOptional()
+  @IsString()
+  badge?: string;
+
+  @IsOptional()
+  @IsString()
+  image?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isBestSeller?: boolean;
+
+  @IsOptional()
+  @IsMongoObjectId()
+  productId?: string;
+}
+
+export class LandingPageTestimonialDto {
+  @IsString()
+  authorName: string;
+
+  @IsString()
+  content: string;
+
+  @IsOptional()
+  @IsString()
+  avatar?: string;
+
+  @IsOptional()
+  @IsNumber()
+  rating?: number;
+}
+
 export class CreateLandingPageDto {
   @ApiProperty()
   @IsNotEmpty({ message: 'Tiêu đề không được để trống' })
@@ -67,20 +124,20 @@ export class CreateLandingPageDto {
   @IsString()
   badgeText?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: () => [LandingPageBenefitDto] })
   @IsOptional()
   @IsArray()
-  benefits?: any[];
+  benefits?: LandingPageBenefitDto[];
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: () => [LandingPagePackageDto] })
   @IsOptional()
   @IsArray()
-  packages?: any[];
+  packages?: LandingPagePackageDto[];
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: () => [LandingPageTestimonialDto] })
   @IsOptional()
   @IsArray()
-  testimonials?: any[];
+  testimonials?: LandingPageTestimonialDto[];
 
   @ApiPropertyOptional()
   @IsOptional()

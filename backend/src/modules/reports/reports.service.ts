@@ -5,6 +5,43 @@ import { InventoryService } from '../inventory/inventory.service';
 import { CustomersService } from '../customers/customers.service';
 import { OrderStatus, PaymentMethod } from '../../common/enums';
 
+interface LowStockReportItem {
+  _id: { toString(): string } | string;
+  currentStock: number;
+  lastUpdated?: Date;
+  product?: {
+    _id: { toString(): string } | string;
+    name: string;
+    unit?: string;
+  };
+}
+
+interface RecentOrderReportItem {
+  _id: { toString(): string } | string;
+  orderCode: string;
+  orderStatus: OrderStatus;
+  paymentMethod?: PaymentMethod;
+  total: number;
+  customerName?: string;
+  createdAt: string | Date;
+}
+
+interface RecentCustomerReportItem {
+  _id: { toString(): string } | string;
+  fullName: string;
+  email: string;
+  createdAt: string | Date;
+}
+
+export interface DashboardNotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  createdAt: string | Date;
+  meta?: Record<string, unknown>;
+}
+
 @Injectable()
 export class ReportsService {
   constructor(
@@ -88,15 +125,15 @@ export class ReportsService {
       this.customersService.getRecent(10),
     ]);
 
-    const notifications: any[] = [];
+    const notifications: DashboardNotificationItem[] = [];
     const now = Date.now();
 
     // Map low stock & out of stock products
-    lowStock.forEach((item: any) => {
+    (lowStock as unknown as LowStockReportItem[]).forEach((item) => {
       if (item.product) {
         const isOutOfStock = item.currentStock <= 0;
         notifications.push({
-          id: `stock-${item._id}`,
+          id: `stock-${item._id.toString()}`,
           type: isOutOfStock ? 'out_of_stock' : 'stock',
           title: isOutOfStock
             ? 'Hết sạch hàng trong kho'
@@ -111,7 +148,7 @@ export class ReportsService {
     });
 
     // Map recent orders with smart alerts
-    recentOrders.forEach((order: any) => {
+    (recentOrders as unknown as RecentOrderReportItem[]).forEach((order) => {
       const isPending = order.orderStatus === OrderStatus.PENDING;
       const isHighValueCod =
         order.paymentMethod === PaymentMethod.COD &&
@@ -123,7 +160,7 @@ export class ReportsService {
 
       if (isHighValueCod) {
         notifications.push({
-          id: `cod-high-${order._id}`,
+          id: `cod-high-${order._id.toString()}`,
           type: 'high_value_order',
           title: 'Đơn hàng COD giá trị cao',
           message: `Đơn hàng #${order.orderCode} (${order.total.toLocaleString('vi-VN')}đ) thanh toán COD cần nhân viên gọi điện xác nhận trước khi giao hàng.`,
@@ -132,7 +169,7 @@ export class ReportsService {
         });
       } else if (isDelayedPending) {
         notifications.push({
-          id: `delay-${order._id}`,
+          id: `delay-${order._id.toString()}`,
           type: 'pending_delay',
           title: 'Đơn hàng chờ xử lý quá lâu',
           message: `Đơn hàng #${order.orderCode} đã tạo hơn 12 giờ nhưng vẫn đang ở trạng thái chờ duyệt.`,
@@ -141,7 +178,7 @@ export class ReportsService {
         });
       } else {
         notifications.push({
-          id: `order-${order._id}`,
+          id: `order-${order._id.toString()}`,
           type: 'order',
           title: 'Đơn hàng mới',
           message: `Đơn hàng #${order.orderCode} trị giá ${order.total.toLocaleString('vi-VN')}đ được tạo bởi ${order.customerName || 'Khách vãng lai'}.`,
@@ -152,16 +189,18 @@ export class ReportsService {
     });
 
     // Map recent customers
-    recentCustomers.forEach((customer: any) => {
-      notifications.push({
-        id: `customer-${customer._id}`,
-        type: 'customer',
-        title: 'Khách hàng mới đăng ký',
-        message: `Thành viên mới ${customer.fullName} (${customer.email}) vừa tạo tài khoản mua sắm.`,
-        createdAt: customer.createdAt,
-        meta: { customerId: customer._id },
-      });
-    });
+    (recentCustomers as unknown as RecentCustomerReportItem[]).forEach(
+      (customer) => {
+        notifications.push({
+          id: `customer-${customer._id.toString()}`,
+          type: 'customer',
+          title: 'Khách hàng mới đăng ký',
+          message: `Thành viên mới ${customer.fullName} (${customer.email}) vừa tạo tài khoản mua sắm.`,
+          createdAt: customer.createdAt,
+          meta: { customerId: customer._id },
+        });
+      },
+    );
 
     // Sort by date (newest first)
     notifications.sort(

@@ -18,6 +18,7 @@ import {
   InventoryDocument,
 } from '../inventory/schemas/inventory.schema';
 import { ReviewsService } from '../reviews/reviews.service';
+import { CreateReviewDto, UpdateReviewDto } from '../reviews/dto/review.dto';
 import { EmailService } from '../email/email.service';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -27,6 +28,22 @@ import {
 } from './dto/product.dto';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
 import { InventoryStatus, ProductStatus } from '../../common/enums';
+
+interface LeanProductExportItem {
+  sku?: string;
+  name?: string;
+  category?: { name?: string } | string | null;
+  status?: string;
+  isFeatured?: boolean;
+  images?: string[];
+  createdAt?: Date | string;
+  price?: number;
+  discountPrice?: number;
+  stock?: number;
+  sold?: number;
+  unit?: string;
+  brand?: string;
+}
 
 function makeDiacriticRegex(str: string): string {
   if (!str) return '';
@@ -43,12 +60,20 @@ function makeDiacriticRegex(str: string): string {
   const normalized = escaped
     .toLowerCase()
     .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  let pattern = '';
+  for (const char of normalized) {
+    pattern += diacriticsMap[char] || char;
+  }
+  return pattern;
+}
+
+function removeDiacritics(str: string): string {
+  return str
+    .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd');
-  return normalized
-    .split('')
-    .map((char) => diacriticsMap[char] || char)
-    .join('');
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
 }
 
 @Injectable()
@@ -56,47 +81,57 @@ export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
   constructor(
-    @InjectModel(Product.name) private productModel: Model<ProductDocument>,
-    private reviewsService: ReviewsService,
-    @InjectModel(StockAlert.name)
-    private stockAlertModel: Model<StockAlertDocument>,
-    @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
+    @InjectModel(Product.name)
+    private readonly productModel: Model<ProductDocument>,
+    @InjectModel(Category.name)
+    private readonly categoryModel: Model<CategoryDocument>,
     @InjectModel(Inventory.name)
-    private inventoryModel: Model<InventoryDocument>,
-    private emailService: EmailService,
-    private configService: ConfigService,
+    private readonly inventoryModel: Model<InventoryDocument>,
+    @InjectModel(StockAlert.name)
+    private readonly stockAlertModel: Model<StockAlertDocument>,
+    private readonly reviewsService: ReviewsService,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
   ) {}
 
   private generateSlug(name: string): string {
-    const base = name
-      .replace(/đ/g, 'd')
-      .replace(/Đ/g, 'd')
+    const base = removeDiacritics(name)
       .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
     const suffix = Math.random().toString(36).substring(2, 6);
     return `${base}-${suffix}`;
   }
 
-  private extractCellValue(cell: any): string {
+  private safeString(val: unknown): string {
+    if (typeof val === 'string') return val.trim();
+    if (typeof val === 'number' || typeof val === 'boolean') {
+      return String(val).trim();
+    }
+    return '';
+  }
+
+  private extractCellValue(cell: unknown): string {
     if (cell === null || cell === undefined) return '';
     if (cell instanceof Date) return cell.toISOString().slice(0, 10);
     if (typeof cell === 'object') {
-      if (cell.text !== undefined) return String(cell.text).trim();
-      if (cell.result !== undefined) return String(cell.result).trim();
-      if (cell.richText && Array.isArray(cell.richText)) {
-        return cell.richText
-          .map((r: any) => r.text || '')
+      const cellObj = cell as Record<string, unknown>;
+      if (cellObj.text !== undefined) return this.safeString(cellObj.text);
+      if (cellObj.result !== undefined) return this.safeString(cellObj.result);
+      if (cellObj.richText && Array.isArray(cellObj.richText)) {
+        return (cellObj.richText as Array<{ text?: unknown }>)
+          .map((r) => (typeof r.text === 'string' ? r.text : ''))
           .join('')
           .trim();
       }
-      if (cell.hyperlink !== undefined) return String(cell.hyperlink).trim();
-      if (cell.error !== undefined) return '';
+      if (cellObj.hyperlink !== undefined) {
+        return this.safeString(cellObj.hyperlink);
+      }
+      if (cellObj.error !== undefined) return '';
       return '';
     }
-    return String(cell).trim();
+    return this.safeString(cell);
   }
 
   async create(dto: CreateProductDto): Promise<ProductDocument> {
@@ -155,15 +190,15 @@ export class ProductsService {
       inStock,
       isFlashSale,
     } = query;
-    const filter: any = { isDeleted: false };
+    const filter: Record<string, unknown> = { isDeleted: false };
 
     if (status) filter.status = status;
 
-    if (discounted === true || (discounted as any) === 'true') {
+    if (discounted === true || String(discounted) === 'true') {
       filter.discountPrice = { $gt: 0 };
     }
 
-    if (isFlashSale === true || (isFlashSale as any) === 'true') {
+    if (isFlashSale === true || String(isFlashSale) === 'true') {
       filter.isFlashSale = true;
     }
 
@@ -175,7 +210,7 @@ export class ProductsService {
         const subCategories = catObjId
           ? await this.categoryModel.find({ parentId: catObjId }).exec()
           : [];
-        const categoryIds: any[] = [
+        const categoryIds: Array<string | Types.ObjectId> = [
           category,
           ...(catObjId ? [catObjId] : []),
           ...subCategories.map((c) => c._id),
@@ -228,20 +263,23 @@ export class ProductsService {
     }
 
     if (minPrice !== undefined || maxPrice !== undefined) {
-      filter.price = {};
+      const priceFilter: Record<string, number> = {};
       if (
         minPrice !== undefined &&
         minPrice !== null &&
         !isNaN(Number(minPrice))
       ) {
-        filter.price.$gte = Number(minPrice);
+        priceFilter.$gte = Number(minPrice);
       }
       if (
         maxPrice !== undefined &&
         maxPrice !== null &&
         !isNaN(Number(maxPrice))
       ) {
-        filter.price.$lte = Number(maxPrice);
+        priceFilter.$lte = Number(maxPrice);
+      }
+      if (Object.keys(priceFilter).length > 0) {
+        filter.price = priceFilter;
       }
     }
 
@@ -250,7 +288,7 @@ export class ProductsService {
     }
 
     if (inStock !== undefined && inStock !== '') {
-      const isInStock = inStock === true || inStock === 'true';
+      const isInStock = inStock === true || String(inStock) === 'true';
       if (isInStock) {
         filter.stock = { $gt: 0 };
       } else {
@@ -276,7 +314,7 @@ export class ProductsService {
     }
 
     const sortChoice = sort || sortBy || 'newest';
-    let sortObj: any = { createdAt: -1 };
+    let sortObj: Record<string, 1 | -1> = { createdAt: -1 };
     switch (sortChoice) {
       case 'price_asc':
         sortObj = { price: 1 };
@@ -308,16 +346,16 @@ export class ProductsService {
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       this.productModel
-        .find(filter)
+        .find(filter as never)
         .populate({
           path: 'category',
           populate: { path: 'parentId', select: 'name slug' },
         })
-        .sort(sortObj)
+        .sort(sortObj as never)
         .skip(skip)
         .limit(limit)
         .exec(),
-      this.productModel.countDocuments(filter).exec(),
+      this.productModel.countDocuments(filter as never).exec(),
     ]);
 
     return paginate(data, total, page, limit);
@@ -373,13 +411,14 @@ export class ProductsService {
       return [];
     }
 
-    const conditions: any[] = [];
+    const conditions: Array<Record<string, unknown>> = [];
     if (currentProduct.category) {
-      const catId =
+      const catObj =
         typeof currentProduct.category === 'object' &&
-        (currentProduct.category as any)._id
-          ? (currentProduct.category as any)._id
-          : currentProduct.category;
+        currentProduct.category !== null
+          ? (currentProduct.category as unknown as Record<string, unknown>)
+          : null;
+      const catId = catObj?._id ? catObj._id : currentProduct.category;
       conditions.push({ category: catId });
     }
     if (currentProduct.author && currentProduct.author.trim()) {
@@ -397,7 +436,7 @@ export class ProductsService {
       conditions.push({ brand: currentProduct.brand });
     }
 
-    const query: any = {
+    const query: Record<string, unknown> = {
       _id: { $ne: currentProduct._id },
       isDeleted: false,
     };
@@ -407,7 +446,7 @@ export class ProductsService {
     }
 
     let related = await this.productModel
-      .find(query)
+      .find(query as never)
       .populate('category')
       .sort({ rating: -1, sold: -1, createdAt: -1 })
       .limit(limit)
@@ -711,8 +750,8 @@ export class ProductsService {
     productId: string,
     userId: string,
     userName: string,
-    dto: any,
-  ): Promise<any> {
+    dto: CreateReviewDto,
+  ): Promise<unknown> {
     return this.reviewsService.create(productId, userId, userName, dto);
   }
 
@@ -720,8 +759,8 @@ export class ProductsService {
     productId: string,
     reviewId: string,
     userId: string,
-    dto: any,
-  ): Promise<any> {
+    dto: UpdateReviewDto,
+  ): Promise<unknown> {
     return this.reviewsService.update(productId, reviewId, userId, dto);
   }
 
@@ -730,7 +769,7 @@ export class ProductsService {
     reviewId: string,
     userId: string,
     userRole: string,
-  ): Promise<any> {
+  ): Promise<unknown> {
     return this.reviewsService.delete(productId, reviewId, userId, userRole);
   }
 
@@ -1163,7 +1202,7 @@ export class ProductsService {
       .sort({ createdAt: -1 })
       .lean();
 
-    products.forEach((prod: any, idx: number) => {
+    (products as unknown as LeanProductExportItem[]).forEach((prod, idx) => {
       const categoryName =
         prod.category && typeof prod.category === 'object'
           ? prod.category.name
@@ -1240,7 +1279,7 @@ export class ProductsService {
   async importFromExcel(buffer: Buffer) {
     const workbook = new ExcelJS.Workbook();
     try {
-      await workbook.xlsx.load(buffer as any);
+      await workbook.xlsx.load(buffer as never);
     } catch {
       throw new BadRequestException(
         'Định dạng file Excel không hợp lệ hoặc file bị hỏng.',
@@ -1288,7 +1327,7 @@ export class ProductsService {
       .find({ isDeleted: false }, { sku: 1, name: 1, slug: 1 })
       .lean();
 
-    const existingSkuMap = new Map<string, any>();
+    const existingSkuMap = new Map<string, { sku?: string; name?: string }>();
     for (const p of existingProducts) {
       if (p.sku) {
         existingSkuMap.set(p.sku.trim().toUpperCase(), p);
@@ -1371,7 +1410,7 @@ export class ProductsService {
           row: r,
           sku: sku.trim(),
           name: name.trim(),
-          reason: `Mã SKU "${sku.trim()}" đã tồn tại trong kho (Sản phẩm: "${existProd.name || ''}"). Hệ thống từ chối tải lại để tránh trùng lặp.`,
+          reason: `Mã SKU "${sku.trim()}" đã tồn tại trong kho (Sản phẩm: "${existProd?.name || ''}"). Hệ thống từ chối tải lại để tránh trùng lặp.`,
         });
         continue;
       }
@@ -1527,13 +1566,15 @@ export class ProductsService {
           price,
           stock,
         });
-      } catch (saveErr: any) {
+      } catch (saveErr: unknown) {
         this.logger.error(`Lỗi lưu sản phẩm tại dòng ${r}:`, saveErr);
+        const errMsg =
+          saveErr instanceof Error ? saveErr.message : 'Không xác định';
         errors.push({
           row: r,
           sku,
           name,
-          reason: `Lỗi CSDL khi tạo sản phẩm: ${saveErr.message || 'Không xác định'}`,
+          reason: `Lỗi CSDL khi tạo sản phẩm: ${errMsg}`,
         });
       }
     }

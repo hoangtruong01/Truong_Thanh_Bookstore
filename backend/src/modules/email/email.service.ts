@@ -2,6 +2,29 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
+export interface EmailOrderItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+export interface EmailOrderDetails {
+  orderCode: string;
+  customerName: string;
+  phone: string;
+  shippingAddress: string;
+  items: EmailOrderItem[];
+  subtotal: number;
+  shippingFee: number;
+  discount: number;
+  total: number;
+}
+
+export interface EmailOrderStatusDetails {
+  orderCode: string;
+  customerName: string;
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -106,12 +129,15 @@ ${html
     return this.sendMail(to, subject, html);
   }
 
-  async sendOrderConfirmationEmail(to: string, order: any): Promise<boolean> {
+  async sendOrderConfirmationEmail(
+    to: string,
+    order: EmailOrderDetails,
+  ): Promise<boolean> {
     const subject = `Xác nhận đơn hàng #${order.orderCode} - Trường Thành Bookstore`;
 
     const itemsHtml = order.items
       .map(
-        (item: any) => `
+        (item: EmailOrderItem) => `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${item.name}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">${item.quantity}</td>
@@ -198,7 +224,7 @@ ${html
 
   async sendOrderStatusEmail(
     to: string,
-    order: any,
+    order: EmailOrderStatusDetails,
     statusText: string,
   ): Promise<boolean> {
     const subject = `Cập nhật trạng thái đơn hàng #${order.orderCode} - Trường Thành Bookstore`;

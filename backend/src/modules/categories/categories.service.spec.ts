@@ -3,6 +3,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { Category } from './schemas/category.schema';
+import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
 
 describe('CategoriesService (TASK 11: Multi-level Category Tree & Slug)', () => {
   let service: CategoriesService;
@@ -95,7 +96,7 @@ describe('CategoriesService (TASK 11: Multi-level Category Tree & Slug)', () => 
     });
 
     mockCategoryModel.findById = jest.fn().mockImplementation((id: string) => {
-      let found: any = null;
+      let found: Record<string, unknown> | null = null;
       if (id === mockRootCat._id) found = { ...mockRootCat };
       if (id === mockChildCat._id) found = { ...mockChildCat };
       if (id === mockSubChildCat._id) found = { ...mockSubChildCat };
@@ -213,7 +214,7 @@ describe('CategoriesService (TASK 11: Multi-level Category Tree & Slug)', () => 
 
   describe('3. Circular Reference Prevention & Validation', () => {
     it('should throw BadRequestException when category sets itself as parent', async () => {
-      const updateDto: any = {
+      const updateDto: UpdateCategoryDto = {
         parentId: mockRootCat._id,
       };
 
@@ -225,7 +226,7 @@ describe('CategoriesService (TASK 11: Multi-level Category Tree & Slug)', () => 
     it('should throw BadRequestException when circular hierarchy is detected (A -> B -> A)', async () => {
       // Child category mockChildCat has parent mockRootCat.
       // Trying to update mockRootCat to have parent mockChildCat should throw.
-      const updateDto: any = {
+      const updateDto: UpdateCategoryDto = {
         parentId: mockChildCat._id,
       };
 
@@ -239,7 +240,7 @@ describe('CategoriesService (TASK 11: Multi-level Category Tree & Slug)', () => 
         exec: jest.fn().mockResolvedValue(null),
       });
 
-      const createDto: any = {
+      const createDto: CreateCategoryDto = {
         name: 'Thước Kẻ',
         parentId: 'non-existent-parent-id',
       };
@@ -252,7 +253,7 @@ describe('CategoriesService (TASK 11: Multi-level Category Tree & Slug)', () => 
 
   describe('4. Category CRUD Operations', () => {
     it('should create a root category with auto-generated slug', async () => {
-      const createDto: any = {
+      const createDto: CreateCategoryDto = {
         name: 'Đồ chơi thông minh',
         sortOrder: 5,
       };
