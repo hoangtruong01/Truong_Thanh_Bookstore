@@ -86,11 +86,26 @@
                 </span>
               </div>
               <p v-if="order.promotionCode"><strong>Mã giảm giá đã dùng:</strong> <span class="font-mono text-red-600 font-bold">{{ order.promotionCode }}</span></p>
-              <p v-if="order.trackingCode">
-                <strong>Mã vận đơn {{ order.shippingProvider }}:</strong>
-                <span class="ml-1 font-mono font-bold text-blue-700">{{ order.trackingCode }}</span>
-              </p>
-              <p v-if="order.shippingStatus"><strong>Trạng thái đối tác:</strong> {{ order.shippingStatus }}</p>
+              <div v-if="order.trackingCode" class="pt-1 space-y-1">
+                <p class="flex flex-wrap items-center gap-1.5">
+                  <strong>Mã vận đơn {{ order.shippingProvider || 'GHN' }}:</strong>
+                  <span class="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">{{ order.trackingCode }}</span>
+                  <a
+                    :href="`https://tracking.ghn.vn/?order_code=${encodeURIComponent(order.trackingCode)}`"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 underline ml-1"
+                  >
+                    <span>Tra cứu GHN</span>
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </p>
+                <p v-if="order.shippingStatus" class="text-[11px] text-slate-500">
+                  <strong>Trạng thái đối tác:</strong> <span class="capitalize text-slate-700">{{ order.shippingStatus }}</span>
+                </p>
+              </div>
 
               <!-- Retry Payment / Payment Instructions for Pending Online Orders -->
               <div v-if="order.orderStatus === 'PENDING' && order.paymentStatus !== 'PAID' && order.paymentMethod !== 'COD'" class="mt-3 pt-3 border-t border-slate-200/60 space-y-2">

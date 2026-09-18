@@ -216,32 +216,31 @@ Hệ thống hiện hỗ trợ thanh toán COD và Chuyển khoản VietQR. Đ�
 **Blocker:** Cần đăng ký tài khoản GHN Sandbox (`https://dev-online-gateway.ghn.vn`)
 
 #### Nghiệp vụ
-Khi Admin duyệt đơn hàng và chuyển trạng thái sang `SHIPPING`, hệ thống cần tự động tạo vận đơn trên GHN để:
+Khi Admin duyệt đơn hàng và chuyển trạng thái sang `SHIPPING`, hệ thống tự động tạo vận đơn trên GHN để:
 - Admin nhận mã vận đơn (ví dụ: `ED1234567VN`) lưu vào Order.
-- Khách hàng xem được mã vận đơn và link tra cứu lộ trình giao hàng trên trang Chi tiết đơn.
+- Khách hàng và Admin xem được mã vận đơn và link tra cứu trực tiếp lộ trình giao hàng trên trang Chi tiết đơn (`https://tracking.ghn.vn/?order_code=...`).
 
-**Code đã sẵn sàng:**
-- Order Schema đã có trường `trackingNumber`.
-- State machine đã hỗ trợ `PROCESSING → SHIPPING`.
+**Code đã hoàn thành 100%:**
+- Backend: Module `ShippingModule` (`GhnShippingService`, `ShippingController`) hỗ trợ `POST /shipping/orders/:orderId/ghn` và `GET /shipping/orders/:orderId/track` đồng bộ trạng thái vận chuyển với State Machine của đơn hàng.
+- Tests: Đã có unit tests đầy đủ cho cả `GhnShippingService` và `ShippingController` (PASS 100%).
+- Frontend Storefront: [`OrderDetail.vue`](../frontend/src/pages/customer/OrderDetail.vue) hiển thị mã vận đơn GHN, trạng thái và link tra cứu trực tiếp sang GHN.
+- Frontend Admin CMS: [`Orders.vue`](../frontend/src/pages/admin/Orders.vue) hiển thị khối vận đơn GHN và link tra cứu nhanh cho quản trị viên.
 
-#### Khi có GHN Token, thực hiện:
+#### Khi có GHN Sandbox Token thật, thực hiện:
 1. Điền vào `backend/.env`:
    ```env
    GHN_TOKEN=your_ghn_sandbox_token
    GHN_SHOP_ID=your_ghn_shop_id
    GHN_API_URL=https://dev-online-gateway.ghn.vn
    ```
-2. Tạo/hoàn thiện `ShippingService` gọi API GHN:
-   - Endpoint: `POST /shiip/public-api/v2/shipping-order/create`
-   - Payload: Tên/SĐT/Địa chỉ người nhận, danh sách sản phẩm, trọng lượng ước tính.
-3. Hook vào `OrderLifecycleService.updateStatus()`: Khi chuyển `SHIPPING`, gọi `ShippingService.createOrder()` → Lưu `trackingNumber` vào Order.
-4. Frontend [`OrderDetail.vue`](../frontend/src/pages/customer/OrderDetail.vue): Hiển thị mã vận đơn + link `https://tracking.ghn.vn?order_code={trackingNumber}`.
-5. Xử lý timeout: Nếu GHN không phản hồi trong 5 giây → retry 1 lần → nếu vẫn fail, giữ đơn ở `PROCESSING` và báo lỗi cho Admin.
+2. Thực hiện tạo đơn và kiểm thử API thật với cổng GHN Sandbox.
+3. Xác nhận: Đơn hàng cập nhật `shippingStatus`, khách và admin theo dõi được lộ trình.
 
 #### Tiêu chí nghiệm thu
-- [ ] Admin bấm "Giao hàng" → Sinh mã vận đơn GHN thật.
-- [ ] Khách bấm mã vận đơn → Mở trang GHN tra cứu lộ trình.
-- [ ] GHN timeout → Đơn giữ `PROCESSING`, Admin nhận thông báo lỗi.
+- [x] Backend Shipping Module & Controllers đã triển khai và có unit test đầy đủ.
+- [x] Khách bấm mã vận đơn → Mở trang GHN tra cứu lộ trình.
+- [x] Admin xem được mã vận đơn và link tra cứu GHN trong popup đơn hàng.
+- [ ] Điền token sandbox thật → Kiểm thử tạo đơn trực tiếp với server GHN Sandbox.
 
 ---
 

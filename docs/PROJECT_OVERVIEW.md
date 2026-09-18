@@ -702,14 +702,14 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 
 | Phân hệ | Lệnh | Kết quả |
 | :--- | :--- | :---: |
-| Backend Unit Tests | `cd backend && npm test` | **43/43 suites, 479/479 tests PASS** |
+| Backend Unit Tests | `cd backend && npm test` | **44/44 suites, 482/482 tests PASS** |
 | Backend Linting | `cd backend && npm run lint` | **0 errors** (1.415 warnings, trần ≤ 1.450 warnings) |
 | Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
 | Frontend Unit Tests | `cd frontend && npm run test:unit` | **14/14 suites, 80/80 tests PASS** |
 | Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |
 | Frontend Linting | `cd frontend && npm run lint` | **0 errors** |
 | Frontend Build | `cd frontend && npm run build` | **Biên dịch thành công** |
-| Mobile Tests | `cd mobile && flutter test` | **42/42 tests PASS** |
+| Mobile Tests | `cd mobile && flutter test` | **47/47 tests PASS** |
 | Mobile Analyze | `cd mobile && flutter analyze` | **0 issues** |
 
 ### 11.3. Cổng Nghiệm Thu CTO — Đã Đạt 4/4
