@@ -103,8 +103,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-
 interface Props {
   icon?: string
   iconType?: 'cart' | 'order' | 'search' | 'wishlist' | 'custom' | string
@@ -114,7 +112,7 @@ interface Props {
   actionTo?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   icon: '📦',
   iconType: 'custom',
   title: 'Không có dữ liệu',

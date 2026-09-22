@@ -24,6 +24,16 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { GeneratedLandingPageResponseDto } from './dto/landing-page-ai.dto';
 
+interface GeminiApiResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
+  }>;
+}
+
 @Injectable()
 export class LandingPageService {
   private readonly logger = new Logger(LandingPageService.name);
@@ -114,7 +124,9 @@ export class LandingPageService {
     // Clean packages
     if (cleaned.packages && Array.isArray(cleaned.packages)) {
       cleaned.packages = cleaned.packages
-        .filter((pkg) => pkg && (pkg.name?.trim() || pkg.price > 0))
+        .filter((pkg) =>
+          Boolean(pkg && (pkg.name?.trim() || (pkg.price ?? 0) > 0)),
+        )
         .map((pkg, idx) => ({
           ...pkg,
           name: pkg.name?.trim() || `Gói Combo ${idx + 1}`,
@@ -139,7 +151,7 @@ export class LandingPageService {
     // Clean benefits
     if (cleaned.benefits && Array.isArray(cleaned.benefits)) {
       cleaned.benefits = cleaned.benefits
-        .filter((b) => b && b.title?.trim())
+        .filter((b) => Boolean(b && b.title?.trim()))
         .map((b) => ({
           ...b,
           title: b.title.trim(),
@@ -153,7 +165,7 @@ export class LandingPageService {
     // Clean testimonials
     if (cleaned.testimonials && Array.isArray(cleaned.testimonials)) {
       cleaned.testimonials = cleaned.testimonials
-        .filter((t) => t && t.authorName?.trim() && t.content?.trim())
+        .filter((t) => Boolean(t && t.authorName?.trim() && t.content?.trim()))
         .map((t) => ({
           ...t,
           authorName: t.authorName.trim(),
@@ -292,7 +304,7 @@ export class LandingPageService {
 
     // Resolve only an administrator-configured binding. Never guess a SKU.
     const targetProductId =
-      selectedPkg?.productId?.toString() || (page as any).productId?.toString();
+      selectedPkg?.productId?.toString() || page.productId?.toString();
 
     if (!targetProductId) {
       throw new BadRequestException(
@@ -344,13 +356,10 @@ export class LandingPageService {
     const savedOrder = await this.ordersService.create(createOrderDto);
 
     // Sync to Google Sheet (async)
-    this.ordersService
-      .syncToGoogleSheet(savedOrder)
-      .catch((err) =>
-        this.logger.error(
-          `Error syncing order to Google Sheet: ${err.message}`,
-        ),
-      );
+    this.ordersService.syncToGoogleSheet(savedOrder).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Error syncing order to Google Sheet: ${msg}`);
+    });
 
     return savedOrder;
   }
@@ -448,7 +457,7 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
         throw new Error(`Gemini API responded with status ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as GeminiApiResponse;
       const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!generatedText) {
         throw new Error('Gemini API returned an empty response');
@@ -457,12 +466,12 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
       // Robust JSON extraction using regex matching for JSON objects
       const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
       const cleanJson = jsonMatch ? jsonMatch[0] : generatedText;
-      const parsed = JSON.parse(cleanJson);
+      const parsed: unknown = JSON.parse(cleanJson);
 
       // BE-08: Validate AI output schema with class-validator
       const dtoInstance = plainToInstance(
         GeneratedLandingPageResponseDto,
-        parsed,
+        parsed as object,
       );
       const validationErrors = await validate(dtoInstance);
       if (validationErrors.length > 0) {
@@ -473,9 +482,10 @@ Hãy trả về một đối tượng JSON chuẩn (không chứa bất kỳ gi�
       }
 
       return parsed;
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       this.logger.warn(
-        `Gemini API error (${error.message}). Falling back to template...`,
+        `Gemini API error (${errorMsg}). Falling back to template...`,
       );
       return this.generateFallbackTemplate(dto);
     }

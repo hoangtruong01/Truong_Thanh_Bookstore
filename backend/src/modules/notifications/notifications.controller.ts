@@ -22,6 +22,16 @@ import { StaffPermission, UserRole } from '../../common/enums';
 import { RegisterDeviceTokenDto } from './dto/device-token.dto';
 import { FcmPushService } from './fcm-push.service';
 
+interface AuthenticatedNotificationUser {
+  _id: { toString(): string };
+  role?: string;
+  permissions?: string[];
+}
+
+interface AuthenticatedNotificationRequest {
+  user: AuthenticatedNotificationUser;
+}
+
 @ApiTags('notifications')
 @Controller('notifications')
 @UseGuards(AuthGuard('jwt'))
@@ -47,7 +57,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Register or rotate an FCM device token' })
   registerDeviceToken(
     @Body() dto: RegisterDeviceTokenDto,
-    @Request() req: any,
+    @Request() req: AuthenticatedNotificationRequest,
   ) {
     return this.fcmPushService.register(
       req.user._id.toString(),
@@ -60,7 +70,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Unregister an FCM device token on logout' })
   unregisterDeviceToken(
     @Body() dto: RegisterDeviceTokenDto,
-    @Request() req: any,
+    @Request() req: AuthenticatedNotificationRequest,
   ) {
     return this.fcmPushService.unregister(
       req.user._id.toString(),
@@ -73,7 +83,7 @@ export class NotificationsController {
     summary: 'Lấy danh sách thông báo của người dùng (kèm số lượng chưa đọc)',
   })
   async getMyNotifications(
-    @Request() req: any,
+    @Request() req: AuthenticatedNotificationRequest,
     @Query() query: NotificationQueryDto,
   ) {
     const userId = req.user._id.toString();
@@ -86,7 +96,7 @@ export class NotificationsController {
 
   @Get('unread-count')
   @ApiOperation({ summary: 'Lấy số lượng thông báo chưa đọc của người dùng' })
-  async getUnreadCount(@Request() req: any) {
+  async getUnreadCount(@Request() req: AuthenticatedNotificationRequest) {
     const userId = req.user._id.toString();
     const count = await this.notificationsService.getUnreadCount(
       userId,
@@ -97,7 +107,10 @@ export class NotificationsController {
 
   @Patch(':id/read')
   @ApiOperation({ summary: 'Đánh dấu một thông báo là đã đọc' })
-  async markAsRead(@Param('id') id: string, @Request() req: any) {
+  async markAsRead(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedNotificationRequest,
+  ) {
     const userId = req.user._id.toString();
     return this.notificationsService.markAsRead(
       id,
@@ -110,7 +123,7 @@ export class NotificationsController {
   @ApiOperation({
     summary: 'Đánh dấu tất cả thông báo của người dùng là đã đọc',
   })
-  async markAllAsRead(@Request() req: any) {
+  async markAllAsRead(@Request() req: AuthenticatedNotificationRequest) {
     const userId = req.user._id.toString();
     return this.notificationsService.markAllAsRead(
       userId,

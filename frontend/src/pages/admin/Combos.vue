@@ -464,11 +464,6 @@ function removeOptionItem(idx: number) {
   }
 }
 
-// Filter parent combos to populate the dropdown
-const parentCombos = computed(() => {
-  return combos.value.filter(c => !c.parentId)
-})
-
 const filteredCombos = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   if (!query) return combos.value
@@ -556,7 +551,7 @@ async function fetchCombos() {
     
     // Only display sub-combos (categories that have a parentId)
     combos.value = all.filter((c: Category) => c.parentId != null)
-  } catch (err) {
+  } catch {
     toast.error('Lỗi khi lấy danh sách combo')
   } finally {
     loading.value = false
@@ -567,17 +562,11 @@ async function fetchProducts() {
   try {
     const res: any = await productService.getAll({ page: 1, limit: 1000 })
     allProducts.value = Array.isArray(res.data) ? res.data : (res.data?.data || [])
-  } catch (err) {
-    console.error('Lỗi khi tải danh sách sản phẩm', err)
+  } catch {
+    console.error('Lỗi khi tải danh sách sản phẩm')
   }
 }
 
-function getParentName(parentId: any): string {
-  if (!parentId) return ''
-  const parentIdStr = typeof parentId === 'object' ? parentId._id : parentId
-  const parent = combos.value.find(c => c._id === parentIdStr)
-  return parent ? parent.name : 'Chưa xác định'
-}
 
 function getComboRetailTotal(combo: Category): number {
   if (!combo.products || !combo.products.length) return 0

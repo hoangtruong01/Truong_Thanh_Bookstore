@@ -66,7 +66,7 @@ jobs:
         run: |
           node --test ../scripts/load/load.test.js
           npm test -- --runInBand
-          npx jest --rootDir . test/all-fixes.spec.ts test/e2e-flow.spec.ts test/critical-commerce-regression.spec.ts --runInBand --detectOpenHandles
+          npx jest --rootDir . test/all-fixes.spec.ts test/e2e-flow.spec.ts test/critical-commerce-regression.spec.ts test/security-p0-audit.spec.ts --runInBand --detectOpenHandles
           npm run test:e2e -- --runInBand --detectOpenHandles
         env:
           MONGODB_URI: mongodb://127.0.0.1:27017/truongthanh_e2e?replicaSet=rs0&directConnection=true

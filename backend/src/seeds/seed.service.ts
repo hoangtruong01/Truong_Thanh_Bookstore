@@ -1909,14 +1909,14 @@ export class SeedService implements OnModuleInit {
     );
 
     // Group non-combo products by category index
-    const productsByCategoryIndex: { [key: number]: any[] } = {
+    const productsByCategoryIndex: Record<number, ProductDocument[]> = {
       0: [],
       1: [],
       2: [],
       4: [],
       5: [],
     };
-    createdNonComboProducts.forEach((product: any) => {
+    (createdNonComboProducts as ProductDocument[]).forEach((product) => {
       const rawProd = nonComboRawProducts.find((rp) => rp.sku === product.sku);
       if (rawProd) {
         productsByCategoryIndex[rawProd.categoryIndex].push(product);
@@ -1924,12 +1924,12 @@ export class SeedService implements OnModuleInit {
     });
 
     // Create combo subcategories and combo products
-    const comboProductsToCreate: any[] = [];
+    const comboProductsToCreate: Array<Record<string, unknown>> = [];
 
     for (let idx = 0; idx < comboRawProducts.length; idx++) {
       const p = comboRawProducts[idx];
       const opt = p.subOptions?.[0] || 'Học tập';
-      const selectedSubProducts: any[] = [];
+      const selectedSubProducts: Types.ObjectId[] = [];
 
       if (opt === 'Học tập') {
         const sgkList = productsByCategoryIndex[0] || [];
@@ -2018,7 +2018,11 @@ export class SeedService implements OnModuleInit {
         createdNonComboProducts.length > 0
       ) {
         selectedSubProducts.push(
-          createdNonComboProducts[idx % createdNonComboProducts.length]._id,
+          (
+            createdNonComboProducts[
+              idx % createdNonComboProducts.length
+            ] as ProductDocument
+          )._id,
         );
       }
 
@@ -2071,11 +2075,13 @@ export class SeedService implements OnModuleInit {
     ];
 
     // Group product IDs by category index for parent categories
-    const categoryProductIds: { [index: number]: any[] } = {
+    const categoryProductIds: Record<number, Types.ObjectId[]> = {
       0: productsByCategoryIndex[0].map((p) => p._id),
       1: productsByCategoryIndex[1].map((p) => p._id),
       2: productsByCategoryIndex[2].map((p) => p._id),
-      3: createdComboProducts.map((p) => p._id),
+      3: (createdComboProducts as unknown as ProductDocument[]).map(
+        (p) => p._id,
+      ),
       4: productsByCategoryIndex[4].map((p) => p._id),
       5: productsByCategoryIndex[5].map((p) => p._id),
     };

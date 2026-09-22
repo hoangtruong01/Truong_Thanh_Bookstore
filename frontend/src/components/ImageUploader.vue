@@ -2,7 +2,7 @@
   <div class="space-y-3">
     <div v-if="label" class="flex justify-between items-center">
       <label class="text-xs font-bold text-slate-700">{{ label }}</label>
-      <span class="text-[10px] text-slate-400 font-medium">Tối đa {{ maxSizeBytes / (1024 * 1024) }}MB / ảnh</span>
+      <span class="text-[10px] text-slate-400 font-medium">Tối đa {{ effectiveMaxSizeBytes / (1024 * 1024) }}MB / ảnh</span>
     </div>
 
     <!-- Image Previews Grid -->
@@ -13,7 +13,10 @@
         class="group relative aspect-square rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-xs"
       >
         <img :src="url" class="w-full h-full object-cover" alt="Preview" />
-        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+        <div
+          v-if="!disabled"
+          class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5"
+        >
           <button
             type="button"
             class="w-7 h-7 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-xs transition-colors cursor-pointer"
@@ -29,7 +32,7 @@
 
       <!-- Add more box if multiple allowed and below max -->
       <button
-        v-if="multiple && previewList.length < maxImages"
+        v-if="multiple && previewList.length < effectiveMaxImages && !disabled"
         type="button"
         class="aspect-square rounded-2xl border-2 border-dashed border-slate-200 hover:border-red-400 hover:bg-red-50/20 text-slate-400 hover:text-red-600 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer"
         @click="triggerFileInput"
@@ -45,11 +48,13 @@
     <div
       v-if="previewList.length === 0"
       :class="[
-        'border-2 border-dashed rounded-3xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2',
-        isDragging ? 'border-red-500 bg-red-50/40' : 'border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-50'
+        'border-2 border-dashed rounded-3xl p-6 text-center transition-all flex flex-col items-center justify-center gap-2',
+        disabled ? 'opacity-50 cursor-not-allowed border-slate-200 bg-slate-50' : 'cursor-pointer',
+        !disabled && isDragging ? 'border-red-500 bg-red-50/40' : '',
+        !disabled && !isDragging ? 'border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-50' : ''
       ]"
-      @dragover.prevent="isDragging = true"
-      @dragleave.prevent="isDragging = false"
+      @dragover.prevent="!disabled && (isDragging = true)"
+      @dragleave.prevent="!disabled && (isDragging = false)"
       @drop.prevent="onDrop"
       @click="triggerFileInput"
     >
@@ -60,7 +65,7 @@
       </div>
       <div>
         <p class="text-xs font-bold text-slate-700">Kéo thả ảnh vào đây hoặc <span class="text-red-600 hover:underline">Chọn tệp</span></p>
-        <p class="text-[10px] text-slate-400 mt-0.5">PNG, JPG, WEBP, AVIF (Tối đa {{ maxSizeBytes / (1024 * 1024) }}MB)</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">PNG, JPG, WEBP, AVIF (Tối đa {{ effectiveMaxSizeBytes / (1024 * 1024) }}MB)</p>
       </div>
     </div>
 
@@ -71,11 +76,12 @@
       class="hidden"
       :accept="acceptedFormats"
       :multiple="multiple"
+      :disabled="disabled"
       @change="onFileSelected"
     />
 
     <!-- Direct URL fallback input (optional) -->
-    <div v-if="allowUrlInput" class="flex gap-2">
+    <div v-if="allowUrlInput && !disabled" class="flex gap-2">
       <input
         v-model="manualUrl"
         type="url"
@@ -105,17 +111,23 @@ const props = withDefaults(
     label?: string
     multiple?: boolean
     maxImages?: number
+    maxFiles?: number
     maxSizeBytes?: number
+    maxSizeMB?: number
     allowUrlInput?: boolean
     acceptedFormats?: string
+    disabled?: boolean
   }>(),
   {
     label: '',
     multiple: false,
-    maxImages: 6,
-    maxSizeBytes: 5 * 1024 * 1024, // 5MB
+    maxImages: undefined,
+    maxFiles: undefined,
+    maxSizeBytes: undefined,
+    maxSizeMB: undefined,
     allowUrlInput: true,
     acceptedFormats: 'image/jpeg,image/png,image/webp,image/avif',
+    disabled: false,
   }
 )
 
@@ -129,6 +141,17 @@ const isDragging = ref(false)
 const manualUrl = ref('')
 const errorMessage = ref('')
 
+const effectiveMaxImages = computed<number>(() => {
+  return props.maxFiles ?? props.maxImages ?? 6
+})
+
+const effectiveMaxSizeBytes = computed<number>(() => {
+  if (props.maxSizeMB !== undefined) {
+    return props.maxSizeMB * 1024 * 1024
+  }
+  return props.maxSizeBytes ?? 5 * 1024 * 1024 // default 5MB
+})
+
 const previewList = computed<string[]>(() => {
   if (Array.isArray(props.modelValue)) {
     return props.modelValue.filter(Boolean)
@@ -137,6 +160,7 @@ const previewList = computed<string[]>(() => {
 })
 
 function triggerFileInput() {
+  if (props.disabled) return
   fileInputRef.value?.click()
 }
 
@@ -149,14 +173,15 @@ function validateFile(file: File): boolean {
     errorMessage.value = 'Định dạng ảnh không được hỗ trợ'
     return false
   }
-  if (file.size > props.maxSizeBytes) {
-    errorMessage.value = `Ảnh "${file.name}" vượt quá dung lượng cho phép (${props.maxSizeBytes / (1024 * 1024)}MB)`
+  if (file.size > effectiveMaxSizeBytes.value) {
+    errorMessage.value = `Ảnh "${file.name}" vượt quá dung lượng cho phép (${effectiveMaxSizeBytes.value / (1024 * 1024)}MB)`
     return false
   }
   return true
 }
 
 function onFileSelected(e: Event) {
+  if (props.disabled) return
   const files = (e.target as HTMLInputElement).files
   if (!files || files.length === 0) return
   handleFiles(Array.from(files))
@@ -164,6 +189,7 @@ function onFileSelected(e: Event) {
 }
 
 function onDrop(e: DragEvent) {
+  if (props.disabled) return
   isDragging.value = false
   const files = e.dataTransfer?.files
   if (!files || files.length === 0) return
@@ -172,8 +198,8 @@ function onDrop(e: DragEvent) {
 
 let readingFiles = false
 async function handleFiles(files: File[]) {
-  if (readingFiles) return
-  const capacity = props.multiple ? props.maxImages - previewList.value.length : 1
+  if (readingFiles || props.disabled) return
+  const capacity = props.multiple ? effectiveMaxImages.value - previewList.value.length : 1
   if (files.length > capacity) {
     errorMessage.value = `Chỉ có thể chọn thêm ${capacity} ảnh`
     return
@@ -188,7 +214,7 @@ async function handleFiles(files: File[]) {
       reader.onabort = () => reject(new Error('Đã hủy đọc ảnh'))
       reader.readAsDataURL(file)
     })))
-    const next = props.multiple ? [...previewList.value, ...urls].slice(0, props.maxImages) : urls[0] || ''
+    const next = props.multiple ? [...previewList.value, ...urls].slice(0, effectiveMaxImages.value) : urls[0] || ''
     emit('update:modelValue', next)
     files.forEach(file => emit('upload-file', file))
   } catch {
@@ -199,6 +225,7 @@ async function handleFiles(files: File[]) {
 }
 
 function addManualUrl() {
+  if (props.disabled) return
   const url = manualUrl.value.trim()
   if (!url) return
   try {
@@ -210,7 +237,7 @@ function addManualUrl() {
   errorMessage.value = ''
   if (props.multiple) {
     const current = Array.isArray(props.modelValue) ? [...props.modelValue] : []
-    if (current.length < props.maxImages) {
+    if (current.length < effectiveMaxImages.value) {
       current.push(url)
       emit('update:modelValue', current)
     }
@@ -221,6 +248,7 @@ function addManualUrl() {
 }
 
 function removeImage(index: number) {
+  if (props.disabled) return
   if (props.multiple) {
     const current = Array.isArray(props.modelValue) ? [...props.modelValue] : []
     current.splice(index, 1)

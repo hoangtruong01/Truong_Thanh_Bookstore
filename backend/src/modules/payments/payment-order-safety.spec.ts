@@ -85,13 +85,56 @@ describe('QA-02: Payment & Order Safety Verification Suite', () => {
         findById: jest.fn(),
       };
       providers = {
-        get: jest.fn(),
+        get: jest.fn().mockImplementation((method: PaymentMethod) => ({
+          method,
+          verifyCallback: jest.fn().mockResolvedValue({
+            success: true,
+            status: PaymentStatus.PAID,
+          }),
+        })),
       };
       paymentsService = new PaymentsService(
         paymentModel,
         orderModel,
         providers,
       );
+    });
+
+    it('BE-02: Callback with invalid signature throws BadRequestException with zero DB writes', async () => {
+      const mockPayment: any = {
+        _id: new Types.ObjectId(),
+        order: new Types.ObjectId(),
+        amount: 500000,
+        provider: PaymentMethod.VNPAY,
+        status: PaymentStatus.PENDING,
+        save: jest.fn().mockResolvedValue(true),
+      };
+
+      paymentModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockPayment),
+      });
+
+      // Provider rejects signature
+      providers.get.mockReturnValue({
+        method: PaymentMethod.VNPAY,
+        verifyCallback: jest
+          .fn()
+          .mockRejectedValue(
+            new BadRequestException('Chữ ký callback thanh toán không hợp lệ'),
+          ),
+      });
+
+      await expect(
+        paymentsService.handleCallback({
+          provider: PaymentMethod.VNPAY,
+          transactionId: 'txn_forged_123',
+          amount: 500000,
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      // ZERO DB WRITES
+      expect(mockPayment.save).not.toHaveBeenCalled();
+      expect(orderModel.updateOne).not.toHaveBeenCalled();
     });
 
     it('BE-03: Amount Tampering detected freezes Payment and marks Order MANUAL_REQUIRED', async () => {
@@ -157,7 +200,7 @@ describe('QA-02: Payment & Order Safety Verification Suite', () => {
       });
 
       expect(result).toBe(mockPayment);
-      expect(providers.get).not.toHaveBeenCalled(); // Short-circuited safely
+      expect(providers.get).toHaveBeenCalledWith(PaymentMethod.MOMO);
       expect(orderModel.updateOne).toHaveBeenCalledWith(
         { _id: mockPayment.order },
         expect.objectContaining({

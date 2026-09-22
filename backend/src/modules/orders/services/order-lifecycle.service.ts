@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
+import { createHash, timingSafeEqual } from 'crypto';
 import { Order, OrderDocument } from '../schemas/order.schema';
 import { UpdateOrderStatusDto, CancelOrderDto } from '../dto/order.dto';
 import {
@@ -135,49 +136,74 @@ export class OrderLifecycleService {
       return updatedOrder;
     }
 
-    const session: ClientSession = await database.startSession();
-    try {
-      if (typeof session.startTransaction === 'function') {
-        session.startTransaction();
-      }
-      const updatedOrder = await this.updateStatusInternal(
-        id,
-        dto,
-        session,
-        afterCommit,
-      );
-      if (typeof session.commitTransaction === 'function') {
-        await session.commitTransaction();
-      }
-      for (const fn of afterCommit) {
-        await fn().catch((err) =>
-          this.logger.error(
-            `Failed to execute post-commit order action: ${err.message}`,
-            err.stack,
-          ),
+    const maxRetries = 3;
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const session: ClientSession = await database.startSession();
+      try {
+        if (typeof session.startTransaction === 'function') {
+          session.startTransaction();
+        }
+        const updatedOrder = await this.updateStatusInternal(
+          id,
+          dto,
+          session,
+          afterCommit,
         );
-      }
-      return updatedOrder;
-    } catch (error) {
-      if (
-        typeof (session as any).inTransaction === 'function' &&
-        (session as any).inTransaction()
-      ) {
-        await (session as any).abortTransaction?.();
-      } else if (typeof session.abortTransaction === 'function') {
-        await session.abortTransaction();
-      }
-      if (this.isTransactionUnsupported(error)) {
-        throw new ServiceUnavailableException(
-          'Cập nhật trạng thái đơn hàng yêu cầu MongoDB replica set để bảo đảm toàn vẹn dữ liệu',
-        );
-      }
-      throw error;
-    } finally {
-      if (typeof session.endSession === 'function') {
-        await session.endSession();
+        if (typeof session.commitTransaction === 'function') {
+          await session.commitTransaction();
+        }
+        for (const fn of afterCommit) {
+          await fn().catch((err) =>
+            this.logger.error(
+              `Failed to execute post-commit order action: ${err.message}`,
+              err.stack,
+            ),
+          );
+        }
+        return updatedOrder;
+      } catch (error) {
+        if (
+          typeof (session as any).inTransaction === 'function' &&
+          (session as any).inTransaction()
+        ) {
+          await (session as any).abortTransaction?.();
+        } else if (typeof session.abortTransaction === 'function') {
+          await session.abortTransaction();
+        }
+
+        lastError = error;
+
+        if (this.isTransactionUnsupported(error)) {
+          throw new ServiceUnavailableException(
+            'Cập nhật trạng thái đơn hàng yêu cầu MongoDB replica set để bảo đảm toàn vẹn dữ liệu',
+          );
+        }
+
+        if (
+          this.isTransientTransactionError(error) &&
+          attempt < maxRetries - 1
+        ) {
+          this.logger.warn(
+            `Transient transaction error detected in order ${id} status update (attempt ${attempt + 1}/${maxRetries}): ${error instanceof Error ? error.message : String(error)}. Retrying...`,
+          );
+          afterCommit.length = 0;
+          await new Promise((resolve) =>
+            setTimeout(resolve, 50 * Math.pow(2, attempt)),
+          );
+          continue;
+        }
+
+        throw error;
+      } finally {
+        if (typeof session.endSession === 'function') {
+          await session.endSession();
+        }
       }
     }
+
+    throw lastError;
   }
 
   async updateStatusInternal(
@@ -457,18 +483,33 @@ export class OrderLifecycleService {
     guestAccessToken?: string,
     reasonOrDto?: string | CancelOrderDto,
   ): Promise<OrderDocument> {
+    if (!guestAccessToken) {
+      throw new ForbiddenException('Thiếu mã truy cập đơn hàng');
+    }
+
     const reason =
       typeof reasonOrDto === 'string'
         ? reasonOrDto
         : reasonOrDto?.reason || 'Khách vãng lai hủy đơn hàng';
 
-    const order = await this.orderModel.findById(id).exec();
-    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+    const order = await this.orderModel
+      .findById(id)
+      .select('+guestAccessTokenHash')
+      .exec();
+    if (!order || order.customer || !order.guestAccessTokenHash) {
+      throw new NotFoundException('Không tìm thấy đơn hàng');
+    }
 
-    if (order.customer) {
-      throw new ForbiddenException(
-        'Đơn hàng thuộc về tài khoản người dùng, vui lòng đăng nhập để thao tác',
-      );
+    const expected = Buffer.from(order.guestAccessTokenHash, 'hex');
+    const actual = Buffer.from(
+      createHash('sha256').update(guestAccessToken).digest('hex'),
+      'hex',
+    );
+    if (
+      expected.length !== actual.length ||
+      !timingSafeEqual(expected, actual)
+    ) {
+      throw new ForbiddenException('Mã truy cập đơn hàng không hợp lệ');
     }
 
     if (order.orderStatus !== OrderStatus.PENDING) {

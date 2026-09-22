@@ -1,24 +1,43 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
-import { Types } from 'mongoose';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Types, Model } from 'mongoose';
 import { UsersService } from './users.service';
 import { UserRole, StaffPermission } from '../../common/enums';
+import { User, UserDocument } from './schemas/user.schema';
+
+interface MockUserDoc {
+  _id: string;
+  role: UserRole;
+  fullName?: string;
+  email?: string;
+  status?: boolean;
+  permissions?: StaffPermission[];
+  wishlist?: unknown[];
+  toObject?: (this: MockUserDoc) => Record<string, unknown>;
+  save?: jest.Mock<Promise<MockUserDoc>>;
+}
+
+interface MockUserModelType {
+  (dto?: unknown): unknown;
+  find: jest.Mock;
+  findById: jest.Mock;
+  findOne: jest.Mock;
+  findByIdAndUpdate: jest.Mock;
+  findByIdAndDelete: jest.Mock;
+  countDocuments: jest.Mock;
+}
 
 describe('UsersService RBAC', () => {
   let service: UsersService;
-  let mockUserModel: any;
+  let mockUserModel: MockUserModelType;
 
   const validAdminId = '507f1f77bcf86cd799439011';
   const validSuperAdminId = '507f1f77bcf86cd799439012';
   const validStaffId = '507f1f77bcf86cd799439013';
   const validOtherAdminId = '507f1f77bcf86cd799439014';
 
-  const mockAdminUser = {
+  const mockAdminUser: MockUserDoc = {
     _id: validAdminId,
     role: UserRole.ADMIN,
     fullName: 'Admin User',
@@ -26,7 +45,7 @@ describe('UsersService RBAC', () => {
     status: true,
   };
 
-  const mockSuperAdminUser = {
+  const mockSuperAdminUser: MockUserDoc = {
     _id: validSuperAdminId,
     role: UserRole.SUPER_ADMIN,
     fullName: 'Super Admin User',
@@ -34,7 +53,7 @@ describe('UsersService RBAC', () => {
     status: true,
   };
 
-  const mockStaffUser = {
+  const mockStaffUser: MockUserDoc = {
     _id: validStaffId,
     role: UserRole.STAFF,
     fullName: 'Staff User',
@@ -52,12 +71,12 @@ describe('UsersService RBAC', () => {
       findByIdAndUpdate: jest.fn(),
       findByIdAndDelete: jest.fn(),
       countDocuments: jest.fn(),
-    };
+    } as unknown as MockUserModelType;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
-        { provide: getModelToken('User'), useValue: mockUserModel },
+        { provide: getModelToken(User.name), useValue: mockUserModel },
       ],
     }).compile();
 
@@ -118,10 +137,12 @@ describe('UsersService RBAC', () => {
       const userConstructorMock = jest.fn().mockReturnValue({
         save: jest.fn().mockResolvedValue(createdUserMock),
       });
-      (service as any).userModel = Object.assign(
+      const combinedModel = Object.assign(
         userConstructorMock,
         mockUserModel,
-      );
+      ) as unknown as Model<UserDocument>;
+      (service as unknown as { userModel: Model<UserDocument> }).userModel =
+        combinedModel;
 
       const dto = {
         email: 'newstaff@truongthanh.vn',
@@ -215,14 +236,16 @@ describe('UsersService RBAC', () => {
     });
 
     it('should successfully update role when actor is SUPER_ADMIN', async () => {
-      const targetUser: any = {
+      const targetUser: MockUserDoc = {
         _id: validStaffId,
         role: UserRole.STAFF,
-        toObject() {
+        toObject(this: MockUserDoc) {
           return { _id: this._id, role: this.role };
         },
       };
-      targetUser.save = jest.fn().mockResolvedValue(targetUser);
+      targetUser.save = jest.fn().mockResolvedValue(targetUser) as jest.Mock<
+        Promise<MockUserDoc>
+      >;
 
       mockUserModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(targetUser),
@@ -240,11 +263,11 @@ describe('UsersService RBAC', () => {
 
   describe('updatePermissions', () => {
     it('should update permissions for STAFF user', async () => {
-      const targetUser: any = {
+      const targetUser: MockUserDoc = {
         _id: validStaffId,
         role: UserRole.STAFF,
         permissions: [StaffPermission.MANAGE_ORDERS],
-        toObject() {
+        toObject(this: MockUserDoc) {
           return {
             _id: this._id,
             role: this.role,
@@ -252,7 +275,9 @@ describe('UsersService RBAC', () => {
           };
         },
       };
-      targetUser.save = jest.fn().mockResolvedValue(targetUser);
+      targetUser.save = jest.fn().mockResolvedValue(targetUser) as jest.Mock<
+        Promise<MockUserDoc>
+      >;
 
       mockUserModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(targetUser),
@@ -294,15 +319,17 @@ describe('UsersService RBAC', () => {
     });
 
     it('should successfully update status for a user', async () => {
-      const targetUser: any = {
+      const targetUser: MockUserDoc = {
         _id: validStaffId,
         role: UserRole.STAFF,
         status: true,
-        toObject() {
+        toObject(this: MockUserDoc) {
           return { _id: this._id, status: this.status };
         },
       };
-      targetUser.save = jest.fn().mockResolvedValue(targetUser);
+      targetUser.save = jest.fn().mockResolvedValue(targetUser) as jest.Mock<
+        Promise<MockUserDoc>
+      >;
 
       mockUserModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(targetUser),

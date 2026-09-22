@@ -1,5 +1,5 @@
 # 📚 TRƯỜNG THÀNH BOOKSTORE — TÀI LIỆU TỔNG QUAN & CẨM NANG DỰ ÁN TOÀN DIỆN
-> **Phiên bản tài liệu:** 4.0 — Cập nhật 2026-09-12  
+> **Phiên bản tài liệu:** 5.0 — Cập nhật 2026-09-22  
 > **Đối tượng:** Thực tập sinh (Intern), Lập trình viên mới (New Developer), Quản lý dự án (PM) & Trợ lý AI (AI Agents).  
 > **Mục tiêu:** Cung cấp tài liệu tra cứu duy nhất (Single Source of Truth) giúp bất kỳ ai đọc hiểu 100% kiến trúc, cấu hình môi trường, quy tắc nghiệp vụ, trạng thái hiện tại của dự án và tiếp tục phát triển/bảo trì hệ thống ngay lập tức mà không gặp rào cản.
 
@@ -61,7 +61,7 @@
 │ - Global: ValidationPipe (DTOs), HttpExceptionFilter, TransformInterceptor       │
 │ - Security: Helmet, CORS Whitelist, Distributed Throttler (Redis), Redaction     │
 │ - Auth Engine: Passport JWT, Refresh Rotation, Token Blacklist, OTP SHA-256      │
-│ - 16 Business Modules: Auth, Users, Products, Categories, Cart, Orders, Payments,│
+│ - 17 Business Modules: Auth, Users, Products, Categories, Cart, Orders, Payments,│
 │   Inventory, Reviews, Promotions, Notifications, Reports, Customers, Banners...  │
 │ - Realtime Gateway: Socket.IO WebSocket Server (Namespace /notifications)        │
 └───────────────────┬─────────────────────────────────────────┬────────────────────┘
@@ -120,7 +120,7 @@ Truong_Thanh_Bookstore/
 │   │   │   ├── redis/          # RedisService & RedisThrottlerStorageService
 │   │   │   └── sentry/         # SentryService tích hợp error tracking
 │   │   ├── config/             # Quản lý & Xác thực biến môi trường (env.validation.ts)
-│   │   ├── modules/            # 16 Modules nghiệp vụ độc lập (Xem mục 3.2)
+│   │   ├── modules/            # 17 Modules nghiệp vụ độc lập (Xem mục 3.2)
 │   │   └── scripts/            # Scripts bảo trì (verify-and-migrate-reviews, load harness)
 │   ├── test/                   # Jest E2E & Integration Test Suites
 │   ├── Dockerfile              # Multi-stage production build
@@ -160,7 +160,7 @@ Truong_Thanh_Bookstore/
 └── docker-compose.tools.yml    # Mongo Express (Chỉ dùng khi debug cục bộ)
 ```
 
-### 3.2. Bản đồ 16 Module Nghiệp vụ Backend
+### 3.2. Bản đồ 17 Module Nghiệp vụ Backend
 
 | STT | Module | Trách nhiệm chính (Responsibilities) |
 | :---: | :--- | :--- |
@@ -180,6 +180,7 @@ Truong_Thanh_Bookstore/
 | 14 | **banners** | Quản lý banner tiếp thị đa vị trí (slider, sidebar, bottom row) & Quảng cáo mở website (Entry Popup Ad / Interstitial Modal) với tần suất hiển thị (Every visit, Session, Daily), lập lịch (startAt, endAt), tự động lưu trữ Cloudinary và quy tắc kích hoạt duy nhất (Single Active Popup). |
 | 15 | **landing-pages**| Quản lý trang đích Flash Sale động, tích hợp trọn vẹn vào `OrdersService.create()` với sản phẩm thật trong DB. |
 | 16 | **email** | Gửi email giao dịch qua SMTP Nodemailer: Gửi mã OTP xác thực và gửi email xác nhận đặt hàng thành công. |
+| 17 | **outbox** | Transactional Outbox Pattern: Lưu sự kiện thông báo cùng Transaction nghiệp vụ, Worker Cron 10s quét & dispatch (Socket.IO, Email, Google Sheets), retry exponential backoff 5 lần, cleanup tự động 7 ngày. |
 
 ---
 
@@ -608,7 +609,7 @@ Hệ thống chạy Cron Job định kỳ 15 phút để tự động hủy đơ
 # 1. Kiểm thử Backend (NestJS + Jest)
 # -------------------------------------------------------------
 cd backend
-npm test -- --runInBand        # Chạy toàn bộ 41 suites / 450 unit tests
+npm test -- --runInBand        # Chạy toàn bộ 46 suites / 506 unit tests
 npm run test:e2e -- --runInBand # Chạy bộ test E2E với MongoDB ReplicaSet
 npm run lint                   # Kiểm tra chất lượng mã nguồn bằng ESLint
 npm run build                  # Biên dịch NestJS production bundle
@@ -683,7 +684,7 @@ Mọi commit push lên nhánh `main` hoặc Pull Request đều tự động kí
 
 ## 11. 📊 Trạng Thái Hiện Tại Dự Án (Current Project Status)
 
-> **Cập nhật lần cuối:** 2026-09-12
+> **Cập nhật lần cuối:** 2026-09-22
 
 ### 11.1. Phase 1: Local MVP — ✅ HOÀN THÀNH 100%
 
@@ -702,14 +703,15 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 
 | Phân hệ | Lệnh | Kết quả |
 | :--- | :--- | :---: |
-| Backend Unit Tests | `cd backend && npm test` | **41/41 suites, 450/450 tests PASS** |
-| Backend Linting | `cd backend && npm run lint` | **0 errors** (≤ 1.950 warnings) |
+| Backend Unit Tests | `cd backend && npm test` | **46/46 suites, 506/506 tests PASS (100%)** |
+| Backend Security Suite | `cd backend && npm test -- security-p0-audit.spec.ts` | **16/16 security regression tests PASS** |
+| Backend Linting | `cd backend && npm run lint` | **0 errors** (trần ≤ 1.100 warnings) |
 | Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
-| Frontend Unit Tests | `cd frontend && npm run test:unit` | **14/14 suites, 72/72 tests PASS** |
+| Frontend Unit Tests | `cd frontend && npm run test:unit` | **14/14 suites, 80/80 tests PASS (100%)** |
 | Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |
-| Frontend Linting | `cd frontend && npm run lint` | **0 errors** |
+| Frontend Linting | `cd frontend && npm run lint` | **0 errors, 0 warnings (Sạch 100%)** |
 | Frontend Build | `cd frontend && npm run build` | **Biên dịch thành công** |
-| Mobile Tests | `cd mobile && flutter test` | **42/42 tests PASS** |
+| Mobile Tests | `cd mobile && flutter test` | **47/47 tests PASS (100%)** |
 | Mobile Analyze | `cd mobile && flutter analyze` | **0 issues** |
 
 ### 11.3. Cổng Nghiệm Thu CTO — Đã Đạt 4/4
@@ -725,12 +727,18 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 
 Chi tiết task Phase 2 xem tại: 👉 [`PENDING_TASKS.md`](PENDING_TASKS.md)
 
-Trọng tâm Phase 2:
-- Tích hợp cổng thanh toán VNPay/MoMo sandbox
-- Tích hợp vận đơn GHN
-- Ký số mobile app & Push notification thật
-- Cải thiện Admin UI (ImageUploader, Focus Trap)
-- Giảm nợ kỹ thuật (ESLint warnings)
+**Đã hoàn thành trong Phase 2:**
+- ✅ Bảo mật P0: BE-01 Guest Order Cancellation (timingSafeEqual), BE-02 Payment Callback Auth (Zero writes), BE-03 Logout Token Verification (verifyAsync), BE-04 Transaction Retry (WriteConflict 3x), BE-05 Payable Order State Invariant
+- ✅ QA-01: Security P0 Regression Test Suite (16/16 tests pass)
+- ✅ RELIABILITY-01: Transactional Outbox Pattern (OutboxModule 17th module)
+- ✅ TECHDEBT-01: Clean Code — Frontend 0 warnings, Backend 0 errors (990 warnings, trần 1.100)
+- ✅ Admin UI: ImageUploader (FE-08), Focus Trap (FE-09)
+
+**Còn lại (chờ tài khoản/chứng chỉ bên ngoài):**
+- 🟡 PAY-01: Tích hợp cổng thanh toán VNPay/MoMo sandbox (chờ Merchant Keys)
+- 🟡 SHIPPING-01: Tích hợp vận đơn GHN sandbox (chờ Token)
+- 🔴 MOBILE-01: Ký số mobile app & Push notification thật (chờ Apple/Google chứng chỉ)
+- 🔴 MOBILE-02: E2E mua hàng thiết bị thật (chờ MOBILE-01)
 
 ### 11.5. Tài Liệu Lưu Trữ (Archive)
 

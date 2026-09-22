@@ -94,7 +94,7 @@ describe('Auth Store (FE-01 Auth Hydration)', () => {
     vi.mocked(authService.login).mockResolvedValueOnce(mockResponse as any)
 
     const store = useAuthStore()
-    const result = await store.login('test@example.com', 'password')
+    await store.login('test@example.com', 'password')
 
     expect(authService.login).toHaveBeenCalledWith('test@example.com', 'password')
     expect(store.user).toEqual(mockUser)

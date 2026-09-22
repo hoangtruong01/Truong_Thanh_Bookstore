@@ -317,7 +317,7 @@ async function loadAllReports() {
       summaryKpis.value = summaryRes.data.kpis
     }
     categoryRevenueList.value = catRes?.data || summaryRes?.data?.categoryRevenue || []
-  } catch (err: any) {
+  } catch {
     errorMessage.value = 'Lỗi khi tải dữ liệu báo cáo từ máy chủ. Vui lòng thử lại!'
     toast.error('Lỗi khi tải báo cáo doanh thu')
   } finally {

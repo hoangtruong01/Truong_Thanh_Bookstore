@@ -1,8 +1,37 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ClientSession, Types } from 'mongoose';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { EmailService } from '../../email/email.service';
+import { EmailService, EmailOrderDetails } from '../../email/email.service';
 import { OrderStatus } from '../../../common/enums';
+import { OrderDocument, OrderItem } from '../schemas/order.schema';
+import { OutboxService } from '../../outbox/outbox.service';
+import { OutboxEventType } from '../../outbox/schemas/outbox-event.schema';
+
+export interface OrderNotificationItem {
+  name: string;
+  quantity: number;
+  price?: number;
+}
+
+export type OrderNotificationData =
+  | OrderDocument
+  | {
+      _id?: Types.ObjectId | string;
+      orderCode: string;
+      customer?: Types.ObjectId | string;
+      customerName?: string;
+      customerEmail?: string;
+      phone?: string;
+      shippingAddress?: string;
+      items?: Array<OrderItem | OrderNotificationItem>;
+      total?: number;
+      paymentMethod?: string;
+      paymentStatus?: string;
+      orderStatus?: string;
+      note?: string;
+      createdAt?: Date | string;
+    };
 
 @Injectable()
 export class OrderNotificationService {
@@ -12,12 +41,16 @@ export class OrderNotificationService {
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
+    @Optional() private readonly outboxService?: OutboxService,
   ) {}
 
   /**
    * Đồng bộ đơn hàng lên Google Sheets nếu có cấu hình webhook.
    */
-  async syncToGoogleSheet(order: any): Promise<void> {
+  async syncToGoogleSheet(
+    order: OrderNotificationData,
+    session?: ClientSession,
+  ): Promise<void> {
     try {
       const webappUrl = this.configService.get<string>(
         'GOOGLE_SHEET_WEBAPP_URL',
@@ -29,7 +62,7 @@ export class OrderNotificationService {
       // Format items to readable string
       const itemsText = order.items
         ? order.items
-            .map((item: any) => `${item.name} (x${item.quantity})`)
+            .map((item) => `${item.name} (x${item.quantity})`)
             .join(', ')
         : '';
 
@@ -41,7 +74,7 @@ export class OrderNotificationService {
         : new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 
       // Translate Status
-      let statusLabel = order.orderStatus;
+      let statusLabel = order.orderStatus || '';
       switch (order.orderStatus) {
         case 'PENDING':
           statusLabel = 'Chờ xử lý';
@@ -84,6 +117,19 @@ export class OrderNotificationService {
         note: order.note || '',
       };
 
+      if (this.outboxService) {
+        const event = await this.outboxService.recordEvent(
+          OutboxEventType.GOOGLE_SHEET_SYNC,
+          payload,
+          session,
+          order.customer ? String(order.customer) : null,
+        );
+        if (!session && event?._id) {
+          this.outboxService.dispatchImmediately(event._id);
+        }
+        return;
+      }
+
       await fetch(webappUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -103,17 +149,54 @@ export class OrderNotificationService {
   /**
    * Gửi thông báo và email xác nhận khi đơn hàng được tạo thành công.
    */
-  notifyOrderCreated(order: any, customerEmail?: string): Promise<void> {
-    // Notify customer in-app if registered
+  async notifyOrderCreated(
+    order: OrderNotificationData,
+    customerEmail?: string,
+    session?: ClientSession,
+  ): Promise<void> {
+    const orderIdStr = order._id ? String(order._id) : '';
+    const totalStr =
+      typeof order.total === 'number'
+        ? order.total.toLocaleString('vi-VN')
+        : '0';
+    const recipientEmail = customerEmail || order.customerEmail;
+
+    if (this.outboxService) {
+      try {
+        const payload = {
+          orderId: orderIdStr,
+          orderCode: order.orderCode,
+          customer: order.customer ? String(order.customer) : null,
+          customerName: order.customerName || 'Khách vãng lai',
+          customerEmail: recipientEmail,
+          total: order.total,
+          paymentMethod: order.paymentMethod,
+          orderStatus: order.orderStatus || 'PENDING',
+        };
+        const event = await this.outboxService.recordEvent(
+          OutboxEventType.ORDER_CREATED,
+          payload,
+          session,
+          order.customer ? String(order.customer) : null,
+        );
+        if (!session && event?._id) {
+          this.outboxService.dispatchImmediately(event._id);
+        }
+      } catch (err) {
+        this.logger.error('Failed to record order created outbox event', err);
+      }
+    }
+
+    // Direct fallback/immediate dispatch for test mocks and best effort
     if (order.customer) {
       this.notificationsService
         .create({
-          userId: order.customer.toString(),
+          userId: String(order.customer),
           title: `Đơn hàng #${order.orderCode} đã được tạo`,
-          message: `Cảm ơn bạn! Đơn hàng #${order.orderCode} trị giá ${order.total?.toLocaleString('vi-VN')}đ đã được tiếp nhận.`,
+          message: `Cảm ơn bạn! Đơn hàng #${order.orderCode} trị giá ${totalStr}đ đã được tiếp nhận.`,
           type: 'order',
           meta: {
-            orderId: order._id.toString(),
+            orderId: orderIdStr,
             orderCode: order.orderCode,
           },
         })
@@ -122,11 +205,12 @@ export class OrderNotificationService {
         );
     }
 
-    // Send confirmation email
-    const recipientEmail = customerEmail || order.customerEmail;
     if (recipientEmail) {
       this.emailService
-        .sendOrderConfirmationEmail(recipientEmail, order)
+        .sendOrderConfirmationEmail(
+          recipientEmail,
+          order as unknown as EmailOrderDetails,
+        )
         .catch((err) =>
           this.logger.error('Failed to send order confirmation email', err),
         );
@@ -138,14 +222,16 @@ export class OrderNotificationService {
   /**
    * Gửi thông báo cập nhật khi trạng thái đơn hàng thay đổi.
    */
-  notifyStatusChanged(
-    order: any,
+  async notifyStatusChanged(
+    order: OrderNotificationData,
     oldStatus: string,
     newStatus: string,
+    session?: ClientSession,
   ): Promise<void> {
     if (!order.customer || oldStatus === newStatus) return Promise.resolve();
 
-    const customerId = order.customer.toString();
+    const customerId = String(order.customer);
+    const orderIdStr = order._id ? String(order._id) : '';
     let statusText = '';
     const targetStatus = newStatus as unknown as OrderStatus;
     switch (targetStatus) {
@@ -170,6 +256,35 @@ export class OrderNotificationService {
         break;
     }
 
+    if (this.outboxService) {
+      try {
+        const payload = {
+          orderId: orderIdStr,
+          orderCode: order.orderCode,
+          customer: customerId,
+          total: order.total,
+          paymentMethod: order.paymentMethod,
+          oldStatus,
+          newStatus,
+          orderStatus: newStatus,
+        };
+        const event = await this.outboxService.recordEvent(
+          OutboxEventType.ORDER_STATUS_CHANGED,
+          payload,
+          session,
+          customerId,
+        );
+        if (!session && event?._id) {
+          this.outboxService.dispatchImmediately(event._id);
+        }
+      } catch (err) {
+        this.logger.error(
+          'Failed to record order status changed outbox event',
+          err,
+        );
+      }
+    }
+
     if (statusText) {
       this.notificationsService
         .create({
@@ -178,7 +293,7 @@ export class OrderNotificationService {
           message: `Đơn hàng #${order.orderCode} của bạn ${statusText}.`,
           type: 'order',
           meta: {
-            orderId: order._id.toString(),
+            orderId: orderIdStr,
             orderCode: order.orderCode,
           },
         })
@@ -200,7 +315,7 @@ export class OrderNotificationService {
             message: `Đơn hàng #${order.orderCode} đã hoàn tất! Hãy để lại đánh giá để chia sẻ cảm nhận và nhận thêm ưu đãi nhé.`,
             type: 'review',
             meta: {
-              orderId: order._id.toString(),
+              orderId: orderIdStr,
               orderCode: order.orderCode,
             },
           })
@@ -216,16 +331,17 @@ export class OrderNotificationService {
   /**
    * Gửi cảnh báo sắp hết hạn 2h cho đơn hàng chưa thanh toán.
    */
-  notifyAutoCancelWarning(order: any): Promise<void> {
+  notifyAutoCancelWarning(order: OrderNotificationData): Promise<void> {
     if (order.customer) {
+      const orderIdStr = order._id ? String(order._id) : '';
       this.notificationsService
         .create({
-          userId: order.customer.toString(),
+          userId: String(order.customer),
           title: `⚠️ Đơn hàng #${order.orderCode} sắp hết hạn`,
           message: `Đơn hàng #${order.orderCode} của bạn sẽ tự động bị hủy sau 2 giờ nữa nếu chưa được thanh toán/xác nhận. Vui lòng hoàn tất đơn hàng.`,
           type: 'order',
           meta: {
-            orderId: order._id.toString(),
+            orderId: orderIdStr,
             orderCode: order.orderCode,
           },
         })

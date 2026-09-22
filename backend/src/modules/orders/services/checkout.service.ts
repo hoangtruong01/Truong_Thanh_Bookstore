@@ -212,7 +212,7 @@ export class CheckoutService {
 
     const guestAccessToken = userId
       ? undefined
-      : dto.idempotencyKey || randomBytes(32).toString('base64url');
+      : randomBytes(32).toString('base64url');
     const idempotencyKeyHash = dto.idempotencyKey
       ? this.hashSecret(dto.idempotencyKey)
       : undefined;

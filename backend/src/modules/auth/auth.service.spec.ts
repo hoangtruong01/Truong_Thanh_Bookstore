@@ -9,18 +9,58 @@ import { UsersService } from '../users/users.service';
 import { CloudinaryService } from '../users/cloudinary.service';
 import { EmailService } from '../email/email.service';
 import { TokenBlacklistService } from './token-blacklist.service';
-import { UserRole } from '../../common/enums';
+import { User } from '../users/schemas/user.schema';
+import { UserRole, LoyaltyTier } from '../../common/enums';
+
+interface MockUser extends Omit<Partial<User>, 'refreshTokenHash' | 'email'> {
+  _id: string;
+  email: string;
+  password?: string;
+  save: jest.Mock;
+  toObject: () => Record<string, unknown>;
+  resetOtp?: string;
+  resetOtpExpiry?: Date;
+  resetOtpAttempts?: number;
+  refreshTokenHash?: string | null;
+}
+
+type MockedUsersService = {
+  findByEmail: jest.Mock;
+  findById: jest.Mock;
+  findByIdWithPassword: jest.Mock;
+  create: jest.Mock;
+  update: jest.Mock;
+};
+
+type MockedJwtService = {
+  sign: jest.Mock;
+  verifyAsync: jest.Mock;
+  decode: jest.Mock;
+};
+
+type MockedEmailService = {
+  sendOtpEmail: jest.Mock;
+};
+
+type MockedCloudinaryService = {
+  uploadImage: jest.Mock;
+};
+
+type MockedConfigService = {
+  get: jest.Mock;
+  getOrThrow: jest.Mock;
+};
 
 describe('AuthService (auth.service.spec.ts)', () => {
   let authService: AuthService;
-  let usersService: jest.Mocked<any>;
-  let jwtService: jest.Mocked<any>;
-  let emailService: jest.Mocked<any>;
-  let cloudinaryService: jest.Mocked<any>;
+  let usersService: MockedUsersService;
+  let jwtService: MockedJwtService;
+  let emailService: MockedEmailService;
+  let cloudinaryService: MockedCloudinaryService;
   let tokenBlacklistService: TokenBlacklistService;
-  let configService: jest.Mocked<any>;
+  let configService: MockedConfigService;
 
-  const mockUser: any = {
+  const mockUser: MockUser = {
     _id: '507f1f77bcf86cd799439011',
     fullName: 'Nguyễn Văn Test',
     email: 'test@truongthanh.vn',
@@ -30,11 +70,11 @@ describe('AuthService (auth.service.spec.ts)', () => {
     status: true,
     tokenVersion: 0,
     loyaltyPoints: 100,
-    loyaltyTier: 'BRONZE',
+    loyaltyTier: LoyaltyTier.BRONZE,
     permissions: [],
     save: jest.fn().mockResolvedValue(true),
-    toObject: function () {
-      return { ...this };
+    toObject: function (): Record<string, unknown> {
+      return { ...this } as Record<string, unknown>;
     },
   };
 
@@ -125,8 +165,9 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(result.accessToken).toBe('mock.jwt.token');
       expect(result.refreshToken).toBe('mock.jwt.token');
       expect(result.user).toBeDefined();
-      expect(result.user.email).toBe('test@truongthanh.vn');
-      expect(result.user.password).toBeUndefined();
+      const userRes = result.user as Record<string, unknown>;
+      expect(userRes.email).toBe('test@truongthanh.vn');
+      expect(userRes.password).toBeUndefined();
       expect(usersService.create).toHaveBeenCalled();
     });
 
@@ -162,7 +203,8 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(result).toBeDefined();
       expect(result.accessToken).toBe('mock.jwt.token');
       expect(result.refreshToken).toBe('mock.jwt.token');
-      expect(result.user.password).toBeUndefined();
+      const loginUser = result.user as Record<string, unknown>;
+      expect(loginUser.password).toBeUndefined();
       expect(user.save).toHaveBeenCalled();
     });
 
@@ -336,7 +378,10 @@ describe('AuthService (auth.service.spec.ts)', () => {
         }),
       });
 
-      const profile = await authService.getProfile(mockUser._id);
+      const profile = (await authService.getProfile(mockUser._id)) as Record<
+        string,
+        unknown
+      >;
       expect(profile.password).toBeUndefined();
       expect(profile.resetOtp).toBeUndefined();
       expect(profile.refreshTokenHash).toBeUndefined();
@@ -448,7 +493,7 @@ describe('AuthService (auth.service.spec.ts)', () => {
           email: mockUser.email,
           type: 'RESET_PASSWORD',
           tokenVersion: 0,
-          jti: expect.any(String),
+          jti: expect.any(String) as unknown,
         }),
         expect.objectContaining({
           secret: jwtSecrets.JWT_RESET_SECRET,
@@ -491,7 +536,7 @@ describe('AuthService (auth.service.spec.ts)', () => {
         .mockResolvedValueOnce(existingUser);
 
       const messages: string[] = [];
-      for (const email of ['unknown@example.com', mockUser.email]) {
+      for (const email of ['unknown@example.com', mockUser.email] as string[]) {
         try {
           await authService.verifyOtp(email, '999999');
         } catch (error) {
@@ -512,7 +557,7 @@ describe('AuthService (auth.service.spec.ts)', () => {
       jwtService.verifyAsync.mockRejectedValue(new Error('invalid signature'));
 
       const messages: string[] = [];
-      for (const email of ['unknown@example.com', mockUser.email]) {
+      for (const email of ['unknown@example.com', mockUser.email] as string[]) {
         try {
           await authService.resetPassword({
             email,
@@ -561,7 +606,7 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(user.save).toHaveBeenCalled();
       const isMatch = await bcrypt.compare(
         'BrandNewPassword@123',
-        user.password,
+        user.password || '',
       );
       expect(isMatch).toBe(true);
     });
@@ -638,6 +683,10 @@ describe('AuthService (auth.service.spec.ts)', () => {
         jti: 'access-jti-123',
         exp: Math.floor(Date.now() / 1000) + 900,
       });
+      jwtService.verifyAsync.mockResolvedValue({
+        sub: mockUser._id,
+        type: 'access',
+      });
 
       const result = await authService.logout(
         undefined,
@@ -672,6 +721,10 @@ describe('AuthService (auth.service.spec.ts)', () => {
         jti: 'refresh-jti-789',
         exp: Math.floor(Date.now() / 1000) + 86400,
       });
+      jwtService.verifyAsync.mockResolvedValue({
+        sub: mockUser._id,
+        type: 'refresh',
+      });
 
       await authService.logout(undefined, undefined, mockRefreshToken);
 
@@ -684,6 +737,27 @@ describe('AuthService (auth.service.spec.ts)', () => {
         expect.any(Number),
       );
       expect(user.refreshTokenHash).toBeUndefined();
+    });
+
+    it('BE-03: rejects forged token and does not mutate user in DB when signature is invalid', async () => {
+      const forgedToken = 'fake.forged.jwt';
+      jwtService.decode.mockReturnValue({
+        sub: 'victim-user-id',
+        jti: 'forged-jti',
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      });
+      // Signature verification fails
+      jwtService.verifyAsync.mockRejectedValue(new Error('invalid signature'));
+
+      const result = await authService.logout(
+        undefined,
+        forgedToken,
+        undefined,
+      );
+
+      expect(result.success).toBe(true);
+      // Victim user DB record is never queried or mutated
+      expect(usersService.findByIdWithPassword).not.toHaveBeenCalled();
     });
   });
 });

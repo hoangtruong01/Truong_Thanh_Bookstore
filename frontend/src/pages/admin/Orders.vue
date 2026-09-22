@@ -118,6 +118,30 @@
             </p>
           </div>
 
+          <!-- Shipping & Tracking block if available -->
+          <div v-if="selectedOrder.trackingCode" class="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 text-xs space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="font-extrabold text-blue-900 flex items-center gap-1.5">
+                <span>🚚</span> Vận đơn {{ selectedOrder.shippingProvider || 'GHN' }}:
+                <span class="font-mono font-black text-blue-700">{{ selectedOrder.trackingCode }}</span>
+              </span>
+              <a
+                :href="`https://tracking.ghn.vn/?order_code=${encodeURIComponent(selectedOrder.trackingCode)}`"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 underline"
+              >
+                <span>Tra cứu GHN</span>
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
+            <p v-if="selectedOrder.shippingStatus" class="text-slate-600 text-[11px]">
+              <span class="font-bold">Trạng thái vận chuyển:</span> <span class="capitalize text-slate-800">{{ selectedOrder.shippingStatus }}</span>
+            </p>
+          </div>
+
           <!-- Order Items list -->
           <div class="space-y-3">
             <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Danh sách sản phẩm ({{ selectedOrder.items?.length || 0 }})</h4>
@@ -250,7 +274,7 @@ async function fetchOrders() {
     if (orders.value.length > 0 && !selectedOrder.value) {
       selectOrder(orders.value[0])
     }
-  } catch (err) {
+  } catch {
     toast.error('Lỗi khi tải danh sách đơn hàng')
   } finally {
     loading.value = false

@@ -355,48 +355,16 @@
             </div>
 
             <!-- Upload Product Images -->
-            <div class="space-y-4">
-              <h3 class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center justify-between">
-                <span>Ảnh sản phẩm</span>
-                <span class="text-[10px] text-slate-400">{{ form.images.length }} ảnh</span>
-              </h3>
-              <div v-if="!isEditing" class="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center bg-slate-50 hover:bg-slate-100/50 transition-colors">
-                <input
-                  ref="fileInput"
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  class="hidden"
-                  @change="handleImageUpload"
-                />
-                <button
-                  type="button"
-                  class="mx-auto flex flex-col items-center justify-center cursor-pointer"
-                  @click="fileInput?.click()"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-slate-400 mb-1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                  </svg>
-                  <span class="text-[11px] font-bold text-slate-600">Chọn ảnh sản phẩm tải lên</span>
-                  <span class="text-[9px] text-slate-400 mt-0.5">Hỗ trợ JPG, PNG, WEBP. Chọn nhiều ảnh cùng lúc.</span>
-                </button>
-              </div>
-
-              <!-- Images Preview Gallery -->
-              <div v-if="form.images.length > 0" class="grid grid-cols-5 gap-2 mt-2">
-                <div v-for="(img, idx) in form.images" :key="idx" class="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center">
-                  <img :src="img" class="w-full h-full object-contain" />
-                  <button
-                    v-if="!isEditing"
-                    class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                    @click="removeImage(Number(idx))"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-2.5 h-2.5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+            <div class="space-y-2">
+              <ImageUploader
+                v-model="form.images"
+                :multiple="true"
+                :max-files="10"
+                :max-size-m-b="5"
+                :disabled="isEditing"
+                label="Ảnh sản phẩm"
+                :allow-url-input="!isEditing"
+              />
             </div>
 
             <!-- AI Prompt & Generation Options -->
@@ -753,6 +721,7 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { landingPageService } from '@/services/landingPage';
 import { useToast } from 'vue-toastification';
+import ImageUploader from '@/components/ImageUploader.vue';
 
 const toast = useToast();
 const landingPages = ref<any[]>([]);
@@ -764,7 +733,6 @@ const saving = ref(false);
 const loadingAI = ref(false);
 const aiPrompt = ref('');
 const currentPreviewImageIdx = ref(0);
-const fileInput = ref<HTMLInputElement | null>(null);
 const isManuallyEditingSlug = ref(false);
 
 const form = ref<any>({
@@ -1028,29 +996,6 @@ async function handlePackageImageUpload(event: any, idx: number) {
   }
 }
 
-function removeImage(idx: number) {
-  form.value.images.splice(idx, 1);
-  if (currentPreviewImageIdx.value >= form.value.images.length) {
-    currentPreviewImageIdx.value = Math.max(0, form.value.images.length - 1);
-  }
-}
-
-// Convert uploaded image files to compressed base64 strings
-async function handleImageUpload(event: any) {
-  const files: FileList = event.target.files;
-  if (!files || files.length === 0) return;
-
-  for (let i = 0; i < files.length; i++) {
-    try {
-      const compressed = await compressImage(files[i], 1000, 0.75);
-      if (compressed) {
-        form.value.images.push(compressed);
-      }
-    } catch {
-      toast.error('Lỗi khi xử lý hình ảnh: ' + files[i].name);
-    }
-  }
-}
 
 async function generateLandingPageAI() {
   if (form.value.images.length === 0) {

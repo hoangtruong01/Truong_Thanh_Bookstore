@@ -1555,7 +1555,7 @@ function loadCustomerReadIds() {
   if (stored) {
     try {
       customerReadIds.value = JSON.parse(stored);
-    } catch (e) {
+    } catch {
       customerReadIds.value = [];
     }
   }
@@ -1585,9 +1585,9 @@ async function fetchCustomerNotifications() {
     } else {
       customerNotifications.value = [];
     }
-  } catch (err) {
+  } catch {
     customerNotifications.value = [];
-    console.error("Failed to fetch customer notifications:", err);
+    console.error("Failed to fetch customer notifications");
   }
 }
 
@@ -1845,7 +1845,7 @@ const performAutocomplete = debounce(async (query: string) => {
     searchResults.value = data.products || [];
     suggestedCategories.value = data.categories || [];
     suggestedKeywords.value = data.keywords || [];
-  } catch (err) {
+  } catch {
     try {
       const fallbackRes: any = await productService.search(trimmed);
       searchResults.value = (fallbackRes.data?.data || fallbackRes.data || []).slice(0, 6);
@@ -1938,7 +1938,7 @@ onMounted(async () => {
     if (parentCategories.value.length > 0) {
       activeParent.value = parentCategories.value[0];
     }
-  } catch (error) {
+  } catch {
     allCategories.value = [];
   }
 

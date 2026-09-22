@@ -154,7 +154,7 @@ async function fetchOrders() {
   try {
     const res = await orderService.getMyOrders()
     orders.value = Array.isArray(res.data) ? res.data : (res.data?.data || [])
-  } catch (err: any) {
+  } catch {
     toast.error('Không thể tải lịch sử đơn hàng')
   } finally {
     loading.value = false

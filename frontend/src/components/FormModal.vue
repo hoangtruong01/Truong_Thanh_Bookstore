@@ -12,7 +12,6 @@
         v-if="modelValue"
         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6"
         @click="handleBackdropClick"
-        @keydown.esc="handleClose"
       >
         <Transition
           enter-active-class="transition-all duration-300 ease-out"
@@ -24,7 +23,11 @@
         >
           <div
             v-if="modelValue"
-            class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full overflow-hidden flex flex-col max-h-[90vh]"
+            ref="modalRef"
+            role="dialog"
+            aria-modal="true"
+            tabindex="-1"
+            class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full overflow-hidden flex flex-col max-h-[90vh] outline-none"
             :class="sizeClass"
             @click.stop
           >
@@ -88,9 +91,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, ref, onUnmounted } from 'vue'
+import { computed, watch, ref, nextTick, onUnmounted } from 'vue'
 import { lockModalScroll } from '../utils/modalScrollLock'
 
+const modalRef = ref<HTMLElement | null>(null)
 const contentRef = ref<HTMLElement | null>(null)
 
 const props = withDefaults(
@@ -162,18 +166,91 @@ function handleSubmit() {
   emit('confirm')
 }
 
-// Each open modal owns one lock; closing another instance cannot unlock it.
+function getFocusableElements(): HTMLElement[] {
+  if (!modalRef.value) return []
+  const elements = modalRef.value.querySelectorAll<HTMLElement>(
+    'button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )
+  return Array.from(elements).filter(el => {
+    return el.offsetWidth > 0 || el.offsetHeight > 0 || el === document.activeElement || el.tagName.toLowerCase() === 'input' || el.tagName.toLowerCase() === 'button'
+  })
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  if (!props.modelValue) return
+  if (e.key === 'Escape') {
+    e.stopPropagation()
+    handleClose()
+    return
+  }
+  if (e.key === 'Tab') {
+    const focusables = getFocusableElements()
+    if (!focusables.length) {
+      e.preventDefault()
+      return
+    }
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+
+    if (e.shiftKey) {
+      if (document.activeElement === first || !modalRef.value?.contains(document.activeElement)) {
+        e.preventDefault()
+        last.focus()
+      }
+    } else {
+      if (document.activeElement === last || !modalRef.value?.contains(document.activeElement)) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+  }
+}
+
+let triggerElement: HTMLElement | null = null
 let releaseScroll: (() => void) | undefined
+
 watch(
   () => props.modelValue,
-  (open) => {
+  async (open) => {
     releaseScroll?.()
-    releaseScroll = open ? lockModalScroll() : undefined
+    if (open) {
+      if (typeof document !== 'undefined') {
+        triggerElement = document.activeElement as HTMLElement | null
+        window.addEventListener('keydown', handleKeydown)
+      }
+      releaseScroll = lockModalScroll()
+      await nextTick()
+      const focusables = getFocusableElements()
+      if (focusables.length > 0) {
+        const firstInput = contentRef.value?.querySelector<HTMLElement>(
+          'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled])'
+        )
+        if (firstInput) {
+          firstInput.focus()
+        } else {
+          focusables[0].focus()
+        }
+      } else {
+        modalRef.value?.focus()
+      }
+    } else {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('keydown', handleKeydown)
+      }
+      releaseScroll = undefined
+      if (triggerElement && typeof triggerElement.focus === 'function') {
+        triggerElement.focus()
+        triggerElement = null
+      }
+    }
   },
   { immediate: true }
 )
 
 onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', handleKeydown)
+  }
   releaseScroll?.()
 })
 </script>

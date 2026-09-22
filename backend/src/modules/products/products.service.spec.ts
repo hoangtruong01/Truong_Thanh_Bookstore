@@ -12,41 +12,146 @@ import { ReviewsService } from '../reviews/reviews.service';
 import { EmailService } from '../email/email.service';
 import { ConfigService } from '@nestjs/config';
 import { ProductStatus } from '../../common/enums';
+import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 
-const createMockQuery = (result: any = null) => {
-  const query: any = {
+interface MockQuery<T = unknown> {
+  populate: jest.Mock<MockQuery<T>>;
+  sort: jest.Mock<MockQuery<T>>;
+  select: jest.Mock<MockQuery<T>>;
+  skip: jest.Mock<MockQuery<T>>;
+  limit: jest.Mock<MockQuery<T>>;
+  lean: jest.Mock<{
+    exec: jest.Mock<Promise<T>>;
+    populate: jest.Mock;
+    sort: jest.Mock;
+    select: jest.Mock;
+    skip: jest.Mock;
+    limit: jest.Mock;
+    then: <TResult1 = T, TResult2 = never>(
+      onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
+      onrejected?:
+        | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
+        | null,
+    ) => Promise<TResult1 | TResult2>;
+    catch: <TResult = never>(
+      onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null,
+    ) => Promise<T | TResult>;
+  }>;
+  exec: jest.Mock<Promise<T>>;
+  then: <TResult1 = T, TResult2 = never>(
+    onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ) => Promise<TResult1 | TResult2>;
+  catch: <TResult = never>(
+    onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null,
+  ) => Promise<T | TResult>;
+}
+
+const createMockQuery = <T = unknown>(
+  result: T = null as unknown as T,
+): MockQuery<T> => {
+  const query = {
     populate: jest.fn().mockImplementation(() => query),
     sort: jest.fn().mockImplementation(() => query),
     select: jest.fn().mockImplementation(() => query),
     skip: jest.fn().mockImplementation(() => query),
     limit: jest.fn().mockImplementation(() => query),
     lean: jest.fn().mockImplementation(() => {
-      const leanQuery: any = {
+      const leanQuery = {
         exec: jest.fn().mockResolvedValue(result),
         populate: jest.fn().mockImplementation(() => leanQuery),
         sort: jest.fn().mockImplementation(() => leanQuery),
         select: jest.fn().mockImplementation(() => leanQuery),
         skip: jest.fn().mockImplementation(() => leanQuery),
         limit: jest.fn().mockImplementation(() => leanQuery),
-        then: (onResolve: any, onReject: any) =>
-          Promise.resolve(result).then(onResolve, onReject),
-        catch: (onReject: any) => Promise.resolve(result).catch(onReject),
+        then: <TResult1 = T, TResult2 = never>(
+          onResolve?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
+          onReject?:
+            | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
+            | null,
+        ) => Promise.resolve(result).then(onResolve, onReject),
+        catch: <TResult = never>(
+          onReject?:
+            | ((reason: unknown) => TResult | PromiseLike<TResult>)
+            | null,
+        ) => Promise.resolve(result).catch(onReject),
       };
       return leanQuery;
     }),
     exec: jest.fn().mockResolvedValue(result),
-    then: (onResolve: any, onReject: any) =>
-      Promise.resolve(result).then(onResolve, onReject),
-    catch: (onReject: any) => Promise.resolve(result).catch(onReject),
-  };
+    then: <TResult1 = T, TResult2 = never>(
+      onResolve?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
+      onReject?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+    ) => Promise.resolve(result).then(onResolve, onReject),
+    catch: <TResult = never>(
+      onReject?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null,
+    ) => Promise.resolve(result).catch(onReject),
+  } as unknown as MockQuery<T>;
   return query;
 };
 
+interface MongoFilterQuery {
+  isDeleted?: boolean;
+  $or?: unknown[];
+  price?: { $gte?: number; $lte?: number };
+  rating?: { $gte?: number };
+  stock?: { $gt?: number };
+  isFlashSale?: boolean;
+  discountPrice?: { $gt?: number };
+  brand?: { $in?: string[] };
+  author?: { $in?: string[] };
+  publisher?: { $in?: string[] };
+  parentId?: unknown;
+  [key: string]: unknown;
+}
+
+interface MockProductInstance {
+  _id: string;
+  name: string;
+  slug: string;
+  sku: string;
+  price: number;
+  discountPrice: number;
+  stock: number;
+  sold: number;
+  unit: string;
+  brand: string;
+  category: string;
+  images: string[];
+  status: ProductStatus;
+  isFeatured: boolean;
+  isDeleted: boolean;
+  author?: string;
+  publisher?: string;
+  save: jest.Mock<Promise<MockProductInstance>>;
+}
+
+interface MockProductModelType {
+  (dto: Partial<CreateProductDto>): MockProductInstance;
+  find: jest.Mock;
+  findOne: jest.Mock;
+  findById: jest.Mock;
+  findByIdAndUpdate: jest.Mock;
+  countDocuments: jest.Mock;
+  distinct: jest.Mock;
+}
+
+interface MockCategoryModelType {
+  find: jest.Mock;
+  findOne: jest.Mock;
+  create: jest.Mock;
+}
+
+interface MockInventoryModelType {
+  create: jest.Mock;
+  findOneAndUpdate: jest.Mock;
+}
+
 describe('ProductsService (TASK 10: Product Management & Excel)', () => {
   let service: ProductsService;
-  let mockProductModel: any;
-  let mockCategoryModel: any;
-  let mockInventoryModel: any;
+  let mockProductModel: MockProductModelType;
+  let mockCategoryModel: MockCategoryModelType;
+  let mockInventoryModel: MockInventoryModelType;
 
   const mockCategory = {
     _id: '507f1f77bcf86cd799439011',
@@ -55,7 +160,7 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
     status: true,
   };
 
-  const mockProduct = {
+  const mockProduct: MockProductInstance = {
     _id: '507f1f77bcf86cd799439022',
     name: 'Bút bi Thiên Long TL-027',
     slug: 'but-bi-thien-long-tl-027-abcd',
@@ -71,20 +176,24 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
     status: ProductStatus.ACTIVE,
     isFeatured: true,
     isDeleted: false,
-    save: jest.fn().mockImplementation(function (this: any) {
+    save: jest.fn().mockImplementation(function (this: MockProductInstance) {
       return Promise.resolve(this);
-    }),
+    }) as jest.Mock<Promise<MockProductInstance>>,
   };
 
   beforeEach(async () => {
-    mockProductModel = jest.fn().mockImplementation((dto) => ({
-      ...dto,
-      _id: '507f1f77bcf86cd799439022',
-      save: jest.fn().mockResolvedValue({
-        _id: '507f1f77bcf86cd799439022',
+    const fnConstructor = jest
+      .fn()
+      .mockImplementation((dto: Partial<CreateProductDto>) => ({
         ...dto,
-      }),
-    }));
+        _id: '507f1f77bcf86cd799439022',
+        save: jest.fn().mockResolvedValue({
+          _id: '507f1f77bcf86cd799439022',
+          ...dto,
+        }),
+      })) as unknown as MockProductModelType;
+
+    mockProductModel = fnConstructor;
 
     mockProductModel.find = jest
       .fn()
@@ -161,7 +270,7 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
 
   describe('1. Product CRUD Operations', () => {
     it('should create a new product and auto-create inventory entry', async () => {
-      const createDto: any = {
+      const createDto: CreateProductDto = {
         name: 'Tập vở 96 trang',
         sku: 'VO-96-01',
         price: 8000,
@@ -203,7 +312,7 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
     });
 
     it('should update product details', async () => {
-      const updateDto: any = {
+      const updateDto: UpdateProductDto = {
         name: 'Bút bi Thiên Long Cập Nhật',
         price: 6000,
       };
@@ -235,11 +344,10 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
 
       // Verify Excel contents
       const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(buffer as any);
+      await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
       const sheet = workbook.getWorksheet('DanhSachSanPham');
-      expect(sheet).toBeDefined();
-      expect(sheet?.getRow(1).getCell(1).value).toContain('Tên sản phẩm');
-      expect(sheet?.getRow(1).getCell(2).value).toContain('Mã SKU');
+      expect(sheet?.getRow(1).getCell(1).text).toContain('Tên sản phẩm');
+      expect(sheet?.getRow(1).getCell(2).text).toContain('Mã SKU');
     });
 
     it('should export products to Excel file (.xlsx)', async () => {
@@ -248,7 +356,7 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       expect(buffer.length).toBeGreaterThan(0);
 
       const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(buffer as any);
+      await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
       const sheet = workbook.getWorksheet('DanhSachSanPham');
       expect(sheet).toBeDefined();
       expect(sheet?.rowCount).toBeGreaterThanOrEqual(2); // Header + at least 1 row
@@ -318,13 +426,11 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       const result = await service.search('dac nhan tam');
       expect(result).toBeDefined();
       expect(mockProductModel.find).toHaveBeenCalled();
-      const findArgs =
-        mockProductModel.find.mock.calls[
-          mockProductModel.find.mock.calls.length - 1
-        ][0];
+      const calls = mockProductModel.find.mock.calls as [MongoFilterQuery][];
+      const findArgs = calls[calls.length - 1][0];
       expect(findArgs.isDeleted).toBe(false);
       expect(findArgs.$or).toBeDefined();
-      expect(findArgs.$or.length).toBeGreaterThan(0);
+      expect(findArgs.$or?.length).toBeGreaterThan(0);
     });
 
     it('should search products by SKU, ISBN, Author, Publisher, Brand', async () => {
@@ -350,16 +456,14 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
 
       expect(result).toBeDefined();
       expect(result.data).toBeDefined();
-      const findArgs =
-        mockProductModel.find.mock.calls[
-          mockProductModel.find.mock.calls.length - 1
-        ][0];
-      expect(findArgs.price.$gte).toBe(10000);
-      expect(findArgs.price.$lte).toBe(50000);
-      expect(findArgs.rating.$gte).toBe(4);
-      expect(findArgs.stock.$gt).toBe(0);
+      const calls = mockProductModel.find.mock.calls as [MongoFilterQuery][];
+      const findArgs = calls[calls.length - 1][0];
+      expect(findArgs.price?.$gte).toBe(10000);
+      expect(findArgs.price?.$lte).toBe(50000);
+      expect(findArgs.rating?.$gte).toBe(4);
+      expect(findArgs.stock?.$gt).toBe(0);
       expect(findArgs.isFlashSale).toBe(true);
-      expect(findArgs.discountPrice.$gt).toBe(0);
+      expect(findArgs.discountPrice?.$gt).toBe(0);
     });
 
     it('should support multi-brand and multi-author filtering via comma-separated values', async () => {
@@ -369,13 +473,14 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
         publisher: 'NXB Trẻ, NXB Kim Đồng',
       });
 
-      const findArgs =
-        mockProductModel.find.mock.calls[
-          mockProductModel.find.mock.calls.length - 1
-        ][0];
-      expect(findArgs.brand.$in).toEqual(['Thiên Long', 'Deli', 'Hồng Hà']);
-      expect(findArgs.author.$in).toEqual(['Nguyễn Nhật Ánh', 'Dale Carnegie']);
-      expect(findArgs.publisher.$in).toEqual(['NXB Trẻ', 'NXB Kim Đồng']);
+      const calls = mockProductModel.find.mock.calls as [MongoFilterQuery][];
+      const findArgs = calls[calls.length - 1][0];
+      expect(findArgs.brand?.$in).toEqual(['Thiên Long', 'Deli', 'Hồng Hà']);
+      expect(findArgs.author?.$in).toEqual([
+        'Nguyễn Nhật Ánh',
+        'Dale Carnegie',
+      ]);
+      expect(findArgs.publisher?.$in).toEqual(['NXB Trẻ', 'NXB Kim Đồng']);
     });
 
     it('should handle recursive category filtering when parent category ID is provided', async () => {
@@ -387,7 +492,7 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
 
       await service.findAll({ category: parentCatId });
       expect(mockCategoryModel.find).toHaveBeenCalledWith({
-        parentId: expect.anything(),
+        parentId: expect.anything() as unknown,
       });
     });
 

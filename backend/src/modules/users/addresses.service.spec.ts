@@ -5,6 +5,29 @@ import { Types } from 'mongoose';
 import { AddressesService } from './addresses.service';
 import { Address } from './schemas/address.schema';
 
+interface MockAddressInstance {
+  _id: Types.ObjectId;
+  user: Types.ObjectId;
+  label: string;
+  recipientName: string;
+  phone: string;
+  province: string;
+  district: string;
+  ward: string;
+  detail: string;
+  isDefault: boolean;
+  isDeleted: boolean;
+  save: jest.Mock<Promise<MockAddressInstance | boolean>>;
+}
+
+interface MockAddressModelType {
+  (dto: Partial<MockAddressInstance>): MockAddressInstance;
+  updateMany: jest.Mock;
+  countDocuments: jest.Mock;
+  find: jest.Mock;
+  findOne: jest.Mock;
+}
+
 describe('AddressesService', () => {
   let service: AddressesService;
 
@@ -12,7 +35,7 @@ describe('AddressesService', () => {
   const mockAddressId = '507f1f77bcf86cd799439022';
   const mockAddressId2 = '507f1f77bcf86cd799439033';
 
-  const mockAddress = {
+  const mockAddress: MockAddressInstance = {
     _id: new Types.ObjectId(mockAddressId),
     user: new Types.ObjectId(mockUserId),
     label: 'Nhà riêng',
@@ -24,12 +47,12 @@ describe('AddressesService', () => {
     detail: '123 Nguyễn Huệ',
     isDefault: true,
     isDeleted: false,
-    save: jest.fn().mockImplementation(function () {
+    save: jest.fn().mockImplementation(function (this: MockAddressInstance) {
       return Promise.resolve(this);
-    }),
+    }) as jest.Mock<Promise<MockAddressInstance>>,
   };
 
-  const mockAddress2 = {
+  const mockAddress2: MockAddressInstance = {
     _id: new Types.ObjectId(mockAddressId2),
     user: new Types.ObjectId(mockUserId),
     label: 'Văn phòng',
@@ -41,18 +64,22 @@ describe('AddressesService', () => {
     detail: '456 Hai Bà Trưng',
     isDefault: false,
     isDeleted: false,
-    save: jest.fn().mockImplementation(function () {
+    save: jest.fn().mockImplementation(function (this: MockAddressInstance) {
       return Promise.resolve(this);
-    }),
+    }) as jest.Mock<Promise<MockAddressInstance>>,
   };
 
-  const mockAddressModel = jest.fn().mockImplementation((dto) => ({
-    ...dto,
-    _id: new Types.ObjectId(mockAddressId),
-    save: jest.fn().mockImplementation(function () {
-      return Promise.resolve(this);
-    }),
-  })) as any;
+  const fnConstructor = jest
+    .fn()
+    .mockImplementation((dto: Partial<MockAddressInstance>) => ({
+      ...dto,
+      _id: new Types.ObjectId(mockAddressId),
+      save: jest.fn().mockImplementation(function (this: MockAddressInstance) {
+        return Promise.resolve(this);
+      }) as jest.Mock<Promise<MockAddressInstance>>,
+    })) as unknown as MockAddressModelType;
+
+  const mockAddressModel: MockAddressModelType = fnConstructor;
 
   mockAddressModel.updateMany = jest.fn();
   mockAddressModel.countDocuments = jest.fn();
@@ -183,10 +210,10 @@ describe('AddressesService', () => {
 
   describe('update', () => {
     it('should update address details successfully', async () => {
-      const existingAddr = {
+      const existingAddr: MockAddressInstance = {
         ...mockAddress,
         isDefault: false,
-        save: jest.fn().mockResolvedValue(true),
+        save: jest.fn().mockResolvedValue(true) as jest.Mock<Promise<boolean>>,
       };
       mockAddressModel.findOne.mockReturnValue({
         exec: jest.fn().mockResolvedValue(existingAddr),
@@ -200,10 +227,10 @@ describe('AddressesService', () => {
     });
 
     it('should reset other default addresses if address is updated to isDefault = true', async () => {
-      const existingAddr = {
+      const existingAddr: MockAddressInstance = {
         ...mockAddress,
         isDefault: false,
-        save: jest.fn().mockResolvedValue(true),
+        save: jest.fn().mockResolvedValue(true) as jest.Mock<Promise<boolean>>,
       };
       mockAddressModel.findOne.mockReturnValue({
         exec: jest.fn().mockResolvedValue(existingAddr),
@@ -222,11 +249,11 @@ describe('AddressesService', () => {
 
   describe('softDelete', () => {
     it('should mark address as deleted', async () => {
-      const nonDefaultAddr = {
+      const nonDefaultAddr: MockAddressInstance = {
         ...mockAddress2,
         isDefault: false,
         isDeleted: false,
-        save: jest.fn().mockResolvedValue(true),
+        save: jest.fn().mockResolvedValue(true) as jest.Mock<Promise<boolean>>,
       };
       mockAddressModel.findOne.mockReturnValue({
         exec: jest.fn().mockResolvedValue(nonDefaultAddr),
@@ -239,17 +266,17 @@ describe('AddressesService', () => {
     });
 
     it('should promote next active address to default when default address is deleted', async () => {
-      const defaultAddr = {
+      const defaultAddr: MockAddressInstance = {
         ...mockAddress,
         isDefault: true,
         isDeleted: false,
-        save: jest.fn().mockResolvedValue(true),
+        save: jest.fn().mockResolvedValue(true) as jest.Mock<Promise<boolean>>,
       };
-      const nextAddr = {
+      const nextAddr: MockAddressInstance = {
         ...mockAddress2,
         isDefault: false,
         isDeleted: false,
-        save: jest.fn().mockResolvedValue(true),
+        save: jest.fn().mockResolvedValue(true) as jest.Mock<Promise<boolean>>,
       };
 
       // First findById returns the defaultAddr
@@ -274,10 +301,10 @@ describe('AddressesService', () => {
 
   describe('setDefault', () => {
     it('should unset all other addresses and set selected address as default', async () => {
-      const targetAddr = {
+      const targetAddr: MockAddressInstance = {
         ...mockAddress2,
         isDefault: false,
-        save: jest.fn().mockResolvedValue(true),
+        save: jest.fn().mockResolvedValue(true) as jest.Mock<Promise<boolean>>,
       };
       mockAddressModel.updateMany.mockResolvedValue({ modifiedCount: 1 });
       mockAddressModel.findOne.mockReturnValue({
