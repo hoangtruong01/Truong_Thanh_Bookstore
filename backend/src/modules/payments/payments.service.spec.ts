@@ -23,7 +23,13 @@ describe('PaymentsService callback reconciliation', () => {
     const orderModel = {
       updateOne: jest.fn().mockReturnValue({ exec: orderUpdateExec }),
     };
-    const providers = { get: jest.fn() };
+    const mockProvider = {
+      verifyCallback: jest.fn().mockResolvedValue({
+        success: true,
+        status: PaymentStatus.PAID,
+      }),
+    };
+    const providers = { get: jest.fn().mockReturnValue(mockProvider) };
     const service = new PaymentsService(
       paymentModel as never,
       orderModel as never,
@@ -54,7 +60,7 @@ describe('PaymentsService callback reconciliation', () => {
       }),
     );
     expect(orderUpdateExec).toHaveBeenCalledTimes(2);
-    expect(providers.get).not.toHaveBeenCalled();
+    expect(providers.get).toHaveBeenCalledWith('VNPAY');
   });
 
   it('safely handles idempotent replay when payment._id is undefined in mock or plain object', async () => {
@@ -77,7 +83,13 @@ describe('PaymentsService callback reconciliation', () => {
         exec: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
       }),
     };
-    const providers = { get: jest.fn() };
+    const mockProvider = {
+      verifyCallback: jest.fn().mockResolvedValue({
+        success: true,
+        status: PaymentStatus.PAID,
+      }),
+    };
+    const providers = { get: jest.fn().mockReturnValue(mockProvider) };
     const service = new PaymentsService(
       paymentModel as never,
       orderModel as never,
@@ -90,5 +102,6 @@ describe('PaymentsService callback reconciliation', () => {
     });
 
     expect(result).toBe(payment);
+    expect(providers.get).toHaveBeenCalledWith('VNPAY');
   });
 });

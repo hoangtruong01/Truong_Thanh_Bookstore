@@ -657,7 +657,7 @@ async function fetchProducts() {
     const items = Array.isArray(res.data) ? res.data : (res.data?.data || [])
     products.value = items
     totalPages.value = res.meta?.totalPages || res.data?.totalPages || 1
-  } catch (err) {
+  } catch {
     toast.error('Lỗi khi tải danh sách sản phẩm')
   } finally {
     loading.value = false
@@ -686,7 +686,7 @@ async function deleteProduct(id: string) {
     await productService.delete(id)
     toast.success('Xóa sản phẩm thành công')
     fetchProducts()
-  } catch (err) {
+  } catch {
     toast.error('Lỗi khi xóa sản phẩm')
   }
 }

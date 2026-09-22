@@ -971,7 +971,6 @@ import { productService } from "@/services/product.service";
 import { categoryService } from "@/services/category.service";
 import { bannerService } from "@/services/banner.service";
 import { formatCurrency, getDiscountPercent } from "@/utils/helpers";
-import ProductCard from "@/components/ProductCard.vue";
 import CategoryProductSection from "@/components/CategoryProductSection.vue";
 import { useScrollReveal } from "@/composables/useScrollReveal";
 import type { Product, Category } from "@/types";
@@ -1110,19 +1109,6 @@ const defaultBottomPromos = [
     emoji: '🌍',
   },
 ];
-
-function getCatNavIcon(slug: string): string {
-  const iconMap: Record<string, string> = {
-    "sach-giao-khoa": "📚",
-    "sach-tham-khao": "📖",
-    "van-phong-pham": "✏️",
-    "do-choi": "🧸",
-    "truyen-tranh": "📕",
-    "do-luu-niem": "🎁",
-    combo: "🔥",
-  };
-  return iconMap[slug] || "📦";
-}
 const { observeNewElements } = useScrollReveal();
 
 const parentCategories = ref<Category[]>([]);
@@ -1375,134 +1361,6 @@ function startCountdown() {
   };
   updateTimer();
   countdownTimer = setInterval(updateTimer, 1000);
-}
-
-const categoryStyles = [
-  {
-    gradient:
-      "bg-gradient-to-br from-amber-50 to-orange-100/70 text-orange-950 border-orange-200/40 hover:border-orange-300",
-    iconColor: "text-orange-600",
-    icon: "academic",
-    label: "Học tập chính hãng",
-    desc: "Sách giáo khoa, sách tham khảo & dụng cụ học sinh đầy đủ",
-  },
-  {
-    gradient:
-      "bg-gradient-to-br from-sky-50 to-blue-100/70 text-blue-950 border-blue-200/40 hover:border-blue-300",
-    iconColor: "text-blue-600",
-    icon: "document",
-    label: "Góc làm việc hiện đại",
-    desc: "Bút ký cao cấp, sổ tay lập kế hoạch & tài liệu tiện ích",
-  },
-  {
-    gradient:
-      "bg-gradient-to-br from-rose-50 to-pink-100/70 text-pink-950 border-pink-200/40 hover:border-pink-300",
-    iconColor: "text-pink-600",
-    icon: "pencil",
-    label: "Mỹ thuật sáng tạo",
-    desc: "Màu vẽ chuyên nghiệp, họa cụ sáng tạo & giấy thủ công",
-  },
-  {
-    gradient:
-      "bg-gradient-to-br from-fuchsia-50 to-purple-100/70 text-purple-950 border-purple-200/40 hover:border-purple-300",
-    iconColor: "text-purple-600",
-    icon: "briefcase",
-    label: "Quà tặng độc đáo",
-    desc: "Bút ký doanh nhân, hộp quà sang trọng nâng tầm đẳng cấp",
-  },
-  {
-    gradient:
-      "bg-gradient-to-br from-emerald-50 to-teal-100/70 text-teal-950 border-teal-200/40 hover:border-teal-300",
-    iconColor: "text-teal-600",
-    icon: "paint",
-    label: "Đồ chơi phát triển",
-    desc: "Rubik, Lego, bộ đồ chơi rèn luyện tư duy logic & trí tuệ",
-  },
-  {
-    gradient:
-      "bg-gradient-to-br from-indigo-50 to-purple-100/70 text-indigo-950 border-indigo-200/40 hover:border-indigo-300",
-    iconColor: "text-indigo-600",
-    icon: "calculator",
-    label: "Hỗ trợ kỹ thuật",
-    desc: "Máy tính học sinh Casio, thước vẽ kỹ thuật chính xác cao",
-  },
-];
-
-function getCategoryStyle(cat: any, index: number) {
-  const slug = cat && cat.slug ? cat.slug : "";
-  switch (slug) {
-    case "sach-giao-khoa":
-      return {
-        gradient:
-          "bg-amber-50/10 text-orange-950 border-orange-200/40 hover:border-orange-300",
-        iconColor: "text-orange-600",
-        icon: "academic",
-        label: "Học tập chính hãng",
-        desc: "Sách giáo khoa đầy đủ môn học cho học sinh cấp 1, 2, 3",
-        bgImage: sgkBg,
-      };
-    case "sach-tham-khao":
-      return {
-        gradient:
-          "bg-sky-50/10 text-blue-950 border-blue-200/40 hover:border-blue-300",
-        iconColor: "text-blue-600",
-        icon: "document",
-        label: "Ôn thi & Luyện đề",
-        desc: "Sách tham khảo bồi dưỡng học sinh giỏi & ôn tập nâng cao",
-        bgImage: sachThamKhaoBg,
-      };
-    case "truyen-tranh":
-      return {
-        gradient:
-          "bg-rose-50/10 text-pink-950 border-pink-200/40 hover:border-pink-300",
-        iconColor: "text-pink-600",
-        icon: "paint",
-        label: "Giải trí & Manga",
-        desc: "Thế giới truyện tranh, manga & nhân vật siêu anh hùng",
-        bgImage: truyenTranhBg,
-      };
-    case "combo":
-      return {
-        gradient:
-          "bg-fuchsia-50/10 text-purple-950 border-purple-200/40 hover:border-purple-300",
-        iconColor: "text-purple-600",
-        icon: "briefcase",
-        label: "Combo siêu tiết kiệm",
-        desc: "Set dụng cụ học tập & văn phòng phẩm trọn bộ giá sốc",
-        bgImage: comboBg,
-      };
-    case "do-choi":
-      return {
-        gradient:
-          "bg-emerald-50/10 text-teal-950 border-teal-200/40 hover:border-teal-300",
-        iconColor: "text-teal-600",
-        icon: "pencil",
-        label: "Phát triển tư duy",
-        desc: "Lego lắp ráp, Rubik thi đấu & bộ boardgame rèn luyện tư duy",
-        bgImage: doChoiBg,
-      };
-    case "do-luu-niem":
-      return {
-        gradient:
-          "bg-indigo-50/10 text-indigo-950 border-indigo-200/40 hover:border-indigo-300",
-        iconColor: "text-indigo-600",
-        icon: "tag",
-        label: "Quà tặng xinh xắn",
-        desc: "Móc khóa Capybara, sổ tay khắc tên & đồ lưu niệm xinh xắn",
-        bgImage: doLuuNiemBg,
-      };
-    default:
-      return categoryStyles[index % categoryStyles.length];
-  }
-}
-
-function getBentoSpanClass(index: number) {
-  if (index === 0) return "md:col-span-2 md:row-span-1";
-  if (index === 1) return "md:col-span-1 md:row-span-1";
-  if (index === 2) return "md:col-span-1 md:row-span-1";
-  if (index === 3) return "md:col-span-2 md:row-span-1";
-  if (index === 4) return "md:col-span-2 md:row-span-1";
-  return "md:col-span-1 md:row-span-1";
 }
 
 function getProductPlaceholder(name: string) {

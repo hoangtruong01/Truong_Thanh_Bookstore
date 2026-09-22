@@ -116,7 +116,7 @@ async function handleLogin() {
   if (authStore.loading) return
   if (!email.value || !password.value) return
   try {
-    const res = await authStore.login(email.value, password.value)
+    await authStore.login(email.value, password.value)
     toast.success('Đăng nhập thành công!')
     
     // Redirect logic

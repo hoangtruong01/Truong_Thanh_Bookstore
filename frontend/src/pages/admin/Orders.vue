@@ -274,7 +274,7 @@ async function fetchOrders() {
     if (orders.value.length > 0 && !selectedOrder.value) {
       selectOrder(orders.value[0])
     }
-  } catch (err) {
+  } catch {
     toast.error('Lỗi khi tải danh sách đơn hàng')
   } finally {
     loading.value = false

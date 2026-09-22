@@ -358,7 +358,7 @@ async function fetchAddresses() {
   loading.value = true
   try {
     addresses.value = await addressService.getAll()
-  } catch (err: any) {
+  } catch {
     toast.error('Lỗi khi tải danh sách sổ địa chỉ')
   } finally {
     loading.value = false
@@ -415,7 +415,7 @@ async function setDefaultAddress(id: string) {
     await addressService.setDefault(id)
     toast.success('Đã chuyển đổi địa chỉ mặc định thành công!')
     await fetchAddresses()
-  } catch (err: any) {
+  } catch {
     toast.error('Lỗi khi thiết lập địa chỉ mặc định')
   }
 }
@@ -426,7 +426,7 @@ async function deleteAddress(id: string) {
     await addressService.delete(id)
     toast.success('Đã xóa địa chỉ thành công!')
     await fetchAddresses()
-  } catch (err: any) {
+  } catch {
     toast.error('Lỗi khi xóa địa chỉ')
   }
 }

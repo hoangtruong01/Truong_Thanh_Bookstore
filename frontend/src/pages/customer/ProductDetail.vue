@@ -1312,7 +1312,7 @@ async function saveEditReview() {
     }
     toast.success('Đã cập nhật đánh giá!')
     cancelEditReview()
-  } catch (err) {
+  } catch {
     toast.error('Có lỗi xảy ra khi cập nhật đánh giá')
   }
 }
@@ -1324,7 +1324,7 @@ async function deleteReview(reviewId?: string) {
     await productService.deleteReview(prodId, reviewId)
     reviews.value = reviews.value.filter(r => (r._id || r.id) !== reviewId)
     toast.success('Đã xóa đánh giá!')
-  } catch (err) {
+  } catch {
     toast.error('Có lỗi xảy ra khi xóa đánh giá')
   }
 }
@@ -1437,7 +1437,7 @@ async function submitReview() {
     showReviewForm.value = false
     
     toast.success('Cảm ơn bạn đã đánh giá sản phẩm!')
-  } catch (err) {
+  } catch {
     toast.error('Có lỗi xảy ra khi gửi đánh giá')
   } finally {
     isSubmittingReview.value = false
@@ -1483,14 +1483,14 @@ async function loadProduct() {
         relatedProducts.value = items.filter((p: Product) => p._id !== res.data._id)
       })
     })
-  } catch (err) {
+  } catch {
     toast.error('Lỗi khi tải chi tiết sản phẩm')
     loading.value = false
   }
 }
 
 onMounted(loadProduct)
-watch(() => route.params.id, (newId) => {
+watch(() => route.params.id, () => {
   stopAutoplay()
   loadProduct()
 })

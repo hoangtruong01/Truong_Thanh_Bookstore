@@ -169,7 +169,7 @@ function shouldShowByFrequency(banner: PopupBanner): boolean {
       if (sessionStorage.getItem(sessionKey)) {
         return false
       }
-    } catch (e) {
+    } catch {
       // If sessionStorage is restricted (private mode), allow display gracefully
       return true
     }
@@ -182,7 +182,7 @@ function shouldShowByFrequency(banner: PopupBanner): boolean {
       if (localStorage.getItem(dayKey)) {
         return false
       }
-    } catch (e) {
+    } catch {
       // If localStorage is restricted, allow display gracefully
       return true
     }
@@ -200,7 +200,7 @@ function markSeen(banner: PopupBanner) {
     try {
       const sessionKey = `entry_ad_seen_${bannerId}_${version}`
       sessionStorage.setItem(sessionKey, '1')
-    } catch (e) {
+    } catch {
       // Ignore storage errors
     }
   }
@@ -210,7 +210,7 @@ function markSeen(banner: PopupBanner) {
       const todayStr = new Date().toISOString().slice(0, 10)
       const dayKey = `entry_ad_seen_${bannerId}_${todayStr}`
       localStorage.setItem(dayKey, '1')
-    } catch (e) {
+    } catch {
       // Ignore storage errors
     }
   }
@@ -314,7 +314,7 @@ async function loadActivePopup() {
     popup.value = data
     showPopup.value = true
     lockScroll()
-  } catch (err) {
+  } catch {
     // API errors must not affect website operation
     showPopup.value = false
   }

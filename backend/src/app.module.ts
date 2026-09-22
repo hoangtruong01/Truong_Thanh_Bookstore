@@ -31,6 +31,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { SecuritySanitizerMiddleware } from './common/middleware/security-sanitizer.middleware';
 import { CommonModule } from './common/common.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
+import { OutboxModule } from './modules/outbox/outbox.module';
 
 @Module({
   imports: [
@@ -97,6 +98,7 @@ import { ShippingModule } from './modules/shipping/shipping.module';
     BannersModule,
     AddressesModule,
     EmailModule,
+    OutboxModule,
   ],
   controllers: [AppController],
   providers: [

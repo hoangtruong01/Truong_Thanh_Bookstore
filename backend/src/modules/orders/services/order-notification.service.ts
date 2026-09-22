@@ -1,10 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Types } from 'mongoose';
+import { ClientSession, Types } from 'mongoose';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { EmailService, EmailOrderDetails } from '../../email/email.service';
 import { OrderStatus } from '../../../common/enums';
 import { OrderDocument, OrderItem } from '../schemas/order.schema';
+import { OutboxService } from '../../outbox/outbox.service';
+import { OutboxEventType } from '../../outbox/schemas/outbox-event.schema';
 
 export interface OrderNotificationItem {
   name: string;
@@ -39,12 +41,16 @@ export class OrderNotificationService {
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
+    @Optional() private readonly outboxService?: OutboxService,
   ) {}
 
   /**
    * Đồng bộ đơn hàng lên Google Sheets nếu có cấu hình webhook.
    */
-  async syncToGoogleSheet(order: OrderNotificationData): Promise<void> {
+  async syncToGoogleSheet(
+    order: OrderNotificationData,
+    session?: ClientSession,
+  ): Promise<void> {
     try {
       const webappUrl = this.configService.get<string>(
         'GOOGLE_SHEET_WEBAPP_URL',
@@ -111,6 +117,19 @@ export class OrderNotificationService {
         note: order.note || '',
       };
 
+      if (this.outboxService) {
+        const event = await this.outboxService.recordEvent(
+          OutboxEventType.GOOGLE_SHEET_SYNC,
+          payload,
+          session,
+          order.customer ? String(order.customer) : null,
+        );
+        if (!session && event?._id) {
+          this.outboxService.dispatchImmediately(event._id);
+        }
+        return;
+      }
+
       await fetch(webappUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,17 +149,46 @@ export class OrderNotificationService {
   /**
    * Gửi thông báo và email xác nhận khi đơn hàng được tạo thành công.
    */
-  notifyOrderCreated(
+  async notifyOrderCreated(
     order: OrderNotificationData,
     customerEmail?: string,
+    session?: ClientSession,
   ): Promise<void> {
-    // Notify customer in-app if registered
+    const orderIdStr = order._id ? String(order._id) : '';
+    const totalStr =
+      typeof order.total === 'number'
+        ? order.total.toLocaleString('vi-VN')
+        : '0';
+    const recipientEmail = customerEmail || order.customerEmail;
+
+    if (this.outboxService) {
+      try {
+        const payload = {
+          orderId: orderIdStr,
+          orderCode: order.orderCode,
+          customer: order.customer ? String(order.customer) : null,
+          customerName: order.customerName || 'Khách vãng lai',
+          customerEmail: recipientEmail,
+          total: order.total,
+          paymentMethod: order.paymentMethod,
+          orderStatus: order.orderStatus || 'PENDING',
+        };
+        const event = await this.outboxService.recordEvent(
+          OutboxEventType.ORDER_CREATED,
+          payload,
+          session,
+          order.customer ? String(order.customer) : null,
+        );
+        if (!session && event?._id) {
+          this.outboxService.dispatchImmediately(event._id);
+        }
+      } catch (err) {
+        this.logger.error('Failed to record order created outbox event', err);
+      }
+    }
+
+    // Direct fallback/immediate dispatch for test mocks and best effort
     if (order.customer) {
-      const orderIdStr = order._id ? String(order._id) : '';
-      const totalStr =
-        typeof order.total === 'number'
-          ? order.total.toLocaleString('vi-VN')
-          : '0';
       this.notificationsService
         .create({
           userId: String(order.customer),
@@ -157,8 +205,6 @@ export class OrderNotificationService {
         );
     }
 
-    // Send confirmation email
-    const recipientEmail = customerEmail || order.customerEmail;
     if (recipientEmail) {
       this.emailService
         .sendOrderConfirmationEmail(
@@ -176,10 +222,11 @@ export class OrderNotificationService {
   /**
    * Gửi thông báo cập nhật khi trạng thái đơn hàng thay đổi.
    */
-  notifyStatusChanged(
+  async notifyStatusChanged(
     order: OrderNotificationData,
     oldStatus: string,
     newStatus: string,
+    session?: ClientSession,
   ): Promise<void> {
     if (!order.customer || oldStatus === newStatus) return Promise.resolve();
 
@@ -207,6 +254,35 @@ export class OrderNotificationService {
       case OrderStatus.CANCELLED:
         statusText = 'đã bị hủy';
         break;
+    }
+
+    if (this.outboxService) {
+      try {
+        const payload = {
+          orderId: orderIdStr,
+          orderCode: order.orderCode,
+          customer: customerId,
+          total: order.total,
+          paymentMethod: order.paymentMethod,
+          oldStatus,
+          newStatus,
+          orderStatus: newStatus,
+        };
+        const event = await this.outboxService.recordEvent(
+          OutboxEventType.ORDER_STATUS_CHANGED,
+          payload,
+          session,
+          customerId,
+        );
+        if (!session && event?._id) {
+          this.outboxService.dispatchImmediately(event._id);
+        }
+      } catch (err) {
+        this.logger.error(
+          'Failed to record order status changed outbox event',
+          err,
+        );
+      }
     }
 
     if (statusText) {

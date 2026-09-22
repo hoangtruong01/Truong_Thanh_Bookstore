@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { useSubmitLock } from '../useSubmitLock'
 
 describe('useSubmitLock (FE-05 Anti-Double Submit)', () => {

@@ -613,7 +613,7 @@ async function fetchProducts() {
     products.value = items
     totalProducts.value = res.meta?.total || res.data?.total || items.length
     totalPages.value = res.meta?.totalPages || res.data?.totalPages || 1
-  } catch (err) {
+  } catch {
     toast.error('Lỗi khi tải danh sách sản phẩm')
   } finally {
     loading.value = false

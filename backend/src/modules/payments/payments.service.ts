@@ -138,6 +138,16 @@ export class PaymentsService {
     if (order.paymentStatus === PaymentStatus.PAID) {
       throw new ConflictException('Đơn hàng đã được thanh toán');
     }
+    const terminalStatuses = [
+      OrderStatus.CANCELLED,
+      OrderStatus.RETURNED,
+      OrderStatus.COMPLETED,
+    ];
+    if (terminalStatuses.includes(order.orderStatus)) {
+      throw new ConflictException(
+        `Không thể tạo phiên thanh toán cho đơn hàng đã ${order.orderStatus === OrderStatus.CANCELLED ? 'bị hủy' : 'kết thúc'}`,
+      );
+    }
     if (dto.orderCode && dto.orderCode !== order.orderCode) {
       throw new BadRequestException('Mã đơn hàng không khớp');
     }
@@ -226,6 +236,28 @@ export class PaymentsService {
       `[CID: ${correlationId}] Nhận callback ${dto.provider}: txn=${dto.transactionId || 'none'}, ref=${dto.providerReference || 'none'}, amount=${dto.amount}`,
     );
 
+    // 1. BE-02: Verify Signature First (Zero DB Writes on Invalid Signature)
+    const provider = this.providers.get(dto.provider);
+    if (!provider) {
+      throw new BadRequestException(
+        `Cổng thanh toán ${dto.provider} không được hỗ trợ`,
+      );
+    }
+
+    const result = await provider.verifyCallback(dto);
+    if (
+      !result.success &&
+      result.failureReason?.toLowerCase().includes('chữ ký')
+    ) {
+      this.logger.error(
+        `[CID: ${correlationId}] [CẢNH BÁO BẢO MẬT] Xác thực chữ ký số thất bại cho callback ${dto.provider}: ${result.failureReason}`,
+      );
+      throw new BadRequestException(
+        result.failureReason || 'Chữ ký số callback không hợp lệ',
+      );
+    }
+
+    // 2. Locate payment
     const payment = await this.paymentModel
       .findOne({
         provider: dto.provider,
@@ -245,7 +277,28 @@ export class PaymentsService {
       throw new NotFoundException('Không tìm thấy giao dịch thanh toán');
     }
 
-    // BE-03: Amount Tampering Detection
+    // 3. BE-03: Strict Idempotency Replay (Signature is already verified)
+    if (payment.callbackProcessedAt || payment.status === PaymentStatus.PAID) {
+      if (payment.transactionId === dto.transactionId) {
+        this.logger.log(
+          `[CID: ${correlationId}] Callback thanh toán lặp lại hợp lệ (Idempotent replay) cho giao dịch ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}`,
+        );
+        await this.syncOrderPaymentStatus(
+          payment.order,
+          payment.status,
+          payment.paidAt,
+        );
+        return payment;
+      }
+      this.logger.warn(
+        `[CID: ${correlationId}] Phát hiện callback xung đột hoặc trùng lặp không hợp lệ cho giao dịch ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}`,
+      );
+      throw new ConflictException(
+        'Thanh toán đã nhận một callback khác trước đó',
+      );
+    }
+
+    // 4. BE-03: Amount Tampering Detection (Authenticated callback with mismatched amount)
     if (
       dto.amount !== undefined &&
       Math.round(Number(dto.amount)) !== Math.round(payment.amount)
@@ -281,7 +334,7 @@ export class PaymentsService {
       );
     }
 
-    // Expiration check
+    // 5. Expiration check
     if (payment.expiresAt && payment.expiresAt < new Date()) {
       payment.status = PaymentStatus.FAILED;
       payment.failureReason = 'Callback đến sau khi phiên thanh toán hết hạn';
@@ -290,37 +343,6 @@ export class PaymentsService {
         `[CID: ${correlationId}] Callback đến sau khi phiên thanh toán ${payment._id?.toString?.() ?? String(payment._id ?? 'none')} đã hết hạn`,
       );
       throw new BadRequestException('Phiên thanh toán đã hết hạn');
-    }
-
-    // BE-03: Strict Idempotency Replay
-    if (payment.callbackProcessedAt || payment.status === PaymentStatus.PAID) {
-      if (payment.transactionId === dto.transactionId) {
-        this.logger.log(
-          `[CID: ${correlationId}] Callback thanh toán lặp lại hợp lệ (Idempotent replay) cho giao dịch ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}`,
-        );
-        await this.syncOrderPaymentStatus(
-          payment.order,
-          payment.status,
-          payment.paidAt,
-        );
-        return payment;
-      }
-      this.logger.warn(
-        `[CID: ${correlationId}] Phát hiện callback xung đột hoặc trùng lặp không hợp lệ cho giao dịch ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}`,
-      );
-      throw new ConflictException(
-        'Thanh toán đã nhận một callback khác trước đó',
-      );
-    }
-
-    const result = await this.providers.get(dto.provider).verifyCallback(dto);
-    if (
-      !result.success &&
-      result.failureReason?.toLowerCase().includes('chữ ký')
-    ) {
-      this.logger.error(
-        `[CID: ${correlationId}] [CẢNH BÁO BẢO MẬT] Xác thực chữ ký số thất bại cho ${dto.provider} payment ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}`,
-      );
     }
 
     // BE-02: Atomic Multi-Document Transaction with Standalone Fallback

@@ -1089,7 +1089,7 @@ async function deleteBanner() {
     toast.success('Đã xóa banner')
     showDeleteConfirm.value = false
     await fetchBanners()
-  } catch (err) {
+  } catch {
     toast.error('Lỗi xóa banner')
   }
 }

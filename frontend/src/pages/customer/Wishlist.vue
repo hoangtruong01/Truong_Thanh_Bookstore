@@ -57,7 +57,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { userService } from '@/services/user.service';
 import { useCartStore } from '@/stores/cart';
 import ProductCard from '@/components/ProductCard.vue';
@@ -66,7 +65,6 @@ import EmptyState from '@/components/EmptyState.vue';
 import type { Product } from '@/types';
 import { useToast } from 'vue-toastification';
 
-const router = useRouter();
 const cartStore = useCartStore();
 const toast = useToast();
 const products = ref<Product[]>([]);
@@ -96,7 +94,7 @@ async function handleMoveToCart(product: Product) {
     cartStore.addToCart(product, 1);
     products.value = products.value.filter((p) => p._id !== product._id);
     toast.success(`Đã chuyển "${product.name}" vào giỏ hàng!`);
-  } catch (err: any) {
+  } catch {
     toast.error('Không thể chuyển sản phẩm vào giỏ hàng');
   }
 }
@@ -106,7 +104,7 @@ async function handleRemoveFromWishlist(product: Product) {
     await userService.removeFromWishlist(product._id);
     products.value = products.value.filter((p) => p._id !== product._id);
     toast.info(`Đã bỏ "${product.name}" khỏi danh sách yêu thích`);
-  } catch (err: any) {
+  } catch {
     toast.error('Không thể xóa khỏi danh sách yêu thích');
   }
 }

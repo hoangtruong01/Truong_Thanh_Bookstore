@@ -10,6 +10,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 import { CartModule } from '../cart/cart.module';
 import { InventoryModule } from '../inventory/inventory.module';
+import { OutboxModule } from '../outbox/outbox.module';
 
 import {
   CheckoutService,
@@ -28,6 +29,7 @@ import {
     UsersModule,
     CartModule,
     InventoryModule,
+    OutboxModule,
   ],
   controllers: [OrdersController],
   providers: [

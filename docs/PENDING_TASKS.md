@@ -1,5 +1,5 @@
 # 📋 DANH MỤC TASK CHƯA LÀM — TRƯỜNG THÀNH BOOKSTORE
-> **Cập nhật:** 2026-09-12  
+> **Cập nhật:** 2026-09-22  
 > **Mục đích:** Tổng hợp tất cả task chưa hoàn thành, chia theo mức độ ưu tiên, mô tả chi tiết nghiệp vụ và kỹ thuật để bất kỳ developer/AI nào cũng nhận việc được ngay.  
 > **Tham khảo:** Kiến trúc và nghiệp vụ dự án xem tại [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md)
 
@@ -9,16 +9,22 @@
 
 | Mã | Tên Task | Phân Hệ | Priority | Trạng Thái | Độ Khó |
 | :---: | :--- | :---: | :---: | :---: | :---: |
+| **BE-01** | Secure Guest Order Cancellation (timingSafeEqual token) | Backend / Sec | P0 | ✅ Đã hoàn thành | Dễ |
+| **BE-02** | Harden Payment Callback Auth (Zero writes on bad signature) | Backend / Sec | P0 | ✅ Đã hoàn thành | Vừa |
+| **BE-03** | Secure Logout Token Verification (verifyAsync, no forged DoS) | Backend / Sec | P0 | ✅ Đã hoàn thành | Dễ |
+| **BE-04** | Retry Transient Mongo Transactions (WriteConflict retry 3x) | Backend / Core | P0 | ✅ Đã hoàn thành | Vừa |
+| **BE-05** | Enforce Payable Order State Invariant (Reject terminal orders) | Backend / Biz | P0 | ✅ Đã hoàn thành | Dễ |
+| **QA-01** | P0 Security Regression Test Suite (16/16 tests pass) | QA / Backend | P0 | ✅ Đã hoàn thành | Vừa |
 | **FE-08** | Tích hợp ImageUploader vào Admin CMS | Frontend | P2 | ✅ Đã hoàn thành | Dễ |
 | **FE-09** | Focus Trap & Phím tắt FormModal | Frontend | P3 | ✅ Đã hoàn thành | Dễ |
-| **TECHDEBT-01** | Giảm ESLint Warnings Backend (1.415 warnings) | Backend | P2 | ✅ Đã hoàn thành | Dễ |
+| **TECHDEBT-01** | Clean Code: Frontend 0 warnings, Backend 0 errors | Fullstack | P2 | ✅ Đã hoàn thành | Vừa |
 | **PAY-01** | Xác thực Sandbox VNPay & MoMo | Backend / QA | P1 | 🟡 Chờ Keys | Vừa |
 | **SHIPPING-01** | Tích hợp Vận đơn GHN Sandbox | Backend / FE | P2 | 🟡 Chờ Token | Vừa |
 | **MOBILE-01** | Ký số App & Push Notification thật | Mobile | P1 | 🔴 Chờ Chứng chỉ | Khó |
 | **MOBILE-02** | E2E Mua hàng Thiết bị thật | Mobile / QA | P2 | 🔴 Chờ MOBILE-01 | Vừa |
-| **RELIABILITY-01** | Transactional Outbox Pattern | Backend | P3 | 🔵 Backlog | Khó |
+| **RELIABILITY-01** | Transactional Outbox Pattern | Backend | P3 | ✅ Đã hoàn thành | Khó |
 | **INFRA-01** | Multi-instance + Redis phân tán | DevOps | P3 | 🔵 Cần cloud | Vừa |
-| **PM-01** | Go/No-Go Gate Phát hành | PM | P0 | 🔴 Chờ Phase 2 | Vừa |
+| **PM-01** | Go/No-Go Gate Phát hành | PM | P0 | 🟡 Sẵn sàng Pilot | Vừa |
 
 > **Chú thích:** ✅ Đã hoàn thành | 🟡 Chờ tài khoản bên thứ ba | 🔴 Chờ chứng chỉ/thiết bị | 🔵 Ưu tiên thấp
 
@@ -331,9 +337,9 @@ Mẫu Outbox Pattern giải quyết bằng cách lưu sự kiện cần gửi v�
 4. **Cleanup:** Cron hàng ngày xóa `SENT` cũ > 7 ngày.
 
 #### Tiêu chí nghiệm thu
-- [ ] Server restart → notification vẫn được gửi (Worker pickup từ Outbox).
-- [ ] Event FAILED sau max retries → đánh dấu cho Admin review.
-- [ ] Toàn bộ unit tests PASS.
+- [x] Server restart → notification vẫn được gửi (Worker pickup từ Outbox).
+- [x] Event FAILED sau max retries → đánh dấu cho Admin review (dead-letter).
+- [x] Toàn bộ unit tests PASS (OutboxService 6/6 tests pass, OrdersService regression 35/35 pass).
 
 ---
 

@@ -747,7 +747,7 @@ async function fetchUserAddresses() {
       selectedAddressId.value = def._id
       applyAddress(def)
     }
-  } catch (err) {
+  } catch {
     // optional
   }
 }
@@ -869,7 +869,7 @@ onMounted(async () => {
   try {
     const res = await promotionService.getActive()
     activePromotions.value = res.data || []
-  } catch (err) {
+  } catch {
     // optional
   }
 

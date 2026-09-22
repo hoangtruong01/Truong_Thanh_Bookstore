@@ -1,15 +1,49 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import {
-  CartService,
-  FREE_SHIPPING_THRESHOLD,
-  DEFAULT_SHIPPING_FEE,
-} from './cart.service';
-import { Cart } from './schemas/cart.schema';
+import { CartService, DEFAULT_SHIPPING_FEE } from './cart.service';
+import { Cart, CartDocument } from './schemas/cart.schema';
 import { Product } from '../products/schemas/product.schema';
 import { Promotion } from '../promotions/schemas/promotion.schema';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProductStatus, DiscountType } from '../../common/enums';
+
+interface MockCartItem {
+  product?: string;
+  name?: string;
+  price: number;
+  discountPrice?: number;
+  quantity: number;
+}
+
+interface MockAppliedVoucher {
+  code: string;
+  name?: string;
+  discountType: DiscountType;
+  discountValue: number;
+  maxDiscount?: number;
+  minOrderValue?: number;
+  status?: boolean;
+}
+
+interface MockCart {
+  _id?: string;
+  user?: string;
+  items: MockCartItem[];
+  subtotal: number;
+  shippingFee: number;
+  discountAmount: number;
+  totalPrice: number;
+  appliedVoucher?: MockAppliedVoucher | null;
+  isModified?: jest.Mock<boolean>;
+  save?: jest.Mock<Promise<MockCart>>;
+}
+
+interface MockCartModelType {
+  (dto: Partial<MockCart>): MockCart;
+  findOne: jest.Mock;
+  findById: jest.Mock;
+  create: jest.Mock;
+}
 
 describe('CartService Unit Tests', () => {
   let cartService: CartService;
@@ -29,19 +63,23 @@ describe('CartService Unit Tests', () => {
     images: ['https://example.com/pen.jpg'],
   };
 
-  const createMockQuery = (result: any) => ({
+  const createMockQuery = <T>(result: T) => ({
     populate: jest.fn().mockReturnThis(),
     exec: jest.fn().mockResolvedValue(result),
   });
 
-  const mockCartModel: any = jest.fn().mockImplementation((dto) => ({
-    ...dto,
-    _id: '507f1f77bcf86cd799439099',
-    isModified: jest.fn().mockReturnValue(false),
-    save: jest.fn().mockImplementation(function () {
-      return Promise.resolve(this);
-    }),
-  }));
+  const fnConstructor = jest
+    .fn()
+    .mockImplementation((dto: Partial<MockCart>) => ({
+      ...dto,
+      _id: '507f1f77bcf86cd799439099',
+      isModified: jest.fn().mockReturnValue(false),
+      save: jest.fn().mockImplementation(function (this: MockCart) {
+        return Promise.resolve(this);
+      }) as jest.Mock<Promise<MockCart>>,
+    })) as unknown as MockCartModelType;
+
+  const mockCartModel: MockCartModelType = fnConstructor;
 
   mockCartModel.findOne = jest.fn();
   mockCartModel.findById = jest.fn();
@@ -75,27 +113,27 @@ describe('CartService Unit Tests', () => {
 
   describe('calculateCartTotals', () => {
     it('should charge 30,000 VND shipping if subtotal < 299,000 VND', () => {
-      const cart: any = {
+      const cart: Partial<MockCart> = {
         items: [{ price: 100000, discountPrice: 0, quantity: 2 }],
       };
-      cartService.calculateCartTotals(cart);
+      cartService.calculateCartTotals(cart as unknown as CartDocument);
       expect(cart.subtotal).toBe(200000);
       expect(cart.shippingFee).toBe(DEFAULT_SHIPPING_FEE);
       expect(cart.totalPrice).toBe(230000);
     });
 
     it('should offer 0 VND free shipping if subtotal >= 299,000 VND', () => {
-      const cart: any = {
+      const cart: Partial<MockCart> = {
         items: [{ price: 150000, discountPrice: 0, quantity: 2 }],
       };
-      cartService.calculateCartTotals(cart);
+      cartService.calculateCartTotals(cart as unknown as CartDocument);
       expect(cart.subtotal).toBe(300000);
       expect(cart.shippingFee).toBe(0);
       expect(cart.totalPrice).toBe(300000);
     });
 
     it('should correctly calculate percent discount voucher capped by maxDiscount', () => {
-      const cart: any = {
+      const cart: Partial<MockCart> = {
         items: [{ price: 200000, discountPrice: 0, quantity: 2 }],
         appliedVoucher: {
           code: 'SALE20',
@@ -105,7 +143,7 @@ describe('CartService Unit Tests', () => {
           minOrderValue: 200000,
         },
       };
-      cartService.calculateCartTotals(cart);
+      cartService.calculateCartTotals(cart as unknown as CartDocument);
       expect(cart.subtotal).toBe(400000);
       expect(cart.shippingFee).toBe(0);
       // 20% of 400k = 80k, capped at 50k
@@ -146,7 +184,7 @@ describe('CartService Unit Tests', () => {
         exec: jest.fn().mockResolvedValue(mockProduct),
       });
 
-      const userCart: any = {
+      const userCart: MockCart = {
         _id: '507f1f77bcf86cd799439099',
         user: validUserId,
         items: [],
@@ -154,9 +192,9 @@ describe('CartService Unit Tests', () => {
         shippingFee: 0,
         discountAmount: 0,
         totalPrice: 0,
-        save: jest.fn().mockImplementation(function () {
+        save: jest.fn().mockImplementation(function (this: MockCart) {
           return Promise.resolve(this);
-        }),
+        }) as jest.Mock<Promise<MockCart>>,
       };
 
       mockCartModel.findOne.mockReturnValue({
@@ -165,7 +203,7 @@ describe('CartService Unit Tests', () => {
 
       mockCartModel.findById.mockReturnValue(createMockQuery(userCart));
 
-      const result = await cartService.addToCart(validUserId, {
+      await cartService.addToCart(validUserId, {
         productId: validProductId,
         quantity: 2,
       });
@@ -195,7 +233,7 @@ describe('CartService Unit Tests', () => {
         exec: jest.fn().mockResolvedValue(mockProduct),
       });
 
-      const userCart: any = {
+      const userCart: MockCart = {
         _id: '507f1f77bcf86cd799439099',
         user: validUserId,
         items: [
@@ -207,9 +245,13 @@ describe('CartService Unit Tests', () => {
             quantity: 2,
           },
         ],
-        save: jest.fn().mockImplementation(function () {
+        subtotal: 60000,
+        shippingFee: 30000,
+        discountAmount: 0,
+        totalPrice: 90000,
+        save: jest.fn().mockImplementation(function (this: MockCart) {
           return Promise.resolve(this);
-        }),
+        }) as jest.Mock<Promise<MockCart>>,
       };
 
       mockCartModel.findOne.mockReturnValue({
@@ -228,16 +270,20 @@ describe('CartService Unit Tests', () => {
 
   describe('removeItem and clearCart', () => {
     it('should remove item and recalculate totals', async () => {
-      const userCart: any = {
+      const userCart: MockCart = {
         _id: '507f1f77bcf86cd799439099',
         user: validUserId,
         items: [
           { product: validProductId, quantity: 1, price: 30000 },
           { product: validProductId2, quantity: 2, price: 50000 },
         ],
-        save: jest.fn().mockImplementation(function () {
+        subtotal: 130000,
+        shippingFee: 30000,
+        discountAmount: 0,
+        totalPrice: 160000,
+        save: jest.fn().mockImplementation(function (this: MockCart) {
           return Promise.resolve(this);
-        }),
+        }) as jest.Mock<Promise<MockCart>>,
       };
 
       mockCartModel.findOne.mockReturnValue({
@@ -251,14 +297,21 @@ describe('CartService Unit Tests', () => {
     });
 
     it('should clear cart and reset all totals and voucher', async () => {
-      const userCart: any = {
+      const userCart: MockCart = {
         user: validUserId,
         items: [{ product: validProductId, quantity: 2, price: 30000 }],
         subtotal: 60000,
-        appliedVoucher: { code: 'SALE' },
-        save: jest.fn().mockImplementation(function () {
+        shippingFee: 30000,
+        discountAmount: 0,
+        totalPrice: 90000,
+        appliedVoucher: {
+          code: 'SALE',
+          discountType: DiscountType.FIXED,
+          discountValue: 10000,
+        },
+        save: jest.fn().mockImplementation(function (this: MockCart) {
           return Promise.resolve(this);
-        }),
+        }) as jest.Mock<Promise<MockCart>>,
       };
 
       mockCartModel.findOne.mockReturnValue({
@@ -274,7 +327,7 @@ describe('CartService Unit Tests', () => {
 
   describe('applyVoucher and removeVoucher', () => {
     it('should throw NotFoundException if voucher code does not exist', async () => {
-      const userCart: any = {
+      const userCart: Partial<MockCart> = {
         items: [{ product: validProductId, quantity: 1, price: 100000 }],
       };
       mockCartModel.findOne.mockReturnValue({
@@ -290,7 +343,7 @@ describe('CartService Unit Tests', () => {
     });
 
     it('should throw BadRequestException if subtotal is less than minOrderValue', async () => {
-      const userCart: any = {
+      const userCart: Partial<MockCart> = {
         items: [
           {
             product: validProductId,
@@ -321,7 +374,7 @@ describe('CartService Unit Tests', () => {
     });
 
     it('should apply valid voucher and calculate discount', async () => {
-      const userCart: any = {
+      const userCart: MockCart = {
         _id: '507f1f77bcf86cd799439099',
         items: [
           {
@@ -332,9 +385,12 @@ describe('CartService Unit Tests', () => {
           },
         ],
         subtotal: 300000,
-        save: jest.fn().mockImplementation(function () {
+        shippingFee: 0,
+        discountAmount: 0,
+        totalPrice: 300000,
+        save: jest.fn().mockImplementation(function (this: MockCart) {
           return Promise.resolve(this);
-        }),
+        }) as jest.Mock<Promise<MockCart>>,
       };
       mockCartModel.findOne.mockReturnValue({
         exec: jest.fn().mockResolvedValue(userCart),
@@ -352,7 +408,7 @@ describe('CartService Unit Tests', () => {
       mockCartModel.findById.mockReturnValue(createMockQuery(userCart));
 
       await cartService.applyVoucher(validUserId, { code: 'FREESHIP50' });
-      expect(userCart.appliedVoucher.code).toBe('FREESHIP50');
+      expect(userCart.appliedVoucher?.code).toBe('FREESHIP50');
       expect(userCart.discountAmount).toBe(50000);
       expect(userCart.totalPrice).toBe(250000);
     });

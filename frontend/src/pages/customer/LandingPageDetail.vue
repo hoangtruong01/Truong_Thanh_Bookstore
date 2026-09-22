@@ -364,14 +364,11 @@
 import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { landingPageService } from '@/services/landingPage';
-import { productService } from '@/services/product.service';
-import { useCartStore } from '@/stores/cart';
 import { useToast } from 'vue-toastification';
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
-const cartStore = useCartStore();
 
 const loading = ref(true);
 const error = ref(false);
@@ -381,11 +378,6 @@ const selectedPackage = ref('');
 const submittingOrder = ref(false);
 const showSuccessModal = ref(false);
 const createdOrderCode = ref('');
-
-function addToCart(product: any) {
-  cartStore.addToCart(product, 1);
-  toast.success(`Đã thêm "${product.name}" vào giỏ hàng`);
-}
 
 // Autoplay Slideshow for Landing Page images
 let autoplayInterval: any = null;

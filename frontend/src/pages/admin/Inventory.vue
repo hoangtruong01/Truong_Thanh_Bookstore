@@ -315,7 +315,7 @@ async function fetchStocks() {
     if (stocks.value.length > 0 && !selectedStock.value) {
       selectStock(stocks.value[0])
     }
-  } catch (err) {
+  } catch {
     toast.error('Lỗi khi tải dữ liệu kho')
   } finally {
     loading.value = false
@@ -327,7 +327,7 @@ async function fetchTransactions() {
   try {
     const res = await inventoryService.getTransactions()
     transactions.value = res.data
-  } catch (err) {
+  } catch {
     toast.error('Lỗi khi tải lịch sử kho')
   } finally {
     loadingTransactions.value = false

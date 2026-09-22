@@ -267,7 +267,7 @@ async function fetchReviews() {
     reviews.value = data.items || []
     total.value = data.total || 0
     currentPage.value = data.page || 1
-  } catch (err: any) {
+  } catch {
     toast.error('Không thể tải danh sách đánh giá')
   } finally {
     loading.value = false
@@ -295,7 +295,7 @@ async function toggleVisibility(rev: any) {
     await reviewService.moderate(rev._id, nextState)
     rev.isVisible = nextState
     toast.success(nextState ? 'Đã công khai đánh giá' : 'Đã ẩn đánh giá')
-  } catch (err: any) {
+  } catch {
     toast.error('Không thể thay đổi trạng thái hiển thị')
   }
 }
@@ -314,7 +314,7 @@ async function submitReply() {
     selectedReview.value.adminReply = replyText.value.trim()
     toast.success('Đã gửi phản hồi thành công')
     showReplyModal.value = false
-  } catch (err: any) {
+  } catch {
     toast.error('Lỗi khi gửi phản hồi')
   } finally {
     submittingReply.value = false
@@ -334,7 +334,7 @@ async function submitDelete() {
     toast.success('Đã xóa đánh giá thành công')
     showDeleteModal.value = false
     fetchReviews()
-  } catch (err: any) {
+  } catch {
     toast.error('Không thể xóa đánh giá')
   }
 }

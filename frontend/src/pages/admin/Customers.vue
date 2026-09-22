@@ -82,7 +82,7 @@ async function fetchCustomers() {
   try {
     const res: any = await customerService.getAll()
     customers.value = Array.isArray(res.data) ? res.data : (res.data?.data || [])
-  } catch (err) {
+  } catch {
     toast.error('Lỗi khi tải thông tin khách hàng')
   } finally {
     loading.value = false

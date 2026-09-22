@@ -88,6 +88,10 @@ export class AuthService {
     return safeUser;
   }
 
+  private getAccessSecret(): string {
+    return this.configService.getOrThrow<string>('JWT_SECRET');
+  }
+
   private getRefreshSecret(): string {
     return this.configService.getOrThrow<string>('JWT_REFRESH_SECRET');
   }
@@ -323,23 +327,37 @@ export class AuthService {
     }
 
     // 3. Resolve target user ID and clear active refreshTokenHash in DB
+    // BE-03: Never trust unverified decode() for user identity mutation.
     let targetUserId = userId;
     if (!targetUserId && rawRefreshToken) {
       try {
-        const decoded: any = this.jwtService.decode(rawRefreshToken);
-        if (typeof decoded?.sub === 'string') targetUserId = decoded.sub;
+        const payload: any = await this.jwtService.verifyAsync(
+          rawRefreshToken,
+          {
+            secret: this.getRefreshSecret(),
+            ignoreExpiration: true,
+          },
+        );
+        if (payload?.type === 'refresh' && typeof payload?.sub === 'string') {
+          targetUserId = payload.sub;
+        }
       } catch {
-        // Invalid refresh tokens are handled by leaving targetUserId unset.
+        // Invalid refresh token signature or type handled by leaving targetUserId unset.
       }
     }
 
-    // SEC-01 fix: If targetUserId still unknown, extract sub from rawAccessToken
+    // BE-03 fix: If targetUserId still unknown, extract sub from rawAccessToken verifying signature
     if (!targetUserId && rawAccessToken) {
       try {
-        const decoded: any = this.jwtService.decode(rawAccessToken);
-        if (typeof decoded?.sub === 'string') targetUserId = decoded.sub;
+        const payload: any = await this.jwtService.verifyAsync(rawAccessToken, {
+          secret: this.getAccessSecret(),
+          ignoreExpiration: true,
+        });
+        if (payload?.type === 'access' && typeof payload?.sub === 'string') {
+          targetUserId = payload.sub;
+        }
       } catch {
-        // Invalid access token ignored
+        // Invalid access token signature or type ignored
       }
     }
 

@@ -603,7 +603,7 @@ async function addQuickOption() {
     }
     toast.success(`Đã thêm phân loại "${val}" thành công!`)
     newQuickOptionVal.value = ''
-  } catch (err: any) {
+  } catch {
     toast.error('Không thể thêm phân loại mới')
   }
 }
@@ -625,7 +625,7 @@ async function removeQuickOption(optName: string) {
     }
     form.subOptions = form.subOptions.filter(o => o !== optName)
     toast.success(`Đã xóa phân loại "${optName}"!`)
-  } catch (err: any) {
+  } catch {
     toast.error('Không thể xóa phân loại')
   }
 }
@@ -660,7 +660,7 @@ onMounted(() => {
         form.subOptions = data.subOptions || []
         imagesList.value = data.images || []
       })
-      .catch(err => {
+      .catch(() => {
         toast.error('Lỗi khi tải thông tin sản phẩm')
         router.push('/admin/products')
       })

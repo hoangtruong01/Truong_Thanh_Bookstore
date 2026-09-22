@@ -264,7 +264,7 @@ async function fetchPromotions() {
   try {
     const res: any = await promotionService.getAll()
     promotions.value = Array.isArray(res.data) ? res.data : (res.data?.data || [])
-  } catch (err) {
+  } catch {
     toast.error('Lỗi khi tải danh sách mã giảm giá')
   } finally {
     loading.value = false
@@ -313,7 +313,7 @@ async function deletePromotion(id: string) {
     await promotionService.delete(id)
     toast.success('Đã xóa mã giảm giá')
     fetchPromotions()
-  } catch (err) {
+  } catch {
     toast.error('Xóa mã giảm giá thất bại')
   }
 }

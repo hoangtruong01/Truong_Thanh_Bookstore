@@ -295,7 +295,7 @@ import type { Promotion } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { useDoubleSubmit, useKeyedDoubleSubmit } from '@/composables/useDoubleSubmit'
+import { useDoubleSubmit } from '@/composables/useDoubleSubmit'
 
 useSeoMeta({
   title: 'Giỏ hàng',
@@ -312,8 +312,6 @@ const loadingCart = ref(true)
 const isApplyingCoupon = ref(false)
 
 const { isSubmitting: isValidatingCheckout, runProtected: runProceedToCheckout } = useDoubleSubmit()
-const { isSubmitting: isApplyingManualCoupon, runProtected: runApplyManualCoupon } = useDoubleSubmit()
-const { isKeySubmitting: isApplyingSuggestedCoupon, runKeyProtected: runApplySuggestedCoupon } = useKeyedDoubleSubmit()
 
 const isAnyItemSelected = computed(() => cartStore.items.some(item => item.selected !== false))
 const isAllSelected = computed(() => cartStore.items.every(item => item.selected !== false))
@@ -336,16 +334,18 @@ function removeSelectedItems() {
 }
 
 async function proceedToCheckout() {
-  if (!isAnyItemSelected.value) {
-    toast.warning('Vui lòng chọn ít nhất một sản phẩm để thanh toán')
-    return
-  }
-  await cartStore.validateCartBeforeCheckout(authStore.isAuthenticated)
-  if (cartStore.warnings.length > 0) {
-    toast.warning('Một số sản phẩm trong giỏ hàng đã thay đổi tồn kho hoặc giá. Vui lòng kiểm tra lại!')
-    return
-  }
-  router.push('/checkout')
+  await runProceedToCheckout(async () => {
+    if (!isAnyItemSelected.value) {
+      toast.warning('Vui lòng chọn ít nhất một sản phẩm để thanh toán')
+      return
+    }
+    await cartStore.validateCartBeforeCheckout(authStore.isAuthenticated)
+    if (cartStore.warnings.length > 0) {
+      toast.warning('Một số sản phẩm trong giỏ hàng đã thay đổi tồn kho hoặc giá. Vui lòng kiểm tra lại!')
+      return
+    }
+    router.push('/checkout')
+  })
 }
 
 async function handleApplyCoupon() {
