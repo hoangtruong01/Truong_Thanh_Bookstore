@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model } from 'mongoose';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, createHmac, randomBytes } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { Order, OrderDocument } from '../schemas/order.schema';
 import { CreateOrderDto, CheckoutPreviewDto } from '../dto/order.dto';
@@ -54,6 +54,35 @@ export class CheckoutService {
 
   hashSecret(value: string): string {
     return createHash('sha256').update(value).digest('hex');
+  }
+
+  deriveGuestAccessToken(idempotencyKey: string): string {
+    const serverSecret =
+      this.configService.get<string>('JWT_SECRET') ||
+      'truongthanh-guest-token-hmac-secret';
+    return createHmac('sha256', serverSecret)
+      .update(`guest_order_access:${idempotencyKey}`)
+      .digest('base64url');
+  }
+
+  computeOrderPayloadHash(dto: CreateOrderDto): string {
+    const sortedItems = [...(dto.items || [])]
+      .map((item) => ({
+        product: String(item.product),
+        quantity: Number(item.quantity),
+      }))
+      .sort((a, b) => a.product.localeCompare(b.product));
+
+    const fingerprint = JSON.stringify({
+      items: sortedItems,
+      shippingAddress: (dto.shippingAddress || '').trim().toLowerCase(),
+      phone: (dto.phone || '').trim(),
+      paymentMethod: dto.paymentMethod || PaymentMethod.COD,
+      promotionCode: (dto.promotionCode || '').trim().toUpperCase(),
+      loyaltyPointsUsed: Number(dto.loyaltyPointsUsed || 0),
+    });
+
+    return createHash('sha256').update(fingerprint).digest('hex');
   }
 
   getEnabledPaymentMethods(): PaymentMethod[] {
@@ -167,7 +196,32 @@ export class CheckoutService {
       }
     }
 
-    const total = Math.max(0, subtotal + shippingFee - discount);
+    let loyaltyDiscount = 0;
+    if (dto.loyaltyPointsUsed && dto.loyaltyPointsUsed > 0) {
+      if (!userId) {
+        warnings.push(
+          'Chỉ khách hàng có tài khoản mới có thể sử dụng điểm thưởng Loyalty.',
+        );
+      } else if (dto.loyaltyPointsUsed < 1000) {
+        warnings.push('Mức tiêu điểm tối thiểu là 1.000 điểm.');
+      } else {
+        const maxAllowedDiscount = Math.floor(subtotal * 0.2);
+        const attemptedDiscount = dto.loyaltyPointsUsed * 100;
+        if (attemptedDiscount > maxAllowedDiscount) {
+          warnings.push(
+            'Số điểm thưởng sử dụng vượt quá hạn mức tối đa (20% giá trị đơn hàng).',
+          );
+          loyaltyDiscount = maxAllowedDiscount;
+        } else {
+          loyaltyDiscount = attemptedDiscount;
+        }
+      }
+    }
+
+    const total = Math.max(
+      0,
+      subtotal + shippingFee - discount - loyaltyDiscount,
+    );
 
     return {
       items: verifiedItems,
@@ -179,6 +233,7 @@ export class CheckoutService {
       amountNeededForFreeShipping,
       discount,
       appliedPromotion,
+      loyaltyDiscount,
       total,
       warnings,
       isValidForCheckout: verifiedItems.length > 0 && warnings.length === 0,
@@ -212,7 +267,9 @@ export class CheckoutService {
 
     const guestAccessToken = userId
       ? undefined
-      : randomBytes(32).toString('base64url');
+      : dto.idempotencyKey
+        ? this.deriveGuestAccessToken(dto.idempotencyKey)
+        : randomBytes(32).toString('base64url');
     const idempotencyKeyHash = dto.idempotencyKey
       ? this.hashSecret(dto.idempotencyKey)
       : undefined;
@@ -223,14 +280,51 @@ export class CheckoutService {
           customer: userId || null,
           idempotencyKeyHash,
         })
+        .select(
+          '+idempotencyKeyHash +guestAccessTokenHash +idempotencyPayloadHash',
+        )
         .exec();
       if (existingOrder) {
+        // BE-03: Detect same idempotency key with different payload
+        const currentPayloadHash = this.computeOrderPayloadHash(dto);
+        const storedPayloadHash = (existingOrder as any).idempotencyPayloadHash;
+
+        if (storedPayloadHash && storedPayloadHash !== currentPayloadHash) {
+          throw new ConflictException(
+            'Idempotency key đã được sử dụng cho một đơn hàng khác với nội dung khác',
+          );
+        } else if (!storedPayloadHash) {
+          // Backwards-compatibility fallback check
+          const itemsMismatch =
+            existingOrder.items.length !== dto.items.length ||
+            existingOrder.phone !== dto.phone ||
+            existingOrder.shippingAddress !== dto.shippingAddress;
+          if (itemsMismatch) {
+            throw new ConflictException(
+              'Idempotency key đã được sử dụng cho một đơn hàng khác',
+            );
+          }
+        }
+
         const payload = existingOrder.toObject
           ? existingOrder.toObject()
           : existingOrder;
+
+        // BE-03: Return guest credential that matches existing order's stored hash
+        let replayGuestToken: string | undefined;
+        if (!userId && dto.idempotencyKey) {
+          const derived = this.deriveGuestAccessToken(dto.idempotencyKey);
+          if (
+            (existingOrder as any).guestAccessTokenHash ===
+            this.hashSecret(derived)
+          ) {
+            replayGuestToken = derived;
+          }
+        }
+
         return {
           ...payload,
-          guestAccessToken,
+          guestAccessToken: replayGuestToken,
           replayed: true,
         };
       }
@@ -347,6 +441,9 @@ export class CheckoutService {
             ? this.hashSecret(guestAccessToken)
             : undefined,
           idempotencyKeyHash,
+          idempotencyPayloadHash: idempotencyKeyHash
+            ? this.computeOrderPayloadHash(dto)
+            : undefined,
           guestPhoneKey: guestProtection?.phoneKey,
           guestPendingSlot: guestProtection?.slot,
           items: verifiedItems,

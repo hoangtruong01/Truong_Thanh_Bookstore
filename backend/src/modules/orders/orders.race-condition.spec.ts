@@ -98,9 +98,13 @@ describe('QA-03: Inventory Race Condition & Concurrency Invariant Tests', () => 
   (mockOrderModel as any).find = jest
     .fn()
     .mockReturnValue({ exec: jest.fn().mockResolvedValue([]) });
-  (mockOrderModel as any).findOne = jest
-    .fn()
-    .mockReturnValue({ exec: jest.fn().mockResolvedValue(null) });
+  (mockOrderModel as any).findOne = jest.fn().mockImplementation(() => {
+    const query: any = {
+      select: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue(null),
+    };
+    return query;
+  });
   (mockOrderModel as any).findById = jest
     .fn()
     .mockImplementation((id: string) => ({

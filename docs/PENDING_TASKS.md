@@ -9,12 +9,13 @@
 
 | Mã | Tên Task | Phân Hệ | Priority | Trạng Thái | Độ Khó |
 | :---: | :--- | :---: | :---: | :---: | :---: |
-| **BE-01** | Secure Guest Order Cancellation (timingSafeEqual token) | Backend / Sec | P0 | ✅ Đã hoàn thành | Dễ |
-| **BE-02** | Harden Payment Callback Auth (Zero writes on bad signature) | Backend / Sec | P0 | ✅ Đã hoàn thành | Vừa |
-| **BE-03** | Secure Logout Token Verification (verifyAsync, no forged DoS) | Backend / Sec | P0 | ✅ Đã hoàn thành | Dễ |
-| **BE-04** | Retry Transient Mongo Transactions (WriteConflict retry 3x) | Backend / Core | P0 | ✅ Đã hoàn thành | Vừa |
-| **BE-05** | Enforce Payable Order State Invariant (Reject terminal orders) | Backend / Biz | P0 | ✅ Đã hoàn thành | Dễ |
-| **QA-01** | P0 Security Regression Test Suite (16/16 tests pass) | QA / Backend | P0 | ✅ Đã hoàn thành | Vừa |
+| **BE-01** | Payment Callback Verification & Replay Protection | Backend / Sec | P0 | ✅ Đã hoàn thành | Vừa |
+| **BE-02** | Payment & Order State Protection (Late callback reconciliation) | Backend / Biz | P0 | ✅ Đã hoàn thành | Vừa |
+| **BE-03** | Guest Checkout Determinism & Idempotency Conflict Check | Backend / Core | P0 | ✅ Đã hoàn thành | Vừa |
+| **BE-04** | Inventory Consistency (Loại bỏ sửa stock trực tiếp qua Product) | Backend / Inventory | P0 | ✅ Đã hoàn thành | Vừa |
+| **BE-05** | Email Service Fail-Safe & Ẩn OTP logs | Backend / Email | P0 | ✅ Đã hoàn thành | Dễ |
+| **FS-01** | Bật/tắt phương thức thanh toán động & Bỏ hardcode VietQR | Fullstack / Pay | P0 | ✅ Đã hoàn thành | Vừa |
+| **FE-01** | Checkout Web đồng bộ giá/phí/tồn kho Server & Contract preview | Frontend / Checkout | P0 | ✅ Đã hoàn thành | Vừa |
 | **FE-08** | Tích hợp ImageUploader vào Admin CMS | Frontend | P2 | ✅ Đã hoàn thành | Dễ |
 | **FE-09** | Focus Trap & Phím tắt FormModal | Frontend | P3 | ✅ Đã hoàn thành | Dễ |
 | **TECHDEBT-01** | Clean Code: Frontend 0 warnings, Backend 0 errors | Fullstack | P2 | ✅ Đã hoàn thành | Vừa |

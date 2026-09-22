@@ -703,11 +703,11 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 
 | Phân hệ | Lệnh | Kết quả |
 | :--- | :--- | :---: |
-| Backend Unit Tests | `cd backend && npm test` | **46/46 suites, 506/506 tests PASS (100%)** |
+| Backend Unit Tests | `cd backend && npm test` | **49/49 suites, 503/503 tests PASS (100%)** |
 | Backend Security Suite | `cd backend && npm test -- security-p0-audit.spec.ts` | **16/16 security regression tests PASS** |
-| Backend Linting | `cd backend && npm run lint` | **0 errors** (trần ≤ 1.100 warnings) |
+| Backend Linting | `cd backend && npm run lint` | **0 errors** (trần ≤ 1.200 warnings) |
 | Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
-| Frontend Unit Tests | `cd frontend && npm run test:unit` | **14/14 suites, 80/80 tests PASS (100%)** |
+| Frontend Unit Tests | `cd frontend && npm run test:unit` | **14/14 suites, 83/83 tests PASS (100%)** |
 | Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |
 | Frontend Linting | `cd frontend && npm run lint` | **0 errors, 0 warnings (Sạch 100%)** |
 | Frontend Build | `cd frontend && npm run build` | **Biên dịch thành công** |

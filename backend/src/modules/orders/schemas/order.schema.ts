@@ -69,6 +69,9 @@ export class Order {
   idempotencyKeyHash?: string;
 
   @Prop({ select: false })
+  idempotencyPayloadHash?: string;
+
+  @Prop({ select: false })
   guestPhoneKey?: string;
 
   @Prop({ type: Number, select: false })

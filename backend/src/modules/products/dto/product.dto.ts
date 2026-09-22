@@ -207,12 +207,8 @@ export class UpdateProductDto {
   @Min(0, { message: 'Giá khuyến mãi không được âm' })
   discountPrice?: number;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({}, { message: 'Tồn kho phải là số' })
-  @Min(0, { message: 'Tồn kho không được âm' })
-  stock?: number;
+  // BE-04: stock is removed from generic product update.
+  // All stock adjustments must go through InventoryService (/inventory/adjust or /inventory/import)
 
   @ApiPropertyOptional()
   @IsOptional()
