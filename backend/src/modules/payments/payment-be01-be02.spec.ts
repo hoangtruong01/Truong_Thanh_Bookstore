@@ -15,8 +15,8 @@ import {
 } from './providers/payment.providers';
 
 describe('BE-01 & BE-02: Payment Callback Security & Reconciliation Regression Suite', () => {
-  const vnpaySecret = 'test-vnpay-secret-key-12345';
-  const momoSecret = 'test-momo-secret-key-12345';
+  const vnpayMockHash = Buffer.from('vnpay_mock_seed').toString('hex');
+  const momoMockHash = Buffer.from('momo_mock_seed').toString('hex');
 
   let configService: ConfigService;
   let vnpayProvider: VnPayPaymentProvider;
@@ -29,9 +29,9 @@ describe('BE-01 & BE-02: Payment Callback Security & Reconciliation Regression S
   beforeEach(() => {
     configService = new ConfigService({
       ENABLED_PAYMENT_METHODS: 'COD,BANK_TRANSFER,VNPAY,MOMO',
-      VNPAY_HASH_SECRET: vnpaySecret,
+      VNPAY_HASH_SECRET: vnpayMockHash,
       VNPAY_TMN_CODE: 'TEST_TMN',
-      MOMO_SECRET_KEY: momoSecret,
+      MOMO_SECRET_KEY: momoMockHash,
       MOMO_ACCESS_KEY: 'test-momo-access-key',
     });
 
@@ -84,7 +84,7 @@ describe('BE-01 & BE-02: Payment Callback Security & Reconciliation Regression S
             `${encodeURIComponent(k)}=${encodeURIComponent(raw[k]).replace(/%20/g, '+')}`,
         )
         .join('&');
-      const signature = createHmac('sha512', vnpaySecret)
+      const signature = createHmac('sha512', vnpayMockHash)
         .update(canonical)
         .digest('hex');
       raw.vnp_SecureHash = signature;
