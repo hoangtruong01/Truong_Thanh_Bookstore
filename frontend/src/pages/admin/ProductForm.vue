@@ -260,15 +260,21 @@
         </div>
 
         <div>
-          <label class="text-xs font-bold text-slate-700">Số lượng kho ban đầu *</label>
+          <label class="text-xs font-bold text-slate-700">
+            {{ isEdit ? 'Số lượng tồn kho (Chỉ xem)' : 'Số lượng kho ban đầu *' }}
+          </label>
           <input
             v-model.number="form.stock"
             type="number"
+            :disabled="isEdit"
             required
             min="0"
             placeholder="0"
-            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+            class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
           />
+          <p v-if="isEdit" class="text-[10.5px] text-slate-500 mt-1">
+            Biến động tồn kho được quản lý tại <router-link to="/admin/inventory" class="text-blue-600 font-bold hover:underline">Quản lý kho</router-link>.
+          </p>
         </div>
 
         <div>
@@ -679,7 +685,8 @@ async function handleSubmit() {
 
     if (isEdit.value) {
       const id = route.params.id as string
-      await productService.update(id, payload)
+      const { stock: _ignoredStock, ...editPayload } = payload
+      await productService.update(id, editPayload)
       toast.success('Cập nhật sản phẩm thành công!')
     } else {
       await productService.create(payload)

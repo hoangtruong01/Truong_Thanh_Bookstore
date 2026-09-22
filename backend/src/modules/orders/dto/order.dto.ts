@@ -236,6 +236,16 @@ export class CheckoutPreviewDto {
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )
   customerEmail?: string;
+
+  @ApiPropertyOptional({
+    description: 'Số điểm loyalty khách hàng muốn sử dụng để giảm giá',
+    example: 1000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'loyaltyPointsUsed phải là số nguyên' })
+  @Min(0, { message: 'loyaltyPointsUsed không được âm' })
+  loyaltyPointsUsed?: number;
 }
 
 export class RequestReturnDto {

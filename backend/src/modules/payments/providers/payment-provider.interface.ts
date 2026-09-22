@@ -29,10 +29,20 @@ export interface PaymentCallbackPayload {
   gatewayResponse?: Record<string, any>;
 }
 
+export interface VerifiedPaymentData {
+  transactionId: string;
+  amount: number;
+  currency?: string;
+  providerReference?: string;
+  orderCode?: string;
+  merchantId?: string;
+}
+
 export interface PaymentCallbackResult {
   success: boolean;
   status: PaymentStatus;
   failureReason?: string;
+  verifiedData?: VerifiedPaymentData;
 }
 
 export interface PaymentProvider {

@@ -139,7 +139,7 @@ export class ProductsService {
     const product = new this.productModel({ ...dto, slug });
     const savedProduct = await product.save();
 
-    // Automatically create inventory entry
+    // Automatically create inventory entry - BE-04: Do not swallow core inventory errors
     try {
       const currentStock = savedProduct.stock || 0;
       let status = InventoryStatus.IN_STOCK;
@@ -161,6 +161,10 @@ export class ProductsService {
       this.logger.error(
         'Failed to auto-create inventory for new product:',
         err,
+      );
+      await this.productModel.deleteOne({ _id: savedProduct._id }).exec();
+      throw new BadRequestException(
+        'Không thể khởi tạo bản ghi dữ liệu kho cho sản phẩm mới',
       );
     }
 
@@ -472,8 +476,15 @@ export class ProductsService {
     if (dto.name && !dto.slug) {
       dto.slug = this.generateSlug(dto.name);
     }
+    // BE-04: Disallow modifying stock directly via generic product update.
+    // All stock adjustments must go through InventoryService with actor and reason.
+    const cleanDto = { ...dto };
+    if ('stock' in cleanDto) {
+      delete (cleanDto as any).stock;
+    }
+
     const product = await this.productModel
-      .findByIdAndUpdate(id, dto, { returnDocument: 'after' })
+      .findByIdAndUpdate(id, cleanDto, { returnDocument: 'after' })
       .populate('category')
       .exec();
     if (!product) throw new NotFoundException('Product not found');

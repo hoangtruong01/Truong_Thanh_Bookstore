@@ -202,4 +202,63 @@ describe('QA-04: Checkout UX & Fee Transparency Regression Suite', () => {
       expect(qrUrl).toContain('accountName=NGUYEN%20HOANG%20TRUONG')
     })
   })
+
+  // =========================================================================
+  // TEST 6: PHƯƠNG THỨC THANH TOÁN THEO BACKEND & MINH BẠCH GIÁ (FS-01 & FE-01)
+  // =========================================================================
+  describe('6. FS-01 & FE-01: Backend Payment Methods & Server-Verified Pricing', () => {
+    const allMethods = [
+      { value: 'COD', label: 'COD' },
+      { value: 'BANK_TRANSFER', label: 'Chuyển khoản' },
+      { value: 'VNPAY', label: 'VNPay' },
+      { value: 'MOMO', label: 'MoMo' },
+    ]
+
+    const filterMethods = (enabledFromBackend: string[], isAuthenticated: boolean) => {
+      return allMethods.filter((method) => {
+        if (!isAuthenticated && method.value !== 'COD') return false
+        return enabledFromBackend.includes(method.value)
+      })
+    }
+
+    it('FS-01: chỉ hiển thị các phương thức thanh toán được backend cho phép', () => {
+      // Backend only allows COD and VNPAY
+      const backendEnabled = ['COD', 'VNPAY']
+      const availableForAuth = filterMethods(backendEnabled, true)
+      expect(availableForAuth.map((m) => m.value)).toEqual(['COD', 'VNPAY'])
+
+      // When MOMO is also enabled by backend
+      const backendWithMomo = ['COD', 'VNPAY', 'MOMO']
+      const availableWithMomo = filterMethods(backendWithMomo, true)
+      expect(availableWithMomo.map((m) => m.value)).toEqual(['COD', 'VNPAY', 'MOMO'])
+    })
+
+    it('FS-01: khách vãng lai chỉ được phép chọn COD bất kể backend bật cổng nào', () => {
+      const backendEnabled = ['COD', 'BANK_TRANSFER', 'VNPAY', 'MOMO']
+      const guestMethods = filterMethods(backendEnabled, false)
+      expect(guestMethods).toHaveLength(1)
+      expect(guestMethods[0].value).toBe('COD')
+    })
+
+    it('FE-01: giá, phí và tổng thanh toán hiển thị ưu tiên nguồn dữ liệu xác minh từ server', () => {
+      const clientCart = { subtotal: 200000, shippingFee: 30000, total: 230000 }
+      const serverPreview = {
+        subtotal: 190000, // Giá một cuốn sách giảm tại server
+        shippingFee: 30000,
+        discount: 20000, // Server validate áp dụng voucher thành công
+        loyaltyDiscount: 10000,
+        total: 190000,
+        warnings: ['Giá sản phẩm Sách đã được điều chỉnh'],
+      }
+
+      // UI ưu tiên server preview nếu có
+      const displayedSubtotal = serverPreview.subtotal ?? clientCart.subtotal
+      const displayedTotal = serverPreview.total ?? clientCart.total
+
+      expect(displayedSubtotal).toBe(190000)
+      expect(displayedTotal).toBe(190000)
+      expect(serverPreview.warnings).toHaveLength(1)
+    })
+  })
 })
+

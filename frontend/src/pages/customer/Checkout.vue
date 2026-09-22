@@ -52,20 +52,20 @@
         </div>
       </div>
 
-      <!-- Hướng dẫn chuyển khoản ngân hàng tự động với VietQR (nếu chọn BANK_TRANSFER) -->
+      <!-- Hướng dẫn chuyển khoản ngân hàng (nếu chọn BANK_TRANSFER) -->
       <div v-if="submittedPaymentMethod === 'BANK_TRANSFER'" class="bg-gradient-to-br from-amber-50 to-orange-50/40 border border-amber-200 rounded-2xl p-6 space-y-4">
         <div class="flex items-center gap-2">
           <span class="text-lg">🏦</span>
           <h3 class="font-extrabold text-amber-900 text-sm uppercase tracking-wide">Hướng dẫn thanh toán chuyển khoản ngân hàng</h3>
         </div>
         <p class="text-xs text-amber-800 leading-relaxed">
-          Quý khách vui lòng quét mã VietQR bên dưới hoặc chuyển khoản theo đúng thông tin để hệ thống tự động xác nhận đơn hàng trong vòng 1-3 phút.
+          Quý khách vui lòng chuyển khoản theo đúng thông tin bên dưới và ghi rõ mã đơn hàng trong nội dung chuyển khoản. Nhân viên nhà sách sẽ kiểm tra đối soát và xử lý giao hàng ngay sau khi nhận được tiền.
         </p>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-white p-4 rounded-xl border border-amber-200">
+        <div v-if="bankTransferConfig && bankTransferConfig.accountNumber" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-white p-4 rounded-xl border border-amber-200">
           <div class="text-center">
             <img
-              :src="`https://img.vietqr.io/image/MB-0345678999-compact2.png?amount=${lastSubmittedTotal}&addInfo=${encodeURIComponent(orderCode)}&accountName=TRUONG%20THANH%20BOOKSTORE`"
+              :src="`https://img.vietqr.io/image/${encodeURIComponent(bankTransferConfig.bankName || 'MB')}-${encodeURIComponent(bankTransferConfig.accountNumber)}-compact2.png?amount=${lastSubmittedTotal}&addInfo=${encodeURIComponent(orderCode)}&accountName=${encodeURIComponent(bankTransferConfig.accountHolder || 'TRUONG THANH BOOKSTORE')}`"
               alt="VietQR Mã Đơn Hàng"
               class="w-44 h-44 mx-auto rounded-lg border border-slate-200 p-1 shadow-xs"
             />
@@ -75,18 +75,18 @@
           <div class="space-y-2 text-xs text-slate-700">
             <div>
               <span class="text-slate-400 block text-[10px] uppercase font-bold">Ngân hàng thụ hưởng</span>
-              <strong class="text-slate-900">MB Bank (Quân Đội)</strong>
+              <strong class="text-slate-900">{{ bankTransferConfig.bankName || 'Ngân hàng' }}</strong>
             </div>
             <div>
               <span class="text-slate-400 block text-[10px] uppercase font-bold">Số tài khoản</span>
               <div class="flex items-center gap-2">
-                <strong class="font-mono text-slate-900 text-sm">0345678999</strong>
-                <button type="button" class="text-xs font-bold text-red-600 hover:underline" @click="copyText('0345678999', 'Số tài khoản')">Copy</button>
+                <strong class="font-mono text-slate-900 text-sm">{{ bankTransferConfig.accountNumber }}</strong>
+                <button type="button" class="text-xs font-bold text-red-600 hover:underline" @click="copyText(bankTransferConfig.accountNumber, 'Số tài khoản')">Copy</button>
               </div>
             </div>
             <div>
               <span class="text-slate-400 block text-[10px] uppercase font-bold">Chủ tài khoản</span>
-              <strong class="text-slate-900">NHÀ SÁCH TRƯỜNG THÀNH</strong>
+              <strong class="text-slate-900">{{ bankTransferConfig.accountHolder || 'TRUONG THANH BOOKSTORE' }}</strong>
             </div>
             <div>
               <span class="text-slate-400 block text-[10px] uppercase font-bold">Số tiền chuyển</span>
@@ -103,6 +103,11 @@
               </div>
             </div>
           </div>
+        </div>
+        <div v-else class="bg-white p-4 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+          <p>Mã đơn hàng: <strong class="font-mono text-red-600">#{{ orderCode }}</strong></p>
+          <p>Số tiền cần thanh toán: <strong class="text-red-600">{{ formatCurrency(lastSubmittedTotal) }}</strong></p>
+          <p class="text-slate-600">Vui lòng liên hệ hotline: <strong>0982938316</strong> để được hỗ trợ hướng dẫn thông tin tài khoản chuyển khoản.</p>
         </div>
       </div>
 
@@ -514,35 +519,46 @@
 
           <!-- Bảng Minh Bạch Chi Phí Đơn Hàng (FE-06 Transparency Table) -->
           <div class="border-t border-slate-100 pt-4 space-y-2.5 text-xs font-medium">
+            <!-- Server warning messages if prices or stock adjusted -->
+            <div v-if="serverPricing?.warnings?.length" class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 space-y-1">
+              <div class="font-bold flex items-center gap-1">
+                <span>⚠️</span>
+                <span>Thông báo cập nhật từ hệ thống:</span>
+              </div>
+              <p v-for="(warn, idx) in serverPricing.warnings" :key="idx" class="text-[11px] leading-relaxed">
+                • {{ warn }}
+              </p>
+            </div>
+
             <div class="flex justify-between text-slate-600">
               <span>Tiền hàng tạm tính</span>
-              <span class="text-slate-800 font-bold">{{ formatCurrency(cartStore.subtotal) }}</span>
+              <span class="text-slate-800 font-bold">{{ formatCurrency(displayedSubtotal) }}</span>
             </div>
 
             <div class="flex justify-between text-slate-600 items-center">
               <span>Phí vận chuyển</span>
               <div class="text-right">
-                <span v-if="isEligibleForFreeShipping" class="font-bold text-green-600 flex items-center gap-1">
+                <span v-if="displayedShippingFee === 0" class="font-bold text-green-600 flex items-center gap-1">
                   <span class="line-through text-slate-400 font-normal">30.000 đ</span>
                   <span>Miễn phí</span>
                 </span>
                 <span v-else class="text-slate-800 font-bold">
-                  {{ formatCurrency(cartStore.shippingFee) }}
+                  {{ formatCurrency(displayedShippingFee) }}
                 </span>
               </div>
             </div>
 
-            <div v-if="cartStore.discountAmount > 0" class="flex justify-between text-red-600">
+            <div v-if="displayedDiscount > 0" class="flex justify-between text-red-600">
               <span class="flex items-center gap-1">
                 <span>Voucher giảm giá</span>
                 <span class="font-mono font-bold bg-red-50 px-1 py-0.2 rounded border border-red-200 text-[10px]">{{ (cartStore.appliedPromotion as any)?.code }}</span>
               </span>
-              <span class="font-bold">-{{ formatCurrency(cartStore.discountAmount) }}</span>
+              <span class="font-bold">-{{ formatCurrency(displayedDiscount) }}</span>
             </div>
 
-            <div v-if="loyaltyDiscountAmount > 0" class="flex justify-between text-amber-600">
+            <div v-if="displayedLoyaltyDiscount > 0" class="flex justify-between text-amber-600">
               <span>Điểm thưởng ({{ loyaltyPointsToSpend.toLocaleString() }} điểm)</span>
-              <span class="font-bold">-{{ formatCurrency(loyaltyDiscountAmount) }}</span>
+              <span class="font-bold">-{{ formatCurrency(displayedLoyaltyDiscount) }}</span>
             </div>
 
             <div class="border-t border-slate-200 pt-3 flex justify-between items-baseline text-slate-900">
@@ -550,7 +566,7 @@
                 <span class="text-sm font-black block">Tổng thanh toán cuối cùng</span>
                 <span class="text-[10px] text-slate-400 font-normal">Đã bao gồm VAT, không phí ẩn</span>
               </div>
-              <span class="text-xl font-black text-[#dc2626]">{{ formatCurrency(finalTotal) }}</span>
+              <span class="text-xl font-black text-[#dc2626]">{{ formatCurrency(displayedTotal) }}</span>
             </div>
           </div>
 
@@ -581,7 +597,7 @@ import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { orderService } from '@/services/order.service'
-import { paymentService } from '@/services/payment.service'
+import { paymentService, type BankTransferConfig } from '@/services/payment.service'
 import { addressService } from '@/services/address.service'
 import { formatCurrency, getEffectivePrice } from '@/utils/helpers'
 import { promotionService } from '@/services/promotion.service'
@@ -614,6 +630,17 @@ const createdOrderId = ref('')
 const lastSubmittedTotal = ref(0)
 const submittedPaymentMethod = ref<'COD' | 'BANK_TRANSFER' | 'VNPAY' | 'MOMO'>('COD')
 
+const enabledPaymentMethods = ref<string[]>(['COD'])
+const bankTransferConfig = ref<BankTransferConfig | null>(null)
+const serverPricing = ref<{
+  subtotal: number
+  shippingFee: number
+  discount: number
+  loyaltyDiscount: number
+  total: number
+  warnings: string[]
+} | null>(null)
+
 // FE-06: Realtime inventory status verification map
 const liveStockMap = ref<Record<string, number>>({})
 
@@ -643,7 +670,10 @@ function adjustItemQty(productId: string, maxAvailable: number) {
 }
 
 async function verifyInventoryPreview() {
-  if (checkoutItems.value.length === 0) return
+  if (checkoutItems.value.length === 0) {
+    serverPricing.value = null
+    return
+  }
   try {
     const previewPayload = {
       items: checkoutItems.value.map(item => ({
@@ -655,17 +685,31 @@ async function verifyInventoryPreview() {
       })),
       shippingAddress: shippingInfo.address || 'Hà Nội',
       phone: shippingInfo.phone || '0900000000',
+      paymentMethod: paymentMethod.value,
       promotionCode: cartStore.appliedPromotion?.code || undefined,
+      customerEmail: shippingInfo.email || undefined,
+      loyaltyPointsUsed: loyaltyPointsToSpend.value > 0 ? loyaltyPointsToSpend.value : undefined,
     }
 
     const res = await orderService.checkoutPreview(previewPayload)
-    const data = res.data?.data || res.data
-    if (data?.items && Array.isArray(data.items)) {
-      const newMap: Record<string, number> = {}
-      for (const item of data.items) {
-        newMap[item.product] = typeof item.stock === 'number' ? item.stock : 999
+    const data = (res.data as any)?.data || res.data
+    if (data) {
+      if (data.items && Array.isArray(data.items)) {
+        const newMap: Record<string, number> = {}
+        for (const item of data.items) {
+          newMap[item.product] = typeof item.stock === 'number' ? item.stock : 999
+        }
+        liveStockMap.value = newMap
       }
-      liveStockMap.value = newMap
+
+      serverPricing.value = {
+        subtotal: typeof data.subtotal === 'number' ? data.subtotal : cartStore.subtotal,
+        shippingFee: typeof data.shippingFee === 'number' ? data.shippingFee : (isEligibleForFreeShipping.value ? 0 : 30000),
+        discount: typeof data.discount === 'number' ? data.discount : cartStore.discountAmount,
+        loyaltyDiscount: typeof data.loyaltyDiscount === 'number' ? data.loyaltyDiscount : loyaltyDiscountAmount.value,
+        total: typeof data.total === 'number' ? data.total : finalTotal.value,
+        warnings: Array.isArray(data.warnings) ? data.warnings : [],
+      }
     }
   } catch (_err) {
     // silently allow fallback without crashing
@@ -673,7 +717,14 @@ async function verifyInventoryPreview() {
 }
 
 watch(
-  () => checkoutItems.value.map(i => `${i.product._id}:${i.quantity}`).join(','),
+  [
+    () => checkoutItems.value.map(i => `${i.product._id}:${i.quantity}`).join(','),
+    () => paymentMethod.value,
+    () => loyaltyPointsToSpend.value,
+    () => shippingInfo.address,
+    () => shippingInfo.phone,
+    () => shippingInfo.email,
+  ],
   () => {
     verifyInventoryPreview()
   },
@@ -727,6 +778,12 @@ const finalTotal = computed(() => {
   return Math.max(0, cartStore.total - loyaltyDiscountAmount.value)
 })
 
+const displayedSubtotal = computed(() => serverPricing.value?.subtotal ?? cartStore.subtotal)
+const displayedShippingFee = computed(() => serverPricing.value?.shippingFee ?? (isEligibleForFreeShipping.value ? 0 : cartStore.shippingFee))
+const displayedDiscount = computed(() => serverPricing.value?.discount ?? cartStore.discountAmount)
+const displayedLoyaltyDiscount = computed(() => serverPricing.value?.loyaltyDiscount ?? loyaltyDiscountAmount.value)
+const displayedTotal = computed(() => serverPricing.value?.total ?? finalTotal.value)
+
 const shippingInfo = reactive({
   fullName: '',
   phone: '',
@@ -767,32 +824,59 @@ function onAddressSelectChange() {
 
 const paymentMethod = ref<'COD' | 'BANK_TRANSFER' | 'VNPAY' | 'MOMO'>('COD')
 
-const paymentMethods = computed(() => [
+const allPaymentMethods = [
   {
     value: 'COD',
     label: 'Thanh toán khi nhận hàng (COD)',
     description: 'Thanh toán bằng tiền mặt khi shipper giao hàng tận nơi.',
     tag: 'Phổ biến',
   },
-  ...(authStore.isAuthenticated ? [
-    {
-      value: 'BANK_TRANSFER',
-      label: 'Chuyển khoản ngân hàng (VietQR)',
-      description: 'Quét mã VietQR chuyển tiền tự động, duyệt đơn nhanh 24/7.',
-      tag: 'Khuyên dùng',
-    },
-    {
-      value: 'VNPAY',
-      label: 'Cổng thanh toán VNPay',
-      description: 'Thanh toán an toàn qua VNPAY-QR, thẻ ATM nội địa hoặc thẻ quốc tế.',
-    },
-    {
-      value: 'MOMO',
-      label: 'Ví điện tử MoMo',
-      description: 'Quét mã qua ứng dụng MoMo chỉ với 1 chạm.',
-    },
-  ] : []),
-])
+  {
+    value: 'BANK_TRANSFER',
+    label: 'Chuyển khoản ngân hàng',
+    description: 'Chuyển khoản theo số tài khoản hoặc quét QR, đối soát và xác nhận nhanh.',
+    tag: 'Khuyên dùng',
+  },
+  {
+    value: 'VNPAY',
+    label: 'Cổng thanh toán VNPay',
+    description: 'Thanh toán an toàn qua VNPAY-QR, thẻ ATM nội địa hoặc thẻ quốc tế.',
+  },
+  {
+    value: 'MOMO',
+    label: 'Ví điện tử MoMo',
+    description: 'Quét mã qua ứng dụng MoMo chỉ với 1 chạm.',
+  },
+]
+
+const paymentMethods = computed(() => {
+  return allPaymentMethods.filter(method => {
+    // Backend security invariant: Guest checkout only supports COD
+    if (!authStore.isAuthenticated && method.value !== 'COD') {
+      return false
+    }
+    return enabledPaymentMethods.value.includes(method.value)
+  })
+})
+
+async function fetchEnabledPaymentMethods() {
+  try {
+    const res = await paymentService.getEnabledMethods()
+    const data = (res.data as any)?.data || res.data
+    if (data?.methods && Array.isArray(data.methods)) {
+      enabledPaymentMethods.value = data.methods
+    }
+    if (data?.bankTransfer) {
+      bankTransferConfig.value = data.bankTransfer
+    }
+    if (!paymentMethods.value.some(m => m.value === paymentMethod.value)) {
+      paymentMethod.value = (paymentMethods.value[0]?.value as any) || 'COD'
+    }
+  } catch (_err) {
+    enabledPaymentMethods.value = ['COD']
+    paymentMethod.value = 'COD'
+  }
+}
 
 function getSelectedPaymentMethodLabel(): string {
   const found = paymentMethods.value.find(m => m.value === submittedPaymentMethod.value)
@@ -859,6 +943,8 @@ async function applySuggestedCoupon(code: string) {
 }
 
 onMounted(async () => {
+  await fetchEnabledPaymentMethods()
+
   if (authStore.isAuthenticated && authStore.user) {
     shippingInfo.fullName = authStore.user.fullName || ''
     shippingInfo.phone = authStore.user.phone || ''
@@ -918,8 +1004,17 @@ async function placeOrder() {
     }
 
     // Pre-checkout safe validation
-    const previewRes = await orderService.checkoutPreview(orderData)
-    const previewData = previewRes.data?.data || previewRes.data
+    const previewPayload = {
+      items,
+      shippingAddress: shippingInfo.address,
+      phone: shippingInfo.phone,
+      paymentMethod: paymentMethod.value,
+      promotionCode: cartStore.appliedPromotion?.code || undefined,
+      customerEmail: shippingInfo.email || undefined,
+      loyaltyPointsUsed: loyaltyPointsToSpend.value > 0 ? loyaltyPointsToSpend.value : undefined,
+    }
+    const previewRes = await orderService.checkoutPreview(previewPayload)
+    const previewData = (previewRes.data as any)?.data || previewRes.data
     if (previewData && previewData.warnings && previewData.warnings.length > 0) {
       if (!previewData.isValidForCheckout) {
         toast.warning(previewData.warnings.join(' | '))
@@ -935,11 +1030,11 @@ async function placeOrder() {
       response = await orderService.create(orderData)
     }
 
-    const orderResponseData = response.data.data || response.data
+    const orderResponseData = (response.data as any)?.data || response.data
     orderCode.value = orderResponseData.orderCode
     const orderId = orderResponseData._id
     createdOrderId.value = orderId
-    lastSubmittedTotal.value = finalTotal.value
+    lastSubmittedTotal.value = orderResponseData.total ?? previewData?.total ?? displayedTotal.value
     submittedPaymentMethod.value = paymentMethod.value
 
     const guestToken = orderResponseData.guestAccessToken

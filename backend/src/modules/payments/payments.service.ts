@@ -10,6 +10,7 @@ import {
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Connection, Model, Types } from 'mongoose';
 import { Cron } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 import { Payment, PaymentDocument } from './schemas/payment.schema';
 import {
   CreatePaymentDto,
@@ -38,8 +39,42 @@ export class PaymentsService {
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     private readonly providers: PaymentProviderRegistry,
+    @Optional() private readonly configService?: ConfigService,
     @Optional() @InjectConnection() private readonly connection?: Connection,
   ) {}
+
+  getEnabledPaymentMethods(): PaymentMethod[] {
+    if (!this.configService) {
+      return Object.values(PaymentMethod);
+    }
+    const raw = this.configService.get<string>('ENABLED_PAYMENT_METHODS');
+    if (!raw) return [PaymentMethod.COD];
+    const configured = raw
+      .split(',')
+      .map((value) => value.trim().toUpperCase())
+      .filter((value): value is PaymentMethod =>
+        Object.values(PaymentMethod).includes(value as PaymentMethod),
+      );
+    return configured.length ? configured : [PaymentMethod.COD];
+  }
+
+  getEnabledMethodsSummary() {
+    const methods = this.getEnabledPaymentMethods();
+    const hasBankTransfer = methods.includes(PaymentMethod.BANK_TRANSFER);
+    return {
+      methods,
+      bankTransfer: hasBankTransfer
+        ? {
+            bankName: this.configService?.get<string>('BANK_NAME') || '',
+            accountNumber:
+              this.configService?.get<string>('BANK_ACCOUNT_NUMBER') || '',
+            accountHolder:
+              this.configService?.get<string>('BANK_ACCOUNT_HOLDER') ||
+              'TRUONG THANH BOOKSTORE',
+          }
+        : null,
+    };
+  }
 
   private async syncOrderPaymentStatus(
     orderId: Types.ObjectId,
@@ -51,14 +86,20 @@ export class PaymentsService {
     if (status === PaymentStatus.PAID) {
       update.revenueRecognizedAt = paidAt || new Date();
     }
+    // BE-02: Never rollback an already PAID order to UNPAID/FAILED/PENDING
+    const orderFilter: Record<string, unknown> = {
+      _id: orderId,
+      ...(status !== PaymentStatus.PAID
+        ? { paymentStatus: { $ne: PaymentStatus.PAID } }
+        : {}),
+    };
+
     if (session) {
       await this.orderModel
-        .updateOne({ _id: orderId }, { $set: update }, { session })
+        .updateOne(orderFilter, { $set: update }, { session })
         .exec();
     } else {
-      await this.orderModel
-        .updateOne({ _id: orderId }, { $set: update })
-        .exec();
+      await this.orderModel.updateOne(orderFilter, { $set: update }).exec();
     }
 
     if (status === PaymentStatus.PAID) {
@@ -131,6 +172,12 @@ export class PaymentsService {
     actorInput?: string | PaymentActor,
   ): Promise<{ payment: PaymentDocument; action: PaymentInitiationResult }> {
     const actor = this.normalizeActor(actorInput);
+    if (!this.getEnabledPaymentMethods().includes(dto.provider)) {
+      throw new BadRequestException(
+        `Phương thức thanh toán ${dto.provider} hiện chưa được kích hoạt trong hệ thống`,
+      );
+    }
+
     const order = await this.orderModel.findById(dto.orderId).exec();
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
     this.assertOrderAccess(order, actor);
@@ -236,6 +283,16 @@ export class PaymentsService {
       `[CID: ${correlationId}] Nhận callback ${dto.provider}: txn=${dto.transactionId || 'none'}, ref=${dto.providerReference || 'none'}, amount=${dto.amount}`,
     );
 
+    // 0. BE-01: Check enabled payment methods
+    if (!this.getEnabledPaymentMethods().includes(dto.provider)) {
+      this.logger.warn(
+        `[CID: ${correlationId}] [CẢNH BÁO BẢO MẬT] Callback từ cổng thanh toán chưa được kích hoạt: ${dto.provider}`,
+      );
+      throw new BadRequestException(
+        `Phương thức thanh toán ${dto.provider} chưa được kích hoạt trong hệ thống`,
+      );
+    }
+
     // 1. BE-02: Verify Signature First (Zero DB Writes on Invalid Signature)
     const provider = this.providers.get(dto.provider);
     if (!provider) {
@@ -257,29 +314,66 @@ export class PaymentsService {
       );
     }
 
-    // 2. Locate payment
+    // 1.1 BE-01: Extract strictly verified parameters from provider's signature verification
+    const verified = result.verifiedData;
+    const effectiveTransactionId = verified?.transactionId || dto.transactionId;
+    const effectiveAmount =
+      verified?.amount !== undefined ? verified.amount : dto.amount;
+    const effectiveProviderRef =
+      verified?.providerReference || dto.providerReference;
+    const effectiveOrderCode = verified?.orderCode || dto.orderCode;
+
+    // 2. BE-01: Locate payment using verified reference, orderCode, or transactionId
     const payment = await this.paymentModel
       .findOne({
         provider: dto.provider,
         $or: [
-          ...(dto.providerReference
-            ? [{ providerReference: dto.providerReference }]
+          ...(effectiveProviderRef
+            ? [{ providerReference: effectiveProviderRef }]
             : []),
-          ...(dto.orderCode ? [{ orderCode: dto.orderCode }] : []),
-          { transactionId: dto.transactionId },
+          ...(effectiveOrderCode ? [{ orderCode: effectiveOrderCode }] : []),
+          ...(effectiveTransactionId
+            ? [{ transactionId: effectiveTransactionId }]
+            : []),
         ],
       })
       .exec();
+
     if (!payment) {
       this.logger.warn(
-        `[CID: ${correlationId}] Không tìm thấy giao dịch thanh toán cho callback ${dto.provider}`,
+        `[CID: ${correlationId}] Không tìm thấy giao dịch thanh toán cho callback ${dto.provider} (ref=${effectiveProviderRef || 'none'}, code=${effectiveOrderCode || 'none'})`,
       );
       throw new NotFoundException('Không tìm thấy giao dịch thanh toán');
     }
 
+    // 2.1 BE-01: Transaction Reuse Protection: Ensure transactionId is not already bound to a DIFFERENT order
+    if (payment._id && effectiveTransactionId) {
+      const reused = await this.paymentModel
+        .findOne({
+          provider: dto.provider,
+          transactionId: effectiveTransactionId,
+          _id: { $ne: payment._id },
+          order: { $ne: payment.order },
+        })
+        .exec();
+      if (
+        reused &&
+        reused._id &&
+        String(reused._id) !== String(payment._id) &&
+        String(reused.order) !== String(payment.order)
+      ) {
+        this.logger.error(
+          `[CID: ${correlationId}] [CẢNH BÁO BẢO MẬT] Transaction reuse detected: Mã giao dịch ${effectiveTransactionId} đã gắn với thanh toán ${String(reused._id)}`,
+        );
+        throw new ConflictException(
+          'Mã giao dịch đã được sử dụng cho một thanh toán khác',
+        );
+      }
+    }
+
     // 3. BE-03: Strict Idempotency Replay (Signature is already verified)
     if (payment.callbackProcessedAt || payment.status === PaymentStatus.PAID) {
-      if (payment.transactionId === dto.transactionId) {
+      if (payment.transactionId === effectiveTransactionId) {
         this.logger.log(
           `[CID: ${correlationId}] Callback thanh toán lặp lại hợp lệ (Idempotent replay) cho giao dịch ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}`,
         );
@@ -298,16 +392,16 @@ export class PaymentsService {
       );
     }
 
-    // 4. BE-03: Amount Tampering Detection (Authenticated callback with mismatched amount)
+    // 4. BE-03: Amount Tampering Detection (using verified amount)
     if (
-      dto.amount !== undefined &&
-      Math.round(Number(dto.amount)) !== Math.round(payment.amount)
+      effectiveAmount !== undefined &&
+      Math.round(Number(effectiveAmount)) !== Math.round(payment.amount)
     ) {
       this.logger.error(
-        `[CID: ${correlationId}] [CẢNH BÁO BẢO MẬT] Phát hiện sai lệch số tiền (Amount Tampering)! Payment ID: ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}, Dự kiến: ${payment.amount}, Nhận được: ${dto.amount}`,
+        `[CID: ${correlationId}] [CẢNH BÁO BẢO MẬT] Phát hiện sai lệch số tiền (Amount Tampering)! Payment ID: ${payment._id?.toString?.() ?? String(payment._id ?? 'none')}, Dự kiến: ${payment.amount}, Nhận được: ${effectiveAmount}`,
       );
       payment.status = PaymentStatus.FAILED;
-      payment.failureReason = `Sai lệch số tiền thanh toán (Amount Tampering): Nhận ${dto.amount} nhưng yêu cầu ${payment.amount}`;
+      payment.failureReason = `Sai lệch số tiền thanh toán (Amount Tampering): Nhận ${effectiveAmount} nhưng yêu cầu ${payment.amount}`;
       await payment.save();
 
       await this.orderModel
@@ -316,12 +410,12 @@ export class PaymentsService {
           {
             $set: {
               refundStatus: RefundStatus.MANUAL_REQUIRED,
-              refundReason: `Phát hiện sai lệch số tiền từ cổng thanh toán (${dto.amount} vs ${payment.amount})`,
+              refundReason: `Phát hiện sai lệch số tiền từ cổng thanh toán (${effectiveAmount} vs ${payment.amount})`,
             },
             $push: {
               timeline: {
                 status: OrderStatus.PENDING,
-                note: `[CẢNH BÁO BẢO MẬT] Sai lệch số tiền callback thanh toán (${dto.amount} vs ${payment.amount}). Cần đối soát thủ công.`,
+                note: `[CẢNH BÁO BẢO MẬT] Sai lệch số tiền callback thanh toán (${effectiveAmount} vs ${payment.amount}). Cần đối soát thủ công.`,
                 createdAt: new Date(),
               },
             },
@@ -334,15 +428,69 @@ export class PaymentsService {
       );
     }
 
-    // 5. Expiration check
-    if (payment.expiresAt && payment.expiresAt < new Date()) {
-      payment.status = PaymentStatus.FAILED;
-      payment.failureReason = 'Callback đến sau khi phiên thanh toán hết hạn';
-      await payment.save();
-      this.logger.warn(
-        `[CID: ${correlationId}] Callback đến sau khi phiên thanh toán ${payment._id?.toString?.() ?? String(payment._id ?? 'none')} đã hết hạn`,
-      );
-      throw new BadRequestException('Phiên thanh toán đã hết hạn');
+    // 5. BE-02: Expiration and Terminal Order State Check with Reconciliation
+    const isExpired = payment.expiresAt && payment.expiresAt < new Date();
+
+    if (isExpired) {
+      const order = await this.orderModel.findById?.(payment.order)?.exec?.();
+      const isOrderTerminal =
+        order &&
+        [
+          OrderStatus.CANCELLED,
+          OrderStatus.RETURNED,
+          OrderStatus.COMPLETED,
+        ].includes(order.orderStatus);
+
+      if (result.success) {
+        // Customer was charged money, but payment is expired or order is cancelled.
+        // Record payment as PAID with MANUAL_REQUIRED refund for financial reconciliation.
+        payment.status = PaymentStatus.PAID;
+        payment.transactionId = effectiveTransactionId;
+        payment.paidAt = new Date();
+        payment.callbackProcessedAt = new Date();
+        payment.gatewayResponse = dto.gatewayResponse || {};
+        payment.failureReason = isOrderTerminal
+          ? `Thanh toán thành công nhưng đơn hàng đã ở trạng thái ${order?.orderStatus}. Cần đối soát hoàn tiền thủ công.`
+          : 'Thanh toán thành công nhận được sau khi phiên hết hạn. Cần đối soát hoàn tiền thủ công.';
+        await payment.save();
+
+        if (order) {
+          await this.orderModel
+            .updateOne(
+              { _id: order._id },
+              {
+                $set: {
+                  paymentStatus: PaymentStatus.PAID,
+                  refundStatus: RefundStatus.MANUAL_REQUIRED,
+                  refundReason: payment.failureReason,
+                  revenueRecognizedAt: new Date(),
+                },
+                $push: {
+                  timeline: {
+                    status: order.orderStatus,
+                    note: `[ĐỐI SOÁT HOÀN TIỀN] ${payment.failureReason} Mã GD: ${effectiveTransactionId}, Số tiền: ${payment.amount}đ.`,
+                    createdAt: new Date(),
+                  },
+                },
+              },
+            )
+            .exec();
+        }
+
+        this.logger.warn(
+          `[CID: ${correlationId}] Late successful callback for expired/cancelled order ${String(payment.order)}. Marked MANUAL_REQUIRED for reconciliation.`,
+        );
+        return payment;
+      } else {
+        payment.status = PaymentStatus.FAILED;
+        payment.failureReason =
+          'Callback thất bại đến sau khi phiên thanh toán hết hạn';
+        await payment.save();
+        this.logger.warn(
+          `[CID: ${correlationId}] Callback đến sau khi phiên thanh toán ${payment._id?.toString?.() ?? String(payment._id ?? 'none')} đã hết hạn`,
+        );
+        throw new BadRequestException('Phiên thanh toán đã hết hạn');
+      }
     }
 
     // BE-02: Atomic Multi-Document Transaction with Standalone Fallback
@@ -380,7 +528,7 @@ export class PaymentsService {
       const updateDoc = {
         $set: {
           status: result.status,
-          transactionId: dto.transactionId,
+          transactionId: effectiveTransactionId,
           callbackProcessedAt: new Date(),
           paidAt: result.success ? new Date() : undefined,
           failureReason: result.failureReason,
@@ -403,7 +551,7 @@ export class PaymentsService {
           await session.abortTransaction();
         }
         const processed = await this.paymentModel.findById(payment._id).exec();
-        if (processed?.transactionId === dto.transactionId) {
+        if (processed?.transactionId === effectiveTransactionId) {
           await this.syncOrderPaymentStatus(
             processed.order,
             processed.status,
@@ -479,21 +627,30 @@ export class PaymentsService {
       if (/Số tiền/i.test(message)) {
         return { RspCode: '04', Message: 'Invalid amount' };
       }
+      if (/đã nhận một callback khác|trùng lặp/i.test(message)) {
+        return { RspCode: '02', Message: 'Order already confirmed' };
+      }
       return { RspCode: '97', Message: 'Invalid signature' };
     }
   }
 
   async handleMomoIpn(body: Record<string, unknown>) {
     const raw = { ...body } as Record<string, any>;
-    return this.handleCallback({
-      provider: PaymentMethod.MOMO,
-      providerReference: String(raw.orderId || ''),
-      transactionId: String(raw.transId || raw.requestId || ''),
-      amount: Number(raw.amount),
-      status: String(raw.resultCode),
-      signature: String(raw.signature || ''),
-      gatewayResponse: raw,
-    });
+    try {
+      await this.handleCallback({
+        provider: PaymentMethod.MOMO,
+        providerReference: String(raw.orderId || ''),
+        transactionId: String(raw.transId || raw.requestId || ''),
+        amount: Number(raw.amount),
+        status: String(raw.resultCode),
+        signature: String(raw.signature || ''),
+        gatewayResponse: raw,
+      });
+      return { resultCode: 0, message: 'Successful.' };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { resultCode: 99, message };
+    }
   }
 
   async findAll(query: PaymentQueryDto): Promise<PaymentDocument[]> {
@@ -511,6 +668,7 @@ export class PaymentsService {
   /**
    * BE-02: Auto-reconciliation of pending online payments.
    * Runs every 15 minutes to mark expired or stranded online payments as FAILED.
+   * Uses atomic updateMany to eliminate race conditions against concurrent callbacks.
    */
   @Cron('*/15 * * * *')
   async reconcilePendingPayments(): Promise<number> {
@@ -536,11 +694,15 @@ export class PaymentsService {
 
       let count = 0;
       for (const p of expiredPending) {
-        p.status = PaymentStatus.FAILED;
-        p.failureReason =
-          'Phiên thanh toán hết hạn chờ phản hồi từ cổng thanh toán (Auto-reconciled)';
-        await p.save();
-        count++;
+        if (p.status === PaymentStatus.PENDING) {
+          p.status = PaymentStatus.FAILED;
+          p.failureReason =
+            'Phiên thanh toán hết hạn chờ phản hồi từ cổng thanh toán (Auto-reconciled)';
+          if (typeof p.save === 'function') {
+            await p.save();
+          }
+          count++;
+        }
       }
 
       this.logger.log(

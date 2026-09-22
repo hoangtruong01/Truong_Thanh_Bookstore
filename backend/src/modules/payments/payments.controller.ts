@@ -35,6 +35,14 @@ type AuthenticatedRequest = Request & {
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
+  @Get('methods')
+  @ApiOperation({
+    summary: 'Lấy danh sách phương thức thanh toán đang được kích hoạt',
+  })
+  getEnabledMethods() {
+    return this.paymentsService.getEnabledMethodsSummary();
+  }
+
   @Post()
   @UseGuards(AuthGuard('jwt'))
   @Throttle({ default: { limit: 10, ttl: 60000 } })

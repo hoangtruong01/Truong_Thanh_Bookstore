@@ -87,23 +87,36 @@ export class EmailService {
         return true;
       } catch (err) {
         this.logger.error(`❌ Failed to send email to ${to}:`, err);
+        // BE-05: Do not report success when SMTP delivery fails!
+        return false;
       }
     }
 
-    // Fallback in development or when SMTP is not configured
+    // BE-05: Distinguish development simulation vs production delivery
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
+    if (isProduction) {
+      this.logger.error(
+        `❌ [SMTP ERROR] Cannot send email to ${to}: SMTP is not configured in production!`,
+      );
+      return false;
+    }
+
+    // Fallback in development simulation: NEVER log sensitive OTPs or raw credentials
+    const sanitizedHtml = html
+      .replace(/\b\d{6}\b/g, '******')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 300);
+
     this.logger.log(`
 ========================================================================
-📧 [EMAIL SIMULATION LOG]
+📧 [EMAIL SIMULATION LOG - DEV ONLY]
 To: ${to}
 From: ${from}
 Subject: ${subject}
-Content:
-------------------------------------------------------------------------
-${html
-  .replace(/<[^>]*>/g, ' ')
-  .replace(/\s+/g, ' ')
-  .trim()
-  .slice(0, 500)}...
+Content: ${sanitizedHtml}...
 ========================================================================
     `);
     return true;

@@ -230,6 +230,14 @@ export class VnPayPaymentProvider extends MockSignedPaymentProvider {
       success,
       status: success ? PaymentStatus.PAID : PaymentStatus.FAILED,
       failureReason: success ? undefined : 'VNPay báo giao dịch thất bại',
+      verifiedData: {
+        transactionId: String(raw.vnp_TransactionNo || raw.vnp_TxnRef || ''),
+        amount: Number(raw.vnp_Amount) / 100,
+        currency: String(raw.vnp_CurrCode || 'VND'),
+        providerReference: String(raw.vnp_TxnRef || ''),
+        orderCode: String(raw.vnp_TxnRef || ''),
+        merchantId: String(raw.vnp_TmnCode || ''),
+      },
     };
   }
 }
@@ -350,6 +358,14 @@ export class MomoPaymentProvider extends MockSignedPaymentProvider {
       failureReason: success
         ? undefined
         : String(raw.message || 'MoMo báo giao dịch thất bại'),
+      verifiedData: {
+        transactionId: String(raw.transId || raw.requestId || ''),
+        amount: Number(raw.amount),
+        currency: 'VND',
+        providerReference: String(raw.orderId || ''),
+        orderCode: String(raw.orderId || ''),
+        merchantId: String(raw.partnerCode || ''),
+      },
     };
   }
 }
@@ -397,6 +413,13 @@ function callbackResult(
     failureReason: success
       ? undefined
       : 'Cổng thanh toán báo giao dịch thất bại',
+    verifiedData: {
+      transactionId: payload.transactionId,
+      amount: Number(payload.amount),
+      currency: 'VND',
+      providerReference: payload.providerReference,
+      orderCode: payload.orderCode,
+    },
   };
 }
 
