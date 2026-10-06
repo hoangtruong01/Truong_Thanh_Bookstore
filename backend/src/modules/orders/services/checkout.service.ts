@@ -19,7 +19,7 @@ import { ProductsService } from '../../products/products.service';
 import { PromotionsService } from '../../promotions/promotions.service';
 import { UsersService } from '../../users/users.service';
 import { CartService } from '../../cart/cart.service';
-import { OrderStatus, PaymentMethod } from '../../../common/enums';
+import { OrderStatus, PaymentMethod, OrderSource } from '../../../common/enums';
 import { OrderInventoryService } from './order-inventory.service';
 import { OrderLoyaltyService } from './order-loyalty.service';
 import { OrderNotificationService } from './order-notification.service';
@@ -231,6 +231,8 @@ export class CheckoutService {
       freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
       isEligibleForFreeShipping,
       amountNeededForFreeShipping,
+      remainingForFreeShipping: amountNeededForFreeShipping,
+      promotionDiscount: discount,
       discount,
       appliedPromotion,
       loyaltyDiscount,
@@ -463,13 +465,13 @@ export class CheckoutService {
             subtotal + shippingFee - discount - loyaltyDiscount,
           ),
           promotionCode: dto.promotionCode?.toUpperCase(),
-          orderSource: dto.orderSource || 'WEB',
+          orderSource: dto.orderSource || OrderSource.WEB,
           landingPageId: dto.landingPageId || undefined,
           timeline: [
             {
               status: OrderStatus.PENDING,
               note:
-                dto.orderSource === 'LANDING_PAGE'
+                dto.orderSource === OrderSource.LANDING_PAGE
                   ? 'Đơn hàng được tạo từ Landing Page, chờ xác nhận.'
                   : 'Đơn hàng được tạo thành công, chờ xác nhận.',
               createdAt: new Date(),
@@ -495,7 +497,10 @@ export class CheckoutService {
               loyaltyPointsSpent,
             );
           }
-          await this.orderInventoryService.rollbackStock(deductedItems);
+          await this.orderInventoryService.rollbackStock(
+            deductedItems,
+            orderCode,
+          );
           if (promotionConsumed && dto.promotionCode) {
             await this.promotionsService
               .releaseUsage(

@@ -60,4 +60,86 @@ describe('GHN shipping status mapping', () => {
     );
     fetchSpy.mockRestore();
   });
+
+  describe('createShipment invariants', () => {
+    it('returns existing order immediately without calling GHN if trackingCode already exists (idempotent)', async () => {
+      const existingOrder = {
+        _id: 'order_1',
+        orderStatus: OrderStatus.CONFIRMED,
+        trackingCode: 'GHN_EXISTING_123',
+      };
+      const mockOrderModel = {
+        findById: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(existingOrder),
+        }),
+      };
+      const service = new GhnShippingService(
+        mockOrderModel as any,
+        {} as any,
+        new ConfigService({}),
+      );
+      const callSpy = jest.spyOn(service as any, 'call');
+
+      const result = await service.createShipment('order_1', {} as any);
+
+      expect(result).toBe(existingOrder);
+      expect(callSpy).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException if order status is not CONFIRMED or PROCESSING', async () => {
+      const pendingOrder = {
+        _id: 'order_2',
+        orderStatus: OrderStatus.PENDING,
+      };
+      const mockOrderModel = {
+        findById: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(pendingOrder),
+        }),
+      };
+      const service = new GhnShippingService(
+        mockOrderModel as any,
+        {} as any,
+        new ConfigService({}),
+      );
+
+      await expect(
+        service.createShipment('order_2', {} as any),
+      ).rejects.toThrow('Chỉ tạo vận đơn cho đơn đã xác nhận');
+    });
+
+    it('handles GHN API failure / timeout gracefully by throwing ServiceUnavailableException without corrupting order', async () => {
+      const confirmedOrder = {
+        _id: 'order_3',
+        orderStatus: OrderStatus.CONFIRMED,
+        items: [],
+      };
+      const mockOrderModel = {
+        findById: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(confirmedOrder),
+        }),
+      };
+      const service = new GhnShippingService(
+        mockOrderModel as any,
+        {} as any,
+        new ConfigService({}),
+      );
+      jest
+        .spyOn(service as any, 'call')
+        .mockRejectedValue(new Error('Network timeout'));
+
+      await expect(
+        service.createShipment('order_3', {
+          toDistrictId: 1,
+          toWardCode: '1',
+          weight: 100,
+          length: 10,
+          width: 10,
+          height: 10,
+        } as any),
+      ).rejects.toThrow();
+
+      // Order has not been modified with trackingCode
+      expect((confirmedOrder as any).trackingCode).toBeUndefined();
+    });
+  });
 });

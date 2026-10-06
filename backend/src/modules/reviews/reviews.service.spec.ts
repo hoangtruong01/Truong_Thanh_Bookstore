@@ -129,7 +129,7 @@ describe('ReviewsService', () => {
 
       const result = await service.getRatingBreakdown(mockProductId);
       expect(result.totalReviews).toBe(0);
-      expect(result.averageRating).toBe(5);
+      expect(result.averageRating).toBe(0);
     });
   });
 
@@ -261,6 +261,7 @@ describe('ReviewsService', () => {
       mockReviewModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue({
           _id: mockReviewId,
+          product: new Types.ObjectId(mockProductId),
           user: new Types.ObjectId(), // Different user
         }),
       });
@@ -276,6 +277,7 @@ describe('ReviewsService', () => {
       mockReviewModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue({
           _id: mockReviewId,
+          product: new Types.ObjectId(mockProductId),
           user: new Types.ObjectId(), // Different user
         }),
       });

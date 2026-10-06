@@ -98,7 +98,9 @@ export class PaymentCallbackDto {
   gatewayResponse?: Record<string, any>;
 }
 
-export class PaymentQueryDto {
+import { PaginationDto } from '../../../common/dto/pagination.dto';
+
+export class PaymentQueryDto extends PaginationDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsMongoObjectId({ message: 'orderId phải là ObjectId hợp lệ' })

@@ -397,6 +397,14 @@ export class OrdersService {
     return this.orderLifecycleService.rejectReturn(id, actor, dto);
   }
 
+  async confirmReturnReceived(
+    id: string,
+    actor: { _id: string; role?: string; permissions?: string[] },
+    note?: string,
+  ): Promise<OrderDocument> {
+    return this.orderLifecycleService.confirmReturnReceived(id, actor, note);
+  }
+
   async processRefund(
     id: string,
     actor: { _id: string; role?: string; permissions?: string[] },

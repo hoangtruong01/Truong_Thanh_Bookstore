@@ -61,9 +61,11 @@ export class OrderInventoryService {
 
   /**
    * Rollback lại số lượng tồn kho nếu quá trình tạo đơn hàng gặp lỗi và không có mongo session.
+   * INV-01: Also cleans up orphan SALE InventoryTransactions.
    */
   async rollbackStock(
     deductedItems: Array<{ product: string; quantity: number }>,
+    orderCode?: string,
   ): Promise<void> {
     for (const deducted of [...deductedItems].reverse()) {
       await this.productsService
@@ -75,6 +77,22 @@ export class OrderInventoryService {
         .incrementSold(deducted.product, -deducted.quantity)
         .catch((rollbackError) =>
           this.logger.error('Sold counter rollback failed', rollbackError),
+        );
+    }
+    // INV-01: Remove orphan SALE inventory transactions created during checkout
+    if (
+      this.inventoryService &&
+      typeof (this.inventoryService as any).deleteTransactionsByReference ===
+        'function' &&
+      orderCode
+    ) {
+      await this.inventoryService
+        .deleteTransactionsByReference(orderCode)
+        .catch((err) =>
+          this.logger.error(
+            'Failed to clean orphan inventory transactions',
+            err,
+          ),
         );
     }
   }

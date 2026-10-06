@@ -662,7 +662,14 @@ export class PaymentsService {
     if (query.orderId) filter.order = new Types.ObjectId(query.orderId);
     if (query.status) filter.status = query.status;
     if (query.provider) filter.provider = query.provider;
-    return this.paymentModel.find(filter).sort({ createdAt: -1 }).exec();
+    const limit = Math.min(100, Math.max(1, query.limit || 50));
+    const skip = Math.max(0, ((query.page || 1) - 1) * limit);
+    return this.paymentModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec();
   }
 
   /**

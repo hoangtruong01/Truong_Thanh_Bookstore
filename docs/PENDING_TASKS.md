@@ -19,6 +19,11 @@
 | **FE-08** | Tích hợp ImageUploader vào Admin CMS | Frontend | P2 | ✅ Đã hoàn thành | Dễ |
 | **FE-09** | Focus Trap & Phím tắt FormModal | Frontend | P3 | ✅ Đã hoàn thành | Dễ |
 | **TECHDEBT-01** | Clean Code: Frontend 0 warnings, Backend 0 errors | Fullstack | P2 | ✅ Đã hoàn thành | Vừa |
+| **SHIP-01** | GHN Authoritative Shipping Guard (Khóa đổi thủ công khi có vận đơn) | Backend | P0 | ✅ Đã hoàn thành | Vừa |
+| **RETURN-01** | Hai giai đoạn hoàn trả: RETURN_REQUESTED -> RETURN_APPROVED -> RETURNED | Fullstack | P0 | ✅ Đã hoàn thành | Vừa |
+| **INV-01** | Dọn dẹp bản ghi SALE mồ côi khi Checkout rollback | Backend | P1 | ✅ Đã hoàn thành | Vừa |
+| **REVIEW-01** | Bảo toàn đánh giá theo Product, sửa rating 0 reviews & chống ReDoS | Backend | P1 | ✅ Đã hoàn thành | Dễ |
+| **MOB-01** | Bảo toàn phiên đăng nhập Mobile khi gặp sự cố mạng (chỉ logout 401/403) | Mobile | P1 | ✅ Đã hoàn thành | Dễ |
 | **PAY-01** | Xác thực Sandbox VNPay & MoMo | Backend / QA | P1 | 🟡 Chờ Keys | Vừa |
 | **SHIPPING-01** | Tích hợp Vận đơn GHN Sandbox | Backend / FE | P2 | 🟡 Chờ Token | Vừa |
 | **MOBILE-01** | Ký số App & Push Notification thật | Mobile | P1 | 🔴 Chờ Chứng chỉ | Khó |

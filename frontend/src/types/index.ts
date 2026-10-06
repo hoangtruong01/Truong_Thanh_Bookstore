@@ -95,7 +95,7 @@ export interface Order {
   note?: string
   paymentMethod: 'COD' | 'BANK_TRANSFER' | 'EWALLET' | 'VNPAY' | 'MOMO'
   paymentStatus: 'UNPAID' | 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'CANCELLED'
-  orderStatus: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPING' | 'DELIVERED' | 'RETURNED' | 'COMPLETED' | 'CANCELLED'
+  orderStatus: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPING' | 'DELIVERED' | 'RETURN_REQUESTED' | 'RETURN_APPROVED' | 'RETURNED' | 'COMPLETED' | 'CANCELLED'
   subtotal: number
   shippingFee: number
   discount: number
@@ -109,6 +109,9 @@ export interface Order {
   trackingCode?: string
   shippingStatus?: string
   shippingSyncedAt?: string
+  returnReason?: string
+  returnRequestedAt?: string
+  returnApprovedAt?: string
   timeline?: OrderTimelineItem[]
   createdAt: string
   updatedAt: string

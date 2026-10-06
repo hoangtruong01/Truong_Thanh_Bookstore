@@ -20,6 +20,14 @@ export const orderService = {
     }),
   updateStatus: (id: string, orderStatus: string, note?: string) =>
     api.patch(`/orders/${id}/status`, { orderStatus, ...(note ? { note } : {}) }),
+  requestReturn: (id: string, reason: string) =>
+    api.post(`/orders/${id}/return-request`, { reason }),
+  approveReturn: (id: string, note?: string) =>
+    api.post(`/orders/${id}/return-approve`, { note }),
+  confirmReturnReceived: (id: string, note?: string) =>
+    api.post(`/orders/${id}/return-received`, { note }),
+  rejectReturn: (id: string, reason: string) =>
+    api.post(`/orders/${id}/return-reject`, { reason }),
   cancel: (id: string) => api.delete(`/orders/${id}`),
   cancelGuest: (id: string, accessToken: string) =>
     api.delete(`/orders/guest/${id}`, {

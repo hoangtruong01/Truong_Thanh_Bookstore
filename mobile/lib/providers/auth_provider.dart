@@ -182,12 +182,16 @@ class AuthProvider with ChangeNotifier {
 
         notifyListeners();
         return true;
-      } else {
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        // MOB-01: Only clear session when server explicitly rejects refresh token (invalid/expired/revoked)
         await logout();
+        return false;
+      } else {
+        // MOB-01: Server errors (500, 502, 503) or rate limits - do NOT logout user
         return false;
       }
     } catch (_) {
-      await logout();
+      // MOB-01: Offline, network timeout, SocketException - do NOT logout user
       return false;
     }
   }

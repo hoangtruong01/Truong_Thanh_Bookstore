@@ -73,6 +73,10 @@ export class OrderLifecycleService {
     dto: OrderStatusChange,
     actor?: { _id: string; role?: string; permissions?: string[] },
   ): Promise<OrderDocument> {
+    if (actor?.role && !(dto as any)._actorRole) {
+      (dto as any)._actorRole = actor.role;
+    }
+
     if (
       actor &&
       (dto.orderStatus === OrderStatus.CANCELLED ||
@@ -229,9 +233,10 @@ export class OrderLifecycleService {
         OrderStatus.RETURNED,
       ],
       [OrderStatus.RETURN_REQUESTED]: [
-        OrderStatus.RETURNED,
+        OrderStatus.RETURN_APPROVED,
         OrderStatus.DELIVERED,
       ],
+      [OrderStatus.RETURN_APPROVED]: [OrderStatus.RETURNED],
       [OrderStatus.COMPLETED]: [
         OrderStatus.RETURN_REQUESTED,
         OrderStatus.RETURNED,
@@ -244,6 +249,27 @@ export class OrderLifecycleService {
       throw new BadRequestException(
         `Không thể chuyển trạng thái từ ${oldStatus} sang ${dto.orderStatus}`,
       );
+    }
+
+    // SHIP-01: When order has GHN tracking, block manual status transitions
+    // for SHIPPING, DELIVERED, RETURNED — GHN API is source of truth.
+    // Only SUPER_ADMIN can override with explicit audit note.
+    if (
+      order.shippingProvider === 'GHN' &&
+      order.trackingCode &&
+      [
+        OrderStatus.SHIPPING,
+        OrderStatus.DELIVERED,
+        OrderStatus.RETURNED,
+      ].includes(dto.orderStatus) &&
+      !(dto as any)._ghnSync
+    ) {
+      const actorRole = ((dto as any)._actorRole || '').toUpperCase();
+      if (actorRole !== 'SUPER_ADMIN') {
+        throw new BadRequestException(
+          `Đơn hàng có mã vận đơn GHN ${order.trackingCode}. Trạng thái vận chuyển phải được đồng bộ từ GHN. Chỉ SUPER_ADMIN có thể thao tác thủ công.`,
+        );
+      }
     }
 
     if (
@@ -269,6 +295,9 @@ export class OrderLifecycleService {
     if (dto.orderStatus === OrderStatus.RETURN_REQUESTED) {
       order.returnReason = dto.returnReason || dto.note;
       order.returnRequestedAt = new Date();
+    }
+    if (dto.orderStatus === OrderStatus.RETURN_APPROVED) {
+      order.returnApprovedAt = new Date();
     }
     if (dto.orderStatus === OrderStatus.DELIVERED) {
       order.deliveredAt ||= new Date();
@@ -300,6 +329,10 @@ export class OrderLifecycleService {
         case OrderStatus.RETURN_REQUESTED:
           timelineNote =
             'Khách hàng đã gửi yêu cầu trả hàng, đang chờ cửa hàng xem xét phê duyệt.';
+          break;
+        case OrderStatus.RETURN_APPROVED:
+          timelineNote =
+            'Cửa hàng đã duyệt yêu cầu trả hàng. Vui lòng gửi hàng lại để hoàn tất.';
           break;
         case OrderStatus.RETURNED:
           timelineNote = 'Đơn hàng đã được tiếp nhận hoàn trả và hoàn kho.';
@@ -429,9 +462,14 @@ export class OrderLifecycleService {
 
     const notifyStatus = async () => {
       savedOrder.$session?.(null);
-      this.orderNotificationService
-        .syncToGoogleSheet(savedOrder)
-        .catch((err) => this.logger.error('Sheet sync failed', err));
+      if (
+        typeof (this.orderNotificationService as any)?.syncToGoogleSheet ===
+        'function'
+      ) {
+        this.orderNotificationService
+          .syncToGoogleSheet(savedOrder)
+          .catch((err) => this.logger.error('Sheet sync failed', err));
+      }
       await this.orderNotificationService.notifyStatusChanged(
         savedOrder,
         oldStatus,
@@ -578,21 +616,42 @@ export class OrderLifecycleService {
     const order = await this.orderModel.findById(id).exec();
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
 
-    if (
-      order.orderStatus !== OrderStatus.RETURN_REQUESTED &&
-      order.orderStatus !== OrderStatus.DELIVERED
-    ) {
+    if (order.orderStatus !== OrderStatus.RETURN_REQUESTED) {
       throw new BadRequestException(
-        'Chỉ có thể duyệt hoàn trả đơn hàng ở trạng thái Yêu cầu trả hàng hoặc Đã giao',
+        'Chỉ có thể duyệt hoàn trả đơn hàng ở trạng thái Yêu cầu trả hàng',
       );
     }
 
     const approveNote =
-      note ||
-      'Cửa hàng đã duyệt yêu cầu hoàn trả sách và tiếp nhận nhập lại kho';
+      note || 'Cửa hàng đã duyệt yêu cầu hoàn trả. Chờ khách gửi hàng lại.';
+    return this.updateStatus(id, {
+      orderStatus: OrderStatus.RETURN_APPROVED,
+      note: approveNote,
+    });
+  }
+
+  /**
+   * BA-RETURN-01: Xác nhận đã nhận lại hàng trả — chỉ ở bước này mới restore inventory.
+   */
+  async confirmReturnReceived(
+    id: string,
+    _actor: { _id: string; role?: string; permissions?: string[] },
+    note?: string,
+  ): Promise<OrderDocument> {
+    const order = await this.orderModel.findById(id).exec();
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+
+    if (order.orderStatus !== OrderStatus.RETURN_APPROVED) {
+      throw new BadRequestException(
+        'Chỉ có thể xác nhận nhận hàng trả khi đơn đang ở trạng thái Đã duyệt trả hàng',
+      );
+    }
+
+    const receiveNote =
+      note || 'Cửa hàng đã nhận lại hàng trả và tiến hành hoàn kho.';
     return this.updateStatus(id, {
       orderStatus: OrderStatus.RETURNED,
-      note: approveNote,
+      note: receiveNote,
     });
   }
 

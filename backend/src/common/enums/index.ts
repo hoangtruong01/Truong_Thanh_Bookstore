@@ -12,10 +12,17 @@ export enum OrderStatus {
   SHIPPING = 'SHIPPING',
   DELIVERED = 'DELIVERED',
   RETURN_REQUESTED = 'RETURN_REQUESTED',
+  RETURN_APPROVED = 'RETURN_APPROVED',
   RETURNED = 'RETURNED',
   /** @deprecated Kept only for backwards compatibility with historical orders. */
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
+}
+
+export enum OrderSource {
+  WEB = 'WEB',
+  MOBILE = 'MOBILE',
+  LANDING_PAGE = 'LANDING_PAGE',
 }
 
 export enum PaymentMethod {

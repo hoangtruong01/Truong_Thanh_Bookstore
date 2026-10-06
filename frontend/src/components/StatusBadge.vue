@@ -60,6 +60,12 @@ const badgeConfig = computed(() => {
   if (s === 'CANCELLED') {
     return { label: 'Đã hủy', bg: 'bg-rose-50 text-rose-700 border border-rose-200/70', dot: 'bg-rose-500' }
   }
+  if (s === 'RETURN_REQUESTED') {
+    return { label: 'Yêu cầu trả hàng', bg: 'bg-amber-50 text-amber-700 border border-amber-200/70', dot: 'bg-amber-500' }
+  }
+  if (s === 'RETURN_APPROVED') {
+    return { label: 'Đã duyệt trả hàng', bg: 'bg-sky-50 text-sky-700 border border-sky-200/70', dot: 'bg-sky-500' }
+  }
   if (s === 'RETURNED') {
     return { label: 'Đã trả hàng', bg: 'bg-slate-100 text-slate-700 border border-slate-200', dot: 'bg-slate-500' }
   }
