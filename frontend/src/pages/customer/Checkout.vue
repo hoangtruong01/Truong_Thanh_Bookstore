@@ -367,7 +367,7 @@
             <div class="flex justify-between items-center text-xs">
               <span class="font-bold text-slate-700">Ưu đãi Freeship toàn quốc:</span>
               <span v-if="isEligibleForFreeShipping" class="font-extrabold text-green-600">Đã đạt Freeship! 🎉</span>
-              <span v-else class="font-bold text-slate-500">Đơn từ 299K</span>
+              <span v-else class="font-bold text-slate-500">Đơn từ {{ formatCurrency(activeFreeShippingThreshold) }}</span>
             </div>
 
             <!-- Progress Bar Line -->
@@ -635,6 +635,9 @@ const bankTransferConfig = ref<BankTransferConfig | null>(null)
 const serverPricing = ref<{
   subtotal: number
   shippingFee: number
+  freeShippingThreshold?: number
+  isEligibleForFreeShipping?: boolean
+  amountNeededForFreeShipping?: number
   discount: number
   loyaltyDiscount: number
   total: number
@@ -705,7 +708,10 @@ async function verifyInventoryPreview() {
       serverPricing.value = {
         subtotal: typeof data.subtotal === 'number' ? data.subtotal : cartStore.subtotal,
         shippingFee: typeof data.shippingFee === 'number' ? data.shippingFee : (isEligibleForFreeShipping.value ? 0 : 30000),
-        discount: typeof data.discount === 'number' ? data.discount : cartStore.discountAmount,
+        freeShippingThreshold: typeof data.freeShippingThreshold === 'number' ? data.freeShippingThreshold : FREE_SHIPPING_THRESHOLD,
+        isEligibleForFreeShipping: typeof data.isEligibleForFreeShipping === 'boolean' ? data.isEligibleForFreeShipping : (cartStore.subtotal >= FREE_SHIPPING_THRESHOLD),
+        amountNeededForFreeShipping: typeof (data.amountNeededForFreeShipping ?? data.remainingForFreeShipping) === 'number' ? (data.amountNeededForFreeShipping ?? data.remainingForFreeShipping) : Math.max(0, FREE_SHIPPING_THRESHOLD - cartStore.subtotal),
+        discount: typeof (data.discount ?? data.promotionDiscount) === 'number' ? (data.discount ?? data.promotionDiscount) : cartStore.discountAmount,
         loyaltyDiscount: typeof data.loyaltyDiscount === 'number' ? data.loyaltyDiscount : loyaltyDiscountAmount.value,
         total: typeof data.total === 'number' ? data.total : finalTotal.value,
         warnings: Array.isArray(data.warnings) ? data.warnings : [],
@@ -733,11 +739,22 @@ watch(
 
 // FE-06: Free Shipping Threshold and Progress Bar
 const FREE_SHIPPING_THRESHOLD = 299000
-const isEligibleForFreeShipping = computed(() => cartStore.subtotal >= FREE_SHIPPING_THRESHOLD)
-const amountNeededForFreeShipping = computed(() => Math.max(0, FREE_SHIPPING_THRESHOLD - cartStore.subtotal))
+const activeFreeShippingThreshold = computed(() => serverPricing.value?.freeShippingThreshold || FREE_SHIPPING_THRESHOLD)
+const isEligibleForFreeShipping = computed(() => {
+  if (serverPricing.value?.isEligibleForFreeShipping !== undefined) {
+    return serverPricing.value.isEligibleForFreeShipping
+  }
+  return cartStore.subtotal >= activeFreeShippingThreshold.value
+})
+const amountNeededForFreeShipping = computed(() => {
+  if (typeof serverPricing.value?.amountNeededForFreeShipping === 'number') {
+    return serverPricing.value.amountNeededForFreeShipping
+  }
+  return Math.max(0, activeFreeShippingThreshold.value - cartStore.subtotal)
+})
 const freeShippingProgressPercent = computed(() => {
   if (isEligibleForFreeShipping.value) return 100
-  return Math.min(100, Math.max(5, Math.round((cartStore.subtotal / FREE_SHIPPING_THRESHOLD) * 100)))
+  return Math.min(100, Math.max(5, Math.round((cartStore.subtotal / activeFreeShippingThreshold.value) * 100)))
 })
 
 // PRODUCT-01: Loyalty Point Spending

@@ -148,6 +148,7 @@ describe('QA-03: Inventory Race Condition & Concurrency Invariant Tests', () => 
 
   const mockInventoryService = {
     recordExternalMovement: jest.fn().mockResolvedValue(undefined),
+    deleteTransactionsByReference: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {

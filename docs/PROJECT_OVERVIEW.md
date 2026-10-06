@@ -465,14 +465,19 @@ Vòng đời đơn hàng và hoàn tiền tuân thủ nghiêm ngặt theo đồ 
            ├──────────────────────────────┐
            ▼                              ▼
     ┌───────────┐                  ┌──────────┐
-    │ DELIVERED │ (Giao thành công)│ RETURNED │ ➔ [ Thu hồi điểm, hoàn kho & kích hoạt Refund nếu PAID ]
+    │ DELIVERED │ (Giao thành công)│ RETURNED │ ➔ [ Thu hồi điểm, hoàn kho nguyên tử & kích hoạt Refund nếu PAID ]
     └─────┬─────┘                  └──────────┘
            │                              ▲
-           ├──────────────┐               │
+           ├──────────────┐               │ (Admin xác nhận nhận hàng: confirmReturnReceived)
            ▼              ▼               │
     ┌───────────┐  ┌──────────────────┐   │
-    │ COMPLETED │  │ RETURN_REQUESTED │───┘ (Admin duyệt ➔ RETURNED; Admin từ chối ➔ DELIVERED)
-    └───────────┘  └──────────────────┘     (Khách yêu cầu trong vòng 7 ngày kể từ DELIVERED)
+    │ COMPLETED │  │ RETURN_REQUESTED │   │
+    └───────────┘  └────────┬─────────┘   │
+                            │             │
+                            ▼             │
+                   ┌─────────────────┐    │
+                   │ RETURN_APPROVED │────┘ (Admin duyệt: approveReturn - CHƯA hoàn kho)
+                   └─────────────────┘      (Admin từ chối ➔ DELIVERED)
 ```
 
 **Bảng Chuyển trạng thái Hợp lệ:**
@@ -481,11 +486,13 @@ Vòng đời đơn hàng và hoàn tiền tuân thủ nghiêm ngặt theo đồ 
 - `PROCESSING` ➔ `SHIPPING`, `CANCELLED` (Chỉ Admin/Staff được hủy kèm lý do; Khách hàng không thể tự hủy)
 - `SHIPPING` ➔ `DELIVERED`
 - `DELIVERED` ➔ `COMPLETED`, `RETURN_REQUESTED`, `RETURNED`
-- `RETURN_REQUESTED` ➔ `RETURNED` (Admin duyệt), `DELIVERED` (Admin từ chối)
+- `RETURN_REQUESTED` ➔ `RETURN_APPROVED` (Admin duyệt yêu cầu, chờ nhận lại hàng - CHƯA hoàn kho), `DELIVERED` (Admin từ chối)
+- `RETURN_APPROVED` ➔ `RETURNED` (Admin xác nhận đã nhận hàng - hoàn kho nguyên tử), `DELIVERED` (Từ chối/hủy quy trình trả)
 - `COMPLETED` ➔ `RETURN_REQUESTED`, `RETURNED` (Trong thời hạn 7 ngày đổi trả)
 - `CANCELLED`, `RETURNED` ➔ *(Trạng thái kết thúc - Không chuyển tiếp)*
 
-> Mọi thao tác chuyển đổi sai quy tắc (ví dụ: `SHIPPING` nhảy sang `CANCELLED`, hoặc khách hàng tự hủy khi `PROCESSING`) đều bị từ chối với lỗi `400 Bad Request`.
+> **Quy tắc Vận chuyển Khách quan (Authoritative Shipping Guard):** Khi đơn có đơn vị vận chuyển GHN và mã vận đơn `trackingCode`, các trạng thái `SHIPPING`, `DELIVERED`, `RETURNED` chỉ được cập nhật tự động thông qua Webhook/Sync GHN. Nhân viên không thể ghi đè thủ công, ngoại trừ quyền can thiệp đặc biệt của `SUPER_ADMIN`.
+> Mọi thao tác chuyển đổi sai quy tắc đều bị từ chối với lỗi `400 Bad Request`.
 
 ---
 
@@ -703,9 +710,10 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 
 | Phân hệ | Lệnh | Kết quả |
 | :--- | :--- | :---: |
-| Backend Unit Tests | `cd backend && npm test` | **49/49 suites, 503/503 tests PASS (100%)** |
+| Backend Unit Tests | `cd backend && npm test` | **50/50 suites, 515/515 tests PASS (100%)** |
 | Backend Security Suite | `cd backend && npm test -- security-p0-audit.spec.ts` | **16/16 security regression tests PASS** |
-| Backend Linting | `cd backend && npm run lint` | **0 errors** (trần ≤ 1.200 warnings) |
+| Backend Commerce Suite | `cd backend && npm test -- orders.commerce-regression.spec.ts` | **11/11 commerce invariant tests PASS** |
+| Backend Linting | `cd backend && npm run lint` | **0 errors** (1.166 warnings, trần ≤ 1.200 warnings) |
 | Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
 | Frontend Unit Tests | `cd frontend && npm run test:unit` | **14/14 suites, 83/83 tests PASS (100%)** |
 | Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |

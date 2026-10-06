@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types, SchemaTypes } from 'mongoose';
 import {
   OrderStatus,
+  OrderSource,
   PaymentMethod,
   PaymentStatus,
   RefundStatus,
@@ -119,8 +120,12 @@ export class Order {
   @Prop()
   promotionCode: string;
 
-  @Prop({ default: 'WEB' })
-  orderSource?: string;
+  @Prop({
+    type: String,
+    enum: Object.values(OrderSource),
+    default: OrderSource.WEB,
+  })
+  orderSource?: OrderSource;
 
   @Prop({ type: SchemaTypes.ObjectId, ref: 'LandingPage' })
   landingPageId?: Types.ObjectId;
@@ -153,6 +158,9 @@ export class Order {
 
   @Prop()
   returnRequestedAt?: Date;
+
+  @Prop()
+  returnApprovedAt?: Date;
 
   @Prop()
   deliveredAt?: Date;

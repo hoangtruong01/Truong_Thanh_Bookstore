@@ -28,9 +28,21 @@ export class AppController {
       3: 'DISCONNECTING',
     };
 
-    const memoryUsage = process.memoryUsage();
     response.status(isDbConnected ? 200 : 503);
 
+    const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+
+    if (isProd) {
+      return {
+        status: isDbConnected ? 'UP' : 'DEGRADED',
+        database: {
+          status: isDbConnected ? 'HEALTHY' : 'UNHEALTHY',
+        },
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    const memoryUsage = process.memoryUsage();
     return {
       status: isDbConnected ? 'UP' : 'DEGRADED',
       database: {

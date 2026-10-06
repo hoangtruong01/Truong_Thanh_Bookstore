@@ -16,7 +16,7 @@ import {
   SubmitOrderDto,
 } from './dto/landing-page.dto';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
-import { PaymentMethod } from '../../common/enums';
+import { PaymentMethod, OrderSource } from '../../common/enums';
 import { ConfigService } from '@nestjs/config';
 import { OrdersService } from '../orders/orders.service';
 import { ProductsService } from '../products/products.service';
@@ -348,7 +348,7 @@ export class LandingPageService {
         ? `${dto.packageName} - ${dto.note}`
         : dto.packageName || 'Đơn hàng từ Landing Page',
       idempotencyKey: dto.idempotencyKey,
-      orderSource: 'LANDING_PAGE',
+      orderSource: OrderSource.LANDING_PAGE,
       landingPageId: page._id.toString(),
     };
 

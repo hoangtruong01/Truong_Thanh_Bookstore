@@ -45,6 +45,16 @@
             <span>{{ isCancelling ? 'Đang hủy...' : 'Hủy đơn' }}</span>
           </button>
           <button 
+            v-if="order.orderStatus === 'DELIVERED'"
+            type="button"
+            :disabled="isRequestingReturn"
+            class="border border-amber-300 text-amber-700 hover:bg-amber-50 font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            @click="handleRequestReturn"
+          >
+            <span>🔄</span>
+            <span>{{ isRequestingReturn ? 'Đang gửi...' : 'Yêu cầu trả hàng' }}</span>
+          </button>
+          <button 
             type="button"
             :disabled="isDownloadingInvoice"
             class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
@@ -348,6 +358,8 @@ function getStatusBadgeStyle(status: string) {
     case 'SHIPPING': return 'bg-purple-100 text-purple-800'
     case 'DELIVERED':
     case 'COMPLETED': return 'bg-green-100 text-green-800'
+    case 'RETURN_REQUESTED': return 'bg-amber-100 text-amber-800'
+    case 'RETURN_APPROVED': return 'bg-sky-100 text-sky-800'
     case 'RETURNED': return 'bg-fuchsia-100 text-fuchsia-800'
     case 'CANCELLED': return 'bg-red-100 text-red-800'
     default: return 'bg-slate-100 text-slate-600'
@@ -358,6 +370,23 @@ import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const isDownloadingInvoice = ref(false)
 const isCancelling = ref(false)
+const isRequestingReturn = ref(false)
+
+async function handleRequestReturn() {
+  if (isRequestingReturn.value || !order.value) return
+  const reason = window.prompt('Vui lòng nhập lý do bạn muốn trả hàng (sản phẩm lỗi, giao sai...):')
+  if (!reason || !reason.trim()) return
+  isRequestingReturn.value = true
+  try {
+    await orderService.requestReturn(order.value._id, reason.trim())
+    toast.success('Đã gửi yêu cầu trả hàng thành công! Cửa hàng sẽ sớm xem xét.')
+    order.value.orderStatus = 'RETURN_REQUESTED' as any
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || err.message || 'Gửi yêu cầu trả hàng thất bại')
+  } finally {
+    isRequestingReturn.value = false
+  }
+}
 
 async function downloadInvoice() {
   if (isDownloadingInvoice.value || !order.value) return

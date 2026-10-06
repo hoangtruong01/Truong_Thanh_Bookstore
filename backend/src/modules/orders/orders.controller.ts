@@ -176,8 +176,18 @@ export class OrdersController {
   @Permissions(StaffPermission.MANAGE_ORDERS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update order status' })
-  updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
-    return this.ordersService.updateStatus(id, dto);
+  updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateOrderStatusDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    // SHIP-01: Pass actor role so GHN guard can allow SUPER_ADMIN override
+    (dto as any)._actorRole = req.user?.role || '';
+    return this.ordersService.updateStatus(id, dto, {
+      _id: req.user._id.toString(),
+      role: req.user.role,
+      permissions: req.user.permissions,
+    });
   }
 
   // Cancel with ownership check — pass userId so service can verify
@@ -263,6 +273,29 @@ export class OrdersController {
         _id: req.user._id.toString(),
       },
       dto,
+    );
+  }
+
+  @Post(':id/return-received')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_ORDERS)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Xác nhận đã nhận lại hàng trả và hoàn kho (Admin/Staff) — BA-RETURN-01',
+  })
+  confirmReturnReceived(
+    @Param('id') id: string,
+    @Body('note') note: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.ordersService.confirmReturnReceived(
+      id,
+      {
+        ...req.user,
+        _id: req.user._id.toString(),
+      },
+      note,
     );
   }
 

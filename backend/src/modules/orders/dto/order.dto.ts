@@ -5,6 +5,7 @@ import {
   IsString,
   IsArray,
   IsEnum,
+  IsEmail,
   MaxLength,
   Matches,
   ValidateNested,
@@ -14,7 +15,7 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { OrderStatus, PaymentMethod } from '../../../common/enums';
+import { OrderStatus, PaymentMethod, OrderSource } from '../../../common/enums';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { IsMongoObjectId, IsPhoneNumberVN } from '../../../common/validators';
 
@@ -27,18 +28,23 @@ export class OrderItemDto {
   @IsMongoObjectId({ message: 'product phải là ObjectId hợp lệ' })
   product: string;
 
-  @ApiProperty({ example: 'Bút bi Thiên Long TL-027' })
-  @IsNotEmpty({ message: 'Tên sản phẩm không được để trống' })
+  @ApiPropertyOptional({ example: 'Bút bi Thiên Long TL-027' })
+  @IsOptional()
   @IsString()
+  @MaxLength(255)
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  name: string;
+  name?: string;
 
-  @ApiProperty({ example: 5000 })
-  @IsNotEmpty({ message: 'Giá sản phẩm không được để trống' })
+  @ApiPropertyOptional({
+    example: 5000,
+    description:
+      'Giá client gửi mang tính tham khảo, backend luôn tính theo giá thực trong DB',
+  })
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({}, { message: 'Giá sản phẩm phải là số' })
   @Min(0, { message: 'Giá không được âm' })
-  price: number;
+  price?: number;
 
   @ApiProperty({ example: 1 })
   @IsNotEmpty({ message: 'Số lượng không được để trống' })
@@ -50,6 +56,7 @@ export class OrderItemDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   image?: string;
 }
 
@@ -64,6 +71,7 @@ export class CreateOrderDto {
   @ApiProperty({ example: '123 Nguyễn Trãi, Q.5, TP.HCM' })
   @IsNotEmpty({ message: 'Địa chỉ giao hàng không được để trống' })
   @IsString()
+  @MaxLength(255, { message: 'Địa chỉ giao hàng không được quá 255 ký tự' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   shippingAddress: string;
 
@@ -76,6 +84,7 @@ export class CreateOrderDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(500, { message: 'Ghi chú không được quá 500 ký tự' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   note?: string;
 
@@ -87,25 +96,31 @@ export class CreateOrderDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(100, { message: 'Tên khách hàng không được quá 100 ký tự' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   customerName?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
+  @IsEmail({}, { message: 'customerEmail không đúng định dạng email' })
+  @MaxLength(100, { message: 'Email không được quá 100 ký tự' })
   @Transform(({ value }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )
   customerEmail?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Giá trị client gửi được bỏ qua, backend tự tính phí ship',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   shippingFee?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Giá trị client gửi được bỏ qua, backend tự tính discount',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
@@ -115,6 +130,7 @@ export class CreateOrderDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   @Transform(({ value }) =>
     typeof value === 'string' ? value.trim().toUpperCase() : value,
   )
@@ -143,11 +159,15 @@ export class CreateOrderDto {
 
   @ApiPropertyOptional({
     description: 'Nguồn phát sinh đơn hàng (WEB, MOBILE, LANDING_PAGE)',
-    default: 'WEB',
+    enum: OrderSource,
+    default: OrderSource.WEB,
   })
   @IsOptional()
-  @IsString()
-  orderSource?: string;
+  @IsEnum(OrderSource, {
+    message:
+      'orderSource phải là một trong các giá trị: WEB, MOBILE, LANDING_PAGE',
+  })
+  orderSource?: OrderSource;
 
   @ApiPropertyOptional({
     description: 'ID trang landing page nếu đơn hàng từ landing page',

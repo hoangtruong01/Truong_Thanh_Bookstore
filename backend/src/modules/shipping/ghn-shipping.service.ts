@@ -142,20 +142,24 @@ export class GhnShippingService {
         await this.ordersService.updateStatus(order._id.toString(), {
           orderStatus: target,
           note: `GHN cập nhật trạng thái ${order.shippingStatus}`,
-        });
+          _ghnSync: true,
+        } as any);
       }
       return;
     }
     if (target === OrderStatus.RETURNED) {
       if (
-        [OrderStatus.DELIVERED, OrderStatus.COMPLETED].includes(
-          order.orderStatus,
-        )
+        [
+          OrderStatus.DELIVERED,
+          OrderStatus.COMPLETED,
+          OrderStatus.RETURN_APPROVED,
+        ].includes(order.orderStatus)
       ) {
         await this.ordersService.updateStatus(order._id.toString(), {
           orderStatus: target,
           note: `GHN cập nhật trạng thái ${order.shippingStatus}`,
-        });
+          _ghnSync: true,
+        } as any);
       }
       return;
     }
@@ -173,7 +177,8 @@ export class GhnShippingService {
       await this.ordersService.updateStatus(order._id.toString(), {
         orderStatus: next,
         note: `Đồng bộ trạng thái vận chuyển GHN: ${order.shippingStatus}`,
-      });
+        _ghnSync: true,
+      } as any);
       current = next;
     }
   }

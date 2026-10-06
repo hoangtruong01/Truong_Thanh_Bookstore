@@ -54,7 +54,7 @@ export class ReviewsService {
     }
 
     const total = reviews.length;
-    const average = total > 0 ? Math.round((sum / total) * 10) / 10 : 5;
+    const average = total > 0 ? Math.round((sum / total) * 10) / 10 : 0;
     const percentages: Record<number, number> = {
       1: 0,
       2: 0,
@@ -173,6 +173,11 @@ export class ReviewsService {
       throw new NotFoundException('Không tìm thấy đánh giá');
     }
 
+    // REVIEW-01: Verify review belongs to the specified product
+    if (review.product && review.product.toString() !== productId) {
+      throw new NotFoundException('Không tìm thấy đánh giá cho sản phẩm này');
+    }
+
     if (review.user.toString() !== userId) {
       throw new ForbiddenException('Bạn không có quyền sửa đánh giá này');
     }
@@ -182,7 +187,10 @@ export class ReviewsService {
     if (dto.images !== undefined) review.images = dto.images;
 
     const saved = await review.save();
-    await this.recalculateProductRating(productId);
+    const targetProductId = review.product
+      ? review.product.toString()
+      : productId;
+    await this.recalculateProductRating(targetProductId);
     return saved;
   }
 
@@ -197,6 +205,11 @@ export class ReviewsService {
       throw new NotFoundException('Không tìm thấy đánh giá');
     }
 
+    // REVIEW-01: Verify review belongs to the specified product
+    if (review.product && review.product.toString() !== productId) {
+      throw new NotFoundException('Không tìm thấy đánh giá cho sản phẩm này');
+    }
+
     if (
       review.user.toString() !== userId &&
       userRole !== 'ADMIN' &&
@@ -207,7 +220,10 @@ export class ReviewsService {
     }
 
     await this.reviewModel.findByIdAndDelete(reviewId).exec();
-    await this.recalculateProductRating(productId);
+    const targetProductId = review.product
+      ? review.product.toString()
+      : productId;
+    await this.recalculateProductRating(targetProductId);
     return { success: true };
   }
 
@@ -258,7 +274,10 @@ export class ReviewsService {
       filter.isVisible = query.isVisible;
     }
     if (query.search) {
-      const searchRegex = new RegExp(query.search, 'i');
+      const safeSearch = query.search
+        .substring(0, 200)
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(safeSearch, 'i');
       filter.$or = [{ name: searchRegex }, { content: searchRegex }];
     }
 
@@ -297,7 +316,7 @@ export class ReviewsService {
 
     if (reviews.length === 0) {
       await this.productModel
-        .findByIdAndUpdate(productId, { rating: 5 })
+        .findByIdAndUpdate(productId, { rating: 0 })
         .exec();
       return;
     }

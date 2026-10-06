@@ -184,6 +184,43 @@
             </div>
           </div>
 
+          <!-- Return Specific Actions (TASK 2 Return Flow) -->
+          <div v-if="selectedOrder.orderStatus === 'RETURN_REQUESTED'" class="border-t border-amber-200/60 bg-amber-50/50 rounded-xl p-3 space-y-2">
+            <p class="text-[11px] font-bold text-amber-900">Khách hàng yêu cầu trả hàng:</p>
+            <p v-if="selectedOrder.returnReason" class="text-xs text-amber-800 italic">"{{ selectedOrder.returnReason }}"</p>
+            <div class="flex gap-2 pt-1">
+              <button
+                type="button"
+                :disabled="updatingStatus"
+                class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-3 py-2 rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer"
+                @click="handleApproveReturn"
+              >
+                Duyệt trả hàng
+              </button>
+              <button
+                type="button"
+                :disabled="updatingStatus"
+                class="bg-slate-200 hover:bg-rose-100 hover:text-rose-700 text-slate-700 font-bold px-3 py-2 rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer"
+                @click="handleRejectReturn"
+              >
+                Từ chối
+              </button>
+            </div>
+          </div>
+
+          <div v-else-if="selectedOrder.orderStatus === 'RETURN_APPROVED'" class="border-t border-sky-200/60 bg-sky-50/50 rounded-xl p-3 space-y-2">
+            <p class="text-[11px] font-bold text-sky-900">Đơn đã duyệt trả. Chờ nhận lại hàng:</p>
+            <p class="text-[10.5px] text-sky-700">Khi nhận được kiện hàng trả về từ khách, bấm xác nhận để hoàn lại tồn kho.</p>
+            <button
+              type="button"
+              :disabled="updatingStatus"
+              class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-2 rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer"
+              @click="handleConfirmReturnReceived"
+            >
+              Xác nhận đã nhận lại hàng (Hoàn kho)
+            </button>
+          </div>
+
           <!-- Status Update Action -->
           <div class="border-t border-slate-100 pt-4 space-y-3">
             <label class="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">Cập nhật trạng thái</label>
@@ -197,8 +234,10 @@
                 <option value="PROCESSING">Đang đóng gói</option>
                 <option value="SHIPPING">Đang giao hàng</option>
                 <option value="DELIVERED">Đã giao thành công</option>
+                <option value="RETURN_REQUESTED">Yêu cầu trả hàng</option>
+                <option value="RETURN_APPROVED">Đã duyệt trả hàng</option>
+                <option value="RETURNED">Đã nhận hoàn trả & hoàn kho</option>
                 <option value="COMPLETED">Hoàn thành đơn</option>
-                <option value="RETURNED">Hoàn trả đơn</option>
                 <option value="CANCELLED">Hủy đơn hàng</option>
               </select>
               <button
@@ -250,6 +289,8 @@ const tabs: FilterTab[] = [
   { value: 'PROCESSING', label: 'Đang đóng gói' },
   { value: 'SHIPPING', label: 'Đang giao' },
   { value: 'DELIVERED', label: 'Đã giao' },
+  { value: 'RETURN_REQUESTED', label: 'Yêu cầu trả hàng' },
+  { value: 'RETURN_APPROVED', label: 'Đã duyệt trả' },
   { value: 'RETURNED', label: 'Hoàn trả' },
   { value: 'CANCELLED', label: 'Đã hủy' },
 ]
@@ -320,6 +361,55 @@ async function updateStatus() {
     fetchOrders()
   } catch (err: any) {
     toast.error(err.message || 'Cập nhật trạng thái thất bại')
+  } finally {
+    updatingStatus.value = false
+  }
+}
+
+async function handleApproveReturn() {
+  if (updatingStatus.value || !selectedOrder.value) return
+  updatingStatus.value = true
+  try {
+    await orderService.approveReturn(selectedOrder.value._id)
+    toast.success('Đã duyệt yêu cầu trả hàng thành công')
+    selectedOrder.value.orderStatus = 'RETURN_APPROVED' as any
+    newStatus.value = 'RETURN_APPROVED'
+    fetchOrders()
+  } catch (err: any) {
+    toast.error(err.message || 'Duyệt trả hàng thất bại')
+  } finally {
+    updatingStatus.value = false
+  }
+}
+
+async function handleRejectReturn() {
+  if (updatingStatus.value || !selectedOrder.value) return
+  const reason = window.prompt('Nhập lý do từ chối yêu cầu trả hàng:')
+  if (!reason || !reason.trim()) return
+  updatingStatus.value = true
+  try {
+    await orderService.rejectReturn(selectedOrder.value._id, reason.trim())
+    toast.success('Đã từ chối yêu cầu trả hàng')
+    fetchOrders()
+  } catch (err: any) {
+    toast.error(err.message || 'Từ chối trả hàng thất bại')
+  } finally {
+    updatingStatus.value = false
+  }
+}
+
+async function handleConfirmReturnReceived() {
+  if (updatingStatus.value || !selectedOrder.value) return
+  if (!window.confirm('Xác nhận đã nhận lại hàng và tiến hành nhập lại kho?')) return
+  updatingStatus.value = true
+  try {
+    await orderService.confirmReturnReceived(selectedOrder.value._id)
+    toast.success('Đã nhận hàng hoàn trả và cập nhật tồn kho thành công')
+    selectedOrder.value.orderStatus = 'RETURNED' as any
+    newStatus.value = 'RETURNED'
+    fetchOrders()
+  } catch (err: any) {
+    toast.error(err.message || 'Xác nhận nhận hàng thất bại')
   } finally {
     updatingStatus.value = false
   }
