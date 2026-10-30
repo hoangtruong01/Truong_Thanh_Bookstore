@@ -37,7 +37,13 @@ export class PosController {
   createPOSOrder(
     @Body() dto: CreatePOSOrderDto,
     @CurrentUser()
-    user: { _id: string; fullName?: string; name?: string; role?: string },
+    user: {
+      _id: string;
+      fullName?: string;
+      name?: string;
+      role?: string;
+      permissions?: string[];
+    },
   ) {
     return this.posService.createPOSOrder(dto, user);
   }
@@ -72,7 +78,13 @@ export class PosController {
     @Param('id') id: string,
     @Body() dto: RefundPOSOrderDto,
     @CurrentUser()
-    user: { _id: string; fullName?: string; name?: string; role?: string },
+    user: {
+      _id: string;
+      fullName?: string;
+      name?: string;
+      role?: string;
+      permissions?: string[];
+    },
   ) {
     return this.posService.refundPOSOrder(id, dto, user);
   }

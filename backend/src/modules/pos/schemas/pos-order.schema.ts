@@ -59,6 +59,15 @@ export class POSOrderItem {
   lineTotal: number;
 
   @Prop({ default: 0, min: 0 })
+  allocatedOrderDiscount: number;
+
+  @Prop({ required: true, min: 0 })
+  effectiveLineTotal: number;
+
+  @Prop({ required: true, min: 0 })
+  netUnitPrice: number;
+
+  @Prop({ default: 0, min: 0 })
   returnedQuantity: number;
 }
 export const POSOrderItemSchema = SchemaFactory.createForClass(POSOrderItem);
@@ -114,6 +123,12 @@ export class POSRefundRecord {
 
   @Prop({ required: true })
   reason: string;
+
+  @Prop()
+  idempotencyKey?: string;
+
+  @Prop()
+  payloadHash?: string;
 }
 export const POSRefundRecordSchema =
   SchemaFactory.createForClass(POSRefundRecord);
@@ -174,6 +189,21 @@ export class POSOrder {
 
   @Prop()
   discountReason?: string;
+
+  @Prop({ default: 0, min: 0 })
+  totalDiscountAmount: number;
+
+  @Prop({ default: 0, min: 0, max: 100 })
+  totalDiscountPercent: number;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
+  approvedBy?: Types.ObjectId;
+
+  @Prop()
+  approvedByName?: string;
+
+  @Prop()
+  payloadHash?: string;
 
   @Prop({ required: true, min: 0 })
   finalAmount: number;

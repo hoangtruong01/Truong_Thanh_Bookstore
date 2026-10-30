@@ -12,6 +12,7 @@ import {
 } from '../inventory/schemas/inventory.schema';
 import { ProductsModule } from '../products/products.module';
 import { InventoryModule } from '../inventory/inventory.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { InventoryModule } from '../inventory/inventory.module';
     ]),
     ProductsModule,
     InventoryModule,
+    UsersModule,
   ],
   controllers: [PosController],
   providers: [PosService],

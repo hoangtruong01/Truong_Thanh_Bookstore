@@ -3,10 +3,12 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Connection, Types, ClientSession } from 'mongoose';
+import * as crypto from 'crypto';
 import {
   POSOrder,
   POSOrderDocument,
@@ -29,12 +31,14 @@ import {
 } from '../inventory/schemas/inventory.schema';
 import { ProductsService } from '../products/products.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { UsersService } from '../users/users.service';
 import {
   InventoryTransactionType,
   OrderSource,
   PaymentMethod,
   PaymentStatus,
   ProductStatus,
+  StaffPermission,
   UserRole,
 } from '../../common/enums';
 import { PaginatedResult } from '../../common/dto/pagination.dto';
@@ -56,34 +60,93 @@ export class PosService {
     private readonly connection: Connection,
     private readonly productsService: ProductsService,
     private readonly inventoryService: InventoryService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
-   * Sinh mã hóa đơn bán hàng POS duy nhất: HD + YYMMDD + -XXXX
-   * Ví dụ: HD261030-0001
+   * Tính SHA-256 fingerprint chuẩn hóa của đơn hàng POS để đối soát Idempotency Key (NEW-005)
+   */
+  private computeOrderPayloadHash(dto: CreatePOSOrderDto): string {
+    const normalized = {
+      customerPhone: dto.customerPhone?.trim() || '',
+      customerType: dto.customerType || POSCustomerType.RETAIL,
+      discountAmount: Number(dto.discountAmount || 0),
+      discountType: dto.discountType || 'FIXED',
+      paymentMethod: dto.paymentMethod || PaymentMethod.CASH,
+      items: (dto.items || [])
+        .map((it) => ({
+          productId: String(it.productId),
+          quantity: Number(it.quantity),
+          unit: (it.unit || '').trim().toLowerCase(),
+          discount: Number(it.discount || 0),
+        }))
+        .sort((a, b) => a.productId.localeCompare(b.productId)),
+    };
+    return crypto
+      .createHash('sha256')
+      .update(JSON.stringify(normalized))
+      .digest('hex');
+  }
+
+  /**
+   * Tính SHA-256 fingerprint của yêu cầu hoàn trả POS (NEW-003, NEW-005)
+   */
+  private computeRefundPayloadHash(dto: RefundPOSOrderDto): string {
+    const normalized = {
+      reason: dto.reason.trim(),
+      items: (dto.items || [])
+        .map((it) => ({
+          productId: String(it.productId),
+          quantity: Number(it.quantity),
+          condition: it.condition,
+        }))
+        .sort((a, b) => a.productId.localeCompare(b.productId)),
+    };
+    return crypto
+      .createHash('sha256')
+      .update(JSON.stringify(normalized))
+      .digest('hex');
+  }
+
+  /**
+   * NEW-006: Sinh mã hóa đơn bán hàng POS duy nhất: HD + YYMMDD + -XXXX
+   * - Sử dụng múi giờ Việt Nam (Asia/Ho_Chi_Minh - UTC+7) để bảo đảm đúng ngày thực tế.
+   * - Sử dụng atomic increment trên MongoDB collection `counters` để chống tranh chấp khi nhiều thu ngân cùng bán.
    */
   private async generateInvoiceCode(session?: ClientSession): Promise<string> {
     const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
+    const vnDateStr = now.toLocaleDateString('en-CA', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+    }); // Format: YYYY-MM-DD
+    const [yyyy, mm, dd] = vnDateStr.split('-');
+    const yy = yyyy.slice(-2);
     const datePrefix = `HD${yy}${mm}${dd}`;
 
-    const query = this.posOrderModel.countDocuments({
-      invoiceCode: { $regex: `^${datePrefix}` },
-    });
-    if (session) query.session(session);
-    const countToday = await query.exec();
+    const counterKey = `pos_invoice_${datePrefix}`;
+    const counterCollection = this.posOrderModel.db.collection('counters');
 
-    let seq = countToday + 1;
+    const counterRes = await counterCollection.findOneAndUpdate(
+      { _id: counterKey as any },
+      { $inc: { seq: 1 } },
+      { upsert: true, returnDocument: 'after' },
+    );
+
+    const seq = (counterRes as any)?.seq || 1;
     let code = `${datePrefix}-${String(seq).padStart(4, '0')}`;
 
-    // Kiểm tra chống trùng mã hóa đơn
+    // Kiểm tra dự phòng chống trùng mã hóa đơn (nếu có dữ liệu tạo thủ công trước đó)
     let existsQuery = this.posOrderModel.findOne({ invoiceCode: code });
     if (session) existsQuery.session(session);
-    while (await existsQuery.exec()) {
-      seq++;
-      code = `${datePrefix}-${String(seq).padStart(4, '0')}`;
+    let attempts = 0;
+    while ((await existsQuery.exec()) && attempts < 5) {
+      attempts++;
+      const nextRes = await counterCollection.findOneAndUpdate(
+        { _id: counterKey as any },
+        { $inc: { seq: 1 } },
+        { upsert: true, returnDocument: 'after' },
+      );
+      const nextSeq = (nextRes as any)?.seq || seq + attempts;
+      code = `${datePrefix}-${String(nextSeq).padStart(4, '0')}`;
       existsQuery = this.posOrderModel.findOne({ invoiceCode: code });
       if (session) existsQuery.session(session);
     }
@@ -92,22 +155,41 @@ export class PosService {
   }
 
   /**
-   * POS-01 & TT-021: Tạo hóa đơn bán hàng quầy POS với giao dịch trừ kho nguyên tử
+   * POS-01 & TT-021 & SPRINT 1 (NEW-001 -> NEW-006):
+   * Tạo hóa đơn bán hàng quầy POS với:
+   * - Kiểm tra quyền chiết khấu > 20% (NEW-001)
+   * - Xác thực tỷ lệ quy đổi từ CSDL, không tin client (NEW-002)
+   * - Phân bổ chiết khấu cấp đơn xuống dòng hàng (NEW-004)
+   * - Khóa idempotency key theo nội dung (NEW-005)
+   * - Sinh mã hóa đơn nguyên tử theo múi giờ VN (NEW-006)
    */
   async createPOSOrder(
     dto: CreatePOSOrderDto,
-    cashier: { _id: string; fullName?: string; name?: string; role?: string },
+    cashier: {
+      _id: string;
+      fullName?: string;
+      name?: string;
+      role?: string;
+      permissions?: string[];
+    },
   ): Promise<POSOrderDocument> {
     const cashierId = new Types.ObjectId(cashier._id);
     const cashierName =
       cashier.fullName || cashier.name || 'Nhân viên thu ngân';
 
-    // 1. Chống gửi lại yêu cầu trùng lặp qua Idempotency Key (TT-005)
+    const orderPayloadHash = this.computeOrderPayloadHash(dto);
+
+    // 1. Chống gửi lại yêu cầu trùng lặp qua Idempotency Key (NEW-005)
     if (dto.idempotencyKey && dto.idempotencyKey.trim()) {
       const existing = await this.posOrderModel
         .findOne({ idempotencyKey: dto.idempotencyKey.trim() })
         .exec();
       if (existing) {
+        if (existing.payloadHash && existing.payloadHash !== orderPayloadHash) {
+          throw new ConflictException(
+            `Idempotency key "${dto.idempotencyKey}" đã được sử dụng với nội dung đơn hàng khác biệt (Payload mismatch).`,
+          );
+        }
         this.logger.log(
           `Idempotent POS order replay for key: ${dto.idempotencyKey}`,
         );
@@ -115,7 +197,24 @@ export class PosService {
       }
     }
 
-    // 2. Kiểm tra danh sách sản phẩm và tính toán giá trị
+    // 2. Kiểm tra danh sách sản phẩm, quy đổi đơn vị và tính toán giá trị
+    const discreteUnits = [
+      'cái',
+      'cây',
+      'cuốn',
+      'quyển',
+      'hộp',
+      'bộ',
+      'gói',
+      'ram',
+      'lốc',
+      'tập',
+      'viên',
+      'tờ',
+      'thùng',
+      'túi',
+    ];
+
     const orderItems: Array<{
       product: Types.ObjectId;
       sku: string;
@@ -128,9 +227,14 @@ export class PosService {
       costPrice: number;
       discount: number;
       lineTotal: number;
+      allocatedOrderDiscount: number;
+      effectiveLineTotal: number;
+      netUnitPrice: number;
       returnedQuantity: number;
     }> = [];
 
+    let grossSubtotal = 0;
+    let totalLineDiscounts = 0;
     let calculatedSubtotal = 0;
 
     for (const itemDto of dto.items) {
@@ -155,46 +259,75 @@ export class PosService {
         );
       }
 
-      // POS-05: Quy đổi đơn vị tính
+      // Kiểm tra tính hợp lệ của số lượng mua
+      const qtyNum = Number(itemDto.quantity);
+      if (isNaN(qtyNum) || !isFinite(qtyNum) || qtyNum <= 0) {
+        throw new BadRequestException(
+          `Số lượng bán của sản phẩm "${product.name}" phải là số dương hợp lệ`,
+        );
+      }
+
+      const baseUnit = (product.unit || 'cái').trim();
+      const isDiscrete = discreteUnits.includes(baseUnit.toLowerCase());
+      if (isDiscrete && !Number.isInteger(qtyNum)) {
+        throw new BadRequestException(
+          `Số lượng sản phẩm "${product.name}" tính theo ${baseUnit} phải là số nguyên dương`,
+        );
+      }
+
+      // NEW-002: Tỷ lệ quy đổi đơn vị tính chỉ tin cậy từ CSDL
       let conversionRatio = 1;
-      let finalUnit = product.unit || 'cái';
+      let finalUnit = baseUnit;
       let unitPrice =
         product.discountPrice > 0 ? product.discountPrice : product.price;
 
-      if (
-        itemDto.unit &&
-        itemDto.unit.trim().toLowerCase() !==
-          (product.unit || 'cái').toLowerCase()
-      ) {
+      const requestedUnit = itemDto.unit ? itemDto.unit.trim() : finalUnit;
+
+      if (requestedUnit.toLowerCase() !== baseUnit.toLowerCase()) {
         const matchedConversion = product.unitConversions?.find(
-          (c) => c.unit.toLowerCase() === itemDto.unit!.trim().toLowerCase(),
+          (c) => c.unit.toLowerCase() === requestedUnit.toLowerCase(),
         );
-        if (matchedConversion) {
-          conversionRatio = matchedConversion.ratio || 1;
-          finalUnit = matchedConversion.unit;
-          if (matchedConversion.price && matchedConversion.price > 0) {
-            unitPrice = matchedConversion.price;
-          } else {
-            unitPrice = unitPrice * conversionRatio;
-          }
-        } else {
-          conversionRatio = itemDto.conversionRatio || 1;
-          finalUnit = itemDto.unit.trim();
+
+        if (!matchedConversion) {
+          throw new BadRequestException(
+            `Đơn vị "${requestedUnit}" chưa được cấu hình cho sản phẩm "${product.name}" trong hệ thống.`,
+          );
         }
+
+        if (
+          itemDto.conversionRatio !== undefined &&
+          itemDto.conversionRatio !== null &&
+          Number(itemDto.conversionRatio) !== matchedConversion.ratio
+        ) {
+          throw new BadRequestException(
+            `Tỷ lệ quy đổi đơn vị gửi lên (${itemDto.conversionRatio}) không khớp với cấu hình hệ thống (${matchedConversion.ratio}) của sản phẩm "${product.name}".`,
+          );
+        }
+
+        conversionRatio = matchedConversion.ratio || 1;
+        finalUnit = matchedConversion.unit;
+        if (matchedConversion.price && matchedConversion.price > 0) {
+          unitPrice = matchedConversion.price;
+        } else {
+          unitPrice = unitPrice * conversionRatio;
+        }
+      } else {
+        conversionRatio = 1;
+        finalUnit = baseUnit;
       }
 
-      // POS-06: Bảng giá bán sỉ
+      // Bảng giá bán sỉ nếu có
       const isWholesale =
         dto.customerType === POSCustomerType.WHOLESALE ||
         (product.wholesaleMinQuantity &&
           product.wholesaleMinQuantity > 1 &&
-          itemDto.quantity >= product.wholesaleMinQuantity);
+          qtyNum >= product.wholesaleMinQuantity);
 
       if (isWholesale && product.wholesalePrice && product.wholesalePrice > 0) {
         unitPrice = product.wholesalePrice * conversionRatio;
       }
 
-      const baseQuantity = itemDto.quantity * conversionRatio;
+      const baseQuantity = qtyNum * conversionRatio;
 
       // Kiểm tra tồn kho trước khi vào transaction
       const inventory = await this.inventoryModel
@@ -204,18 +337,42 @@ export class PosService {
 
       if (currentStock < baseQuantity) {
         throw new BadRequestException(
-          `Sản phẩm "${product.name}" chỉ còn ${currentStock} ${product.unit || 'cái'} trong kho, không đủ bán ${baseQuantity} ${product.unit || 'cái'}`,
+          `Sản phẩm "${product.name}" chỉ còn ${currentStock} ${baseUnit} trong kho, không đủ bán ${baseQuantity} ${baseUnit}`,
         );
       }
 
       // Giá vốn (cost price snapshot)
       const costPrice = inventory?.costPrice || 0;
-      const itemDiscount = itemDto.discount ? Math.max(0, itemDto.discount) : 0;
-      const lineTotal = Math.max(
-        0,
-        unitPrice * itemDto.quantity - itemDiscount,
-      );
 
+      // NEW-001: Kiểm tra tính hợp lệ của chiết khấu dòng hàng
+      const itemGrossTotal = unitPrice * qtyNum;
+      grossSubtotal += itemGrossTotal;
+
+      const rawLineDiscount =
+        itemDto.discount !== undefined && itemDto.discount !== null
+          ? Number(itemDto.discount)
+          : 0;
+
+      if (
+        isNaN(rawLineDiscount) ||
+        !isFinite(rawLineDiscount) ||
+        rawLineDiscount < 0
+      ) {
+        throw new BadRequestException(
+          `Mức chiết khấu dòng sản phẩm "${product.name}" không hợp lệ`,
+        );
+      }
+
+      if (rawLineDiscount > itemGrossTotal) {
+        throw new BadRequestException(
+          `Chiết khấu dòng sản phẩm "${product.name}" (${rawLineDiscount}đ) không được vượt quá giá trị hàng (${itemGrossTotal}đ).`,
+        );
+      }
+
+      const itemDiscount = rawLineDiscount;
+      const lineTotal = itemGrossTotal - itemDiscount;
+
+      totalLineDiscounts += itemDiscount;
       calculatedSubtotal += lineTotal;
 
       orderItems.push({
@@ -224,43 +381,119 @@ export class PosService {
         name: product.name,
         unit: finalUnit,
         conversionRatio,
-        quantity: itemDto.quantity,
+        quantity: qtyNum,
         baseQuantity,
         unitPrice,
         costPrice,
         discount: itemDiscount,
         lineTotal,
+        allocatedOrderDiscount: 0,
+        effectiveLineTotal: lineTotal,
+        netUnitPrice: qtyNum > 0 ? lineTotal / qtyNum : 0,
         returnedQuantity: 0,
       });
     }
 
-    // 3. Tính toán tổng chiết khấu đơn và số tiền thanh toán
-    let discountAmount = dto.discountAmount
-      ? Math.max(0, dto.discountAmount)
-      : 0;
-    if (dto.discountType === 'PERCENT') {
-      discountAmount = Math.round((calculatedSubtotal * discountAmount) / 100);
-    }
-    if (discountAmount > calculatedSubtotal) {
-      discountAmount = calculatedSubtotal;
+    // 3. Tính toán tổng chiết khấu đơn và kiểm tra phân quyền (NEW-001)
+    let orderDiscount =
+      dto.discountAmount !== undefined && dto.discountAmount !== null
+        ? Number(dto.discountAmount)
+        : 0;
+
+    if (isNaN(orderDiscount) || !isFinite(orderDiscount) || orderDiscount < 0) {
+      throw new BadRequestException('Mức chiết khấu đơn hàng không hợp lệ');
     }
 
-    // POS-08: Giảm giá vượt 20% yêu cầu quyền quản lý (ADMIN/SUPER_ADMIN)
-    if (discountAmount > calculatedSubtotal * 0.2) {
-      const isManager =
-        cashier.role === UserRole.ADMIN ||
-        cashier.role === UserRole.SUPER_ADMIN;
-      if (
-        !isManager &&
-        (!dto.discountReason || dto.discountReason.trim().length < 5)
-      ) {
-        throw new ForbiddenException(
-          'Chiết khấu đơn hàng trên 20% cần có lý do phê duyệt của Quản lý cửa hàng',
+    if (dto.discountType === 'PERCENT') {
+      if (orderDiscount > 100) {
+        throw new BadRequestException(
+          'Tỷ lệ chiết khấu đơn không được vượt quá 100%',
         );
+      }
+      orderDiscount = Math.round((calculatedSubtotal * orderDiscount) / 100);
+    }
+
+    if (orderDiscount > calculatedSubtotal) {
+      orderDiscount = calculatedSubtotal;
+    }
+
+    // NEW-001: Tổng mức giảm = chiết khấu từng dòng + chiết khấu cấp đơn
+    const totalDiscountAmount = totalLineDiscounts + orderDiscount;
+    const totalDiscountPercent =
+      grossSubtotal > 0 ? (totalDiscountAmount / grossSubtotal) * 100 : 0;
+
+    let approvedBy: Types.ObjectId | undefined = undefined;
+    let approvedByName: string | undefined = undefined;
+
+    const cashierHasOverridePerm =
+      cashier.role === UserRole.ADMIN ||
+      cashier.role === UserRole.SUPER_ADMIN ||
+      (Array.isArray(cashier.permissions) &&
+        cashier.permissions.includes(StaffPermission.POS_OVERRIDE_DISCOUNT));
+
+    if (totalDiscountPercent > 20) {
+      if (cashierHasOverridePerm) {
+        approvedBy = cashierId;
+        approvedByName = cashierName;
+      } else {
+        if (!dto.approvedById) {
+          throw new ForbiddenException(
+            `Tổng mức giảm giá đạt ${totalDiscountPercent.toFixed(1)}% (vượt mức cho phép 20%). Bắt buộc phải có Quản lý phê duyệt (approvedById). Nhập lý do không thể thay thế quyền phê duyệt.`,
+          );
+        }
+
+        const approver = await this.usersService.findById(dto.approvedById);
+        const isApproverAuthorized =
+          approver &&
+          approver.status &&
+          (approver.role === UserRole.ADMIN ||
+            approver.role === UserRole.SUPER_ADMIN ||
+            (Array.isArray(approver.permissions) &&
+              approver.permissions.includes(
+                StaffPermission.POS_OVERRIDE_DISCOUNT,
+              )));
+
+        if (!isApproverAuthorized) {
+          throw new ForbiddenException(
+            'Người phê duyệt không hợp lệ hoặc không có quyền phê duyệt mức chiết khấu trên 20%.',
+          );
+        }
+
+        approvedBy = approver._id;
+        approvedByName = approver.fullName || 'Quản lý cửa hàng';
       }
     }
 
-    const finalAmount = Math.max(0, calculatedSubtotal - discountAmount);
+    // 4. NEW-004: Phân bổ giảm giá cấp đơn xuống từng dòng hàng theo tỷ lệ VND
+    const finalAmount = Math.max(0, calculatedSubtotal - orderDiscount);
+
+    if (calculatedSubtotal > 0 && orderDiscount > 0) {
+      let allocatedAcc = 0;
+      for (let i = 0; i < orderItems.length; i++) {
+        const it = orderItems[i];
+        let alloc = 0;
+        if (i === orderItems.length - 1) {
+          alloc = orderDiscount - allocatedAcc;
+        } else {
+          alloc = Math.round(
+            (orderDiscount * it.lineTotal) / calculatedSubtotal,
+          );
+        }
+        alloc = Math.min(alloc, it.lineTotal);
+        allocatedAcc += alloc;
+        it.allocatedOrderDiscount = alloc;
+        it.effectiveLineTotal = it.lineTotal - alloc;
+        it.netUnitPrice =
+          it.quantity > 0 ? it.effectiveLineTotal / it.quantity : 0;
+      }
+    } else {
+      for (const it of orderItems) {
+        it.allocatedOrderDiscount = 0;
+        it.effectiveLineTotal = it.lineTotal;
+        it.netUnitPrice =
+          it.quantity > 0 ? it.effectiveLineTotal / it.quantity : 0;
+      }
+    }
 
     let cashGiven = dto.cashGiven ?? finalAmount;
     let changeGiven = 0;
@@ -272,7 +505,7 @@ export class PosService {
       }
     }
 
-    // 4. Thực thi giao dịch MongoDB Transaction nguyên tử
+    // 5. Thực thi giao dịch MongoDB Transaction nguyên tử
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
@@ -281,14 +514,12 @@ export class PosService {
 
       // Trừ kho nguyên tử và ghi nhận lịch sử biến động kho (SALE)
       for (const item of orderItems) {
-        // Lấy tồn hiện tại trước khi trừ
         const invBefore = await this.inventoryModel
           .findOne({ product: item.product })
           .session(session)
           .exec();
         const stockBefore = invBefore?.currentStock ?? 0;
 
-        // Trừ tồn sản phẩm và kho
         await this.productsService.deductStock(
           item.product.toString(),
           item.baseQuantity,
@@ -300,7 +531,6 @@ export class PosService {
           session,
         );
 
-        // Ghi lịch sử xuất kho liên kết mã hóa đơn POS (TT-021)
         await this.transactionModel.create(
           [
             {
@@ -332,9 +562,13 @@ export class PosService {
             customerType: dto.customerType || POSCustomerType.RETAIL,
             items: orderItems,
             subtotal: calculatedSubtotal,
-            discountAmount,
+            discountAmount: orderDiscount,
             discountType: dto.discountType || 'FIXED',
             discountReason: dto.discountReason || '',
+            totalDiscountAmount,
+            totalDiscountPercent,
+            approvedBy,
+            approvedByName,
             finalAmount,
             cashGiven,
             changeGiven,
@@ -345,6 +579,7 @@ export class PosService {
             totalRefundedAmount: 0,
             note: dto.note || '',
             idempotencyKey: dto.idempotencyKey?.trim() || undefined,
+            payloadHash: orderPayloadHash,
           },
         ],
         { session },
@@ -355,8 +590,29 @@ export class PosService {
         `POS Order created successfully: ${invoiceCode} - Total: ${finalAmount}đ`,
       );
       return savedOrder;
-    } catch (err) {
+    } catch (err: any) {
       await session.abortTransaction();
+      // Xử lý race condition nếu 2 request cùng idempotencyKey đến đồng thời
+      if (
+        err?.code === 11000 &&
+        dto.idempotencyKey &&
+        err?.keyPattern?.idempotencyKey
+      ) {
+        const existing = await this.posOrderModel
+          .findOne({ idempotencyKey: dto.idempotencyKey.trim() })
+          .exec();
+        if (existing) {
+          if (
+            existing.payloadHash &&
+            existing.payloadHash !== orderPayloadHash
+          ) {
+            throw new ConflictException(
+              `Idempotency key "${dto.idempotencyKey}" đã được sử dụng với nội dung đơn hàng khác biệt.`,
+            );
+          }
+          return existing;
+        }
+      }
       this.logger.error(
         'Failed to create POS Order, transaction aborted:',
         err,
@@ -368,7 +624,13 @@ export class PosService {
   }
 
   /**
-   * POS-07: Đổi và trả hàng tại cửa hàng theo phiếu bán gốc
+   * POS-07 & NEW-003, NEW-004:
+   * Đổi và trả hàng tại cửa hàng theo phiếu bán gốc
+   * - Kiểm tra số lượng trong MongoDB transaction có điều kiện
+   * - Hỗ trợ idempotencyKey chống lặp lệnh hoàn trả
+   * - Phân bổ giá trị hoàn tiền chuẩn xác theo giá sau chiết khấu (NEW-004)
+   * - Không hoàn tiền vượt quá tổng giá trị đơn hàng finalAmount
+   * - Phân biệt hàng tốt (GOOD - nhập lại kho) và hàng lỗi (DAMAGED - không nhập kho bán)
    */
   async refundPOSOrder(
     id: string,
@@ -378,111 +640,167 @@ export class PosService {
     const actorId = new Types.ObjectId(actor._id);
     const actorName = actor.fullName || actor.name || 'Quản lý quầy';
 
-    const order = await this.posOrderModel.findById(id).exec();
-    if (!order) {
-      throw new NotFoundException(`Không tìm thấy hóa đơn POS với ID: ${id}`);
-    }
+    const refundPayloadHash = this.computeRefundPayloadHash(dto);
 
-    if (
-      order.status === POSOrderStatus.RETURNED ||
-      order.status === POSOrderStatus.CANCELLED
-    ) {
-      throw new BadRequestException(
-        'Hóa đơn này đã hoàn trả toàn bộ hoặc đã bị hủy trước đó',
-      );
-    }
-
-    // Kiểm tra từng sản phẩm xin trả
-    let totalRefundAmount = 0;
-    const processedRefundItems: Array<{
-      product: Types.ObjectId;
-      sku: string;
-      name: string;
-      quantity: number;
-      baseQuantity: number;
-      condition: POSItemCondition;
-      refundAmount: number;
-    }> = [];
-
-    for (const refItem of dto.items) {
-      const targetItem = order.items.find(
-        (it) => it.product.toString() === refItem.productId,
-      );
-      if (!targetItem) {
-        throw new BadRequestException(
-          `Sản phẩm ID ${refItem.productId} không có trong hóa đơn ${order.invoiceCode}`,
-        );
-      }
-
-      const availableToReturn =
-        targetItem.quantity - (targetItem.returnedQuantity || 0);
-      if (refItem.quantity > availableToReturn) {
-        throw new BadRequestException(
-          `Sản phẩm "${targetItem.name}" chỉ còn có thể trả tối đa ${availableToReturn} ${targetItem.unit}`,
-        );
-      }
-
-      const itemUnitPriceActual =
-        targetItem.lineTotal / (targetItem.quantity || 1);
-      const refundItemAmount = Math.round(
-        itemUnitPriceActual * refItem.quantity,
-      );
-      totalRefundAmount += refundItemAmount;
-
-      const baseQuantity = refItem.quantity * (targetItem.conversionRatio || 1);
-
-      processedRefundItems.push({
-        product: targetItem.product,
-        sku: targetItem.sku,
-        name: targetItem.name,
-        quantity: refItem.quantity,
-        baseQuantity,
-        condition: refItem.condition,
-        refundAmount: refundItemAmount,
-      });
-    }
-
-    // Thực thi hoàn trả trong Transaction
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
 
-      for (const ref of processedRefundItems) {
-        // Cập nhật số lượng đã trả trên dòng hóa đơn
-        const orderItem = order.items.find(
-          (it) => it.product.toString() === ref.product.toString(),
-        )!;
-        orderItem.returnedQuantity =
-          (orderItem.returnedQuantity || 0) + ref.quantity;
+      // Đọc phiếu bán gốc bên trong Transaction để khóa tranh chấp đồng thời
+      const order = await this.posOrderModel
+        .findById(id)
+        .session(session)
+        .exec();
+      if (!order) {
+        throw new NotFoundException(`Không tìm thấy hóa đơn POS với ID: ${id}`);
+      }
 
-        // Nếu hàng còn tốt: Tái nhập kho bán lại được
-        if (ref.condition === POSItemCondition.GOOD) {
+      if (
+        order.status === POSOrderStatus.RETURNED ||
+        order.status === POSOrderStatus.CANCELLED
+      ) {
+        throw new BadRequestException(
+          'Hóa đơn này đã hoàn trả toàn bộ hoặc đã bị hủy trước đó',
+        );
+      }
+
+      // NEW-003 & NEW-005: Kiểm tra Idempotency Key của lệnh hoàn trả
+      if (dto.idempotencyKey && dto.idempotencyKey.trim()) {
+        const existingRefund = order.refundHistory.find(
+          (r) => r.idempotencyKey === dto.idempotencyKey!.trim(),
+        );
+        if (existingRefund) {
+          if (
+            existingRefund.payloadHash &&
+            existingRefund.payloadHash !== refundPayloadHash
+          ) {
+            throw new ConflictException(
+              `Idempotency key hoàn trả "${dto.idempotencyKey}" đã được sử dụng với nội dung khác.`,
+            );
+          }
+          await session.abortTransaction();
+          this.logger.log(
+            `Idempotent POS refund replay for key: ${dto.idempotencyKey}`,
+          );
+          return order;
+        }
+      }
+
+      // Kiểm tra từng sản phẩm xin trả
+      let totalRefundAmount = 0;
+      const processedRefundItems: Array<{
+        product: Types.ObjectId;
+        sku: string;
+        name: string;
+        quantity: number;
+        baseQuantity: number;
+        condition: POSItemCondition;
+        refundAmount: number;
+      }> = [];
+
+      for (const refItem of dto.items) {
+        const targetItem = order.items.find(
+          (it) => it.product.toString() === refItem.productId,
+        );
+        if (!targetItem) {
+          throw new BadRequestException(
+            `Sản phẩm ID ${refItem.productId} không có trong hóa đơn ${order.invoiceCode}`,
+          );
+        }
+
+        const availableToReturn =
+          targetItem.quantity - (targetItem.returnedQuantity || 0);
+        if (refItem.quantity > availableToReturn) {
+          throw new BadRequestException(
+            `Sản phẩm "${targetItem.name}" chỉ còn có thể trả tối đa ${availableToReturn} ${targetItem.unit}`,
+          );
+        }
+
+        // NEW-004: Tính tiền hoàn trả dựa trên giá trị thực sau phân bổ chiết khấu (effectiveLineTotal)
+        const effectiveTotal =
+          targetItem.effectiveLineTotal !== undefined
+            ? targetItem.effectiveLineTotal
+            : targetItem.lineTotal;
+        const netUnit =
+          targetItem.netUnitPrice !== undefined
+            ? targetItem.netUnitPrice
+            : effectiveTotal / (targetItem.quantity || 1);
+
+        // Tính số tiền đã hoàn trả cho sản phẩm này trước đó
+        let alreadyRefundedForItem = 0;
+        for (const rh of order.refundHistory) {
+          for (const it of rh.items) {
+            if (it.product.toString() === targetItem.product.toString()) {
+              alreadyRefundedForItem += it.refundAmount || 0;
+            }
+          }
+        }
+
+        let refundItemAmount = 0;
+        if (refItem.quantity === availableToReturn) {
+          // Trả hết số lượng còn lại của sản phẩm này: hoàn số tiền thực còn lại
+          refundItemAmount = Math.max(
+            0,
+            effectiveTotal - alreadyRefundedForItem,
+          );
+        } else {
+          // Trả một phần: tính theo netUnitPrice
+          refundItemAmount = Math.round(netUnit * refItem.quantity);
+          const maxRemainingForItem = Math.max(
+            0,
+            effectiveTotal - alreadyRefundedForItem,
+          );
+          if (refundItemAmount > maxRemainingForItem) {
+            refundItemAmount = maxRemainingForItem;
+          }
+        }
+
+        totalRefundAmount += refundItemAmount;
+        const baseQuantity =
+          refItem.quantity * (targetItem.conversionRatio || 1);
+
+        // Cập nhật returnedQuantity trên dòng hóa đơn
+        targetItem.returnedQuantity =
+          (targetItem.returnedQuantity || 0) + refItem.quantity;
+
+        processedRefundItems.push({
+          product: targetItem.product,
+          sku: targetItem.sku,
+          name: targetItem.name,
+          quantity: refItem.quantity,
+          baseQuantity,
+          condition: refItem.condition,
+          refundAmount: refundItemAmount,
+        });
+
+        // Xử lý tồn kho
+        if (refItem.condition === POSItemCondition.GOOD) {
           const invBefore = await this.inventoryModel
-            .findOne({ product: ref.product })
+            .findOne({ product: targetItem.product })
             .session(session)
             .exec();
           const stockBefore = invBefore?.currentStock ?? 0;
 
           await this.productsService.updateStock(
-            ref.product.toString(),
-            ref.baseQuantity,
+            targetItem.product.toString(),
+            baseQuantity,
             session,
           );
           await this.productsService.incrementSold(
-            ref.product.toString(),
-            -ref.baseQuantity,
+            targetItem.product.toString(),
+            -baseQuantity,
             session,
           );
 
           await this.transactionModel.create(
             [
               {
-                product: ref.product,
+                product: targetItem.product,
                 type: InventoryTransactionType.RETURN,
-                quantity: ref.baseQuantity,
-                change: ref.baseQuantity,
+                quantity: baseQuantity,
+                change: baseQuantity,
                 stockBefore,
-                stockAfter: stockBefore + ref.baseQuantity,
+                stockAfter: stockBefore + baseQuantity,
                 note: `Khách trả hàng tại quầy: ${dto.reason} (${order.invoiceCode})`,
                 reference: order.invoiceCode,
                 createdBy: actorId,
@@ -495,9 +813,9 @@ export class PosService {
           await this.transactionModel.create(
             [
               {
-                product: ref.product,
+                product: targetItem.product,
                 type: InventoryTransactionType.DAMAGE,
-                quantity: ref.baseQuantity,
+                quantity: baseQuantity,
                 change: 0,
                 stockBefore: 0,
                 stockAfter: 0,
@@ -511,16 +829,24 @@ export class PosService {
         }
       }
 
-      // Kiểm tra xem đơn đã trả hết chưa
+      // Khống chế tổng tiền hoàn qua các đợt không bao giờ vượt quá finalAmount của đơn gốc
+      const maxPossibleRefund = Math.max(
+        0,
+        order.finalAmount - (order.totalRefundedAmount || 0),
+      );
+      if (totalRefundAmount > maxPossibleRefund) {
+        totalRefundAmount = maxPossibleRefund;
+      }
+
+      order.totalRefundedAmount =
+        (order.totalRefundedAmount || 0) + totalRefundAmount;
+
       const isFullyReturned = order.items.every(
         (it) => (it.returnedQuantity || 0) >= it.quantity,
       );
       order.status = isFullyReturned
         ? POSOrderStatus.RETURNED
         : POSOrderStatus.PARTIALLY_RETURNED;
-
-      order.totalRefundedAmount =
-        (order.totalRefundedAmount || 0) + totalRefundAmount;
 
       order.refundHistory.push({
         refundId: `RF-${Date.now()}`,
@@ -530,6 +856,8 @@ export class PosService {
         items: processedRefundItems,
         totalRefundAmount,
         reason: dto.reason.trim(),
+        idempotencyKey: dto.idempotencyKey?.trim() || undefined,
+        payloadHash: refundPayloadHash,
       });
 
       await order.save({ session });

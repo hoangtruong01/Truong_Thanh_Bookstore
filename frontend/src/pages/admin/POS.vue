@@ -854,6 +854,7 @@ interface HeldCart {
   paymentMethod: 'CASH' | 'BANK_TRANSFER'
   cashGiven: number
   note: string
+  idempotencyKey: string
 }
 
 function createEmptyCart(name: string): HeldCart {
@@ -870,6 +871,7 @@ function createEmptyCart(name: string): HeldCart {
     paymentMethod: 'CASH',
     cashGiven: 0,
     note: '',
+    idempotencyKey: `pos_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
   }
 }
 
@@ -1118,7 +1120,9 @@ async function submitPOSOrder(andPrint: boolean) {
       cashGiven: currentCart.value.cashGiven || cartFinalAmount.value,
       paymentMethod: currentCart.value.paymentMethod,
       note: currentCart.value.note.trim() || undefined,
-      idempotencyKey: `pos_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      idempotencyKey:
+        currentCart.value.idempotencyKey ||
+        (currentCart.value.idempotencyKey = `pos_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`),
     }
 
     const res: any = await posService.createOrder(payload)
@@ -1185,10 +1189,12 @@ const orderToRefund = ref<any>(null)
 const refundItemsForm = ref<any[]>([])
 const refundReason = ref('')
 const submittingRefund = ref(false)
+const refundIdempotencyKey = ref('')
 
 function openRefundModal(ord: any) {
   orderToRefund.value = ord
   refundReason.value = ''
+  refundIdempotencyKey.value = `rf_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
   refundItemsForm.value = ord.items.map((it: any) => ({
     productId: it.product,
     name: it.name,
@@ -1221,7 +1227,9 @@ async function submitRefund() {
         condition: it.condition,
       })),
       reason: refundReason.value.trim(),
-      idempotencyKey: `rf_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      idempotencyKey:
+        refundIdempotencyKey.value ||
+        (refundIdempotencyKey.value = `rf_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`),
     }
 
     await posService.refundOrder(orderToRefund.value._id, payload)

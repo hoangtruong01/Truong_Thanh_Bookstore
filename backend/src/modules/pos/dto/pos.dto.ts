@@ -112,6 +112,14 @@ export class CreatePOSOrderDto {
   @IsString()
   discountReason?: string;
 
+  @ApiPropertyOptional({
+    description: 'ID người quản lý phê duyệt (nếu mức giảm giá tổng > 20%)',
+    example: '507f1f77bcf86cd799439099',
+  })
+  @IsOptional()
+  @IsMongoId({ message: 'approvedById phải là ObjectId hợp lệ' })
+  approvedById?: string;
+
   @ApiPropertyOptional({ description: 'Số tiền khách đưa', example: 200000 })
   @IsOptional()
   @IsNumber()
