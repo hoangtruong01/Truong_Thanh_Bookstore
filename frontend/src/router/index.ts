@@ -29,6 +29,9 @@ const AdminProducts = () => import('@/pages/admin/Products.vue');
 const AdminProductForm = () => import('@/pages/admin/ProductForm.vue');
 const AdminOrders = () => import('@/pages/admin/Orders.vue');
 const AdminInventory = () => import('@/pages/admin/Inventory.vue');
+const AdminSuppliers = () => import('@/pages/admin/Suppliers.vue');
+const AdminPurchases = () => import('@/pages/admin/Purchases.vue');
+const AdminStockAudits = () => import('@/pages/admin/StockAudits.vue');
 const AdminPOS = () => import('@/pages/admin/POS.vue');
 const AdminCustomers = () => import('@/pages/admin/Customers.vue');
 const AdminPromotions = () => import('@/pages/admin/Promotions.vue');
@@ -83,6 +86,9 @@ const routes = [
       { path: 'orders', name: 'AdminOrders', component: AdminOrders, meta: { permission: 'MANAGE_ORDERS' } },
       { path: 'pos', name: 'AdminPOS', component: AdminPOS, meta: { permission: 'POS_ACCESS' } },
       { path: 'inventory', name: 'AdminInventory', component: AdminInventory, meta: { permission: 'MANAGE_INVENTORY' } },
+      { path: 'suppliers', name: 'AdminSuppliers', component: AdminSuppliers, meta: { permission: 'MANAGE_INVENTORY' } },
+      { path: 'purchases', name: 'AdminPurchases', component: AdminPurchases, meta: { permission: 'MANAGE_INVENTORY' } },
+      { path: 'stock-audits', name: 'AdminStockAudits', component: AdminStockAudits, meta: { permission: 'MANAGE_INVENTORY' } },
       { path: 'combos', name: 'AdminCombos', component: AdminCombos, meta: { permission: 'MANAGE_PRODUCTS' } },
       { path: 'reviews', name: 'AdminReviews', component: AdminReviews, meta: { permission: 'MANAGE_PRODUCTS' } },
       { path: 'customers', name: 'AdminCustomers', component: AdminCustomers, meta: { permission: 'MANAGE_CUSTOMERS' } },
@@ -170,6 +176,9 @@ router.afterEach((to) => {
     AdminProducts: 'Quản Lý Sản Phẩm — Trường Thành Admin',
     AdminOrders: 'Quản Lý Đơn Hàng — Trường Thành Admin',
     AdminInventory: 'Quản Lý Tồn Kho — Trường Thành Admin',
+    AdminSuppliers: 'Quản Lý Nhà Cung Cấp — Trường Thành Admin',
+    AdminPurchases: 'Mua Hàng & Nhập Kho — Trường Thành Admin',
+    AdminStockAudits: 'Kiểm Kê Kho — Trường Thành Admin',
     AdminReviews: 'Kiểm Duyệt Đánh Giá — Trường Thành Admin',
     AdminCustomers: 'Quản Lý Khách Hàng — Trường Thành Admin',
     AdminPromotions: 'Mã Khuyến Mãi — Trường Thành Admin',
