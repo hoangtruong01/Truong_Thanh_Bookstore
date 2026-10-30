@@ -256,7 +256,7 @@
             <div v-else class="space-y-3 max-h-[300px] overflow-y-auto pr-1">
               <div
                 v-for="(item, idx) in currentCart.items"
-                :key="item.productId"
+                :key="item.productId + '_' + item.unit"
                 class="border border-slate-100 rounded-xl p-2.5 bg-slate-50/30 flex items-start justify-between gap-2"
               >
                 <div class="space-y-1.5 flex-1 min-w-0">
@@ -1154,9 +1154,12 @@ function onItemUnitChange(item: CartItem) {
 }
 
 function incrementQty(item: CartItem) {
-  const baseReq = (item.quantity + 1) * item.conversionRatio
+  const otherBaseQty = currentCart.value.items
+    .filter((it) => it.productId === item.productId && it !== item)
+    .reduce((sum, it) => sum + it.quantity * it.conversionRatio, 0)
+  const baseReq = otherBaseQty + (item.quantity + 1) * item.conversionRatio
   if (baseReq > item.stock) {
-    toast.warning(`Số lượng vượt quá tồn kho khả dụng (${item.stock})`)
+    toast.warning(`Tổng số lượng sản phẩm này trong đơn vượt quá tồn kho khả dụng (${item.stock})`)
     return
   }
   item.quantity += 1
@@ -1170,10 +1173,14 @@ function decrementQty(item: CartItem) {
 
 function validateItemQty(item: CartItem) {
   if (!item.quantity || item.quantity < 1) item.quantity = 1
-  const baseReq = item.quantity * item.conversionRatio
-  if (baseReq > item.stock) {
-    toast.warning(`Số lượng vượt quá tồn kho (${item.stock}). Đã điều chỉnh về mức tối đa.`)
-    item.quantity = Math.floor(item.stock / item.conversionRatio) || 1
+  const otherBaseQty = currentCart.value.items
+    .filter((it) => it.productId === item.productId && it !== item)
+    .reduce((sum, it) => sum + it.quantity * it.conversionRatio, 0)
+  const remainingBaseStock = Math.max(0, item.stock - otherBaseQty)
+  const maxPossible = Math.floor(remainingBaseStock / item.conversionRatio)
+  if (item.quantity > maxPossible) {
+    toast.warning(`Số lượng vượt quá tồn kho khả dụng (${remainingBaseStock}). Đã điều chỉnh về mức tối đa.`)
+    item.quantity = maxPossible >= 1 ? maxPossible : 1
   }
 }
 
