@@ -14,4 +14,13 @@ export const reportService = {
   getOrderStatusStats: () => api.get('/reports/order-status-stats'),
   getCategoryRevenue: (startDate?: string, endDate?: string, channel?: string) =>
     api.get('/reports/category-revenue', { params: { startDate, endDate, channel } }),
+  getInventoryLedgerProfit: (params?: any) =>
+    api.get('/reports/inventory-ledger-profit', { params }),
+  exportInventoryLedgerProfit: (params?: any) =>
+    api.get('/reports/export/inventory-ledger-profit', {
+      params,
+      responseType: 'blob',
+    }),
+  getReorderSuggestions: (params?: any) =>
+    api.get('/reports/reorder-suggestions', { params }),
 };

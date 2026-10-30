@@ -36,6 +36,8 @@ import { PosModule } from './modules/pos/pos.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { StockAuditsModule } from './modules/stock-audits/stock-audits.module';
+import { PricingModule } from './modules/pricing/pricing.module';
+import { FinanceModule } from './modules/finance/finance.module';
 
 @Module({
   imports: [
@@ -107,6 +109,8 @@ import { StockAuditsModule } from './modules/stock-audits/stock-audits.module';
     SuppliersModule,
     PurchasingModule,
     StockAuditsModule,
+    PricingModule,
+    FinanceModule,
   ],
   controllers: [AppController],
   providers: [

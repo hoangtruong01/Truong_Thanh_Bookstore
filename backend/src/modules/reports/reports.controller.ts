@@ -1,4 +1,5 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
@@ -10,6 +11,10 @@ import { ReportsService } from './reports.service';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { StaffPermission } from '../../common/enums';
+import {
+  InventoryLedgerQueryDto,
+  ReorderSuggestionQueryDto,
+} from './dto/inventory-ledger.dto';
 
 @ApiTags('reports')
 @Controller('reports')
@@ -103,5 +108,51 @@ export class ReportsController {
     @Query('channel') channel?: string,
   ) {
     return this.reportsService.getCategoryRevenue(startDate, endDate, channel);
+  }
+
+  /**
+   * ERP-05 / REP-02 & REP-04: Báo cáo Nhập Xuất Tồn và Lãi Gộp
+   */
+  @Get('inventory-ledger-profit')
+  @ApiOperation({
+    summary: 'Báo cáo Nhập Xuất Tồn và Lãi Gộp theo sản phẩm và kỳ (ERP-05)',
+  })
+  getInventoryLedgerProfit(@Query() query: InventoryLedgerQueryDto) {
+    return this.reportsService.getInventoryLedgerAndProfit(query);
+  }
+
+  /**
+   * DOC-04: Xuất Excel Báo cáo Nhập Xuất Tồn và Lãi Gộp
+   */
+  @Get('export/inventory-ledger-profit')
+  @ApiOperation({
+    summary: 'Xuất file Excel Báo cáo Nhập Xuất Tồn và Lãi Gộp (ERP-05)',
+  })
+  async exportInventoryLedgerProfit(
+    @Query() query: InventoryLedgerQueryDto,
+    @Res() res: Response,
+  ) {
+    const buffer =
+      await this.reportsService.exportInventoryLedgerProfitToExcel(query);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=nhap-xuat-ton-lai-gop.xlsx',
+    );
+    res.send(buffer);
+  }
+
+  /**
+   * ERP-06: Đề xuất nhập hàng thông minh (Smart Reordering Suggestions)
+   */
+  @Get('reorder-suggestions')
+  @ApiOperation({
+    summary: 'Gợi ý và đề xuất số lượng đặt mua hàng thông minh (ERP-06)',
+  })
+  getReorderSuggestions(@Query() query: ReorderSuggestionQueryDto) {
+    return this.reportsService.getReorderSuggestions(query);
   }
 }
