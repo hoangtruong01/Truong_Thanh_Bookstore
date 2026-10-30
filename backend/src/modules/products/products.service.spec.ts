@@ -4,7 +4,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import * as ExcelJS from 'exceljs';
 import { ProductsService } from './products.service';
-import { Product } from './schemas/product.schema';
+import { Product, ProductSchema } from './schemas/product.schema';
 import { StockAlert } from './schemas/stock-alert.schema';
 import { Category } from '../categories/schemas/category.schema';
 import { Inventory } from '../inventory/schemas/inventory.schema';
@@ -711,6 +711,23 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       mockProductModel.findOne.mockReturnValueOnce(createMockQuery(null));
       const res = await service.getRelated('unknown-id', 8);
       expect(res).toEqual([]);
+    });
+  });
+
+  describe('ProductSchema MongoDB Text Index & Language Override Isolation', () => {
+    it('should configure text index with default_language: "none" and language_override: "none" to safely support Vietnamese documents', () => {
+      const indexes = ProductSchema.indexes();
+      const textIndexEntry = indexes.find(
+        ([fields]) => (fields as Record<string, unknown>).name === 'text',
+      );
+      expect(textIndexEntry).toBeDefined();
+      const [, options] = textIndexEntry!;
+      expect(options).toEqual(
+        expect.objectContaining({
+          default_language: 'none',
+          language_override: 'none',
+        }),
+      );
     });
   });
 });

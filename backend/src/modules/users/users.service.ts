@@ -79,7 +79,7 @@ export class UsersService {
       throw new BadRequestException('ID người dùng không đúng định dạng');
     }
     const user = await this.userModel
-      .findByIdAndUpdate(id, data, { new: true })
+      .findByIdAndUpdate(id, data, { returnDocument: 'after' })
       .select('-password')
       .exec();
     if (!user) throw new NotFoundException('User not found');
@@ -593,7 +593,7 @@ export class UsersService {
       {
         $inc: { loyaltyPoints: -points },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (session) query.session(session);
     return await query.exec();
@@ -613,7 +613,7 @@ export class UsersService {
       {
         $inc: { loyaltyPoints: points },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (session) query.session(session);
     return await query.exec();

@@ -108,7 +108,7 @@ export class OutboxService {
       {
         $set: { status: OutboxStatus.PROCESSING },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
 
     if (!lockedEvent) {

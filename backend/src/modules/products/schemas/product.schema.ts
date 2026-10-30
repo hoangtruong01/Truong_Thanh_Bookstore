@@ -142,15 +142,22 @@ export class Product {
 export const ProductSchema = SchemaFactory.createForClass(Product);
 
 // FIX-2.4 & TASK 12: Indexes for search, multi-criteria filter, and sort performance
-ProductSchema.index({
-  name: 'text',
-  description: 'text',
-  author: 'text',
-  publisher: 'text',
-  sku: 'text',
-  isbn: 'text',
-  brand: 'text',
-});
+// Note: default_language & language_override set to 'none' to prevent MongoDB from misinterpreting Vietnamese 'language' field as a stemming override
+ProductSchema.index(
+  {
+    name: 'text',
+    description: 'text',
+    author: 'text',
+    publisher: 'text',
+    sku: 'text',
+    isbn: 'text',
+    brand: 'text',
+  },
+  {
+    default_language: 'none',
+    language_override: 'none',
+  },
+);
 ProductSchema.index({ category: 1, isDeleted: 1, status: 1 });
 ProductSchema.index({ price: 1, isDeleted: 1 });
 ProductSchema.index({ discountPrice: 1, isDeleted: 1 });
