@@ -232,6 +232,13 @@ export class POSOrderQueryDto extends PaginationDto {
   paymentMethod?: string;
 }
 
+export enum POSShift {
+  MORNING = 'MORNING', // 06:00 - 12:00
+  AFTERNOON = 'AFTERNOON', // 12:00 - 18:00
+  EVENING = 'EVENING', // 18:00 - 23:00
+  ALL = 'ALL', // 00:00 - 23:59:59
+}
+
 export class POSSessionReportQueryDto {
   @ApiPropertyOptional({
     description: 'ID thu ngân (mặc định thu ngân hiện tại nếu là STAFF)',
@@ -244,4 +251,22 @@ export class POSSessionReportQueryDto {
   @IsOptional()
   @IsString()
   date?: string;
+
+  @ApiPropertyOptional({
+    enum: POSShift,
+    description: 'Ca làm việc (MORNING, AFTERNOON, EVENING, ALL)',
+  })
+  @IsOptional()
+  @IsEnum(POSShift, { message: 'Ca làm việc không hợp lệ' })
+  shift?: POSShift;
+
+  @ApiPropertyOptional({ description: 'Giờ bắt đầu tùy chọn (HH:mm)' })
+  @IsOptional()
+  @IsString()
+  startTime?: string;
+
+  @ApiPropertyOptional({ description: 'Giờ kết thúc tùy chọn (HH:mm)' })
+  @IsOptional()
+  @IsString()
+  endTime?: string;
 }

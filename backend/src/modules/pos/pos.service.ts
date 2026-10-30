@@ -21,6 +21,7 @@ import {
   RefundPOSOrderDto,
   POSOrderQueryDto,
   POSSessionReportQueryDto,
+  POSShift,
 } from './dto/pos.dto';
 import { Product, ProductDocument } from '../products/schemas/product.schema';
 import {
@@ -1053,10 +1054,15 @@ export class PosService {
   }
 
   /**
-   * POS-10: Báo cáo hoạt động theo ca bán / ngày của nhân viên thu ngân
+   * POS-10 & NEW-014: Báo cáo hoạt động theo ca bán / ngày của nhân viên thu ngân
+   * Chuẩn hóa theo múi giờ Việt Nam (Asia/Ho_Chi_Minh - UTC+7), hỗ trợ ca sáng/chiều/tối,
+   * và tính chính xác đổi trả phát sinh trong ca/ngày (kể cả khi hoàn trả cho đơn ngày trước).
    */
   async getSessionReport(query: POSSessionReportQueryDto): Promise<{
     date: string;
+    shift: string;
+    startTime: string;
+    endTime: string;
     totalOrders: number;
     totalRevenue: number;
     cashTotal: number;
@@ -1065,67 +1071,170 @@ export class PosService {
     totalRefundedAmount: number;
     itemsSoldCount: number;
   }> {
-    let startOfDay: Date;
-    let endOfDay: Date;
-    if (query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date)) {
-      startOfDay = new Date(`${query.date}T00:00:00.000Z`);
-      endOfDay = new Date(`${query.date}T23:59:59.999Z`);
-    } else {
-      const targetDate = query.date ? new Date(query.date) : new Date();
-      startOfDay = new Date(targetDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      endOfDay = new Date(targetDate);
-      endOfDay.setHours(23, 59, 59, 999);
+    const vnOffsetMs = 7 * 60 * 60 * 1000;
+    const nowVN = new Date(Date.now() + vnOffsetMs);
+    const dateStr =
+      query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date)
+        ? query.date
+        : nowVN.toISOString().slice(0, 10);
+
+    const shift = query.shift || POSShift.ALL;
+    let startHour = 0;
+    let startMin = 0;
+    let endHour = 23;
+    let endMin = 59;
+    let endSec = 59;
+    let endMs = 999;
+
+    if (query.startTime && /^\d{2}:\d{2}$/.test(query.startTime)) {
+      const [h, m] = query.startTime.split(':').map(Number);
+      startHour = h;
+      startMin = m;
+    } else if (shift === POSShift.MORNING) {
+      startHour = 6;
+      startMin = 0;
+    } else if (shift === POSShift.AFTERNOON) {
+      startHour = 12;
+      startMin = 0;
+    } else if (shift === POSShift.EVENING) {
+      startHour = 18;
+      startMin = 0;
     }
 
-    const filter: Record<string, any> = {
-      createdAt: { $gte: startOfDay, $lte: endOfDay },
+    if (query.endTime && /^\d{2}:\d{2}$/.test(query.endTime)) {
+      const [h, m] = query.endTime.split(':').map(Number);
+      endHour = h;
+      endMin = m;
+      endSec = 0;
+      endMs = 0;
+    } else if (shift === POSShift.MORNING) {
+      endHour = 12;
+      endMin = 0;
+      endSec = 0;
+      endMs = 0;
+    } else if (shift === POSShift.AFTERNOON) {
+      endHour = 18;
+      endMin = 0;
+      endSec = 0;
+      endMs = 0;
+    } else if (shift === POSShift.EVENING) {
+      endHour = 23;
+      endMin = 0;
+      endSec = 0;
+      endMs = 0;
+    }
+
+    const windowStart = new Date(
+      `${dateStr}T${String(startHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}:00.000+07:00`,
+    );
+    const windowEnd = new Date(
+      `${dateStr}T${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}:${String(endSec).padStart(2, '0')}.${String(endMs).padStart(3, '0')}+07:00`,
+    );
+
+    // 1. Tìm các đơn POS được tạo trong ca/ngày báo cáo
+    const salesFilter: Record<string, any> = {
+      createdAt: { $gte: windowStart, $lte: windowEnd },
     };
-
     if (query.cashierId && Types.ObjectId.isValid(query.cashierId)) {
-      filter.cashier = new Types.ObjectId(query.cashierId);
+      salesFilter.cashier = new Types.ObjectId(query.cashierId);
     }
 
-    const orders = await this.posOrderModel.find(filter).exec();
+    const ordersInWindow = await this.posOrderModel.find(salesFilter).exec();
 
-    let totalRevenue = 0;
-    let cashTotal = 0;
-    let transferTotal = 0;
-    let totalRefundedAmount = 0;
-    let refundedOrdersCount = 0;
+    let grossRevenue = 0;
+    let cashSales = 0;
+    let transferSales = 0;
     let itemsSoldCount = 0;
+    let completedOrdersCount = 0;
+    let sessionRefundedAmount = 0;
+    let sessionRefundRecordsCount = 0;
+    let cashRefunded = 0;
+    let transferRefunded = 0;
 
-    for (const ord of orders) {
+    for (const ord of ordersInWindow) {
       if (ord.status !== POSOrderStatus.CANCELLED) {
-        const netAmount = ord.finalAmount - (ord.totalRefundedAmount || 0);
-        totalRevenue += netAmount;
+        completedOrdersCount++;
+        grossRevenue += ord.finalAmount;
 
         if (ord.paymentMethod === PaymentMethod.CASH) {
-          cashTotal += netAmount;
+          cashSales += ord.finalAmount;
         } else {
-          transferTotal += netAmount;
+          transferSales += ord.finalAmount;
         }
 
-        if (ord.totalRefundedAmount && ord.totalRefundedAmount > 0) {
-          totalRefundedAmount += ord.totalRefundedAmount;
-          refundedOrdersCount++;
-        }
-
-        for (const it of ord.items) {
-          const actualQty = it.quantity - (it.returnedQuantity || 0);
+        for (const it of ord.items || []) {
+          const actualQty = (it.quantity || 0) - (it.returnedQuantity || 0);
           itemsSoldCount += Math.max(0, actualQty);
+        }
+
+        // Nếu đơn hàng trong ca có ghi nhận hoàn tiền nhưng không có mảng refundHistory chi tiết (legacy format)
+        if (
+          (!ord.refundHistory || ord.refundHistory.length === 0) &&
+          ord.totalRefundedAmount &&
+          ord.totalRefundedAmount > 0
+        ) {
+          sessionRefundedAmount += ord.totalRefundedAmount;
+          sessionRefundRecordsCount++;
+          if (ord.paymentMethod === PaymentMethod.CASH) {
+            cashRefunded += ord.totalRefundedAmount;
+          } else {
+            transferRefunded += ord.totalRefundedAmount;
+          }
         }
       }
     }
 
+    // 2. Tìm tất cả các nghiệp vụ hoàn trả phát sinh trong ca/ngày báo cáo (NEW-014)
+    // Kể cả khi đơn hàng gốc được tạo ở ngày trước đó
+    const refundFilter: Record<string, any> = {
+      'refundHistory.refundedAt': { $gte: windowStart, $lte: windowEnd },
+    };
+    if (query.cashierId && Types.ObjectId.isValid(query.cashierId)) {
+      refundFilter['refundHistory.actor'] = new Types.ObjectId(query.cashierId);
+    }
+
+    const ordersWithRefunds = await this.posOrderModel
+      .find(refundFilter)
+      .exec();
+
+    for (const ord of ordersWithRefunds) {
+      if (ord.refundHistory && ord.refundHistory.length > 0) {
+        for (const refRecord of ord.refundHistory) {
+          const refTime = new Date(refRecord.refundedAt).getTime();
+          const isInWindow =
+            refTime >= windowStart.getTime() && refTime <= windowEnd.getTime();
+          const matchesCashier =
+            !query.cashierId || refRecord.actor?.toString() === query.cashierId;
+
+          if (isInWindow && matchesCashier) {
+            sessionRefundedAmount += refRecord.totalRefundAmount;
+            sessionRefundRecordsCount++;
+
+            if (ord.paymentMethod === PaymentMethod.CASH) {
+              cashRefunded += refRecord.totalRefundAmount;
+            } else {
+              transferRefunded += refRecord.totalRefundAmount;
+            }
+          }
+        }
+      }
+    }
+
+    const netTotalRevenue = Math.max(0, grossRevenue - sessionRefundedAmount);
+    const netCashTotal = Math.max(0, cashSales - cashRefunded);
+    const netTransferTotal = Math.max(0, transferSales - transferRefunded);
+
     return {
-      date: startOfDay.toISOString().slice(0, 10),
-      totalOrders: orders.length,
-      totalRevenue,
-      cashTotal,
-      transferTotal,
-      refundedOrdersCount,
-      totalRefundedAmount,
+      date: dateStr,
+      shift,
+      startTime: windowStart.toISOString(),
+      endTime: windowEnd.toISOString(),
+      totalOrders: completedOrdersCount,
+      totalRevenue: netTotalRevenue,
+      cashTotal: netCashTotal,
+      transferTotal: netTransferTotal,
+      refundedOrdersCount: sessionRefundRecordsCount,
+      totalRefundedAmount: sessionRefundedAmount,
       itemsSoldCount,
     };
   }

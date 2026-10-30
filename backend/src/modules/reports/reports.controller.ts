@@ -26,14 +26,22 @@ export class ReportsController {
   }
 
   @Get('revenue')
-  @ApiOperation({ summary: 'Get revenue by date range' })
+  @ApiOperation({
+    summary: 'Get revenue by date range and sales channel (NEW-013)',
+  })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({
+    name: 'channel',
+    required: false,
+    enum: ['ALL', 'POS', 'WEB', 'MOBILE', 'WHOLESALE'],
+  })
   getRevenue(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('channel') channel?: string,
   ) {
-    return this.reportsService.getRevenue(startDate, endDate);
+    return this.reportsService.getRevenue(startDate, endDate, channel);
   }
 
   @Get('best-selling-products')
@@ -79,8 +87,21 @@ export class ReportsController {
   }
 
   @Get('category-revenue')
-  @ApiOperation({ summary: 'Lấy cơ cấu doanh thu theo danh mục sản phẩm' })
-  getCategoryRevenue() {
-    return this.reportsService.getCategoryRevenue();
+  @ApiOperation({
+    summary: 'Lấy cơ cấu doanh thu theo danh mục sản phẩm (NEW-016)',
+  })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({
+    name: 'channel',
+    required: false,
+    enum: ['ALL', 'POS', 'WEB', 'MOBILE', 'WHOLESALE'],
+  })
+  getCategoryRevenue(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('channel') channel?: string,
+  ) {
+    return this.reportsService.getCategoryRevenue(startDate, endDate, channel);
   }
 }

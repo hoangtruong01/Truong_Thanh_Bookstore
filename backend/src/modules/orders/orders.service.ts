@@ -538,12 +538,31 @@ export class OrdersService {
     ]);
   }
 
-  async getCategoryRevenue(): Promise<{ category: string; revenue: number }[]> {
+  async getCategoryRevenue(
+    startDate?: Date,
+    endDate?: Date,
+    orderSource?: string,
+  ): Promise<{ category: string; revenue: number }[]> {
+    const match: any = {
+      ...this.getRealizedRevenueMatch(),
+    };
+
+    const andConditions: any[] = [];
+    if (startDate) {
+      andConditions.push(this.getRevenueDateMatch(startDate, endDate));
+    } else if (endDate) {
+      andConditions.push(this.getRevenueDateMatch(new Date(0), endDate));
+    }
+    if (orderSource && orderSource !== 'ALL') {
+      match.orderSource = orderSource;
+    }
+    if (andConditions.length > 0) {
+      match.$and = andConditions;
+    }
+
     const result = await this.orderModel.aggregate([
       {
-        $match: {
-          ...this.getRealizedRevenueMatch(),
-        },
+        $match: match,
       },
       { $unwind: '$items' },
       {
@@ -575,15 +594,43 @@ export class OrdersService {
         },
       },
       {
-        $group: {
-          _id: {
+        $project: {
+          categoryName: {
             $ifNull: [
               '$items.categoryName',
               { $ifNull: ['$categoryDoc.name', 'Khác'] },
             ],
           },
+          // NEW-016: Phân bổ giảm giá cấp đơn về từng dòng theo tỷ lệ net/subtotal
+          netItemRevenue: {
+            $round: [
+              {
+                $multiply: [
+                  { $multiply: ['$items.price', '$items.quantity'] },
+                  {
+                    $cond: [
+                      {
+                        $and: [
+                          { $gt: ['$subtotal', 0] },
+                          { $gt: ['$total', 0] },
+                        ],
+                      },
+                      { $divide: ['$total', '$subtotal'] },
+                      1,
+                    ],
+                  },
+                ],
+              },
+              0,
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: '$categoryName',
           revenue: {
-            $sum: { $multiply: ['$items.price', '$items.quantity'] },
+            $sum: '$netItemRevenue',
           },
         },
       },

@@ -223,9 +223,9 @@ Mẫu phiếu in đang ghi cố định địa chỉ `123 Đường Sách, Q. Ni
 
 ---
 
-## NHÓM 3 — TỒN KHO, BÁO CÁO VÀ GIÁ VỐN
+## NHÓM 3 — TỒN KHO, BÁO CÁO VÀ GIÁ VỐN (✅ ĐÃ HOÀN THÀNH - SPRINT 3)
 
-### NEW-011 — Làm cho kiểm kê và điều chỉnh tồn kho chống tranh chấp thật sự [P1]
+### NEW-011 — Làm cho kiểm kê và điều chỉnh tồn kho chống tranh chấp thật sự [P1] [✅ ĐÃ HOÀN THÀNH]
 
 **File:** `backend/src/modules/inventory/inventory.service.ts`
 
@@ -241,7 +241,7 @@ Cơ chế kiểm tra `expectedCurrentStock` được thực hiện trước lờ
 
 **Test:** Tồn 10, nhân viên mở phiếu kiểm kê; trong lúc đó POS bán 2, khiến tồn còn 8; xác nhận kiểm kê dựa trên số 10 cũ phải bị từ chối hoặc yêu cầu đối soát lại.
 
-### NEW-012 — Kiểm soát chế độ fallback khi MongoDB không hỗ trợ transaction [P1]
+### NEW-012 — Kiểm soát chế độ fallback khi MongoDB không hỗ trợ transaction [P1] [✅ ĐÃ HOÀN THÀNH]
 
 **File:** `backend/src/modules/inventory/inventory.service.ts`
 
@@ -257,7 +257,7 @@ Hệ thống có cơ chế chuyển sang xử lý bù trừ khi MongoDB không h
 
 **Test:** Giả lập lỗi ghi lịch sử kho giữa giao dịch; không được để tồn đã thay đổi nhưng thiếu chứng từ.
 
-### NEW-013 — Tổng hợp doanh thu cả WEB, MOBILE, POS và bán sỉ [P1]
+### NEW-013 — Tổng hợp doanh thu cả WEB, MOBILE, POS và bán sỉ [P1] [✅ ĐÃ HOÀN THÀNH]
 
 **File:**
 - `backend/src/modules/reports/reports.service.ts`
@@ -281,7 +281,7 @@ Báo cáo chung hiện lấy dữ liệu từ `OrdersService`, còn POS lưu ở
 - Trả hàng POS hợp lệ 200.000đ → tính đúng doanh thu thuần theo chính sách báo cáo.
 - Lọc riêng POS không hiển thị doanh số WEB.
 
-### NEW-014 — Chuẩn hóa múi giờ báo cáo ca bán [P1]
+### NEW-014 — Chuẩn hóa múi giờ báo cáo ca bán [P1] [✅ ĐÃ HOÀN THÀNH]
 
 **File:** `backend/src/modules/pos/pos.service.ts`
 
@@ -297,7 +297,7 @@ Báo cáo POS đang có cách tính mốc ngày khác nhau giữa ngày do clien
 
 **Test:** Giao dịch lúc 00:30 Việt Nam phải thuộc đúng ngày tại Việt Nam.
 
-### NEW-015 — Chuẩn hóa giá vốn và lãi gộp theo sản phẩm [P1]
+### NEW-015 — Chuẩn hóa giá vốn và lãi gộp theo sản phẩm [P1] [✅ ĐÃ HOÀN THÀNH]
 
 **File:**
 - `backend/src/modules/inventory/schemas/inventory.schema.ts`
@@ -317,7 +317,7 @@ POS lưu `costPrice` từ Inventory. Tuy nhiên, hệ thống chưa có luồng 
 
 **Test:** Nhập 10 sản phẩm giá vốn 5.000đ và 10 sản phẩm giá vốn 7.000đ; nếu sử dụng bình quân gia quyền thì giá vốn bình quân là 6.000đ/sản phẩm, trước các điều chỉnh khác.
 
-### NEW-016 — Sửa báo cáo danh mục để tính đúng giảm giá và thời gian [P1]
+### NEW-016 — Sửa báo cáo danh mục để tính đúng giảm giá và thời gian [P1] [✅ ĐÃ HOÀN THÀNH]
 
 **File:**
 - `backend/src/modules/orders/orders.service.ts`

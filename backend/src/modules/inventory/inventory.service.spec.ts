@@ -404,4 +404,241 @@ describe('InventoryService — Comprehensive Ledger & Consistency Tests', () => 
       );
     });
   });
+
+  describe('Sprint 3: NEW-011, NEW-012, NEW-015 Hardening', () => {
+    describe('NEW-011: Atomic Stock Adjustment & Conflict Protection', () => {
+      it('throws ConflictException when current stock changed from expectedCurrentStock inside transaction', async () => {
+        // Mock currentStock in DB is 8 (due to concurrent POS sale), but expected is 10
+        const inventoryDoc = {
+          product: '507f1f77bcf86cd799439011',
+          currentStock: 8,
+          minStock: 10,
+        };
+        const inventoryModel: any = {
+          findOne: jest.fn().mockReturnValue(query(inventoryDoc)),
+          db: {},
+        };
+        const transactionModel: any = {
+          findOne: jest.fn().mockReturnValue(query(null)),
+          create: jest.fn(),
+        };
+        const productsService: any = {
+          updateStock: jest.fn(),
+          deductStock: jest.fn(),
+        };
+
+        const service = new InventoryService(
+          inventoryModel,
+          transactionModel,
+          productsService,
+        );
+
+        await expect(
+          service.adjustStock({
+            product: '507f1f77bcf86cd799439011',
+            newStock: 15,
+            expectedCurrentStock: 10, // Form had 10, but DB changed to 8
+          }),
+        ).rejects.toThrow(ConflictException);
+
+        expect(productsService.updateStock).not.toHaveBeenCalled();
+        expect(productsService.deductStock).not.toHaveBeenCalled();
+      });
+
+      it('succeeds and dynamically updates stock when expectedCurrentStock matches', async () => {
+        const inventoryDoc = {
+          product: '507f1f77bcf86cd799439011',
+          currentStock: 10,
+          minStock: 10,
+          save: jest.fn(),
+        };
+        let findCount = 0;
+        const inventoryModel: any = {
+          findOne: jest.fn().mockImplementation(() => {
+            findCount++;
+            if (findCount > 1) {
+              return query({ ...inventoryDoc, currentStock: 15 });
+            }
+            return query(inventoryDoc);
+          }),
+          db: {},
+        };
+        const transactionModel: any = {
+          findOne: jest.fn().mockReturnValue(query(null)),
+          create: jest.fn().mockResolvedValue({}),
+        };
+        const productsService: any = {
+          updateStock: jest.fn().mockResolvedValue(undefined),
+          deductStock: jest.fn().mockResolvedValue(undefined),
+        };
+
+        const service = new InventoryService(
+          inventoryModel,
+          transactionModel,
+          productsService,
+        );
+
+        const result = await service.adjustStock({
+          product: '507f1f77bcf86cd799439011',
+          newStock: 15,
+          expectedCurrentStock: 10,
+        });
+
+        expect(productsService.updateStock).toHaveBeenCalledWith(
+          '507f1f77bcf86cd799439011',
+          5,
+          undefined,
+        );
+        expect(result.currentStock).toBe(15);
+      });
+    });
+
+    describe('NEW-012: Production Transaction Enforcement & Ledger Reconciliation', () => {
+      const origEnv = process.env.NODE_ENV;
+
+      afterEach(() => {
+        process.env.NODE_ENV = origEnv;
+      });
+
+      it('rejects fallback and throws in production if MongoDB session is unavailable', async () => {
+        process.env.NODE_ENV = 'production';
+        const inventoryModel: any = {
+          findOne: jest.fn().mockReturnValue(query({ currentStock: 10 })),
+          db: { startSession: undefined }, // No transaction support
+        };
+        const service = new InventoryService(
+          inventoryModel,
+          {} as any,
+          {} as any,
+        );
+
+        await expect(
+          service.importStock({
+            product: '507f1f77bcf86cd799439011',
+            quantity: 5,
+          }),
+        ).rejects.toThrow(
+          'Chế độ transaction bắt buộc trong môi trường production',
+        );
+      });
+
+      it('reconcileStockWithLedger detects mismatch between currentStock and ledger transaction sum', async () => {
+        const productModel: any = {
+          find: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              lean: jest.fn().mockReturnValue({
+                exec: jest.fn().mockResolvedValue([
+                  {
+                    _id: '507f1f77bcf86cd799439011',
+                    name: 'Bút Bi Thiên Long',
+                    sku: 'TL-01',
+                  },
+                ]),
+              }),
+            }),
+          }),
+        };
+
+        const inventoryModel: any = {
+          db: { model: jest.fn().mockReturnValue(productModel) },
+          find: jest.fn().mockReturnValue({
+            lean: jest.fn().mockReturnValue({
+              exec: jest.fn().mockResolvedValue([
+                {
+                  product: '507f1f77bcf86cd799439011',
+                  currentStock: 15, // Kho đang ghi nhận 15
+                },
+              ]),
+            }),
+          }),
+        };
+
+        const transactionModel: any = {
+          aggregate: jest.fn().mockResolvedValue([
+            {
+              _id: '507f1f77bcf86cd799439011',
+              totalChange: 10, // Sổ kho chỉ có tổng change là 10 -> lệch 5
+              count: 2,
+            },
+          ]),
+        };
+
+        const service = new InventoryService(
+          inventoryModel,
+          transactionModel,
+          {} as any,
+        );
+
+        const result = await service.reconcileStockWithLedger(
+          '507f1f77bcf86cd799439011',
+        );
+
+        expect(result.mismatchedCount).toBe(1);
+        expect(result.discrepancies[0]).toEqual(
+          expect.objectContaining({
+            productId: '507f1f77bcf86cd799439011',
+            currentStock: 15,
+            ledgerStock: 10,
+            difference: 5,
+          }),
+        );
+      });
+    });
+
+    describe('NEW-015: Moving Weighted Average Cost Calculation', () => {
+      it('calculates weighted average cost: 10 @ 5,000 + 10 @ 7,000 = 6,000 VND', async () => {
+        // Product currently has 10 units with costPrice 5,000
+        const inventoryDoc = {
+          product: '507f1f77bcf86cd799439011',
+          currentStock: 10,
+          costPrice: 5000,
+          minStock: 5,
+          save: jest.fn().mockResolvedValue(undefined),
+        };
+
+        let findCount = 0;
+        const inventoryModel: any = {
+          findOne: jest.fn().mockImplementation(() => {
+            findCount++;
+            if (findCount > 1) {
+              inventoryDoc.currentStock = 20;
+            }
+            return query(inventoryDoc);
+          }),
+          db: {},
+        };
+
+        const transactionModel: any = {
+          findOne: jest.fn().mockReturnValue(query(null)),
+          create: jest.fn().mockResolvedValue({}),
+        };
+
+        const productsService: any = {
+          updateStock: jest.fn().mockResolvedValue(undefined),
+        };
+
+        const service = new InventoryService(
+          inventoryModel,
+          transactionModel,
+          productsService,
+        );
+
+        // Import 10 more units at 7,000 VND
+        await service.importStock({
+          product: '507f1f77bcf86cd799439011',
+          quantity: 10,
+          costPrice: 7000,
+        });
+
+        // New cost = ((10 * 5000) + (10 * 7000)) / (10 + 10) = 120,000 / 20 = 6,000
+        expect(inventoryDoc.costPrice).toBe(6000);
+        expect(transactionModel.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            costPrice: 7000, // Unit cost of this import transaction
+            change: 10,
+          }),
+        );
+      });
+    });
+  });
 });

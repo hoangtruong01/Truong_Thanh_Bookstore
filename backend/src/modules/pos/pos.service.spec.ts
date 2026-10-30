@@ -28,6 +28,7 @@ import {
   StaffPermission,
   UserRole,
 } from '../../common/enums';
+import { POSShift } from './dto/pos.dto';
 
 describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
   let service: PosService;
@@ -1262,6 +1263,61 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
       expect(report.totalRefundedAmount).toBe(50000);
       expect(report.refundedOrdersCount).toBe(1);
       expect(report.itemsSoldCount).toBe(13); // 5 + (10 - 2)
+    });
+
+    it('NEW-014: counts refunds executed during today shift even if original order was created on previous date', async () => {
+      // Order created yesterday, but refunded today at 09:00 VN
+      const yesterdayOrderRefundedToday = {
+        invoiceCode: 'HD261029-0001',
+        createdAt: new Date('2026-10-29T10:00:00.000Z'), // Yesterday
+        status: POSOrderStatus.PARTIALLY_RETURNED,
+        finalAmount: 500000,
+        paymentMethod: PaymentMethod.CASH,
+        refundHistory: [
+          {
+            refundId: 'REF-01',
+            refundedAt: new Date('2026-10-30T02:30:00.000Z'), // 09:30 AM VN on 2026-10-30
+            totalRefundAmount: 120000,
+            actorName: 'Thu ngân A',
+            items: [{ quantity: 1 }],
+          },
+        ],
+      };
+
+      // Today's new order sold at 08:00 VN
+      const todayOrder = {
+        invoiceCode: 'HD261030-0001',
+        createdAt: new Date('2026-10-30T01:00:00.000Z'), // 08:00 AM VN
+        status: POSOrderStatus.COMPLETED,
+        finalAmount: 300000,
+        paymentMethod: PaymentMethod.CASH,
+        items: [{ quantity: 3, returnedQuantity: 0 }],
+        refundHistory: [],
+      };
+
+      let findCallCount = 0;
+      mockPOSOrderModel.find.mockImplementation((filter: any) => {
+        findCallCount++;
+        // Call 1 is salesFilter (finds todayOrder created in window)
+        // Call 2 is refundFilter (finds yesterdayOrderRefundedToday having refund in window)
+        if (filter.createdAt) {
+          return { exec: jest.fn().mockResolvedValue([todayOrder]) } as any;
+        }
+        return {
+          exec: jest.fn().mockResolvedValue([yesterdayOrderRefundedToday]),
+        } as any;
+      });
+
+      const report = await service.getSessionReport({
+        date: '2026-10-30',
+        shift: POSShift.MORNING,
+      });
+
+      expect(report.shift).toBe('MORNING');
+      expect(report.totalOrders).toBe(1); // 1 new order today
+      expect(report.totalRefundedAmount).toBe(120000); // 120k refunded during today morning
+      expect(report.totalRevenue).toBe(180000); // 300k - 120k = 180k
+      expect(report.cashTotal).toBe(180000);
     });
   });
 });
