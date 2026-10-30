@@ -447,13 +447,21 @@ Kiểm thử theo vai trò:
 
 ## THỨ TỰ TRIỂN KHAI ĐỀ XUẤT
 
-**Sprint 1 — An toàn dữ liệu và POS**
-NEW-001, NEW-002, NEW-003, NEW-004, NEW-005, NEW-006.
+**Sprint 1 — An toàn dữ liệu và POS** [✅ ĐÃ HOÀN THÀNH - Branch: `feature/sprint1-pos-safety`]
+- NEW-001: Khóa quyền giảm giá tại quầy
+- NEW-002: Không tin tỷ lệ quy đổi đơn vị do client gửi
+- NEW-003: Chống hoàn trả hàng trùng và tranh chấp đồng thời
+- NEW-004: Sửa cách tính giá trị hàng trả khi đơn có giảm giá
+- NEW-005: Khóa idempotency của phiếu POS theo nội dung request
+- NEW-006: Sửa mã hóa đơn POS bị tranh chấp khi nhiều thu ngân cùng bán
 
-**Sprint 2 — Trải nghiệm bán hàng và phân quyền**
-NEW-007, NEW-008, NEW-009, NEW-010.
+**Sprint 2 — Trải nghiệm bán hàng và phân quyền** [✅ ĐÃ HOÀN THÀNH - Branch: `feature/sprint2-pos-ux-permissions`]
+- NEW-007: Quét mã vạch hộp/thùng phải nhận đúng đơn vị
+- NEW-008: Đồng bộ quyền POS ở menu, router và backend
+- NEW-009: Hạn chế dữ liệu khách hàng theo quyền và phạm vi công việc
+- NEW-010: Không in thông tin liên hệ mẫu lên phiếu bán
 
-**Sprint 3 — Báo cáo, tồn kho và giá vốn**
+**Sprint 3 — Báo cáo, tồn kho và giá vốn** [⏳ TIẾP THEO]
 NEW-011 đến NEW-016.
 
 **Sprint 4 — Mua hàng và vận hành**

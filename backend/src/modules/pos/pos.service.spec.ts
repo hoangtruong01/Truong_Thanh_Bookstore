@@ -1061,6 +1061,175 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
     });
   });
 
+  describe('NEW-007 — Quét mã vạch hộp/thùng nhận diện đúng đơn vị [P1]', () => {
+    it('should correctly identify SKU match when keyword equals sku', async () => {
+      const productWithConv = {
+        _id: new Types.ObjectId(),
+        name: 'Bút bi Thiên Long TL-027',
+        sku: 'TL-027',
+        barcode: '8935001234567',
+        price: 5000,
+        discountPrice: 0,
+        unit: 'cây',
+        unitConversions: [
+          {
+            unit: 'hộp',
+            ratio: 20,
+            price: 80000,
+            barcode: '8935001234599',
+          },
+        ],
+      };
+
+      mockProductModel.find.mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([productWithConv]),
+      } as any);
+
+      const results = await service.searchProductsForPOS('TL-027');
+      expect(results).toHaveLength(1);
+      expect(results[0].matchType).toBe('SKU');
+      expect(results[0].matchedUnit).toBe('cây');
+      expect(results[0].matchedConversionRatio).toBe(1);
+      expect(results[0].matchedPrice).toBe(5000);
+    });
+
+    it('should correctly identify UNIT_CONVERSION match when keyword equals box barcode', async () => {
+      const productWithConv = {
+        _id: new Types.ObjectId(),
+        name: 'Bút bi Thiên Long TL-027',
+        sku: 'TL-027',
+        barcode: '8935001234567',
+        price: 5000,
+        discountPrice: 0,
+        unit: 'cây',
+        unitConversions: [
+          {
+            unit: 'hộp',
+            ratio: 20,
+            price: 80000,
+            barcode: '8935001234599',
+          },
+        ],
+      };
+
+      mockProductModel.find.mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([productWithConv]),
+      } as any);
+
+      // Search with the box barcode '8935001234599'
+      const results = await service.searchProductsForPOS('8935001234599');
+      expect(results).toHaveLength(1);
+      expect(results[0].matchType).toBe('UNIT_CONVERSION');
+      expect(results[0].matchedUnit).toBe('hộp');
+      expect(results[0].matchedConversionRatio).toBe(20);
+      expect(results[0].matchedPrice).toBe(80000);
+      expect(results[0].matchedBarcode).toBe('8935001234599');
+    });
+  });
+
+  describe('NEW-008 & NEW-009 — Phân quyền POS và chống rò rỉ dữ liệu khách hàng (IDOR) [P1]', () => {
+    it('should restrict cashier without POS_VIEW_ORDERS to only view their own orders in findAll', async () => {
+      const findMock = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([]),
+      });
+      mockPOSOrderModel.find = findMock as any;
+      mockPOSOrderModel.countDocuments.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(0),
+      } as any);
+
+      // Cashier has only POS_ACCESS
+      await service.findAll({}, cashierUser);
+
+      expect(findMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cashier: new Types.ObjectId(cashierUser._id),
+        }),
+      );
+    });
+
+    it('should mask customer phone for staff without MANAGE_CUSTOMERS permission', async () => {
+      const orderDoc = {
+        toObject: () => ({
+          _id: new Types.ObjectId(),
+          invoiceCode: 'HD261030-0010',
+          customerName: 'Nguyễn Văn A',
+          customerPhone: '0901234567',
+          items: [{ name: 'Bút', unitPrice: 5000, costPrice: 3000 }],
+        }),
+      };
+
+      mockPOSOrderModel.find.mockReturnValueOnce({
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([orderDoc]),
+      } as any);
+      mockPOSOrderModel.countDocuments.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(1),
+      } as any);
+
+      const res = await service.findAll({}, cashierUser);
+      expect(res.data[0].customerPhone).toBe('090****567');
+      expect(res.data[0].items[0].costPrice).toBeUndefined();
+    });
+
+    it('should throw ForbiddenException when cashier accesses another cashier order by ID (IDOR Protection)', async () => {
+      const otherCashierId = new Types.ObjectId();
+      const foreignOrder = {
+        _id: new Types.ObjectId(),
+        invoiceCode: 'HD261030-0999',
+        cashier: otherCashierId,
+        toObject: () => ({
+          _id: new Types.ObjectId(),
+          cashier: otherCashierId,
+        }),
+      };
+
+      mockPOSOrderModel.findById.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(foreignOrder),
+      } as any);
+
+      await expect(
+        service.findById(foreignOrder._id.toString(), cashierUser),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow manager (ADMIN) to access any cashier order by ID', async () => {
+      const otherCashierId = new Types.ObjectId();
+      const foreignOrder = {
+        _id: new Types.ObjectId(),
+        invoiceCode: 'HD261030-0999',
+        cashier: otherCashierId,
+        toObject: () => ({
+          _id: new Types.ObjectId(),
+          cashier: otherCashierId,
+          items: [{ name: 'Bút', costPrice: 3000 }],
+          customerPhone: '0901234567',
+        }),
+      };
+
+      mockPOSOrderModel.findById.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(foreignOrder),
+      } as any);
+
+      const res = await service.findById(
+        foreignOrder._id.toString(),
+        adminUser,
+      );
+      expect(res.customerPhone).toBe('0901234567'); // Admin sees full phone
+      expect(res.items[0].costPrice).toBe(3000); // Admin sees costPrice
+    });
+  });
+
   describe('getSessionReport (POS-10)', () => {
     it('should aggregate revenue, cash, transfer and refund totals correctly', async () => {
       const todayOrders = [
