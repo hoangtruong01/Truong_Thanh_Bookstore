@@ -10,6 +10,7 @@ import {
 } from '../inventory/schemas/inventory.schema';
 import { ProductsService } from '../products/products.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { UsersService } from '../users/users.service';
 import { Types } from 'mongoose';
 import { PaymentMethod, ProductStatus, UserRole } from '../../common/enums';
 
@@ -57,6 +58,11 @@ describe('POS-03 Omnichannel Stock Concurrency (Web vs POS)', () => {
         session: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(0),
       }),
+      db: {
+        collection: jest.fn().mockReturnValue({
+          findOneAndUpdate: jest.fn().mockResolvedValue({ seq: 1 }),
+        }),
+      },
     };
 
     mockProductModel = {
@@ -130,6 +136,7 @@ describe('POS-03 Omnichannel Stock Concurrency (Web vs POS)', () => {
         { provide: 'DatabaseConnection', useValue: mockConnection },
         { provide: ProductsService, useValue: mockProductsService },
         { provide: InventoryService, useValue: mockInventoryService },
+        { provide: UsersService, useValue: { findById: jest.fn() } },
       ],
     }).compile();
 
