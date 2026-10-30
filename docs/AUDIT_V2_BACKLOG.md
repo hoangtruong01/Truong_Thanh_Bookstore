@@ -341,7 +341,7 @@ Báo cáo doanh thu theo danh mục hiện cộng giá × số lượng từ dò
 
 Các module dưới đây nên phát triển theo thứ tự phụ thuộc nghiệp vụ.
 
-### ERP-01 — Quản lý nhà cung cấp
+### ERP-01 — Quản lý nhà cung cấp [✅ ĐÃ HOÀN THÀNH - SPRINT 4]
 
 **Yêu cầu:**
 - Mã và tên nhà cung cấp.
@@ -353,7 +353,7 @@ Các module dưới đây nên phát triển theo thứ tự phụ thuộc nghi�
 
 **Nghiệm thu:** Có thể biết một sản phẩm từng nhập từ nhà cung cấp nào, ngày nào, giá bao nhiêu.
 
-### ERP-02 — Đơn đặt mua hàng (Purchase Order)
+### ERP-02 — Đơn đặt mua hàng (Purchase Order) [✅ ĐÃ HOÀN THÀNH - SPRINT 4]
 
 **Yêu cầu:**
 - Tạo PO theo nhà cung cấp.
@@ -364,7 +364,7 @@ Các module dưới đây nên phát triển theo thứ tự phụ thuộc nghi�
 
 **Nghiệm thu:** Đặt mua 100 hộp nhưng chưa nhận hàng → tồn thực tế không tăng.
 
-### ERP-03 — Phiếu nhận hàng và nhập kho từ PO
+### ERP-03 — Phiếu nhận hàng và nhập kho từ PO [✅ ĐÃ HOÀN THÀNH - SPRINT 4]
 
 **Yêu cầu:**
 - Nhận toàn bộ hoặc một phần PO.
@@ -377,7 +377,7 @@ Các module dưới đây nên phát triển theo thứ tự phụ thuộc nghi�
 
 **Nghiệm thu:** PO 100 hộp, nhận 60 hộp → tồn tăng theo 60 hộp, PO còn chờ 40 hộp.
 
-### ERP-04 — Phiếu kiểm kê và phê duyệt chênh lệch
+### ERP-04 — Phiếu kiểm kê và phê duyệt chênh lệch [✅ ĐÃ HOÀN THÀNH - SPRINT 4]
 
 **Yêu cầu:**
 - Tạo đợt kiểm kê.
@@ -464,10 +464,10 @@ Kiểm thử theo vai trò:
 **Sprint 3 — Báo cáo, tồn kho và giá vốn** [✅ ĐÃ HOÀN THÀNH - Branch: `feature/sprint3-inventory-reports-cost`]
 NEW-011 đến NEW-016.
 
-**Sprint 4 — Mua hàng và vận hành** [⏳ TIẾP THEO]
+**Sprint 4 — Mua hàng và vận hành** [✅ ĐÃ HOÀN THÀNH - Branch: `feature/sprint4-purchasing-operations`]
 ERP-01, ERP-02, ERP-03, ERP-04.
 
-**Sprint 5 — Quản trị và tối ưu**
+**Sprint 5 — Quản trị và tối ưu** [⏳ TIẾP THEO]
 ERP-05, ERP-06, QA-01, QA-02 và hoàn thiện kiểm thử.
 
 ---
