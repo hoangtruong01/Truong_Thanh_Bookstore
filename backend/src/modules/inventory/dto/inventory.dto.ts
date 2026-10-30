@@ -56,6 +56,15 @@ export class InventoryTransactionDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   idempotencyKey?: string;
 
+  @ApiPropertyOptional({
+    description: 'Giá vốn đơn vị khi nhập hàng',
+    example: 50000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @Min(0, { message: 'Giá vốn không được âm' })
+  costPrice?: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

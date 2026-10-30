@@ -183,4 +183,123 @@ describe('ReportsService', () => {
       expect(result.some((n) => n.type === 'customer')).toBe(true);
     });
   });
+
+  describe('Sprint 3: NEW-013 & NEW-016 Omnichannel & Category Revenue', () => {
+    it('NEW-013: aggregates omnichannel revenue combining Online + POS with refund deduction and COGS', async () => {
+      // Create mock POSOrderModel with 1 POS order
+      const mockPOSOrderModel: any = {
+        find: jest.fn().mockReturnValue({
+          lean: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue([
+              {
+                _id: 'pos-01',
+                invoiceCode: 'HD260905-0001',
+                createdAt: new Date('2026-09-05T03:00:00.000Z'), // 10:00 AM VN
+                subtotal: 2200000,
+                totalDiscountAmount: 200000,
+                finalAmount: 2000000,
+                totalRefundedAmount: 200000, // Net = 1,800,000
+                items: [
+                  {
+                    quantity: 2,
+                    returnedQuantity: 0,
+                    conversionRatio: 1,
+                    costPrice: 500000, // COGS = 1,000,000
+                  },
+                ],
+              },
+            ]),
+          }),
+        }),
+      };
+
+      const customReportsService = new ReportsService(
+        mockOrdersService,
+        mockProductsService,
+        mockInventoryService,
+        mockCustomersService,
+        mockPOSOrderModel,
+      );
+
+      // Online mock returns: date '2026-09-05', total 1,000,000
+      mockOrdersService.getRevenueByDateRange.mockResolvedValueOnce([
+        {
+          _id: '2026-09-05',
+          subtotal: 1000000,
+          discount: 0,
+          total: 1000000,
+          count: 1,
+        },
+      ]);
+
+      const result = await customReportsService.getRevenue(
+        '2026-09-05',
+        '2026-09-05',
+        'ALL',
+      );
+
+      expect(result.length).toBe(1);
+      const row = result[0];
+      // Total net = 1,000,000 (online) + (2,000,000 - 200,000) (pos) = 2,800,000
+      expect(row.total).toBe(2800000);
+      expect(row.refund).toBe(200000);
+      expect(row.cogs).toBe(1000000);
+      expect(row.grossProfit).toBe(1800000); // 2,800,000 - 1,000,000
+      expect(row.count).toBe(2);
+    });
+
+    it('NEW-016: category revenue aggregates both Online and POS categories', async () => {
+      const mockPOSOrderModel: any = {
+        find: jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            lean: jest.fn().mockReturnValue({
+              exec: jest.fn().mockResolvedValue([
+                {
+                  status: 'COMPLETED',
+                  items: [
+                    {
+                      quantity: 3,
+                      returnedQuantity: 1,
+                      effectiveLineTotal: 150000,
+                      netUnitPrice: 50000, // soldQty = 2 * 50k = 100k
+                      product: {
+                        name: 'Bút Bi',
+                        category: { name: 'Văn Phòng Phẩm' },
+                      },
+                    },
+                  ],
+                },
+              ]),
+            }),
+          }),
+        }),
+      };
+
+      const customReportsService = new ReportsService(
+        mockOrdersService,
+        mockProductsService,
+        mockInventoryService,
+        mockCustomersService,
+        mockPOSOrderModel,
+      );
+
+      mockOrdersService.getCategoryRevenue.mockResolvedValueOnce([
+        { category: 'Sách Kỹ Năng', revenue: 500000 },
+      ]);
+
+      const result = await customReportsService.getCategoryRevenue(
+        '2026-09-01',
+        '2026-09-05',
+        'ALL',
+      );
+
+      expect(result.length).toBe(2);
+      expect(result).toEqual(
+        expect.arrayContaining([
+          { category: 'Sách Kỹ Năng', revenue: 500000 },
+          { category: 'Văn Phòng Phẩm', revenue: 100000 },
+        ]),
+      );
+    });
+  });
 });

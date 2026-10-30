@@ -7,21 +7,40 @@
         <p class="text-xs text-slate-500 font-medium">Theo dõi dữ liệu kinh doanh, tăng trưởng doanh số thực tế và cơ cấu doanh thu theo danh mục.</p>
       </div>
 
-      <!-- Quick Range Filter Buttons (FE-02) -->
-      <div class="inline-flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
-        <button
-          v-for="preset in rangePresets"
-          :key="preset.value"
-          :class="[
-            'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all',
-            selectedRange === preset.value
-              ? 'bg-white text-blue-700 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          ]"
-          @click="selectPreset(preset.value)"
-        >
-          {{ preset.label }}
-        </button>
+      <!-- Quick Range & Channel Filter (FE-02 & NEW-013) -->
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Channel Filter -->
+        <div class="inline-flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-2xl border border-slate-200/80">
+          <span class="text-xs font-bold text-slate-500">Kênh:</span>
+          <select
+            v-model="selectedChannel"
+            class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+            @change="onChannelChange"
+          >
+            <option value="ALL">🌐 Tất cả các kênh</option>
+            <option value="POS">🏪 Bán tại quầy (POS)</option>
+            <option value="WEB">💻 Website</option>
+            <option value="MOBILE">📱 Mobile App</option>
+            <option value="WHOLESALE">📦 Bán sỉ</option>
+          </select>
+        </div>
+
+        <!-- Range Presets -->
+        <div class="inline-flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
+          <button
+            v-for="preset in rangePresets"
+            :key="preset.value"
+            :class="[
+              'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all',
+              selectedRange === preset.value
+                ? 'bg-white text-blue-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            ]"
+            @click="selectPreset(preset.value)"
+          >
+            {{ preset.label }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -77,14 +96,13 @@
         </div>
       </div>
 
-      <!-- Real Dynamic KPI Cards with Actual Growth (FE-02) -->
-      <div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <!-- Real Dynamic KPI Cards with Actual Growth (FE-02, NEW-013 & NEW-015) -->
+      <div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <!-- Revenue Card -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-xs">
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs">
           <div>
             <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tổng doanh thu kỳ lọc</span>
-              <!-- Real dynamic growth rate badge -->
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Doanh thu thuần</span>
               <span
                 v-if="summaryKpis && summaryKpis.revenueGrowthRate !== null && summaryKpis.revenueGrowthRate !== undefined"
                 :class="[
@@ -97,21 +115,20 @@
                 <span>{{ summaryKpis.revenueGrowthRate >= 0 ? '↑ +' : '↓ ' }}{{ summaryKpis.revenueGrowthRate }}%</span>
               </span>
               <span v-else class="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
-                Kỳ trước: N/A
+                N/A
               </span>
             </div>
             <div v-if="loading" class="h-8 bg-slate-100 rounded-lg w-3/4 mt-3 animate-pulse"></div>
-            <p v-else class="text-2xl font-black text-blue-700 mt-2">{{ formatCurrency(totalRevenue) }}</p>
+            <p v-else class="text-xl font-black text-blue-700 mt-2">{{ formatCurrency(totalRevenue) }}</p>
           </div>
-          <p class="text-[11px] text-slate-400 font-medium mt-3">Đã khấu trừ hoàn trả và đơn hủy</p>
+          <p class="text-[10px] text-slate-400 font-medium mt-2">Đã khấu trừ giảm giá & hoàn trả</p>
         </div>
 
         <!-- Orders Count Card -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-xs">
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs">
           <div>
             <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Đơn hàng thành công</span>
-              <!-- Real dynamic growth rate badge -->
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Số đơn hàng</span>
               <span
                 v-if="summaryKpis && summaryKpis.ordersGrowthRate !== null && summaryKpis.ordersGrowthRate !== undefined"
                 :class="[
@@ -124,23 +141,38 @@
                 <span>{{ summaryKpis.ordersGrowthRate >= 0 ? '↑ +' : '↓ ' }}{{ summaryKpis.ordersGrowthRate }}%</span>
               </span>
               <span v-else class="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
-                Kỳ trước: N/A
+                N/A
               </span>
             </div>
             <div v-if="loading" class="h-8 bg-slate-100 rounded-lg w-1/2 mt-3 animate-pulse"></div>
-            <p v-else class="text-2xl font-black text-slate-800 mt-2">{{ totalOrdersCount }}</p>
+            <p v-else class="text-xl font-black text-slate-800 mt-2">{{ totalOrdersCount }}</p>
           </div>
-          <p class="text-[11px] text-slate-400 font-medium mt-3">AOV ước tính: {{ formatCurrency(estimatedAov) }}</p>
+          <p class="text-[10px] text-slate-400 font-medium mt-2">AOV: {{ formatCurrency(estimatedAov) }}</p>
         </div>
 
-        <!-- Total Discount Card -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-xs">
+        <!-- COGS Card (NEW-015) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs">
           <div>
-            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tổng voucher & giảm giá</span>
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Giá vốn hàng bán (COGS)</span>
             <div v-if="loading" class="h-8 bg-slate-100 rounded-lg w-2/3 mt-3 animate-pulse"></div>
-            <p v-else class="text-2xl font-black text-red-600 mt-2">{{ formatCurrency(totalDiscount) }}</p>
+            <p v-else class="text-xl font-black text-amber-600 mt-2">{{ formatCurrency(totalCogs) }}</p>
           </div>
-          <p class="text-[11px] text-slate-400 font-medium mt-3">Tiết kiệm cho khách hàng</p>
+          <p class="text-[10px] text-slate-400 font-medium mt-2">Tính theo giá bình quân di động</p>
+        </div>
+
+        <!-- Gross Profit Card (NEW-015) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lợi nhuận gộp</span>
+              <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Biên: {{ grossMarginPercent }}%
+              </span>
+            </div>
+            <div v-if="loading" class="h-8 bg-slate-100 rounded-lg w-2/3 mt-3 animate-pulse"></div>
+            <p v-else class="text-xl font-black text-emerald-600 mt-2">{{ formatCurrency(totalGrossProfit) }}</p>
+          </div>
+          <p class="text-[10px] text-slate-400 font-medium mt-2">Doanh thu thuần trừ giá vốn</p>
         </div>
       </div>
     </div>
@@ -209,10 +241,13 @@
           <thead>
             <tr class="text-slate-400 font-bold text-xs uppercase tracking-wider border-b border-slate-150 bg-slate-50/50">
               <th class="py-4 px-6">Ngày</th>
-              <th class="py-4 px-6">Số lượng đơn hàng</th>
+              <th class="py-4 px-6">Số đơn</th>
               <th class="py-4 px-6">Doanh thu tạm tính</th>
               <th class="py-4 px-6">Đã giảm giá</th>
-              <th class="py-4 px-6">Doanh thu thực tế</th>
+              <th class="py-4 px-6">Hoàn trả</th>
+              <th class="py-4 px-6">Doanh thu thuần</th>
+              <th class="py-4 px-6">Giá vốn (COGS)</th>
+              <th class="py-4 px-6">Lợi nhuận gộp</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 font-medium text-slate-800">
@@ -221,7 +256,10 @@
               <td class="py-4 px-6 font-bold text-slate-800">{{ row.count }}</td>
               <td class="py-4 px-6">{{ formatCurrency(row.subtotal) }}</td>
               <td class="py-4 px-6 text-red-500 font-semibold">-{{ formatCurrency(row.discount) }}</td>
+              <td class="py-4 px-6 text-orange-500 font-semibold">{{ row.refund ? '-' + formatCurrency(row.refund) : '0đ' }}</td>
               <td class="py-4 px-6 font-black text-blue-700">{{ formatCurrency(row.total) }}</td>
+              <td class="py-4 px-6 text-slate-600">{{ formatCurrency(row.cogs || 0) }}</td>
+              <td class="py-4 px-6 font-bold text-emerald-600">{{ formatCurrency(row.grossProfit !== undefined ? row.grossProfit : (row.total - (row.cogs || 0))) }}</td>
             </tr>
           </tbody>
         </table>
@@ -247,6 +285,7 @@ const errorMessage = ref('')
 
 type RangeOption = 'day' | 'week' | 'month' | 'year' | 'custom'
 const selectedRange = ref<RangeOption>('month')
+const selectedChannel = ref<string>('ALL')
 
 const rangePresets: { label: string; value: 'day' | 'week' | 'month' | 'year' }[] = [
   { label: 'Hôm nay', value: 'day' },
@@ -294,6 +333,10 @@ function onCustomDateChange() {
   selectedRange.value = 'custom'
 }
 
+function onChannelChange() {
+  loadAllReports()
+}
+
 function applyCustomDateFilter() {
   selectedRange.value = 'custom'
   loadAllReports()
@@ -307,9 +350,9 @@ async function loadAllReports() {
     const rangeParam = selectedRange.value !== 'custom' ? selectedRange.value : undefined
 
     const [revenueRes, summaryRes, catRes] = await Promise.all([
-      reportService.getRevenue(startDate.value, endDate.value),
+      reportService.getRevenue(startDate.value, endDate.value, selectedChannel.value),
       reportService.getSummary(rangeParam),
-      reportService.getCategoryRevenue().catch(() => ({ data: [] })),
+      reportService.getCategoryRevenue(startDate.value, endDate.value, selectedChannel.value).catch(() => ({ data: [] })),
     ])
 
     reportData.value = revenueRes.data || []
@@ -338,8 +381,28 @@ const totalOrdersCount = computed(() => {
   return reportData.value.reduce((sum, row) => sum + (row.count || 0), 0)
 })
 
-const totalDiscount = computed(() => {
+const _totalDiscount = computed(() => {
   return reportData.value.reduce((sum, row) => sum + (row.discount || 0), 0)
+})
+
+const totalCogs = computed(() => {
+  return reportData.value.reduce((sum, row) => sum + (row.cogs || 0), 0)
+})
+
+const totalGrossProfit = computed(() => {
+  return reportData.value.reduce(
+    (sum, row) =>
+      sum +
+      (row.grossProfit !== undefined
+        ? row.grossProfit
+        : (row.total || 0) - (row.cogs || 0)),
+    0,
+  )
+})
+
+const grossMarginPercent = computed(() => {
+  if (totalRevenue.value <= 0) return '0.0'
+  return ((totalGrossProfit.value / totalRevenue.value) * 100).toFixed(1)
 })
 
 const estimatedAov = computed(() => {

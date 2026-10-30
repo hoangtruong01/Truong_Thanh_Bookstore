@@ -53,6 +53,15 @@ export class InventoryController {
     return this.inventoryService.reconcile();
   }
 
+  @Get('reconcile-ledger')
+  @ApiOperation({
+    summary:
+      'Reconcile Inventory.currentStock vs ledger transaction history (NEW-012)',
+  })
+  reconcileLedger(@Query('productId') productId?: string) {
+    return this.inventoryService.reconcileStockWithLedger(productId);
+  }
+
   @Post('sync-missing')
   @ApiOperation({
     summary: 'Manually sync missing inventory documents for products (TT-006)',

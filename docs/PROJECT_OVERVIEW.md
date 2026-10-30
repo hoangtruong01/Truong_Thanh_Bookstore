@@ -710,7 +710,7 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 
 | Phân hệ | Lệnh | Kết quả |
 | :--- | :--- | :---: |
-| Backend Unit Tests | `cd backend && npm test` | **53/53 suites, 551/551 tests PASS (100%)** |
+| Backend Unit Tests | `cd backend && npm test` | **53/53 suites, 584/584 tests PASS (100%)** |
 | Backend POS & Concurrency Suite | `cd backend && npm test -- pos.service.spec.ts pos.omnichannel-concurrency.spec.ts` | **10/10 POS & Omnichannel race condition tests PASS** |
 | Backend Health & Release SHA (TT-014) | `cd backend && npm test -- app.controller.spec.ts` | **3/3 health readiness & release SHA tests PASS** |
 | Backend Security Suite | `cd backend && npm test -- security-p0-audit.spec.ts` | **16/16 security regression tests PASS** |

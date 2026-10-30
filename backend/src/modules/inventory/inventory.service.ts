@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -276,6 +277,106 @@ export class InventoryService {
     };
   }
 
+  /**
+   * NEW-012: Đối soát số lượng tồn kho giữa Inventory.currentStock và sổ kho (tổng các biến động trong InventoryTransaction).
+   */
+  async reconcileStockWithLedger(productId?: string): Promise<{
+    totalChecked: number;
+    matchedCount: number;
+    mismatchedCount: number;
+    discrepancies: Array<{
+      productId: string;
+      productName: string;
+      sku: string;
+      currentStock: number;
+      ledgerStock: number;
+      difference: number;
+      transactionCount: number;
+      reason: string;
+    }>;
+  }> {
+    const productModel = this.inventoryModel.db.model('Product');
+    const filter: any = { isDeleted: false };
+    if (productId && Types.ObjectId.isValid(productId)) {
+      filter._id = new Types.ObjectId(productId);
+    }
+
+    const products = await productModel
+      .find(filter)
+      .select('name sku')
+      .lean()
+      .exec();
+
+    const invFilter: any = {};
+    if (productId && Types.ObjectId.isValid(productId)) {
+      invFilter.product = new Types.ObjectId(productId);
+    }
+    const inventories = await this.inventoryModel.find(invFilter).lean().exec();
+    const invMap = new Map<string, number>();
+    for (const inv of inventories) {
+      invMap.set(inv.product.toString(), inv.currentStock ?? 0);
+    }
+
+    const txMatch: any = {};
+    if (productId && Types.ObjectId.isValid(productId)) {
+      txMatch.product = new Types.ObjectId(productId);
+    }
+
+    const ledgerAggregation = await this.transactionModel.aggregate([
+      { $match: txMatch },
+      {
+        $group: {
+          _id: '$product',
+          totalChange: { $sum: '$change' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const ledgerMap = new Map<string, { totalChange: number; count: number }>();
+    for (const row of ledgerAggregation) {
+      ledgerMap.set(row._id.toString(), {
+        totalChange: row.totalChange,
+        count: row.count,
+      });
+    }
+
+    const discrepancies: any[] = [];
+    let matchedCount = 0;
+
+    for (const p of products) {
+      const prodId = (p as any)._id.toString();
+      const currentStock = invMap.get(prodId) ?? 0;
+      const ledger = ledgerMap.get(prodId) || { totalChange: 0, count: 0 };
+      const ledgerStock = ledger.totalChange;
+
+      if (currentStock === ledgerStock) {
+        matchedCount++;
+      } else {
+        discrepancies.push({
+          productId: prodId,
+          productName: (p as any).name,
+          sku: (p as any).sku,
+          currentStock,
+          ledgerStock,
+          difference: currentStock - ledgerStock,
+          transactionCount: ledger.count,
+          reason:
+            ledger.count === 0
+              ? 'Chưa có chứng từ sổ kho (Missing ledger transactions)'
+              : 'Chênh lệch tồn kho và sổ kho (Ledger discrepancy)',
+        });
+      }
+    }
+
+    return {
+      totalChecked: products.length,
+      matchedCount,
+      mismatchedCount: discrepancies.length,
+      discrepancies,
+    };
+  }
+
   async getLowStock(): Promise<InventoryDocument[]> {
     return this.inventoryModel
       .find({
@@ -303,11 +404,11 @@ export class InventoryService {
   }
 
   /**
-   * TT-001: Điều chỉnh số lượng tồn kho theo số lượng thực tế sau kiểm kê (newStock).
-   * - Tính delta = newStock - currentStock
+   * TT-001 & NEW-011: Điều chỉnh số lượng tồn kho theo số lượng thực tế sau kiểm kê (newStock).
+   * - Tính delta = newStock - currentStock trực tiếp trong MongoDB session
    * - Cho phép tăng/giảm nhưng không cho âm
    * - Nếu delta === 0: không phát sinh biến động
-   * - Optimistic locking: kiểm tra expectedCurrentStock
+   * - Optimistic locking: kiểm tra expectedCurrentStock ngay trong transaction session để chống tranh chấp
    */
   async adjustStock(
     dto: AdjustInventoryDto,
@@ -315,48 +416,26 @@ export class InventoryService {
   ): Promise<InventoryDocument> {
     const productId = dto.product.toString();
 
-    // 1. Trường hợp sử dụng newStock (chuẩn hóa kiểm kê thực tế theo TT-001)
+    // 1. Trường hợp sử dụng newStock (chuẩn hóa kiểm kê thực tế theo TT-001 & NEW-011)
     if (dto.newStock !== undefined) {
       if (dto.newStock < 0) {
         throw new BadRequestException('Số lượng tồn kho thực tế không thể âm');
       }
 
-      const inventory = await this.inventoryModel
-        .findOne({ product: productId })
-        .exec();
-      if (!inventory) {
-        throw new NotFoundException(
-          'Không tìm thấy bản ghi kho cho sản phẩm này',
-        );
-      }
-
-      // Optimistic lock: kiểm tra số lượng tồn hiện tại có bị thay đổi trong lúc mở form không
-      if (
-        dto.expectedCurrentStock !== undefined &&
-        inventory.currentStock !== dto.expectedCurrentStock
-      ) {
-        throw new ConflictException(
-          `Số lượng tồn kho hiện tại (${inventory.currentStock}) đã thay đổi so với số lượng bạn đang xem (${dto.expectedCurrentStock}). Vui lòng tải lại trang để kiểm kê chính xác.`,
-        );
-      }
-
-      const delta = dto.newStock - inventory.currentStock;
-
-      // Nếu số lượng không thay đổi: không phát sinh biến động
-      if (delta === 0) {
-        return inventory;
-      }
-
       return this.applyMovement(
         {
           product: productId,
-          quantity: Math.abs(delta),
+          quantity: 0, // Sẽ được tính delta động trong transaction
           note: dto.note || 'Điều chỉnh số lượng sau kiểm kê',
           reference: dto.reference || dto.idempotencyKey,
         },
         InventoryTransactionType.ADJUSTMENT,
         userId,
-        Math.sign(delta),
+        1,
+        {
+          expectedCurrentStock: dto.expectedCurrentStock,
+          targetNewStock: dto.newStock,
+        },
       );
     }
 
@@ -375,6 +454,9 @@ export class InventoryService {
         InventoryTransactionType.ADJUSTMENT,
         userId,
         Math.sign(dto.quantity),
+        {
+          expectedCurrentStock: dto.expectedCurrentStock,
+        },
       );
     }
 
@@ -441,15 +523,22 @@ export class InventoryService {
   }
 
   /**
-   * Core logic áp dụng biến động kho với bảo vệ Idempotency (TT-005) và MongoDB Transaction (TT-002).
+   * Core logic áp dụng biến động kho với bảo vệ Idempotency (TT-005),
+   * Optimistic Locking & Atomic checks (NEW-011),
+   * MongoDB Transaction Enforcement in Production (NEW-012),
+   * và Bình quân gia quyền di động (NEW-015).
    */
   private async applyMovement(
     dto: InventoryTransactionDto,
     type: InventoryTransactionType,
     userId?: string,
     adjustmentSign = 1,
+    options?: {
+      expectedCurrentStock?: number;
+      targetNewStock?: number;
+    },
   ): Promise<InventoryDocument> {
-    const delta = this.movementDelta(type, dto.quantity, adjustmentSign);
+    let delta = this.movementDelta(type, dto.quantity, adjustmentSign);
     const productId = dto.product.toString();
     const referenceKey = dto.reference || dto.idempotencyKey;
     let fallbackMutated = false;
@@ -470,7 +559,8 @@ export class InventoryService {
           const isSamePayload =
             existing.product.toString() === productId &&
             existing.type === type &&
-            existing.change === delta;
+            (options?.targetNewStock !== undefined ||
+              existing.change === delta);
 
           if (isSamePayload) {
             // Cùng key, cùng nội dung -> Idempotent replay an toàn
@@ -490,6 +580,36 @@ export class InventoryService {
             );
           }
         }
+      }
+
+      // NEW-011: Đọc và kiểm tra optimistic lock ngay TRONG transaction session
+      const preInvQuery = this.inventoryModel.findOne({ product: productId });
+      if (session) preInvQuery.session(session);
+      const preInv = await preInvQuery.exec();
+      if (!preInv) throw new NotFoundException('Inventory record not found');
+
+      // Kiểm tra optimistic lock: số lượng tồn có bị thay đổi giữa lúc xem và lúc ghi không
+      if (
+        options?.expectedCurrentStock !== undefined &&
+        preInv.currentStock !== options.expectedCurrentStock
+      ) {
+        throw new ConflictException(
+          `Số lượng tồn kho hiện tại (${preInv.currentStock}) đã thay đổi so với số lượng bạn đang xem (${options.expectedCurrentStock}). Vui lòng tải lại trang để kiểm kê chính xác.`,
+        );
+      }
+
+      // Nếu điều chỉnh theo newStock, tính delta chuẩn xác ngay tại thời điểm snapshot session
+      if (options?.targetNewStock !== undefined) {
+        delta = options.targetNewStock - preInv.currentStock;
+        if (delta === 0) {
+          return preInv;
+        }
+      }
+
+      if (preInv.currentStock + delta < 0) {
+        throw new BadRequestException(
+          'Giao dịch bị từ chối vì tồn kho không thể âm',
+        );
       }
 
       // Cập nhật tồn kho sản phẩm trong session transaction
@@ -516,13 +636,45 @@ export class InventoryService {
         );
       }
 
+      // NEW-015: Cập nhật giá vốn bình quân gia quyền di động (Moving Weighted Average Cost) khi IMPORT
+      let txCostPrice = inventory.costPrice || 0;
+      if (
+        type === InventoryTransactionType.IMPORT &&
+        dto.costPrice !== undefined &&
+        dto.costPrice > 0
+      ) {
+        const stockBefore = inventory.currentStock - delta;
+        const oldStock = Math.max(0, stockBefore);
+        const oldCost = inventory.costPrice || 0;
+        const importedQty = Math.abs(dto.quantity);
+        const importedCost = dto.costPrice;
+
+        let newCost = importedCost;
+        if (oldStock > 0) {
+          newCost = Math.round(
+            (oldStock * oldCost + importedQty * importedCost) /
+              (oldStock + importedQty),
+          );
+        }
+        inventory.costPrice = newCost;
+        if (session) {
+          await inventory.save({ session });
+        } else {
+          await inventory.save();
+        }
+        txCostPrice = importedCost;
+      }
+
       const payload = {
         product: new Types.ObjectId(productId),
         type,
-        quantity: Math.abs(dto.quantity),
+        quantity: Math.abs(
+          options?.targetNewStock !== undefined ? delta : dto.quantity,
+        ),
         change: delta,
         stockBefore: inventory.currentStock - delta,
         stockAfter: inventory.currentStock,
+        costPrice: txCostPrice,
         note: dto.note,
         reference: referenceKey,
         createdBy: userId ? new Types.ObjectId(userId) : undefined,
@@ -548,7 +700,19 @@ export class InventoryService {
     };
 
     const connection = (this.inventoryModel as any).db;
-    if (!connection?.startSession) return persist();
+    if (!connection?.startSession) {
+      // NEW-012: Không âm thầm fallback sang phương thức ghi thiếu nguyên tử trong production
+      if (process.env.NODE_ENV === 'production') {
+        this.logger.error(
+          'CRITICAL: MongoDB client session is unavailable in production for inventory operations.',
+        );
+        throw new InternalServerErrorException(
+          'Chế độ transaction bắt buộc trong môi trường production đối với nghiệp vụ tồn kho.',
+        );
+      }
+      return persist();
+    }
+
     const session: ClientSession = await connection.startSession();
     try {
       let result: InventoryDocument | undefined;
@@ -561,6 +725,18 @@ export class InventoryService {
       return result;
     } catch (error) {
       if (!this.isTransactionUnsupported(error)) throw error;
+
+      // NEW-012: Chặn fallback thiếu an toàn trong Production
+      if (process.env.NODE_ENV === 'production') {
+        this.logger.error(
+          'CRITICAL: MongoDB transactions are required in production for inventory operations. Transaction unsupported by MongoDB deployment.',
+          error instanceof Error ? error.stack : String(error),
+        );
+        throw new InternalServerErrorException(
+          'Chế độ transaction bắt buộc trong môi trường production đối với nghiệp vụ tồn kho.',
+        );
+      }
+
       this.logger.warn(
         'MongoDB transactions unavailable; using compensated inventory mode.',
       );

@@ -77,6 +77,9 @@ export class InventoryTransaction {
   @Prop({ type: SchemaTypes.ObjectId, ref: 'Order' })
   order?: Types.ObjectId;
 
+  @Prop({ default: 0, min: 0 })
+  costPrice?: number;
+
   @Prop()
   reference?: string;
 
