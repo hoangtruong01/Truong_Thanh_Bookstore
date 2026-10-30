@@ -9,11 +9,35 @@ import {
   Min,
   Max,
   IsMongoId,
+  ValidateNested,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { ProductStatus } from '../../../common/enums';
+
+export class UnitConversionDto {
+  @ApiProperty({ example: 'hộp' })
+  @IsNotEmpty()
+  @IsString()
+  unit: string;
+
+  @ApiProperty({ example: 20 })
+  @IsNumber()
+  @Min(1)
+  ratio: number;
+
+  @ApiPropertyOptional({ example: 90000 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  price?: number;
+
+  @ApiPropertyOptional({ example: '8935001234567' })
+  @IsOptional()
+  @IsString()
+  barcode?: string;
+}
 
 export class CreateProductDto {
   @ApiProperty({ example: 'Bút bi Thiên Long TL-027' })
@@ -202,6 +226,40 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   packaging?: string;
+
+  // POS & Wholesale fields (POS-05, POS-06)
+  @ApiPropertyOptional({
+    description: 'Mã vạch barcode',
+    example: '8935001234567',
+  })
+  @IsOptional()
+  @IsString()
+  barcode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Giá bán sỉ (wholesale price)',
+    example: 4500,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  wholesalePrice?: number;
+
+  @ApiPropertyOptional({
+    description: 'Số lượng mua tối thiểu để nhận giá sỉ',
+    example: 10,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  wholesaleMinQuantity?: number;
+
+  @ApiPropertyOptional({ type: [UnitConversionDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UnitConversionDto)
+  unitConversions?: UnitConversionDto[];
 }
 
 export class UpdateProductDto {
@@ -380,6 +438,40 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   packaging?: string;
+
+  // POS & Wholesale fields (POS-05, POS-06)
+  @ApiPropertyOptional({
+    description: 'Mã vạch barcode',
+    example: '8935001234567',
+  })
+  @IsOptional()
+  @IsString()
+  barcode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Giá bán sỉ (wholesale price)',
+    example: 4500,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  wholesalePrice?: number;
+
+  @ApiPropertyOptional({
+    description: 'Số lượng mua tối thiểu để nhận giá sỉ',
+    example: 10,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  wholesaleMinQuantity?: number;
+
+  @ApiPropertyOptional({ type: [UnitConversionDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UnitConversionDto)
+  unitConversions?: UnitConversionDto[];
 }
 
 export class ProductQueryDto extends PaginationDto {
@@ -387,6 +479,11 @@ export class ProductQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({ description: 'Barcode' })
+  @IsOptional()
+  @IsString()
+  barcode?: string;
 
   @ApiPropertyOptional({
     description: 'Product type: BOOK, STATIONERY, OTHER',

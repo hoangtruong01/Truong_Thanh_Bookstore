@@ -23,6 +23,7 @@ export enum OrderSource {
   WEB = 'WEB',
   MOBILE = 'MOBILE',
   LANDING_PAGE = 'LANDING_PAGE',
+  POS = 'POS',
 }
 
 export enum PaymentMethod {
@@ -31,6 +32,7 @@ export enum PaymentMethod {
   EWALLET = 'EWALLET',
   VNPAY = 'VNPAY',
   MOMO = 'MOMO',
+  CASH = 'CASH',
 }
 
 export enum PaymentStatus {
@@ -93,6 +95,8 @@ export enum StaffPermission {
   MANAGE_PROMOTIONS = 'MANAGE_PROMOTIONS',
   MANAGE_BANNERS = 'MANAGE_BANNERS',
   MANAGE_LANDING_PAGES = 'MANAGE_LANDING_PAGES',
+  POS_ACCESS = 'POS_ACCESS',
+  POS_OVERRIDE_DISCOUNT = 'POS_OVERRIDE_DISCOUNT',
 }
 
 export * from './error-code.enum';

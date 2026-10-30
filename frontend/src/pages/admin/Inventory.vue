@@ -7,6 +7,12 @@
         <p class="text-[11px] text-slate-400 font-semibold">Kiểm soát mức kho tối thiểu/tối đa, điều chỉnh kiểm kê hoặc xuất nhập kho nhanh chóng.</p>
       </div>
       <div class="flex items-center gap-2">
+        <router-link
+          to="/admin/pos"
+          class="bg-[#dc2626] hover:bg-[#b91c1c] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+        >
+          <span>⚡ Bán hàng quầy (POS)</span>
+        </router-link>
         <button
           type="button"
           :disabled="reconciling"
@@ -180,10 +186,13 @@
                 >
                   <option value="adjustment">Kiểm kê kho (Số lượng thực tế)</option>
                   <option value="import">Nhập thêm kho (+)</option>
-                  <option value="sale">Xuất bán lẻ (-)</option>
+                  <option value="sale">Xuất tiêu hao / Sử dụng nội bộ (-)</option>
                   <option value="return">Khách trả hàng (+)</option>
                   <option value="damage">Hư hỏng / Hao hụt (-)</option>
                 </select>
+                <p v-if="adjustType === 'sale'" class="text-[10px] text-amber-700 bg-amber-50 p-2 rounded-lg mt-1 font-semibold">
+                  💡 Để bán lẻ cho khách và xuất hóa đơn quầy, vui lòng sử dụng chức năng <router-link to="/admin/pos" class="font-bold underline text-[#dc2626]">Bán hàng tại quầy (POS)</router-link>.
+                </p>
               </div>
 
               <!-- Quantity Input -->

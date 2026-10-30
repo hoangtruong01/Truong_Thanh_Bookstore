@@ -104,6 +104,34 @@ export class Product {
   @Prop()
   packaging: string;
 
+  // POS & Đóng gói quy đổi (POS-05, POS-06)
+  @Prop({ index: true })
+  barcode: string;
+
+  @Prop({ default: 0 })
+  wholesalePrice: number;
+
+  @Prop({ default: 1 })
+  wholesaleMinQuantity: number;
+
+  @Prop({
+    type: [
+      {
+        unit: { type: String, required: true },
+        ratio: { type: Number, required: true, min: 1 },
+        price: { type: Number, required: false },
+        barcode: { type: String, required: false },
+      },
+    ],
+    default: [],
+  })
+  unitConversions: Array<{
+    unit: string;
+    ratio: number;
+    price?: number;
+    barcode?: string;
+  }>;
+
   @Prop({ default: false })
   isDeleted: boolean;
 

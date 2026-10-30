@@ -29,6 +29,7 @@ const AdminProducts = () => import('@/pages/admin/Products.vue');
 const AdminProductForm = () => import('@/pages/admin/ProductForm.vue');
 const AdminOrders = () => import('@/pages/admin/Orders.vue');
 const AdminInventory = () => import('@/pages/admin/Inventory.vue');
+const AdminPOS = () => import('@/pages/admin/POS.vue');
 const AdminCustomers = () => import('@/pages/admin/Customers.vue');
 const AdminPromotions = () => import('@/pages/admin/Promotions.vue');
 const AdminReports = () => import('@/pages/admin/Reports.vue');
@@ -80,6 +81,7 @@ const routes = [
       { path: 'products/create', name: 'AdminProductCreate', component: AdminProductForm, meta: { permission: 'MANAGE_PRODUCTS' } },
       { path: 'products/:id/edit', name: 'AdminProductEdit', component: AdminProductForm, meta: { permission: 'MANAGE_PRODUCTS' } },
       { path: 'orders', name: 'AdminOrders', component: AdminOrders, meta: { permission: 'MANAGE_ORDERS' } },
+      { path: 'pos', name: 'AdminPOS', component: AdminPOS, meta: { permission: 'POS_ACCESS' } },
       { path: 'inventory', name: 'AdminInventory', component: AdminInventory, meta: { permission: 'MANAGE_INVENTORY' } },
       { path: 'combos', name: 'AdminCombos', component: AdminCombos, meta: { permission: 'MANAGE_PRODUCTS' } },
       { path: 'reviews', name: 'AdminReviews', component: AdminReviews, meta: { permission: 'MANAGE_PRODUCTS' } },

@@ -477,7 +477,16 @@ export class ProductsService {
       }
     }
 
-    if (q && q.trim()) {
+    if (query.barcode && query.barcode.trim()) {
+      const bEscaped = query.barcode
+        .trim()
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { barcode: { $regex: bEscaped, $options: 'i' } },
+        { 'unitConversions.barcode': { $regex: bEscaped, $options: 'i' } },
+        { sku: { $regex: bEscaped, $options: 'i' } },
+      ];
+    } else if (q && q.trim()) {
       // ReDoS Prevention: Limit search query length to 100 characters
       const safeQ = q.trim().substring(0, 100);
       const regexPattern = makeDiacriticRegex(safeQ);
@@ -487,6 +496,8 @@ export class ProductsService {
         { name: { $regex: regexPattern, $options: 'i' } },
         { description: { $regex: regexPattern, $options: 'i' } },
         { sku: { $regex: rawEscaped, $options: 'i' } },
+        { barcode: { $regex: rawEscaped, $options: 'i' } },
+        { 'unitConversions.barcode': { $regex: rawEscaped, $options: 'i' } },
         { isbn: { $regex: rawEscaped, $options: 'i' } },
         { author: { $regex: regexPattern, $options: 'i' } },
         { publisher: { $regex: regexPattern, $options: 'i' } },
@@ -744,6 +755,8 @@ export class ProductsService {
           { name: { $regex: regexPattern, $options: 'i' } },
           { description: { $regex: regexPattern, $options: 'i' } },
           { sku: { $regex: rawEscaped, $options: 'i' } },
+          { barcode: { $regex: rawEscaped, $options: 'i' } },
+          { 'unitConversions.barcode': { $regex: rawEscaped, $options: 'i' } },
           { isbn: { $regex: rawEscaped, $options: 'i' } },
           { author: { $regex: regexPattern, $options: 'i' } },
           { publisher: { $regex: regexPattern, $options: 'i' } },

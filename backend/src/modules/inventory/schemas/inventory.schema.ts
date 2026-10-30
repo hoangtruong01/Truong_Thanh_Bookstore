@@ -20,6 +20,9 @@ export class Inventory {
   @Prop({ default: 0 })
   currentStock: number;
 
+  @Prop({ default: 0 })
+  costPrice: number;
+
   @Prop({ default: 10 })
   minStock: number;
 

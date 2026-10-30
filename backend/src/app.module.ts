@@ -32,6 +32,7 @@ import { SecuritySanitizerMiddleware } from './common/middleware/security-saniti
 import { CommonModule } from './common/common.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
+import { PosModule } from './modules/pos/pos.module';
 
 @Module({
   imports: [
@@ -99,6 +100,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     AddressesModule,
     EmailModule,
     OutboxModule,
+    PosModule,
   ],
   controllers: [AppController],
   providers: [

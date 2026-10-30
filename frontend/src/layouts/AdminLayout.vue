@@ -434,10 +434,15 @@ const ReviewsIcon = {
   template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>`
 }
 
+const PosIcon = {
+  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v-.75A.75.75 0 0 1 3 4.5h.75m0 0h16.5m0 0h.75A.75.75 0 0 1 21 5.25v.75m0 0h-.75A.75.75 0 0 1 19.5 5.25v-.75m0 0v14.25m-16.5 0v-14.25" /></svg>`
+}
+
 const navItems = computed(() => {
   const items = [
     { name: 'AdminDashboard', label: locale.value === 'en' ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
     { name: 'AdminProducts', label: locale.value === 'en' ? 'Products' : 'Sản phẩm', to: '/admin/products', icon: ProductsIcon, permission: 'MANAGE_PRODUCTS' },
+    { name: 'AdminPOS', label: locale.value === 'en' ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: PosIcon, permission: 'MANAGE_ORDERS' },
     { name: 'AdminOrders', label: locale.value === 'en' ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: OrdersIcon, permission: 'MANAGE_ORDERS' },
     { name: 'AdminInventory', label: locale.value === 'en' ? 'Inventory' : 'Kho hàng', to: '/admin/inventory', icon: InventoryIcon, permission: 'MANAGE_INVENTORY' },
     { name: 'AdminCombos', label: locale.value === 'en' ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon, permission: 'MANAGE_PRODUCTS' },
