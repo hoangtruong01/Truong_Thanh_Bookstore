@@ -519,6 +519,28 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
         service.createPOSOrder(dto as any, cashierUser),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('should reject multi-line order with same product when total requested quantity exceeds stock', async () => {
+      // sampleProduct stock is 100. Let's request 60 + 50 = 110 cây
+      const dto = {
+        items: [
+          {
+            productId: sampleProduct._id.toString(),
+            quantity: 60,
+            unit: 'cây',
+          },
+          {
+            productId: sampleProduct._id.toString(),
+            quantity: 50,
+            unit: 'cây',
+          },
+        ],
+      };
+
+      await expect(
+        service.createPOSOrder(dto as any, cashierUser),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('NEW-004 — Phân bổ giảm giá và tính giá trị hàng trả [P0]', () => {
@@ -893,6 +915,76 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
         ]),
         expect.anything(),
       );
+    });
+
+    it('should accurately target matching unit when refunding order having multiple units of same product', async () => {
+      const order = {
+        _id: new Types.ObjectId(),
+        invoiceCode: 'HD261030-0088',
+        finalAmount: 185000,
+        totalRefundedAmount: 0,
+        status: POSOrderStatus.COMPLETED,
+        items: [
+          {
+            product: sampleProduct._id,
+            sku: 'TL-027',
+            name: 'Bút bi Thiên Long TL-027',
+            unit: 'cây',
+            conversionRatio: 1,
+            quantity: 5,
+            lineTotal: 25000,
+            effectiveLineTotal: 25000,
+            netUnitPrice: 5000,
+            returnedQuantity: 0,
+          },
+          {
+            product: sampleProduct._id,
+            sku: 'TL-027-BOX',
+            name: 'Bút bi Thiên Long TL-027 (Hộp)',
+            unit: 'hộp',
+            conversionRatio: 20,
+            quantity: 2,
+            lineTotal: 160000,
+            effectiveLineTotal: 160000,
+            netUnitPrice: 80000,
+            returnedQuantity: 0,
+          },
+        ],
+        refundHistory: [] as any[],
+        save: jest.fn().mockResolvedValue(true),
+      };
+
+      mockPOSOrderModel.findById.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(order),
+      });
+
+      // Refund 1 hộp (not cây)
+      const refundDto = {
+        items: [
+          {
+            productId: sampleProduct._id.toString(),
+            quantity: 1,
+            unit: 'hộp',
+            condition: POSItemCondition.GOOD,
+          },
+        ],
+        reason: 'Khách thừa 1 hộp',
+      };
+
+      const res = await service.refundPOSOrder(
+        order._id.toString(),
+        refundDto,
+        adminUser,
+      );
+
+      // Verify the hộp item was refunded (1 * 80000 = 80000)
+      const boxItem = res.items.find((it) => it.unit === 'hộp');
+      const penItem = res.items.find((it) => it.unit === 'cây');
+      expect(boxItem?.returnedQuantity).toBe(1);
+      expect(penItem?.returnedQuantity).toBe(0);
+      expect(res.totalRefundedAmount).toBe(80000);
+      expect(res.status).toBe(POSOrderStatus.PARTIALLY_RETURNED);
     });
   });
 

@@ -163,6 +163,11 @@ export class RefundPOSItemDto {
   @Min(1, { message: 'Số lượng trả lại phải lớn hơn hoặc bằng 1' })
   quantity: number;
 
+  @ApiPropertyOptional({ description: 'Đơn vị tính hàng trả', example: 'cái' })
+  @IsOptional()
+  @IsString()
+  unit?: string;
+
   @ApiProperty({ enum: POSItemCondition, example: POSItemCondition.GOOD })
   @IsEnum(POSItemCondition, {
     message:

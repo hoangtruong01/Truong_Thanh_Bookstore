@@ -83,6 +83,9 @@ export class POSRefundItem {
   @Prop({ required: true })
   name: string;
 
+  @Prop({ default: 'cái' })
+  unit: string;
+
   @Prop({ required: true, min: 1 })
   quantity: number;
 

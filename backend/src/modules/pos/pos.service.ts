@@ -99,6 +99,7 @@ export class PosService {
           productId: String(it.productId),
           quantity: Number(it.quantity),
           condition: it.condition,
+          unit: (it.unit || '').trim().toLowerCase(),
         }))
         .sort((a, b) => a.productId.localeCompare(b.productId)),
     };
@@ -236,6 +237,7 @@ export class PosService {
     let grossSubtotal = 0;
     let totalLineDiscounts = 0;
     let calculatedSubtotal = 0;
+    const productTotalBaseQtyMap = new Map<string, number>();
 
     for (const itemDto of dto.items) {
       if (!Types.ObjectId.isValid(itemDto.productId)) {
@@ -329,15 +331,20 @@ export class PosService {
 
       const baseQuantity = qtyNum * conversionRatio;
 
+      // Theo dõi tổng số lượng cơ sở yêu cầu của từng sản phẩm để tránh bán vượt tồn khi đơn có nhiều dòng cùng sản phẩm
+      const prevReq = productTotalBaseQtyMap.get(product._id.toString()) || 0;
+      const totalReq = prevReq + baseQuantity;
+      productTotalBaseQtyMap.set(product._id.toString(), totalReq);
+
       // Kiểm tra tồn kho trước khi vào transaction
       const inventory = await this.inventoryModel
         .findOne({ product: product._id })
         .exec();
       const currentStock = inventory?.currentStock ?? product.stock ?? 0;
 
-      if (currentStock < baseQuantity) {
+      if (currentStock < totalReq) {
         throw new BadRequestException(
-          `Sản phẩm "${product.name}" chỉ còn ${currentStock} ${baseUnit} trong kho, không đủ bán ${baseQuantity} ${baseUnit}`,
+          `Sản phẩm "${product.name}" chỉ còn ${currentStock} ${baseUnit} trong kho, không đủ bán tổng cộng ${totalReq} ${baseUnit}`,
         );
       }
 
@@ -692,6 +699,7 @@ export class PosService {
         product: Types.ObjectId;
         sku: string;
         name: string;
+        unit: string;
         quantity: number;
         baseQuantity: number;
         condition: POSItemCondition;
@@ -700,11 +708,14 @@ export class PosService {
 
       for (const refItem of dto.items) {
         const targetItem = order.items.find(
-          (it) => it.product.toString() === refItem.productId,
+          (it) =>
+            it.product.toString() === refItem.productId &&
+            (!refItem.unit ||
+              it.unit.toLowerCase() === refItem.unit.trim().toLowerCase()),
         );
         if (!targetItem) {
           throw new BadRequestException(
-            `Sản phẩm ID ${refItem.productId} không có trong hóa đơn ${order.invoiceCode}`,
+            `Sản phẩm ID ${refItem.productId}${refItem.unit ? ` (đơn vị: ${refItem.unit})` : ''} không có trong hóa đơn ${order.invoiceCode}`,
           );
         }
 
@@ -726,11 +737,15 @@ export class PosService {
             ? targetItem.netUnitPrice
             : effectiveTotal / (targetItem.quantity || 1);
 
-        // Tính số tiền đã hoàn trả cho sản phẩm này trước đó
+        // Tính số tiền đã hoàn trả cho sản phẩm và đơn vị này trước đó
         let alreadyRefundedForItem = 0;
         for (const rh of order.refundHistory) {
           for (const it of rh.items) {
-            if (it.product.toString() === targetItem.product.toString()) {
+            if (
+              it.product.toString() === targetItem.product.toString() &&
+              (!it.unit ||
+                it.unit.toLowerCase() === targetItem.unit.toLowerCase())
+            ) {
               alreadyRefundedForItem += it.refundAmount || 0;
             }
           }
@@ -767,6 +782,7 @@ export class PosService {
           product: targetItem.product,
           sku: targetItem.sku,
           name: targetItem.name,
+          unit: targetItem.unit,
           quantity: refItem.quantity,
           baseQuantity,
           condition: refItem.condition,
