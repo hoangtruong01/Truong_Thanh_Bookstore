@@ -11,4 +11,4 @@ Disallow: /guest-orders
 Disallow: /addresses
 Disallow: /wishlist
 
-Sitemap: https://truong-thanh-store.vercel.app/sitemap.xml
+Sitemap: https://truong-thanh-bookstore.vercel.app/sitemap.xml

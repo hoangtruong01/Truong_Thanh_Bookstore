@@ -7,11 +7,10 @@
 
   *Hệ thống Thương Mại Điện Tử & Quản Lý Nhà Sách Trực Tuyến Đa Nền Tảng (Web Storefront, Admin Dashboard & Mobile App)*
 
-  [![Backend CI](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/backend-ci.yml)
-  [![Frontend CI](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/frontend-ci.yml)
-  [![Mobile CI/CD](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/mobile-ci.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/mobile-ci.yml)
-  [![Test Suite](https://img.shields.io/badge/Tests-322%20Passed%20Local-brightgreen.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore)
-  [![Security Audit](https://img.shields.io/badge/Audit-Sprint%201--4%20Hardened-blue.svg)](docs/PENDING_TASKS.md)
+  [![CI Pipeline](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/ci.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/ci.yml)
+  [![CD Deploy](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/deploy.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/deploy.yml)
+  [![Test Suite](https://img.shields.io/badge/Tests-681%20Passed%20(100%25)-brightgreen.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore)
+  [![Security Audit](https://img.shields.io/badge/Audit-P0%2FP1%20Hardened-blue.svg)](docs/PROJECT_OVERVIEW.md)
 
 </div>
 
@@ -144,23 +143,57 @@ flutter run
 ```bash
 cd backend
 
-# Chạy toàn bộ 25 test suites / 322 tests (mốc local 2026-09-03)
+# Chạy toàn bộ 53 test suites / 551 unit, integration & concurrency tests
 npm test
 
-# Kiểm tra chất lượng mã nguồn bằng ESLint (Ratchet budget limit)
+# Kiểm tra chất lượng mã nguồn bằng ESLint (Ratchet budget limit <= 1280 warnings)
 npm run lint
 
 # Kiểm tra build bundle NestJS
 npm run build
 ```
 
-### 2. Kiểm thử Mobile (Flutter Tests)
+### 2. Kiểm thử Frontend Web (Vitest + Vue-TSC + ESLint + Playwright)
+```bash
+cd frontend
+
+# Chạy toàn bộ 14 test suites / 83 unit & composable tests
+npm run test:unit
+
+# Kiểm tra kiểu TypeScript (0 errors)
+npm run typecheck
+
+# Kiểm tra ESLint 9 Flat Config (0 errors)
+npm run lint
+
+# Kiểm tra production build Vite
+npm run build
+
+# Chạy E2E Tests đa thiết bị (Desktop Chrome, Mobile, Tablet & Barcode Scanner)
+npx playwright test
+```
+
+### 3. Kiểm thử Mobile (Flutter Tests & Analysis)
 ```bash
 cd mobile
 
-# Chạy toàn bộ 16 unit, widget và E2E tests trên Mobile
+# Kiểm tra phân tích tĩnh Dart (0 issues)
+flutter analyze
+
+# Chạy toàn bộ 47 unit, widget và contract tests trên Mobile
 flutter test
 ```
+
+---
+
+## 🔒 Quy Tắc Bảo Vệ Nhánh (Branch Protection & Quality Gates)
+
+Để đảm bảo tính toàn vẹn và độ tin cậy của mã nguồn trên Production (`main` branch):
+
+1. **Pull Request Bắt Buộc:** Mọi thay đổi đều phải thông qua Pull Request, không được commit hoặc force push trực tiếp lên `main`.
+2. **Quality Gate CI Pipeline:** Tất cả các luồng kiểm thử (`test:unit`, `lint`, `typecheck`, `build` của cả Backend, Frontend và Mobile) phải đạt **PASS 100% (0 errors)** trên GitHub Actions trước khi merge.
+3. **Chống Replay & Concurrency Test:** Mọi nghiệp vụ liên quan đến trừ kho, phiếu bán hàng POS và thanh toán phải có concurrency unit test chứng minh không phát sinh race condition hoặc số lượng tồn kho âm.
+4. **Không Hardcode Secrets:** Mọi secret, token và credentials phải được cấu hình qua GitHub Repository Secrets và biến môi trường.
 
 ---
 
@@ -168,8 +201,8 @@ flutter test
 
 Các tài liệu nghiệp vụ, kiến trúc và quản lý công việc được lưu trữ tại thư mục `docs/`:
 
-- 📘 [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) — Tài liệu Tổng Quan Dự Án & Cẩm Nang Cho Intern/Dev Mới (Kiến trúc hệ thống, chi tiết cấu hình biến môi trường, cơ chế bảo mật JWT/RBAC, 16 modules, quy tắc nghiệp vụ mua hàng/tồn kho/loyalty và hướng dẫn phát triển).
-- 📋 [docs/PENDING_TASKS.md](docs/PENDING_TASKS.md) — Danh Mục Công Việc Chưa Xong & Kế Hoạch Chi Tiết (Tổng hợp release gates, kết nối sandbox VNPay/MoMo/GHN, nợ kỹ thuật và hướng dẫn chọn việc cho Intern).
+- 📘 [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) — Tài liệu Tổng Quan Dự Án & Cẩm Nang Toàn Diện (Kiến trúc hệ thống, chi tiết cấu hình biến môi trường, cơ chế bảo mật JWT/RBAC, 16 modules, phân hệ POS bán tại quầy, quy tắc nghiệp vụ mua hàng/tồn kho/loyalty và hướng dẫn phát triển).
+- 📋 [docs/PENDING_TASKS.md](docs/PENDING_TASKS.md) — Danh Mục Công Việc & Kế Hoạch Triển Khai Chi Tiết.
 
 ---
 

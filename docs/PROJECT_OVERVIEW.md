@@ -712,14 +712,16 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | :--- | :--- | :---: |
 | Backend Unit Tests | `cd backend && npm test` | **53/53 suites, 551/551 tests PASS (100%)** |
 | Backend POS & Concurrency Suite | `cd backend && npm test -- pos.service.spec.ts pos.omnichannel-concurrency.spec.ts` | **10/10 POS & Omnichannel race condition tests PASS** |
+| Backend Health & Release SHA (TT-014) | `cd backend && npm test -- app.controller.spec.ts` | **3/3 health readiness & release SHA tests PASS** |
 | Backend Security Suite | `cd backend && npm test -- security-p0-audit.spec.ts` | **16/16 security regression tests PASS** |
 | Backend Commerce Suite | `cd backend && npm test -- orders.commerce-regression.spec.ts` | **11/11 commerce invariant tests PASS** |
-| Backend Linting | `cd backend && npm run lint` | **0 errors** (1.274 warnings, trần ≤ 1.950 warnings) |
+| Backend Linting | `cd backend && npm run lint` | **0 errors** (1.274 warnings, thắt chặt trần ≤ 1.280 warnings — TT-026) |
 | Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
 | Frontend Unit Tests | `cd frontend && npm run test:unit` | **14/14 suites, 83/83 tests PASS (100%)** |
 | Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |
 | Frontend Linting | `cd frontend && npm run lint` | **0 errors, 0 warnings (Sạch 100%)** |
 | Frontend Build | `cd frontend && npm run build` | **Biên dịch thành công** |
+| Frontend Multi-Device E2E (TT-024) | `cd frontend && npx playwright test` | **Desktop, Mobile (Pixel 7), Tablet (iPad Pro 11) & Barcode Scanner** |
 | Mobile Tests | `cd mobile && flutter test` | **47/47 tests PASS (100%)** |
 | Mobile Analyze | `cd mobile && flutter analyze` | **0 issues** |
 

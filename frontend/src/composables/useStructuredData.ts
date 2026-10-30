@@ -53,8 +53,8 @@ export function useOrganizationSchema() {
     '@type': 'Organization',
     name: 'Trường Thành Stationery',
     alternateName: 'Văn Phòng Phẩm Trường Thành',
-    url: 'https://truong-thanh-store.vercel.app',
-    logo: 'https://truong-thanh-store.vercel.app/favicon.svg',
+    url: 'https://truong-thanh-bookstore.vercel.app',
+    logo: 'https://truong-thanh-bookstore.vercel.app/favicon.svg',
     description: 'Hệ thống cung cấp dụng cụ học tập và văn phòng phẩm chất lượng cao tại Việt Nam.',
     address: {
       '@type': 'PostalAddress',

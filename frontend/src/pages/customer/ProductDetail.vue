@@ -1154,14 +1154,23 @@ const quantity = ref(1)
 const loading = ref(true)
 const categoryDetail = ref<Category | null>(null)
 
-useSeoMeta(() => ({
-  title: product.value?.name || 'Chi tiết sản phẩm',
-  description:
-    product.value?.description ||
-    'Sản phẩm chính hãng tại Trường Thành Stationery. Giá tốt, giao hàng nhanh.',
-  ogImage: product.value?.images?.[0] || '',
-  ogType: 'product',
-}))
+useSeoMeta(() => {
+  const prodSlug = product.value?.slug || product.value?._id
+  const canonicalUrl = prodSlug
+    ? `https://truong-thanh-bookstore.vercel.app/products/${prodSlug}`
+    : undefined
+
+  return {
+    title: product.value?.name || 'Chi tiết sản phẩm',
+    description:
+      product.value?.description ||
+      'Sản phẩm chính hãng tại Trường Thành Stationery. Giá tốt, giao hàng nhanh.',
+    ogImage: product.value?.images?.[0] || '',
+    ogType: 'product',
+    ogUrl: canonicalUrl,
+    canonical: canonicalUrl,
+  }
+})
 
 useProductSchema({
   get name() { return product.value?.name || '' },
@@ -1173,6 +1182,11 @@ useProductSchema({
   get discountPrice() { return product.value?.discountPrice },
   get stock() { return product.value?.stock || 0 },
   get rating() { return product.value?.rating },
+  get reviewCount() { return reviews.value?.length || 0 },
+  get url() {
+    const prodSlug = product.value?.slug || product.value?._id
+    return prodSlug ? `https://truong-thanh-bookstore.vercel.app/products/${prodSlug}` : undefined
+  },
 })
 
 const comboRetailTotal = computed(() => {

@@ -119,12 +119,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { getStoreInfo, type StoreInfo } from '@/services/store-info.service'
+import { formatCurrency } from '@/utils/helpers'
 
 const isOpen = ref(false)
 const inputText = ref('')
 const messageBox = ref<HTMLElement | null>(null)
 const showFaqMenu = ref(true)
+
+const storeInfo = ref<StoreInfo>(getStoreInfo())
+
+function onStoreInfoUpdated(e: Event) {
+  const customEv = e as CustomEvent<StoreInfo>
+  if (customEv.detail) {
+    storeInfo.value = customEv.detail
+  }
+}
+
+onMounted(() => {
+  storeInfo.value = getStoreInfo()
+  window.addEventListener('store-info-updated', onStoreInfoUpdated)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('store-info-updated', onStoreInfoUpdated)
+})
 
 interface Message {
   sender: 'user' | 'bot'
@@ -135,16 +155,16 @@ interface Message {
 const messages = ref<Message[]>([
   {
     sender: 'bot',
-    text: 'Xin chào! Tôi là Trợ lý ảo của Nhà sách Trường Thành. Tôi có thể giúp gì cho bạn hôm nay?',
+    text: 'Xin chào! Tôi là Trợ lý ảo tự động của Nhà sách Trường Thành (chưa kết nối nhân viên trực tiếp). Tôi có thể hỗ trợ giải đáp các thắc mắc thường gặp về sản phẩm, giao hàng và chính sách cho bạn!',
     timestamp: new Date(),
   },
 ])
 
 const faqOptions = [
   { id: 'points', question: 'Chương trình tích điểm & Tiers', keyword: 'loyalty' },
-  { id: 'shipping', question: 'Chính sách vận chuyển', keyword: 'ship' },
-  { id: 'hours', question: 'Thời gian hoạt động', keyword: 'giờ mở cửa' },
-  { id: 'contact', question: 'Liên hệ hỗ trợ khách hàng', keyword: 'liên hệ' },
+  { id: 'shipping', question: 'Chính sách vận chuyển & Đổi trả', keyword: 'ship' },
+  { id: 'hours', question: 'Thời gian mở cửa hoạt động', keyword: 'giờ mở cửa' },
+  { id: 'contact', question: 'Địa chỉ & Hotline cửa hàng', keyword: 'liên hệ' },
 ]
 
 function formatTime(d: Date) {
@@ -180,11 +200,12 @@ async function sendMessage() {
     })
     showFaqMenu.value = true
     scrollToBottom()
-  }, 600)
+  }, 500)
 }
 
 function getBotReply(query: string): string {
   const q = query.toLowerCase()
+  const info = storeInfo.value
 
   if (q.includes('điểm') || q.includes('tích lũy') || q.includes('loyalty') || q.includes('hạng')) {
     return `Chương trình thành viên Trường Thành Bookstore:
@@ -197,29 +218,27 @@ function getBotReply(query: string): string {
 • Quyền lợi: Giảm giá đặc quyền trực tiếp theo hạng thành viên và nhiều quà tặng sinh nhật hấp dẫn!`
   }
 
-  if (q.includes('ship') || q.includes('vận chuyển') || q.includes('giao hàng')) {
-    return `Chính sách vận chuyển tại Trường Thành Bookstore:
-• Miễn phí giao hàng toàn quốc đối với các đơn hàng từ 299.000 VNĐ trở lên.
-• Đơn hàng dưới 299.000 VNĐ phí ship chỉ từ 20.000 - 30.000 VNĐ tùy khu vực.
-• Thời gian giao hàng:
-  - Nội thành: 1 - 2 ngày làm việc.
-  - Ngoại thành và các tỉnh khác: 2 - 4 ngày làm việc.`
+  if (q.includes('ship') || q.includes('vận chuyển') || q.includes('giao hàng') || q.includes('đổi trả')) {
+    return `Chính sách vận chuyển & Đổi trả tại ${info.name}:
+• Miễn phí giao hàng toàn quốc đối với các đơn hàng từ ${formatCurrency(info.freeShippingThreshold)} trở lên.
+• Đơn hàng dưới ${formatCurrency(info.freeShippingThreshold)} phí ship đồng giá chỉ 30.000 VNĐ.
+• Đổi trả linh hoạt trong vòng ${info.returnPolicyDays} ngày đối với sản phẩm nguyên vẹn, còn tem mác.`
   }
 
   if (q.includes('giờ') || q.includes('mở cửa') || q.includes('thời gian') || q.includes('hoạt động')) {
-    return `Nhà sách Trường Thành hoạt động liên tục các ngày trong tuần:
-• Thời gian làm việc: 08:00 đến 22:00 hàng ngày (bao gồm cả thứ Bảy, Chủ Nhật và các ngày lễ tết).`
+    return `${info.name} hoạt động:
+• Giờ mở cửa: ${info.openingHours}`
   }
 
-  if (q.includes('liên hệ') || q.includes('hotline') || q.includes('sđt') || q.includes('điện thoại')) {
-    return `Bạn có thể kết nối với chúng tôi qua các kênh hỗ trợ khách hàng:
-• Hotline hỗ trợ: 0901 234 567 (hỗ trợ từ 08:00 - 22:00).
-• Email: support@truongthanh.vn
-• Địa chỉ cửa hàng: Quận 9, TP. Hồ Chí Minh.`
+  if (q.includes('liên hệ') || q.includes('hotline') || q.includes('sđt') || q.includes('điện thoại') || q.includes('địa chỉ') || q.includes('ở đâu')) {
+    return `Thông tin liên hệ ${info.name}:
+• Hotline: ${info.hotline}
+• Email: ${info.email}
+• Địa chỉ: ${info.address}`
   }
 
-  return `Cảm ơn câu hỏi của bạn. Hệ thống ghi nhận yêu cầu: "${query}".
-Để biết thêm chi tiết, vui lòng chọn một trong các chủ đề gợi ý bên dưới hoặc liên hệ Hotline: 0901 234 567 để gặp nhân viên hỗ trợ trực tiếp.`
+  return `Cảm ơn câu hỏi của bạn. Hệ thống tự động ghi nhận câu hỏi: "${query}".
+Vì là trợ lý tự động, nếu cần tư vấn gấp bạn vui lòng gọi Hotline: ${info.hotline} hoặc đến trực tiếp tại ${info.address} để được nhân viên phục vụ tận tình!`
 }
 
 async function scrollToBottom() {

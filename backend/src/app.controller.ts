@@ -31,6 +31,12 @@ export class AppController {
     response.status(isDbConnected ? 200 : 503);
 
     const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+    const release =
+      this.configService.get<string>('RELEASE_SHA') ||
+      this.configService.get<string>('VERCEL_GIT_COMMIT_SHA') ||
+      this.configService.get<string>('RENDER_GIT_COMMIT') ||
+      process.env.GIT_COMMIT ||
+      'latest';
 
     if (isProd) {
       return {
@@ -38,6 +44,7 @@ export class AppController {
         database: {
           status: isDbConnected ? 'HEALTHY' : 'UNHEALTHY',
         },
+        release,
         timestamp: new Date().toISOString(),
       };
     }
@@ -59,8 +66,7 @@ export class AppController {
           heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024),
         },
       },
-      release:
-        process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || 'unknown',
+      release,
       timestamp: new Date().toISOString(),
     };
   }

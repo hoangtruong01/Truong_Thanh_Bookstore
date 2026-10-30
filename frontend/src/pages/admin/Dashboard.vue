@@ -8,6 +8,21 @@
     </div>
 
     <div v-else-if="stats" class="space-y-6">
+      <!-- Header with Quick Store Info Config Button (TT-019) -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
+        <div>
+          <h2 class="text-base font-extrabold text-slate-800">Tổng quan hoạt động kinh doanh</h2>
+          <p class="text-xs text-slate-400 font-medium">Báo cáo doanh số, đơn hàng và quản trị thông tin cửa hàng trực tiếp.</p>
+        </div>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 bg-slate-900 hover:bg-red-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer shadow-xs"
+          @click="openStoreConfigModal"
+        >
+          <span>⚙️ Cấu hình Cửa hàng & Chatbot</span>
+        </button>
+      </div>
+
       <!-- Low Stock Warnings / Push Notifications (Low Stock Alert) -->
       <div v-if="lowStockItems.length > 0" class="bg-red-50 border border-red-200/80 rounded-2xl p-6 space-y-4 shadow-sm">
         <div class="flex items-center justify-between">
@@ -290,6 +305,108 @@
       </div>
 
     </div>
+
+    <!-- Modal cấu hình thông tin cửa hàng & Chatbot (TT-019) -->
+    <div
+      v-if="showStoreConfigModal"
+      class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4"
+    >
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden">
+        <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <span class="text-lg">⚙️</span>
+            <div>
+              <h3 class="text-xs font-black uppercase tracking-wider">Cấu hình thông tin cửa hàng & Chatbot</h3>
+              <p class="text-[10px] text-slate-400">Dữ liệu được Chatbot và website sử dụng tự động (TT-019)</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="text-slate-400 hover:text-white text-lg font-bold p-1 cursor-pointer"
+            @click="showStoreConfigModal = false"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form class="p-6 space-y-4" @submit.prevent="handleSaveStoreConfig">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs font-bold text-slate-700 block">Tên cửa hàng</label>
+              <input
+                v-model="storeConfigForm.name"
+                type="text"
+                required
+                class="w-full mt-1 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-red-600"
+              />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-700 block">Hotline liên hệ</label>
+              <input
+                v-model="storeConfigForm.hotline"
+                type="text"
+                required
+                class="w-full mt-1 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-red-600"
+              />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-700 block">Email hỗ trợ</label>
+              <input
+                v-model="storeConfigForm.email"
+                type="email"
+                required
+                class="w-full mt-1 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-red-600"
+              />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-700 block">Số ngày cho phép đổi trả</label>
+              <input
+                v-model.number="storeConfigForm.returnPolicyDays"
+                type="number"
+                min="1"
+                required
+                class="w-full mt-1 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-red-600"
+              />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-bold text-slate-700 block">Địa chỉ cửa hàng</label>
+              <input
+                v-model="storeConfigForm.address"
+                type="text"
+                required
+                class="w-full mt-1 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-red-600"
+              />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-bold text-slate-700 block">Giờ mở cửa / Thời gian hoạt động</label>
+              <input
+                v-model="storeConfigForm.openingHours"
+                type="text"
+                required
+                placeholder="Ví dụ: 07:30 đến 21:30 hàng ngày"
+                class="w-full mt-1 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-red-600"
+              />
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 cursor-pointer"
+              @click="showStoreConfigModal = false"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors"
+            >
+              Lưu thay đổi
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -297,10 +414,25 @@
 import { ref, onMounted } from 'vue'
 import { reportService } from '@/services/report.service'
 import { inventoryService } from '@/services/inventory.service'
+import { getStoreInfo, saveStoreInfo, type StoreInfo } from '@/services/store-info.service'
 import { useToast } from 'vue-toastification'
 import { formatCurrency, getStatusLabel } from '@/utils/helpers'
 import api from '@/utils/api'
 import type { DashboardStats, Order, Product } from '@/types'
+
+const showStoreConfigModal = ref(false)
+const storeConfigForm = ref<StoreInfo>(getStoreInfo())
+
+function openStoreConfigModal() {
+  storeConfigForm.value = { ...getStoreInfo() }
+  showStoreConfigModal.value = true
+}
+
+function handleSaveStoreConfig() {
+  saveStoreInfo(storeConfigForm.value)
+  showStoreConfigModal.value = false
+  toast.success('Đã lưu cấu hình cửa hàng thành công! Chatbot và website đã cập nhật tức thì.')
+}
 
 const stats = ref<DashboardStats | null>(null)
 const recentOrders = ref<Order[]>([])
