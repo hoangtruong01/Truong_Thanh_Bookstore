@@ -19,6 +19,7 @@ import {
   CashEntryStatus,
 } from '../schemas/cash-entry.schema';
 import { SupplierPayableStatus } from '../schemas/supplier-payable.schema';
+import { CustomerReceivableStatus } from '../schemas/customer-receivable.schema';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class CreateCashAccountDto {
@@ -156,6 +157,89 @@ export class SupplierPayableQueryDto extends PaginationDto {
   @IsOptional()
   @IsEnum(SupplierPayableStatus)
   status?: SupplierPayableStatus;
+
+  @IsOptional()
+  @IsDateString()
+  dueDateFrom?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dueDateTo?: string;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
+}
+
+export class CreateCustomerReceivableDto {
+  @IsMongoId({ message: 'ID khách hàng không hợp lệ' })
+  customerId: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Tên khách hàng không được để trống' })
+  customerName: string;
+
+  @IsOptional()
+  @IsString()
+  customerPhone?: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Mã hóa đơn / đơn hàng không được để trống' })
+  invoiceCode: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0, { message: 'Tổng tiền phải lớn hơn hoặc bằng 0' })
+  totalAmount: number;
+
+  @IsDateString({}, { message: 'Ngày đến hạn không đúng định dạng ISO date' })
+  dueDate: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  creditLimit?: number;
+
+  @IsOptional()
+  @IsMongoId()
+  orderId?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  posOrderId?: string;
+
+  @IsOptional()
+  @IsString()
+  note?: string;
+}
+
+export class CollectCustomerPaymentDto {
+  @IsMongoId({ message: 'ID sổ quỹ thu tiền không hợp lệ' })
+  accountId: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1, { message: 'Số tiền thu phải lớn hơn 0' })
+  amount: number;
+
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+}
+
+export class CustomerReceivableQueryDto extends PaginationDto {
+  @IsOptional()
+  @IsMongoId()
+  customerId?: string;
+
+  @IsOptional()
+  @IsEnum(CustomerReceivableStatus)
+  status?: CustomerReceivableStatus;
 
   @IsOptional()
   @IsDateString()

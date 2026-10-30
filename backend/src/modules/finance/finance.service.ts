@@ -26,6 +26,11 @@ import {
   SupplierPayableStatus,
 } from './schemas/supplier-payable.schema';
 import {
+  CustomerReceivable,
+  CustomerReceivableDocument,
+  CustomerReceivableStatus,
+} from './schemas/customer-receivable.schema';
+import {
   CreateCashAccountDto,
   UpdateCashAccountDto,
   CreateCashEntryDto,
@@ -33,6 +38,9 @@ import {
   CashEntryQueryDto,
   PaySupplierDto,
   SupplierPayableQueryDto,
+  CreateCustomerReceivableDto,
+  CollectCustomerPaymentDto,
+  CustomerReceivableQueryDto,
 } from './dto/finance.dto';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
 
@@ -47,6 +55,8 @@ export class FinanceService {
     private readonly entryModel: Model<CashEntryDocument>,
     @InjectModel(SupplierPayable.name)
     private readonly payableModel: Model<SupplierPayableDocument>,
+    @InjectModel(CustomerReceivable.name)
+    private readonly receivableModel: Model<CustomerReceivableDocument>,
     @InjectConnection()
     private readonly connection: Connection,
   ) {}
@@ -489,6 +499,48 @@ export class FinanceService {
   }
 
   /**
+   * PUR-04: Bù trừ công nợ khi trả hàng nhà cung cấp (Purchase Return Credit Adjustment)
+   */
+  async applyPurchaseReturnCredit(
+    goodsReceiptId: Types.ObjectId | string,
+    returnAmount: number,
+    returnCode: string,
+    note?: string,
+  ): Promise<SupplierPayableDocument | null> {
+    if (returnAmount <= 0) return null;
+
+    const payable = await this.payableModel.findOne({
+      goodsReceipt: new Types.ObjectId(goodsReceiptId.toString()),
+      isDeleted: false,
+    });
+
+    if (!payable) return null;
+
+    // Giảm số dư công nợ còn lại (remainingAmount) và điều chỉnh totalAmount
+    const actualCredit = Math.min(returnAmount, payable.remainingAmount);
+    payable.remainingAmount = Math.max(
+      0,
+      payable.remainingAmount - actualCredit,
+    );
+    payable.totalAmount = Math.max(
+      payable.paidAmount,
+      payable.totalAmount - actualCredit,
+    );
+
+    if (
+      payable.remainingAmount === 0 &&
+      payable.paidAmount >= payable.totalAmount
+    ) {
+      payable.status = SupplierPayableStatus.PAID;
+    }
+
+    payable.note =
+      `${payable.note || ''} | Bù trừ ${actualCredit.toLocaleString('vi-VN')} đ từ phiếu trả hàng ${returnCode} ${note || ''}`.trim();
+
+    return await payable.save();
+  }
+
+  /**
    * FIN-03: Thanh toán công nợ nhà cung cấp
    * - Tạo phiếu chi (PC) từ sổ quỹ
    * - Trừ số dư sổ quỹ
@@ -685,5 +737,247 @@ export class FinanceService {
     }
 
     return Buffer.from(await workbook.xlsx.writeBuffer());
+  }
+
+  // ==================== CUSTOMER RECEIVABLES (FIN-04) ====================
+
+  /**
+   * FIN-04: Tạo khoản công nợ phải thu khách hàng (AR)
+   */
+  async createReceivable(
+    dto: CreateCustomerReceivableDto,
+    _userId?: string,
+  ): Promise<CustomerReceivableDocument> {
+    const existing = await this.receivableModel.findOne({
+      invoiceCode: dto.invoiceCode,
+      isDeleted: false,
+    });
+    if (existing) {
+      throw new ConflictException(
+        `Đã tồn tại khoản công nợ cho hóa đơn ${dto.invoiceCode}`,
+      );
+    }
+
+    const receivable = new this.receivableModel({
+      customer: new Types.ObjectId(dto.customerId),
+      customerName: dto.customerName,
+      customerPhone: dto.customerPhone,
+      invoiceCode: dto.invoiceCode,
+      totalAmount: dto.totalAmount,
+      paidAmount: 0,
+      remainingAmount: dto.totalAmount,
+      creditLimit: dto.creditLimit || 0,
+      dueDate: new Date(dto.dueDate),
+      status:
+        dto.totalAmount === 0
+          ? CustomerReceivableStatus.PAID
+          : CustomerReceivableStatus.UNPAID,
+      collectionHistory: [],
+      order: dto.orderId ? new Types.ObjectId(dto.orderId) : undefined,
+      posOrder: dto.posOrderId ? new Types.ObjectId(dto.posOrderId) : undefined,
+      note: dto.note,
+    });
+
+    return await receivable.save();
+  }
+
+  /**
+   * FIN-04: Thu tiền công nợ khách hàng (AR Collection)
+   * - Tạo phiếu thu (PT) vào sổ quỹ
+   * - Tăng số dư sổ quỹ
+   * - Giảm số dư công nợ remainingAmount
+   * - Chống thu vượt quá số nợ còn lại
+   */
+  async collectCustomerPayment(
+    receivableId: string,
+    dto: CollectCustomerPaymentDto,
+    userId: string,
+  ): Promise<{
+    receivable: CustomerReceivableDocument;
+    cashEntry: CashEntryDocument;
+  }> {
+    if (!Types.ObjectId.isValid(receivableId)) {
+      throw new BadRequestException('ID khoản công nợ khách hàng không hợp lệ');
+    }
+
+    const receivable = await this.receivableModel.findOne({
+      _id: receivableId,
+      isDeleted: false,
+    });
+
+    if (!receivable) {
+      throw new NotFoundException('Không tìm thấy khoản công nợ khách hàng');
+    }
+
+    if (receivable.status === CustomerReceivableStatus.PAID) {
+      throw new BadRequestException('Khoản công nợ này đã được thu đủ 100%');
+    }
+
+    if (dto.amount > receivable.remainingAmount) {
+      throw new BadRequestException(
+        `Số tiền thu (${dto.amount.toLocaleString('vi-VN')} đ) không được vượt quá số nợ còn lại (${receivable.remainingAmount.toLocaleString('vi-VN')} đ)`,
+      );
+    }
+
+    // 1. Tạo phiếu thu vào sổ quỹ
+    const cashEntry = await this.createEntry(
+      {
+        account: dto.accountId,
+        direction: CashEntryDirection.IN,
+        category: CashEntryCategory.WHOLESALE_COLLECTION,
+        amount: dto.amount,
+        referenceType: 'CUSTOMER_RECEIVABLE',
+        referenceId: receivable.invoiceCode,
+        partnerName: receivable.customerName,
+        note: dto.note || `Thu nợ khách sỉ đơn ${receivable.invoiceCode}`,
+        idempotencyKey: dto.idempotencyKey,
+      },
+      userId,
+    );
+
+    // 2. Cập nhật số dư nợ
+    receivable.paidAmount += dto.amount;
+    receivable.remainingAmount = Math.max(
+      0,
+      receivable.totalAmount - receivable.paidAmount,
+    );
+
+    if (receivable.remainingAmount === 0) {
+      receivable.status = CustomerReceivableStatus.PAID;
+    } else {
+      receivable.status = CustomerReceivableStatus.PARTIALLY_PAID;
+    }
+
+    receivable.collectionHistory.push({
+      cashEntry: cashEntry._id,
+      entryCode: cashEntry.entryCode,
+      amount: dto.amount,
+      collectedAt: new Date(),
+      collectedBy: new Types.ObjectId(userId),
+      note: dto.note,
+    });
+
+    const savedReceivable = await receivable.save();
+    return { receivable: savedReceivable, cashEntry };
+  }
+
+  /**
+   * Kiểm tra hạn mức nợ của khách hàng (Wholesale Credit Limit Check)
+   */
+  async checkCustomerCreditLimit(
+    customerId: string,
+    requestedAmount: number,
+  ): Promise<{
+    allowed: boolean;
+    currentDebt: number;
+    creditLimit: number;
+    excessAmount: number;
+  }> {
+    if (!Types.ObjectId.isValid(customerId)) {
+      throw new BadRequestException('ID khách hàng không hợp lệ');
+    }
+
+    const receivables = await this.receivableModel.find({
+      customer: new Types.ObjectId(customerId),
+      status: {
+        $in: [
+          CustomerReceivableStatus.UNPAID,
+          CustomerReceivableStatus.PARTIALLY_PAID,
+        ],
+      },
+      isDeleted: false,
+    });
+
+    const currentDebt = receivables.reduce(
+      (sum, r) => sum + r.remainingAmount,
+      0,
+    );
+    const creditLimit =
+      receivables.length > 0 && receivables[0].creditLimit
+        ? receivables[0].creditLimit
+        : 30000000;
+
+    const totalProjectedDebt = currentDebt + requestedAmount;
+    const allowed = creditLimit <= 0 || totalProjectedDebt <= creditLimit;
+    const excessAmount = allowed ? 0 : totalProjectedDebt - creditLimit;
+
+    return {
+      allowed,
+      currentDebt,
+      creditLimit,
+      excessAmount,
+    };
+  }
+
+  /**
+   * Lấy danh sách công nợ khách hàng
+   */
+  async findAllReceivables(
+    query: CustomerReceivableQueryDto,
+  ): Promise<PaginatedResult<CustomerReceivableDocument>> {
+    const {
+      page = 1,
+      limit = 20,
+      customerId,
+      status,
+      dueDateFrom,
+      dueDateTo,
+      search,
+    } = query;
+    const skip = (page - 1) * limit;
+
+    const filter: Record<string, any> = { isDeleted: false };
+
+    if (customerId && Types.ObjectId.isValid(customerId)) {
+      filter.customer = new Types.ObjectId(customerId);
+    }
+
+    if (status) filter.status = status;
+
+    if (search && search.trim()) {
+      filter.$or = [
+        { invoiceCode: new RegExp(search.trim(), 'i') },
+        { customerName: new RegExp(search.trim(), 'i') },
+      ];
+    }
+
+    if (dueDateFrom || dueDateTo) {
+      filter.dueDate = {};
+      if (dueDateFrom) filter.dueDate.$gte = new Date(dueDateFrom);
+      if (dueDateTo) {
+        const end = new Date(dueDateTo);
+        end.setHours(23, 59, 59, 999);
+        filter.dueDate.$lte = end;
+      }
+    }
+
+    const [items, total] = await Promise.all([
+      this.receivableModel
+        .find(filter)
+        .sort({ dueDate: 1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('customer', 'fullName phone email code')
+        .populate('order', 'orderNumber totalAmount')
+        .exec(),
+      this.receivableModel.countDocuments(filter).exec(),
+    ]);
+
+    return paginate(items, total, page, limit);
+  }
+
+  async findReceivableById(id: string): Promise<CustomerReceivableDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('ID công nợ khách hàng không hợp lệ');
+    }
+    const receivable = await this.receivableModel
+      .findOne({ _id: id, isDeleted: false })
+      .populate('customer', 'fullName phone email code')
+      .populate('order', 'orderNumber')
+      .exec();
+    if (!receivable) {
+      throw new NotFoundException('Không tìm thấy khoản công nợ khách hàng');
+    }
+    return receivable;
   }
 }

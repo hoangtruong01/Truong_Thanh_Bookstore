@@ -24,6 +24,9 @@ import {
   CashEntryQueryDto,
   PaySupplierDto,
   SupplierPayableQueryDto,
+  CreateCustomerReceivableDto,
+  CollectCustomerPaymentDto,
+  CustomerReceivableQueryDto,
 } from './dto/finance.dto';
 
 @Controller('finance')
@@ -120,5 +123,55 @@ export class FinanceController {
       dto,
       req.user.id || req.user._id,
     );
+  }
+
+  // ==================== CUSTOMER RECEIVABLES (FIN-04) ====================
+
+  @Get('receivables')
+  @Permissions(StaffPermission.MANAGE_FINANCE, StaffPermission.MANAGE_ORDERS)
+  findAllReceivables(@Query() query: CustomerReceivableQueryDto) {
+    return this.financeService.findAllReceivables(query);
+  }
+
+  @Get('receivables/:id')
+  @Permissions(StaffPermission.MANAGE_FINANCE, StaffPermission.MANAGE_ORDERS)
+  findReceivableById(@Param('id') id: string) {
+    return this.financeService.findReceivableById(id);
+  }
+
+  @Post('receivables')
+  @Permissions(StaffPermission.MANAGE_FINANCE, StaffPermission.MANAGE_ORDERS)
+  createReceivable(
+    @Body() dto: CreateCustomerReceivableDto,
+    @Request() req: any,
+  ) {
+    return this.financeService.createReceivable(
+      dto,
+      req.user.id || req.user._id,
+    );
+  }
+
+  @Post('receivables/:id/collect')
+  @Permissions(StaffPermission.MANAGE_FINANCE)
+  collectCustomerPayment(
+    @Param('id') id: string,
+    @Body() dto: CollectCustomerPaymentDto,
+    @Request() req: any,
+  ) {
+    return this.financeService.collectCustomerPayment(
+      id,
+      dto,
+      req.user.id || req.user._id,
+    );
+  }
+
+  @Get('customers/:customerId/credit-check')
+  @Permissions(StaffPermission.MANAGE_FINANCE, StaffPermission.MANAGE_ORDERS)
+  checkCreditLimit(
+    @Param('customerId') customerId: string,
+    @Query('amount') amount?: string,
+  ) {
+    const num = amount ? Number(amount) : 0;
+    return this.financeService.checkCustomerCreditLimit(customerId, num);
   }
 }

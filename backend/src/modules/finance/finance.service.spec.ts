@@ -18,12 +18,17 @@ import {
   SupplierPayable,
   SupplierPayableStatus,
 } from './schemas/supplier-payable.schema';
+import {
+  CustomerReceivable,
+  CustomerReceivableStatus,
+} from './schemas/customer-receivable.schema';
 
 describe('FinanceService', () => {
   let service: FinanceService;
   let mockAccountModel: any;
   let mockEntryModel: any;
   let mockPayableModel: any;
+  let mockReceivableModel: any;
   let mockConnection: any;
 
   beforeEach(async () => {
@@ -56,6 +61,14 @@ describe('FinanceService', () => {
     mockPayableModel.findOne = jest.fn();
     mockPayableModel.countDocuments = jest.fn();
 
+    mockReceivableModel = jest.fn().mockImplementation((dto) => ({
+      ...dto,
+      save: jest.fn().mockResolvedValue({ _id: new Types.ObjectId(), ...dto }),
+    }));
+    mockReceivableModel.find = jest.fn();
+    mockReceivableModel.findOne = jest.fn();
+    mockReceivableModel.countDocuments = jest.fn();
+
     mockConnection = {
       startSession: jest
         .fn()
@@ -76,6 +89,10 @@ describe('FinanceService', () => {
         {
           provide: getModelToken(SupplierPayable.name),
           useValue: mockPayableModel,
+        },
+        {
+          provide: getModelToken(CustomerReceivable.name),
+          useValue: mockReceivableModel,
         },
         {
           provide: getConnectionToken(),
@@ -367,6 +384,124 @@ describe('FinanceService', () => {
           new Types.ObjectId().toString(),
         ),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('FIN-04: Customer Receivables', () => {
+    it('Tạo khoản công nợ khách sỉ thành công', async () => {
+      mockReceivableModel.findOne.mockReturnValue(null);
+
+      const res = await service.createReceivable({
+        customerId: new Types.ObjectId().toString(),
+        customerName: 'Đại lý Sách Miền Nam',
+        invoiceCode: 'HD261030-0001',
+        totalAmount: 15000000,
+        dueDate: '2026-11-30',
+        creditLimit: 30000000,
+      });
+
+      expect(res.customerName).toBe('Đại lý Sách Miền Nam');
+      expect(res.remainingAmount).toBe(15000000);
+      expect(res.paidAmount).toBe(0);
+      expect(res.status).toBe(CustomerReceivableStatus.UNPAID);
+    });
+
+    it('Thu tiền công nợ khách sỉ thành công -> Giảm nợ, tăng quỹ', async () => {
+      const receivableId = new Types.ObjectId().toString();
+      const accountId = new Types.ObjectId().toString();
+      const mockReceivable: any = {
+        _id: new Types.ObjectId(receivableId),
+        customerName: 'Đại lý Sách Miền Nam',
+        invoiceCode: 'HD261030-0001',
+        totalAmount: 15000000,
+        paidAmount: 0,
+        remainingAmount: 15000000,
+        status: CustomerReceivableStatus.UNPAID,
+        collectionHistory: [],
+        save: jest.fn().mockImplementation(function () {
+          return Promise.resolve(this);
+        }),
+      };
+
+      mockReceivableModel.findOne.mockReturnValue(mockReceivable);
+      mockAccountModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          _id: new Types.ObjectId(accountId),
+          currentBalance: 5000000,
+          status: CashAccountStatus.ACTIVE,
+        }),
+      });
+      mockAccountModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(true),
+      });
+      mockEntryModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const res = await service.collectCustomerPayment(
+        receivableId,
+        {
+          accountId,
+          amount: 5000000,
+          note: 'Thu đợt 1',
+        },
+        new Types.ObjectId().toString(),
+      );
+
+      expect(res.receivable.paidAmount).toBe(5000000);
+      expect(res.receivable.remainingAmount).toBe(10000000);
+      expect(res.receivable.status).toBe(
+        CustomerReceivableStatus.PARTIALLY_PAID,
+      );
+      expect(res.receivable.collectionHistory.length).toBe(1);
+    });
+
+    it('Thu vượt quá số nợ còn lại -> Báo lỗi', async () => {
+      const receivableId = new Types.ObjectId().toString();
+      const mockReceivable: any = {
+        _id: new Types.ObjectId(receivableId),
+        invoiceCode: 'HD261030-0001',
+        totalAmount: 10000000,
+        paidAmount: 8000000,
+        remainingAmount: 2000000,
+        status: CustomerReceivableStatus.PARTIALLY_PAID,
+      };
+
+      mockReceivableModel.findOne.mockReturnValue(mockReceivable);
+
+      await expect(
+        service.collectCustomerPayment(
+          receivableId,
+          {
+            accountId: new Types.ObjectId().toString(),
+            amount: 3000000, // Vượt 2tr
+          },
+          new Types.ObjectId().toString(),
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('Kiểm tra hạn mức nợ khách sỉ (Credit Limit Check)', async () => {
+      const customerId = new Types.ObjectId().toString();
+      mockReceivableModel.find.mockReturnValue([
+        { remainingAmount: 15000000, creditLimit: 20000000 },
+      ]);
+
+      // Nợ 15tr, limit 20tr, mua thêm 4tr -> tổng 19tr <= 20tr -> allowed
+      const check1 = await service.checkCustomerCreditLimit(
+        customerId,
+        4000000,
+      );
+      expect(check1.allowed).toBe(true);
+      expect(check1.excessAmount).toBe(0);
+
+      // Mua thêm 6tr -> tổng 21tr > 20tr -> not allowed
+      const check2 = await service.checkCustomerCreditLimit(
+        customerId,
+        6000000,
+      );
+      expect(check2.allowed).toBe(false);
+      expect(check2.excessAmount).toBe(1000000);
     });
   });
 });

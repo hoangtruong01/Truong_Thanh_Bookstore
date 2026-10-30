@@ -6,6 +6,10 @@ import {
   SupplierPayable,
   SupplierPayableSchema,
 } from './schemas/supplier-payable.schema';
+import {
+  CustomerReceivable,
+  CustomerReceivableSchema,
+} from './schemas/customer-receivable.schema';
 import { FinanceService } from './finance.service';
 import { FinanceController } from './finance.controller';
 
@@ -15,6 +19,7 @@ import { FinanceController } from './finance.controller';
       { name: CashAccount.name, schema: CashAccountSchema },
       { name: CashEntry.name, schema: CashEntrySchema },
       { name: SupplierPayable.name, schema: SupplierPayableSchema },
+      { name: CustomerReceivable.name, schema: CustomerReceivableSchema },
     ]),
   ],
   controllers: [FinanceController],

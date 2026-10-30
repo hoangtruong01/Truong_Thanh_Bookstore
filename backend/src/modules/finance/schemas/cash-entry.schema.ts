@@ -10,6 +10,8 @@ export enum CashEntryDirection {
 
 export enum CashEntryCategory {
   SUPPLIER_PAYMENT = 'SUPPLIER_PAYMENT', // Chi trả tiền nhà cung cấp
+  WHOLESALE_COLLECTION = 'WHOLESALE_COLLECTION', // Thu tiền công nợ khách sỉ
+  PURCHASE_RETURN_REFUND = 'PURCHASE_RETURN_REFUND', // Tiền NCC hoàn trả khi trả hàng
   POS_REVENUE = 'POS_REVENUE', // Thu bán hàng tại quầy POS
   ONLINE_REVENUE = 'ONLINE_REVENUE', // Thu bán hàng Online
   UTILITY_EXPENSE = 'UTILITY_EXPENSE', // Chi phí điện, nước, mặt bằng, văn phòng
