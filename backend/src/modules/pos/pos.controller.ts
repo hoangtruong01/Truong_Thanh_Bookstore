@@ -86,12 +86,8 @@ export class PosController {
     @Query() query: POSSessionReportQueryDto,
     @CurrentUser() user: { _id: string; role?: string },
   ) {
-    // Nếu là STAFF bình thường, chỉ xem ca bán của chính mình
-    if (
-      user.role !== UserRole.ADMIN &&
-      user.role !== UserRole.SUPER_ADMIN &&
-      !query.cashierId
-    ) {
+    // Nếu là STAFF bình thường, chỉ được xem ca bán của chính mình (chống IDOR)
+    if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) {
       query.cashierId = user._id;
     }
     return this.posService.getSessionReport(query);

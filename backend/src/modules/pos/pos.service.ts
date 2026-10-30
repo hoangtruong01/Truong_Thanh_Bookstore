@@ -665,11 +665,18 @@ export class PosService {
     totalRefundedAmount: number;
     itemsSoldCount: number;
   }> {
-    const targetDate = query.date ? new Date(query.date) : new Date();
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    let startOfDay: Date;
+    let endOfDay: Date;
+    if (query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date)) {
+      startOfDay = new Date(`${query.date}T00:00:00.000Z`);
+      endOfDay = new Date(`${query.date}T23:59:59.999Z`);
+    } else {
+      const targetDate = query.date ? new Date(query.date) : new Date();
+      startOfDay = new Date(targetDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      endOfDay = new Date(targetDate);
+      endOfDay.setHours(23, 59, 59, 999);
+    }
 
     const filter: Record<string, any> = {
       createdAt: { $gte: startOfDay, $lte: endOfDay },

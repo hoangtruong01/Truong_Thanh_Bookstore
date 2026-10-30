@@ -303,6 +303,127 @@
         </div>
       </div>
 
+      <!-- POS & Wholesale (POS-05, POS-06) -->
+      <div class="border-t border-slate-100 pt-6 space-y-4">
+        <div>
+          <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+            <span>⚡</span> Cấu hình Bán hàng tại quầy (POS) & Bán sỉ
+          </h3>
+          <p class="text-[11px] text-slate-400 font-semibold">Cài đặt mã vạch quét quầy, giá bán sỉ và quy đổi đơn vị đóng gói (hộp/thùng).</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 bg-slate-50/60 border border-slate-200/80 rounded-2xl p-5">
+          <div>
+            <label class="text-xs font-bold text-slate-700">Mã vạch (Barcode)</label>
+            <input
+              v-model="form.barcode"
+              type="text"
+              placeholder="Ví dụ: 8935001234567"
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-600"
+            />
+            <p class="text-[10px] text-slate-400 mt-1">Dùng để quét mã vạch bán nhanh tại quầy thu ngân</p>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-700">Giá bán sỉ (VND)</label>
+            <input
+              :value="formatNumberWithDots(form.wholesalePrice)"
+              type="text"
+              placeholder="0"
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+              @input="handleWholesalePriceInput"
+            />
+            <p class="text-[10px] text-slate-400 mt-1">Áp dụng cho khách mua sỉ hoặc đơn số lượng lớn</p>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-700">SL tối thiểu hưởng giá sỉ</label>
+            <input
+              v-model.number="form.wholesaleMinQuantity"
+              type="number"
+              min="1"
+              placeholder="10"
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+            />
+            <p class="text-[10px] text-slate-400 mt-1">Đạt số lượng này sẽ tự động gợi ý giá sỉ ở POS</p>
+          </div>
+
+          <!-- Packaging / Unit conversions list (POS-05) -->
+          <div class="sm:col-span-3 space-y-3 border-t border-slate-200/80 pt-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-slate-800">Quy đổi đóng gói theo đơn vị (Hộp / Thùng / Ram)</span>
+                <p class="text-[10px] text-slate-400">Ví dụ: 1 hộp = 20 cây bút; khi bán 1 hộp kho sẽ tự động trừ 20 cây</p>
+              </div>
+              <button
+                type="button"
+                class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-xl border border-blue-200 cursor-pointer transition-colors"
+                @click="addUnitConversion"
+              >
+                + Thêm quy đổi đơn vị
+              </button>
+            </div>
+
+            <div v-if="form.unitConversions && form.unitConversions.length > 0" class="space-y-2">
+              <div
+                v-for="(conv, cIdx) in form.unitConversions"
+                :key="cIdx"
+                class="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-white border border-slate-200 rounded-xl p-3 items-center"
+              >
+                <div>
+                  <label class="text-[10px] font-bold text-slate-500 block">Tên đơn vị</label>
+                  <input
+                    v-model="conv.unit"
+                    type="text"
+                    placeholder="hộp, thùng..."
+                    class="w-full mt-0.5 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] font-bold text-slate-500 block">Tỷ lệ quy đổi (x {{ form.unit || 'cái' }})</label>
+                  <input
+                    v-model.number="conv.ratio"
+                    type="number"
+                    min="1"
+                    placeholder="20"
+                    class="w-full mt-0.5 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] font-bold text-slate-500 block">Giá bán riêng (nếu có)</label>
+                  <input
+                    v-model.number="conv.price"
+                    type="number"
+                    min="0"
+                    placeholder="Bỏ trống nếu nhân theo tỷ lệ"
+                    class="w-full mt-0.5 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold"
+                  />
+                </div>
+                <div class="flex items-center gap-2 pt-3 sm:pt-0">
+                  <div class="flex-1">
+                    <label class="text-[10px] font-bold text-slate-500 block">Mã vạch riêng</label>
+                    <input
+                      v-model="conv.barcode"
+                      type="text"
+                      placeholder="Barcode của hộp..."
+                      class="w-full mt-0.5 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-mono"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    class="text-slate-400 hover:text-red-600 font-extrabold text-sm p-1 rounded-lg cursor-pointer mt-3"
+                    title="Xóa quy đổi này"
+                    @click="removeUnitConversion(cIdx)"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- TT-028: Product Type & Specifications -->
       <div class="border-t border-slate-100 pt-6 space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -602,6 +723,27 @@ const handleDiscountPriceInput = (event: Event) => {
   target.value = formatNumberWithDots(cleanValue);
 };
 
+const handleWholesalePriceInput = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const rawValue = target.value;
+  const cleanValue = rawValue.replace(/\D/g, '');
+  form.wholesalePrice = cleanValue ? parseInt(cleanValue, 10) : 0;
+  target.value = formatNumberWithDots(cleanValue);
+};
+
+const addUnitConversion = () => {
+  form.unitConversions.push({
+    unit: '',
+    ratio: 1,
+    price: undefined,
+    barcode: '',
+  });
+};
+
+const removeUnitConversion = (index: number) => {
+  form.unitConversions.splice(index, 1);
+};
+
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
@@ -639,6 +781,11 @@ const form = reactive({
   discountPrice: 0,
   stock: 0,
   unit: 'cái',
+  // POS & Wholesale fields
+  barcode: '',
+  wholesalePrice: 0,
+  wholesaleMinQuantity: 10,
+  unitConversions: [] as Array<{ unit: string; ratio: number; price?: number; barcode?: string }>,
   description: '',
   status: 'ACTIVE',
   isFeatured: false,
@@ -861,6 +1008,11 @@ onMounted(() => {
         isHotDeal.value = (data.discountPrice || 0) > 0
         form.stock = data.stock
         form.unit = data.unit || 'cái'
+        // POS & Wholesale fields
+        form.barcode = data.barcode || ''
+        form.wholesalePrice = data.wholesalePrice || 0
+        form.wholesaleMinQuantity = data.wholesaleMinQuantity !== undefined ? data.wholesaleMinQuantity : 10
+        form.unitConversions = Array.isArray(data.unitConversions) ? [...data.unitConversions] : []
         form.description = data.description || ''
         form.status = data.status
         form.isFeatured = data.isFeatured || false
@@ -907,8 +1059,18 @@ async function handleSubmit() {
   submitting.value = true
   try {
     const finalImages = imagesList.value.filter(url => url.trim() !== '')
+    const cleanedConversions = (form.unitConversions || [])
+      .filter(c => c.unit && c.unit.trim() && c.ratio > 0)
+      .map(c => ({
+        unit: c.unit.trim(),
+        ratio: Number(c.ratio),
+        price: c.price !== undefined && c.price !== null && !isNaN(c.price) ? Number(c.price) : undefined,
+        barcode: c.barcode?.trim() || undefined,
+      }))
+
     const payload: any = {
       ...form,
+      unitConversions: cleanedConversions,
       discountPrice: isHotDeal.value ? form.discountPrice : 0,
       images: finalImages.length > 0 ? finalImages : ['https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400'],
     }
