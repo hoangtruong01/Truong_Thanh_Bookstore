@@ -198,9 +198,15 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
     mockProductModel.find = jest
       .fn()
       .mockImplementation(() => createMockQuery([mockProduct]));
-    mockProductModel.findOne = jest
-      .fn()
-      .mockImplementation(() => createMockQuery(mockProduct));
+    mockProductModel.findOne = jest.fn().mockImplementation((filter: any) => {
+      if (filter?.sku && filter.sku !== mockProduct.sku) {
+        return createMockQuery(null);
+      }
+      if (filter?.slug && filter.slug !== mockProduct.slug) {
+        return createMockQuery(null);
+      }
+      return createMockQuery(mockProduct);
+    });
     mockProductModel.findById = jest
       .fn()
       .mockImplementation(() => createMockQuery(mockProduct));
@@ -210,6 +216,14 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
         name: 'Bút bi Thiên Long Cập Nhật',
       }),
     );
+
+    (mockProductModel as any).db = {
+      collection: jest.fn().mockReturnValue({
+        findOne: jest.fn().mockResolvedValue({ seq: 0 }),
+        updateOne: jest.fn().mockResolvedValue({}),
+        findOneAndUpdate: jest.fn().mockResolvedValue({ seq: 1 }),
+      }),
+    };
 
     mockProductModel.countDocuments = jest.fn().mockReturnValue({
       exec: jest.fn().mockResolvedValue(1),
@@ -334,6 +348,69 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
         { isDeleted: true },
       );
     });
+
+    it('TT-009: should auto-generate sequential SKU (SP000001) when sku is omitted', async () => {
+      const createDto: CreateProductDto = {
+        name: 'Bút máy học sinh',
+        price: 15000,
+        category: mockCategory._id,
+      };
+
+      const result = await service.create(createDto);
+      expect(result).toBeDefined();
+      expect(result.sku).toBe('SP000001');
+    });
+
+    it('TT-009: should reject duplicate custom SKU', async () => {
+      const createDto: CreateProductDto = {
+        name: 'Bút bi trùng SKU',
+        sku: 'TL-027-BLUE', // Trùng mockProduct.sku
+        price: 10000,
+        category: mockCategory._id,
+      };
+
+      await expect(service.create(createDto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('TT-011: should allow gift product with price 0, but reject negative price', async () => {
+      const giftProduct: CreateProductDto = {
+        name: 'Voucher quà tặng 0đ',
+        price: 0,
+        category: mockCategory._id,
+      };
+      const result = await service.create(giftProduct);
+      expect(result.price).toBe(0);
+
+      const negativeProduct: CreateProductDto = {
+        name: 'Sản phẩm giá âm',
+        price: -1000,
+        category: mockCategory._id,
+      };
+      await expect(service.create(negativeProduct)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('TT-011: should reject when discountPrice > price', async () => {
+      const invalidDiscount: CreateProductDto = {
+        name: 'Sản phẩm giảm giá sai',
+        price: 10000,
+        discountPrice: 15000,
+        category: mockCategory._id,
+      };
+      await expect(service.create(invalidDiscount)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('TT-018: should generate clean Vietnamese SEO slug without random suffix', async () => {
+      const slug = await service.generateUniqueSlug(
+        'Sách Giáo Khoa Lớp 1 - Cánh Diều',
+      );
+      expect(slug).toBe('sach-giao-khoa-lop-1-canh-dieu');
+    });
   });
 
   describe('2. Excel Import & Export Operations', () => {
@@ -405,10 +482,11 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
 
       const excelBuffer = await workbook.xlsx.writeBuffer();
 
-      // Mock findOne to return null for new product SKU check
+      // Mock findOne to return null for new product SKU check and slug check
       mockProductModel.findOne = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(null),
-        lean: jest.fn().mockResolvedValue(null),
       });
 
       const importResult = await service.importFromExcel(

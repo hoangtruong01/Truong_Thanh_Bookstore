@@ -250,7 +250,45 @@ export class CategoriesService {
   }
 
   /**
-   * Xóa danh mục an toàn: chuyển các danh mục con liên quan về null để tránh mồ côi
+   * TT-010: Lấy toàn bộ ID của danh mục này và tất cả các danh mục con, cháu cấp sâu bên dưới.
+   */
+  async getAllDescendantCategoryIds(
+    categoryId: string | Types.ObjectId,
+  ): Promise<Types.ObjectId[]> {
+    const rootId =
+      typeof categoryId === 'string'
+        ? new Types.ObjectId(categoryId)
+        : categoryId;
+
+    const resultIds: Types.ObjectId[] = [rootId];
+    const queue: Types.ObjectId[] = [rootId];
+    const visited = new Set<string>([rootId.toString()]);
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      const children = await this.categoryModel
+        .find({ parentId: currentId })
+        .select('_id')
+        .lean()
+        .exec();
+
+      for (const child of children) {
+        const cId = child._id;
+        const cIdStr = cId.toString();
+        if (!visited.has(cIdStr)) {
+          visited.add(cIdStr);
+          resultIds.push(cId);
+          queue.push(cId);
+        }
+      }
+    }
+
+    return resultIds;
+  }
+
+  /**
+   * TT-010: Xóa danh mục an toàn.
+   * Chặn xóa nếu danh mục đang chứa danh mục con hoặc sản phẩm để bảo toàn tính toàn vẹn dữ liệu.
    */
   async delete(id: string): Promise<void> {
     const category = await this.categoryModel.findById(id).exec();
@@ -258,13 +296,27 @@ export class CategoriesService {
       throw new NotFoundException('Không tìm thấy danh mục');
     }
 
-    // Re-parent all direct children to parentId of this category (or null)
-    await this.categoryModel
-      .updateMany(
-        { parentId: new Types.ObjectId(id) },
-        { $set: { parentId: category.parentId || null } },
-      )
-      .exec();
+    // 1. Kiểm tra nếu còn danh mục con
+    const childCount = await this.categoryModel.countDocuments({
+      parentId: new Types.ObjectId(id),
+    });
+    if (childCount > 0) {
+      throw new BadRequestException(
+        `Không thể xóa danh mục "${category.name}" vì còn chứa ${childCount} danh mục con. Vui lòng chuyển hoặc xóa các danh mục con trước.`,
+      );
+    }
+
+    // 2. Kiểm tra nếu còn sản phẩm
+    const productModel = this.categoryModel.db.model('Product');
+    const productCount = await productModel.countDocuments({
+      category: new Types.ObjectId(id),
+      isDeleted: false,
+    });
+    if (productCount > 0) {
+      throw new BadRequestException(
+        `Không thể xóa danh mục "${category.name}" vì đang có ${productCount} sản phẩm trực thuộc. Vui lòng chuyển sản phẩm sang danh mục khác trước khi xóa.`,
+      );
+    }
 
     await this.categoryModel.findByIdAndDelete(id).exec();
   }

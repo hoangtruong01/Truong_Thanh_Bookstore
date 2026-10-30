@@ -35,6 +35,16 @@ export interface Product {
   discountPrice: number
   stock: number
   unit?: string
+  productType?: 'BOOK' | 'STATIONERY' | 'OTHER'
+  pages?: number
+  coverType?: string
+  bookSize?: string
+  translator?: string
+  language?: string
+  origin?: string
+  color?: string
+  material?: string
+  packaging?: string
   images: string[]
   rating: number
   sold: number
@@ -147,13 +157,14 @@ export interface Inventory {
 export interface InventoryTransaction {
   _id: string
   product: Product | string
-  type: 'IMPORT' | 'SALE' | 'RETURN' | 'ADJUSTMENT' | 'DAMAGE'
+  type: 'IMPORT' | 'SALE' | 'RETURN' | 'ADJUSTMENT' | 'DAMAGE' | 'OPENING_BALANCE'
   quantity: number
   change: number
   stockBefore: number
   stockAfter: number
   note?: string
   reference?: string
+  createdBy?: { _id: string; fullName: string } | string
   createdAt: string
 }
 

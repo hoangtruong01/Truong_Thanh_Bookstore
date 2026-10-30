@@ -57,6 +57,7 @@ export enum InventoryTransactionType {
   RETURN = 'RETURN',
   ADJUSTMENT = 'ADJUSTMENT',
   DAMAGE = 'DAMAGE',
+  OPENING_BALANCE = 'OPENING_BALANCE',
 }
 
 export enum DiscountType {

@@ -27,11 +27,15 @@ export class CreateProductDto {
   @IsString()
   slug?: string;
 
-  @ApiProperty({ example: 'TL-027' })
-  @IsNotEmpty({ message: 'Mã SKU không được để trống' })
+  @ApiPropertyOptional({
+    description:
+      'Mã SKU sản phẩm (bỏ trống để hệ thống tự sinh mã tuần tự SP000001)',
+    example: 'SP000001',
+  })
+  @IsOptional()
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  sku: string;
+  sku?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -133,6 +137,71 @@ export class CreateProductDto {
   @IsArray()
   @IsString({ each: true })
   subOptions?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Phân loại ngành hàng: BOOK, STATIONERY hoặc OTHER',
+    enum: ['BOOK', 'STATIONERY', 'OTHER'],
+    default: 'BOOK',
+  })
+  @IsOptional()
+  @IsString()
+  productType?: string;
+
+  @ApiPropertyOptional({ description: 'Số trang sách', example: 250 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Số trang phải là số' })
+  @Min(1, { message: 'Số trang tối thiểu là 1' })
+  pages?: number;
+
+  @ApiPropertyOptional({ description: 'Hình thức bìa', example: 'Bìa mềm' })
+  @IsOptional()
+  @IsString()
+  coverType?: string;
+
+  @ApiPropertyOptional({
+    description: 'Khổ sách / Kích thước',
+    example: '13 x 19 cm',
+  })
+  @IsOptional()
+  @IsString()
+  bookSize?: string;
+
+  @ApiPropertyOptional({ description: 'Dịch giả', example: 'Nguyễn Văn A' })
+  @IsOptional()
+  @IsString()
+  translator?: string;
+
+  @ApiPropertyOptional({ description: 'Ngôn ngữ', example: 'Tiếng Việt' })
+  @IsOptional()
+  @IsString()
+  language?: string;
+
+  @ApiPropertyOptional({
+    description: 'Xuất xứ / Nơi sản xuất',
+    example: 'Việt Nam',
+  })
+  @IsOptional()
+  @IsString()
+  origin?: string;
+
+  @ApiPropertyOptional({ description: 'Màu sắc', example: 'Xanh dương' })
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  @ApiPropertyOptional({ description: 'Chất liệu', example: 'Nhựa cao cấp' })
+  @IsOptional()
+  @IsString()
+  material?: string;
+
+  @ApiPropertyOptional({
+    description: 'Quy cách đóng gói',
+    example: '20 cây / hộp',
+  })
+  @IsOptional()
+  @IsString()
+  packaging?: string;
 }
 
 export class UpdateProductDto {
@@ -246,6 +315,71 @@ export class UpdateProductDto {
   @IsArray()
   @IsString({ each: true })
   subOptions?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Phân loại ngành hàng: BOOK, STATIONERY hoặc OTHER',
+    enum: ['BOOK', 'STATIONERY', 'OTHER'],
+    default: 'BOOK',
+  })
+  @IsOptional()
+  @IsString()
+  productType?: string;
+
+  @ApiPropertyOptional({ description: 'Số trang sách', example: 250 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Số trang phải là số' })
+  @Min(1, { message: 'Số trang tối thiểu là 1' })
+  pages?: number;
+
+  @ApiPropertyOptional({ description: 'Hình thức bìa', example: 'Bìa mềm' })
+  @IsOptional()
+  @IsString()
+  coverType?: string;
+
+  @ApiPropertyOptional({
+    description: 'Khổ sách / Kích thước',
+    example: '13 x 19 cm',
+  })
+  @IsOptional()
+  @IsString()
+  bookSize?: string;
+
+  @ApiPropertyOptional({ description: 'Dịch giả', example: 'Nguyễn Văn A' })
+  @IsOptional()
+  @IsString()
+  translator?: string;
+
+  @ApiPropertyOptional({ description: 'Ngôn ngữ', example: 'Tiếng Việt' })
+  @IsOptional()
+  @IsString()
+  language?: string;
+
+  @ApiPropertyOptional({
+    description: 'Xuất xứ / Nơi sản xuất',
+    example: 'Việt Nam',
+  })
+  @IsOptional()
+  @IsString()
+  origin?: string;
+
+  @ApiPropertyOptional({ description: 'Màu sắc', example: 'Xanh dương' })
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  @ApiPropertyOptional({ description: 'Chất liệu', example: 'Nhựa cao cấp' })
+  @IsOptional()
+  @IsString()
+  material?: string;
+
+  @ApiPropertyOptional({
+    description: 'Quy cách đóng gói',
+    example: '20 cây / hộp',
+  })
+  @IsOptional()
+  @IsString()
+  packaging?: string;
 }
 
 export class ProductQueryDto extends PaginationDto {
@@ -253,6 +387,13 @@ export class ProductQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({
+    description: 'Product type: BOOK, STATIONERY, OTHER',
+  })
+  @IsOptional()
+  @IsString()
+  productType?: string;
 
   @ApiPropertyOptional({
     description: 'Brand filter or comma-separated list of brands',

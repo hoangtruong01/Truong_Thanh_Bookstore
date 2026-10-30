@@ -9,6 +9,8 @@ import {
 import {
   Inventory,
   InventorySchema,
+  InventoryTransaction,
+  InventoryTransactionSchema,
 } from '../inventory/schemas/inventory.schema';
 import { ReviewsModule } from '../reviews/reviews.module';
 import { ProductsService } from './products.service';
@@ -22,6 +24,7 @@ import { ProductsController } from './products.controller';
       { name: StockAlert.name, schema: StockAlertSchema },
       { name: Category.name, schema: CategorySchema },
       { name: Inventory.name, schema: InventorySchema },
+      { name: InventoryTransaction.name, schema: InventoryTransactionSchema },
     ]),
   ],
   controllers: [ProductsController],

@@ -10,6 +10,18 @@ describe('BE-04: Product Inventory Consistency & Direct Stock Mutation Defense',
 
   beforeEach(() => {
     mockProductModel = {
+      findById: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          _id: new Types.ObjectId().toString(),
+          price: 150000,
+          discountPrice: 0,
+        }),
+      }),
+      findOne: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      }),
       findByIdAndUpdate: jest.fn(),
       deleteOne: jest
         .fn()
@@ -74,6 +86,8 @@ describe('BE-04: Product Inventory Consistency & Direct Stock Mutation Defense',
     }));
     (service as any).productModel = MockProductConstructor;
     (service as any).productModel.deleteOne = mockProductModel.deleteOne;
+    (service as any).productModel.findOne = mockProductModel.findOne;
+    (service as any).productModel.findById = mockProductModel.findById;
 
     // Simulate inventory creation failure
     mockInventoryModel.create.mockRejectedValue(

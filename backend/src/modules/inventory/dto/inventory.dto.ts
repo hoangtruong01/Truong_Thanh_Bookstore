@@ -8,7 +8,10 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { InventoryTransactionType } from '../../../common/enums';
+import {
+  InventoryStatus,
+  InventoryTransactionType,
+} from '../../../common/enums';
 import { IsMongoObjectId } from '../../../common/validators';
 
 export class InventoryTransactionDto {
@@ -45,6 +48,14 @@ export class InventoryTransactionDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   reference?: string;
 
+  @ApiPropertyOptional({
+    description: 'Khóa chống trùng lặp idempotency (alias của reference)',
+  })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  idempotencyKey?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -61,16 +72,39 @@ export class AdjustInventoryDto {
   @IsMongoObjectId({ message: 'product phải là ObjectId hợp lệ' })
   product: string;
 
-  @ApiProperty({
-    description: 'Số lượng điều chỉnh (có thể âm hoặc dương)',
+  @ApiPropertyOptional({
+    description: 'Số lượng tồn kho thực tế sau kiểm kê (TT-001)',
+    example: 15,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'Số lượng kho mới phải là số nguyên' })
+  @Min(0, { message: 'Tồn kho không thể âm' })
+  newStock?: number;
+
+  @ApiPropertyOptional({
+    description: 'Số lượng điều chỉnh (có thể âm hoặc dương - legacy format)',
     example: -5,
   })
-  @IsNotEmpty({ message: 'Số lượng điều chỉnh không được để trống' })
+  @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'Số lượng điều chỉnh phải là số nguyên' })
-  quantity: number;
+  quantity?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'Tồn kho hiện tại mà client thấy trước khi điều chỉnh (chống xung đột dữ liệu)',
+    example: 10,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'expectedCurrentStock phải là số nguyên' })
+  @Min(0)
+  expectedCurrentStock?: number;
+
+  @ApiPropertyOptional({
+    description: 'Lý do/ghi chú điều chỉnh',
+  })
   @IsOptional()
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -83,4 +117,99 @@ export class AdjustInventoryDto {
   @IsString()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   reference?: string;
+
+  @ApiPropertyOptional({
+    description: 'Khóa chống trùng lặp idempotency (alias của reference)',
+  })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  idempotencyKey?: string;
+}
+
+export class InventoryQueryDto {
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiPropertyOptional({ default: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number = 20;
+
+  @ApiPropertyOptional({ description: 'Tìm theo tên sản phẩm, SKU' })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  search?: string;
+
+  @ApiPropertyOptional({ enum: InventoryStatus })
+  @IsOptional()
+  @IsEnum(InventoryStatus)
+  status?: InventoryStatus;
+
+  @ApiPropertyOptional({ description: 'ID danh mục' })
+  @IsOptional()
+  @IsString()
+  category?: string;
+}
+
+export class InventoryTransactionQueryDto {
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiPropertyOptional({ default: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number = 20;
+
+  @ApiPropertyOptional({ description: 'Lọc theo ID sản phẩm' })
+  @IsOptional()
+  @IsString()
+  productId?: string;
+
+  @ApiPropertyOptional({ description: 'Lọc theo mã SKU' })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  sku?: string;
+
+  @ApiPropertyOptional({ enum: InventoryTransactionType })
+  @IsOptional()
+  @IsEnum(InventoryTransactionType)
+  type?: InventoryTransactionType;
+
+  @ApiPropertyOptional({ description: 'Từ ngày (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  startDate?: string;
+
+  @ApiPropertyOptional({ description: 'Đến ngày (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  endDate?: string;
+
+  @ApiPropertyOptional({ description: 'ID người thực hiện' })
+  @IsOptional()
+  @IsString()
+  createdBy?: string;
+
+  @ApiPropertyOptional({
+    description: 'Từ khóa tìm kiếm (tên sản phẩm, SKU, ghi chú, mã tham chiếu)',
+  })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  search?: string;
 }

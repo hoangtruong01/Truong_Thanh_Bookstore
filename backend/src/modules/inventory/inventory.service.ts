@@ -2,10 +2,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
+import * as ExcelJS from 'exceljs';
 import {
   Inventory,
   InventoryDocument,
@@ -15,9 +17,12 @@ import {
 import {
   InventoryTransactionDto,
   AdjustInventoryDto,
+  InventoryQueryDto,
+  InventoryTransactionQueryDto,
 } from './dto/inventory.dto';
 import { ProductsService } from '../products/products.service';
 import { InventoryStatus, InventoryTransactionType } from '../../common/enums';
+import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
 
 @Injectable()
 export class InventoryService {
@@ -37,51 +42,238 @@ export class InventoryService {
     return InventoryStatus.IN_STOCK;
   }
 
-  async findAll(): Promise<InventoryDocument[]> {
-    try {
-      const productModel = this.inventoryModel.db.model('Product');
-      const products = await productModel.find({ isDeleted: false }).exec();
+  /**
+   * TT-006 & TT-020: API GET danh sách kho thuần túy READ-ONLY, hỗ trợ phân trang & tìm kiếm phía server.
+   * Không tự động ghi / insertMany dữ liệu trong hàm GET.
+   */
+  async findAll(
+    query?: InventoryQueryDto,
+  ): Promise<PaginatedResult<InventoryDocument>> {
+    const page = Math.max(1, Number(query?.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(query?.limit) || 20));
+    const skip = (page - 1) * limit;
 
-      const existingInventories = await this.inventoryModel.find().exec();
-      const existingProductIds = new Set(
-        existingInventories.map((inv) => inv.product.toString()),
-      );
+    const filter: Record<string, any> = {};
 
-      const missingProducts = products.filter(
-        (p) => !existingProductIds.has(p._id.toString()),
-      );
-
-      if (missingProducts.length > 0) {
-        const newInventories = missingProducts.map((p) => {
-          const currentStock = p.stock || 0;
-          let status = InventoryStatus.IN_STOCK;
-          if (currentStock <= 0) {
-            status = InventoryStatus.OUT_OF_STOCK;
-          } else if (currentStock <= 10) {
-            status = InventoryStatus.LOW_STOCK;
-          }
-          return {
-            product: p._id,
-            currentStock,
-            minStock: 10,
-            maxStock: 1000,
-            status,
-            lastUpdated: new Date(),
-          };
-        });
-        await this.inventoryModel.insertMany(newInventories);
-      }
-    } catch (err) {
-      this.logger.error(
-        'Failed to sync missing product inventory records:',
-        err,
-      );
+    if (query?.status) {
+      filter.status = query.status;
     }
-    const items = await this.inventoryModel
-      .find()
-      .populate('product', 'name sku images price')
+
+    const productModel = this.inventoryModel.db.model('Product');
+
+    // Tìm kiếm theo tên sản phẩm, SKU hoặc lọc theo danh mục
+    if (query?.search || query?.category) {
+      const productFilter: any = { isDeleted: false };
+      if (query.search) {
+        const searchRegex = new RegExp(
+          query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+          'i',
+        );
+        productFilter.$or = [{ name: searchRegex }, { sku: searchRegex }];
+      }
+      if (query.category) {
+        productFilter.category = query.category;
+      }
+
+      const matchingProducts = await productModel
+        .find(productFilter)
+        .select('_id')
+        .lean()
+        .exec();
+
+      const matchingIds = matchingProducts.map((p) => p._id);
+      filter.product = { $in: matchingIds };
+    } else {
+      // Khi không tìm kiếm cụ thể, loại trừ các sản phẩm đã xóa mềm
+      const deletedProducts = await productModel
+        .find({ isDeleted: true })
+        .select('_id')
+        .lean()
+        .exec();
+      if (deletedProducts.length > 0) {
+        filter.product = { $nin: deletedProducts.map((p) => p._id) };
+      }
+    }
+
+    const [items, total] = await Promise.all([
+      this.inventoryModel
+        .find(filter)
+        .populate('product', 'name sku images price unit')
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.inventoryModel.countDocuments(filter).exec(),
+    ]);
+
+    // Lọc ra các bản ghi mà product không bị null (do soft delete)
+    const validItems = items.filter((item) => item.product !== null);
+
+    return paginate(validItems, total, page, limit);
+  }
+
+  /**
+   * TT-006: Endpoint/Công cụ đồng bộ riêng cho Admin khi cần tạo bản ghi kho còn thiếu.
+   */
+  async syncMissingInventories(): Promise<{
+    createdCount: number;
+    totalProducts: number;
+    message: string;
+  }> {
+    const productModel = this.inventoryModel.db.model('Product');
+    const products = await productModel.find({ isDeleted: false }).exec();
+
+    const existingInventories = await this.inventoryModel.find().exec();
+    const existingProductIds = new Set(
+      existingInventories.map((inv) => inv.product.toString()),
+    );
+
+    const missingProducts = products.filter(
+      (p) => !existingProductIds.has(p._id.toString()),
+    );
+
+    if (missingProducts.length === 0) {
+      return {
+        createdCount: 0,
+        totalProducts: products.length,
+        message: 'Tất cả sản phẩm đã có dữ liệu kho đồng bộ',
+      };
+    }
+
+    const newInventories = missingProducts.map((p) => {
+      const currentStock = p.stock || 0;
+      let status = InventoryStatus.IN_STOCK;
+      if (currentStock <= 0) {
+        status = InventoryStatus.OUT_OF_STOCK;
+      } else if (currentStock <= 10) {
+        status = InventoryStatus.LOW_STOCK;
+      }
+      return {
+        product: p._id,
+        currentStock,
+        minStock: 10,
+        maxStock: 1000,
+        status,
+        lastUpdated: new Date(),
+      };
+    });
+
+    await this.inventoryModel.insertMany(newInventories);
+
+    // Ghi nhận lịch sử OPENING_BALANCE cho các sản phẩm có tồn kho ban đầu
+    for (const p of missingProducts) {
+      if ((p.stock || 0) > 0) {
+        await this.transactionModel.create({
+          product: p._id,
+          type: InventoryTransactionType.OPENING_BALANCE,
+          quantity: p.stock,
+          change: p.stock,
+          stockBefore: 0,
+          stockAfter: p.stock,
+          note: 'Đồng bộ tồn kho đầu kỳ từ công cụ quản trị',
+        });
+      }
+    }
+
+    return {
+      createdCount: missingProducts.length,
+      totalProducts: products.length,
+      message: `Đã đồng bộ bổ sung ${missingProducts.length} bản ghi kho`,
+    };
+  }
+
+  /**
+   * TT-002: Công cụ đối soát số lượng giữa Product.stock, Inventory.currentStock và lịch sử giao dịch.
+   */
+  async reconcile(): Promise<{
+    totalChecked: number;
+    matchedCount: number;
+    mismatchedCount: number;
+    discrepancies: Array<{
+      productId: string;
+      productName: string;
+      sku: string;
+      productStock: number;
+      inventoryStock: number;
+      difference: number;
+      reason: string;
+    }>;
+  }> {
+    const productModel = this.inventoryModel.db.model('Product');
+    const products = await productModel
+      .find({ isDeleted: false })
+      .select('name sku stock')
+      .lean()
       .exec();
-    return items.filter((item) => item.product !== null);
+
+    const inventories = await this.inventoryModel.find().lean().exec();
+    const inventoryMap = new Map<string, any>();
+    for (const inv of inventories) {
+      inventoryMap.set(inv.product.toString(), inv);
+    }
+
+    const discrepancies: any[] = [];
+    let matchedCount = 0;
+    const checkedProductIds = new Set<string>();
+
+    for (const prod of products) {
+      const prodItem = prod as any;
+      const prodId = prodItem._id.toString();
+      checkedProductIds.add(prodId);
+      const pStock = prodItem.stock || 0;
+      const invRecord = inventoryMap.get(prodId);
+
+      if (!invRecord) {
+        discrepancies.push({
+          productId: prodId,
+          productName: prodItem.name,
+          sku: prodItem.sku,
+          productStock: pStock,
+          inventoryStock: 0,
+          difference: pStock,
+          reason: 'Thiếu bản ghi kho (Missing inventory record)',
+        });
+        continue;
+      }
+
+      const iStock = invRecord.currentStock ?? 0;
+      if (pStock === iStock) {
+        matchedCount++;
+      } else {
+        discrepancies.push({
+          productId: prodId,
+          productName: prodItem.name,
+          sku: prodItem.sku,
+          productStock: pStock,
+          inventoryStock: iStock,
+          difference: pStock - iStock,
+          reason: 'Lệch số lượng tồn (Stock mismatch)',
+        });
+      }
+    }
+
+    // Kiểm tra bản ghi kho mồ côi (Inventory có product không tồn tại hoặc đã bị xóa)
+    for (const inv of inventories) {
+      const invProdId = inv.product.toString();
+      if (!checkedProductIds.has(invProdId)) {
+        discrepancies.push({
+          productId: invProdId,
+          productName: 'Sản phẩm đã bị xóa hoặc không tồn tại',
+          sku: '-',
+          productStock: 0,
+          inventoryStock: inv.currentStock,
+          difference: -inv.currentStock,
+          reason: 'Bản ghi kho mồ côi (Orphan inventory record)',
+        });
+      }
+    }
+
+    return {
+      totalChecked: products.length,
+      matchedCount,
+      mismatchedCount: discrepancies.length,
+      discrepancies,
+    };
   }
 
   async getLowStock(): Promise<InventoryDocument[]> {
@@ -92,7 +284,7 @@ export class InventoryService {
           { status: InventoryStatus.OUT_OF_STOCK },
         ],
       })
-      .populate('product', 'name sku images price')
+      .populate('product', 'name sku images price unit')
       .exec();
   }
 
@@ -110,18 +302,84 @@ export class InventoryService {
     return this.applyMovement(dto, InventoryTransactionType.SALE, userId);
   }
 
+  /**
+   * TT-001: Điều chỉnh số lượng tồn kho theo số lượng thực tế sau kiểm kê (newStock).
+   * - Tính delta = newStock - currentStock
+   * - Cho phép tăng/giảm nhưng không cho âm
+   * - Nếu delta === 0: không phát sinh biến động
+   * - Optimistic locking: kiểm tra expectedCurrentStock
+   */
   async adjustStock(
     dto: AdjustInventoryDto,
     userId?: string,
   ): Promise<InventoryDocument> {
-    if (dto.quantity === 0) {
-      throw new BadRequestException('Số lượng điều chỉnh phải khác 0');
+    const productId = dto.product.toString();
+
+    // 1. Trường hợp sử dụng newStock (chuẩn hóa kiểm kê thực tế theo TT-001)
+    if (dto.newStock !== undefined) {
+      if (dto.newStock < 0) {
+        throw new BadRequestException('Số lượng tồn kho thực tế không thể âm');
+      }
+
+      const inventory = await this.inventoryModel
+        .findOne({ product: productId })
+        .exec();
+      if (!inventory) {
+        throw new NotFoundException(
+          'Không tìm thấy bản ghi kho cho sản phẩm này',
+        );
+      }
+
+      // Optimistic lock: kiểm tra số lượng tồn hiện tại có bị thay đổi trong lúc mở form không
+      if (
+        dto.expectedCurrentStock !== undefined &&
+        inventory.currentStock !== dto.expectedCurrentStock
+      ) {
+        throw new ConflictException(
+          `Số lượng tồn kho hiện tại (${inventory.currentStock}) đã thay đổi so với số lượng bạn đang xem (${dto.expectedCurrentStock}). Vui lòng tải lại trang để kiểm kê chính xác.`,
+        );
+      }
+
+      const delta = dto.newStock - inventory.currentStock;
+
+      // Nếu số lượng không thay đổi: không phát sinh biến động
+      if (delta === 0) {
+        return inventory;
+      }
+
+      return this.applyMovement(
+        {
+          product: productId,
+          quantity: Math.abs(delta),
+          note: dto.note || 'Điều chỉnh số lượng sau kiểm kê',
+          reference: dto.reference || dto.idempotencyKey,
+        },
+        InventoryTransactionType.ADJUSTMENT,
+        userId,
+        Math.sign(delta),
+      );
     }
-    return this.applyMovement(
-      { ...dto, quantity: Math.abs(dto.quantity) },
-      InventoryTransactionType.ADJUSTMENT,
-      userId,
-      Math.sign(dto.quantity),
+
+    // 2. Trường hợp legacy (truyền quantity có dấu)
+    if (dto.quantity !== undefined) {
+      if (dto.quantity === 0) {
+        throw new BadRequestException('Số lượng điều chỉnh phải khác 0');
+      }
+      return this.applyMovement(
+        {
+          product: productId,
+          quantity: Math.abs(dto.quantity),
+          note: dto.note,
+          reference: dto.reference || dto.idempotencyKey,
+        },
+        InventoryTransactionType.ADJUSTMENT,
+        userId,
+        Math.sign(dto.quantity),
+      );
+    }
+
+    throw new BadRequestException(
+      'Cần cung cấp newStock hoặc quantity để điều chỉnh kho',
     );
   }
 
@@ -148,7 +406,7 @@ export class InventoryService {
     }
     if (dto.type === InventoryTransactionType.ADJUSTMENT) {
       throw new BadRequestException(
-        'Giao dịch ADJUSTMENT phải dùng endpoint /inventory/adjust với số lượng có dấu',
+        'Giao dịch ADJUSTMENT phải dùng endpoint /inventory/adjust với số lượng kiểm kê mới (newStock)',
       );
     }
     return this.applyMovement(dto, dto.type, userId);
@@ -161,7 +419,8 @@ export class InventoryService {
   ): number {
     if (
       type === InventoryTransactionType.IMPORT ||
-      type === InventoryTransactionType.RETURN
+      type === InventoryTransactionType.RETURN ||
+      type === InventoryTransactionType.OPENING_BALANCE
     ) {
       return quantity;
     }
@@ -181,6 +440,9 @@ export class InventoryService {
     );
   }
 
+  /**
+   * Core logic áp dụng biến động kho với bảo vệ Idempotency (TT-005) và MongoDB Transaction (TT-002).
+   */
   private async applyMovement(
     dto: InventoryTransactionDto,
     type: InventoryTransactionType,
@@ -189,31 +451,48 @@ export class InventoryService {
   ): Promise<InventoryDocument> {
     const delta = this.movementDelta(type, dto.quantity, adjustmentSign);
     const productId = dto.product.toString();
+    const referenceKey = dto.reference || dto.idempotencyKey;
     let fallbackMutated = false;
 
     const persist = async (
       session?: ClientSession,
     ): Promise<InventoryDocument> => {
-      if (dto.reference) {
+      // TT-005: Kiểm tra Idempotency chặt chẽ
+      if (referenceKey) {
         const existingQuery = this.transactionModel.findOne({
-          reference: dto.reference,
-          product: new Types.ObjectId(productId),
-          type,
+          reference: referenceKey,
         });
         if (session) existingQuery.session(session);
         const existing = await existingQuery.exec();
+
         if (existing) {
-          const inventoryQuery = this.inventoryModel.findOne({
-            product: productId,
-          });
-          if (session) inventoryQuery.session(session);
-          const current = await inventoryQuery.exec();
-          if (!current)
-            throw new NotFoundException('Inventory record not found');
-          return current;
+          // Kiểm tra xem giao dịch đã tồn tại có cùng nội dung không
+          const isSamePayload =
+            existing.product.toString() === productId &&
+            existing.type === type &&
+            existing.change === delta;
+
+          if (isSamePayload) {
+            // Cùng key, cùng nội dung -> Idempotent replay an toàn
+            const inventoryQuery = this.inventoryModel.findOne({
+              product: productId,
+            });
+            if (session) inventoryQuery.session(session);
+            const current = await inventoryQuery.exec();
+            if (!current) {
+              throw new NotFoundException('Inventory record not found');
+            }
+            return current;
+          } else {
+            // Cùng key nhưng khác nội dung -> 409 Conflict
+            throw new ConflictException(
+              `Mã tham chiếu (idempotencyKey) "${referenceKey}" đã được sử dụng cho một giao dịch khác.`,
+            );
+          }
         }
       }
 
+      // Cập nhật tồn kho sản phẩm trong session transaction
       if (delta < 0) {
         await this.productsService.deductStock(
           productId,
@@ -245,13 +524,25 @@ export class InventoryService {
         stockBefore: inventory.currentStock - delta,
         stockAfter: inventory.currentStock,
         note: dto.note,
-        reference: dto.reference,
+        reference: referenceKey,
         createdBy: userId ? new Types.ObjectId(userId) : undefined,
       };
-      if (session) {
-        await this.transactionModel.create([payload], { session });
-      } else {
-        await this.transactionModel.create(payload);
+
+      try {
+        if (session) {
+          await this.transactionModel.create([payload], { session });
+        } else {
+          await this.transactionModel.create(payload);
+        }
+      } catch (createErr: any) {
+        // TT-005: Xử lý race condition khi 2 request cùng idempotencyKey gửi song song cùng mili-giây
+        if (createErr?.code === 11000 && referenceKey) {
+          this.logger.warn(
+            `Phát hiện race condition duplicate key "${referenceKey}". Trả về kết quả giao dịch trước đó.`,
+          );
+          return inventory;
+        }
+        throw createErr;
       }
       return inventory;
     };
@@ -264,8 +555,9 @@ export class InventoryService {
       await session.withTransaction(async () => {
         result = await persist(session);
       });
-      if (!result)
+      if (!result) {
         throw new Error('Inventory transaction completed without a result');
+      }
       return result;
     } catch (error) {
       if (!this.isTransactionUnsupported(error)) throw error;
@@ -338,18 +630,160 @@ export class InventoryService {
     await this.transactionModel.deleteMany({ reference }).exec();
   }
 
+  /**
+   * Helper xây dựng bộ lọc lịch sử giao dịch dùng chung cho phân trang và xuất Excel (TT-004)
+   */
+  private async buildTransactionFilter(
+    query?: InventoryTransactionQueryDto,
+  ): Promise<Record<string, any>> {
+    const filter: Record<string, any> = {};
+
+    if (query?.productId && Types.ObjectId.isValid(query.productId)) {
+      filter.product = new Types.ObjectId(query.productId);
+    }
+
+    if (query?.type) {
+      filter.type = query.type;
+    }
+
+    if (query?.createdBy && Types.ObjectId.isValid(query.createdBy)) {
+      filter.createdBy = new Types.ObjectId(query.createdBy);
+    }
+
+    if (query?.startDate || query?.endDate) {
+      filter.createdAt = {};
+      if (query.startDate) {
+        const start = new Date(query.startDate);
+        if (!isNaN(start.getTime())) {
+          filter.createdAt.$gte = start;
+        }
+      }
+      if (query.endDate) {
+        const end = new Date(query.endDate);
+        if (!isNaN(end.getTime())) {
+          end.setHours(23, 59, 59, 999);
+          filter.createdAt.$lte = end;
+        }
+      }
+      if (Object.keys(filter.createdAt).length === 0) {
+        delete filter.createdAt;
+      }
+    }
+
+    // Lọc theo SKU hoặc từ khóa tìm kiếm
+    if (query?.sku || query?.search) {
+      const productModel = this.inventoryModel.db.model('Product');
+      const searchTerm = (query.sku || query.search || '').trim();
+      const regex = new RegExp(
+        searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+        'i',
+      );
+
+      const matchingProducts = await productModel
+        .find({
+          $or: [{ sku: regex }, { name: regex }],
+        })
+        .select('_id')
+        .lean()
+        .exec();
+
+      const matchingIds = matchingProducts.map((p) => p._id);
+
+      if (query.search) {
+        filter.$or = [
+          { product: { $in: matchingIds } },
+          { note: regex },
+          { reference: regex },
+        ];
+      } else {
+        filter.product = { $in: matchingIds };
+      }
+    }
+
+    return filter;
+  }
+
+  /**
+   * TT-004: Lịch sử nhập xuất kho hỗ trợ phân trang & bộ lọc nâng cao
+   */
   async getTransactions(
-    productId?: string,
-  ): Promise<InventoryTransactionDocument[]> {
-    const filter: any = {};
-    if (productId) filter.product = productId;
-    return this.transactionModel
+    query?: InventoryTransactionQueryDto,
+  ): Promise<PaginatedResult<InventoryTransactionDocument>> {
+    const page = Math.max(1, Number(query?.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(query?.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const filter = await this.buildTransactionFilter(query);
+
+    const [items, total] = await Promise.all([
+      this.transactionModel
+        .find(filter)
+        .populate('product', 'name sku unit')
+        .populate('createdBy', 'fullName email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.transactionModel.countDocuments(filter).exec(),
+    ]);
+
+    return paginate(items, total, page, limit);
+  }
+
+  /**
+   * TT-004: Xuất Excel lịch sử nhập xuất kho
+   */
+  async exportTransactionsToExcel(
+    query?: InventoryTransactionQueryDto,
+  ): Promise<Buffer> {
+    const filter = await this.buildTransactionFilter(query);
+
+    const transactions = await this.transactionModel
       .find(filter)
-      .populate('product', 'name sku')
+      .populate('product', 'name sku unit')
       .populate('createdBy', 'fullName')
       .sort({ createdAt: -1 })
-      .limit(50)
+      .limit(5000)
       .exec();
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('LichSuKho');
+
+    worksheet.columns = [
+      { header: 'Thời gian', key: 'createdAt', width: 20 },
+      { header: 'Tên sản phẩm', key: 'productName', width: 35 },
+      { header: 'Mã SKU', key: 'sku', width: 15 },
+      { header: 'Loại biến động', key: 'type', width: 18 },
+      { header: 'Số lượng thay đổi', key: 'change', width: 18 },
+      { header: 'Tồn trước', key: 'stockBefore', width: 12 },
+      { header: 'Tồn sau', key: 'stockAfter', width: 12 },
+      { header: 'Người thực hiện', key: 'createdBy', width: 22 },
+      { header: 'Mã tham chiếu', key: 'reference', width: 20 },
+      { header: 'Ghi chú', key: 'note', width: 30 },
+    ];
+
+    worksheet.getRow(1).font = { bold: true };
+
+    for (const tx of transactions) {
+      const prod: any = tx.product;
+      const creator: any = tx.createdBy;
+      worksheet.addRow({
+        createdAt: tx.createdAt
+          ? new Date(tx.createdAt).toLocaleString('vi-VN')
+          : '',
+        productName: prod?.name || 'Sản phẩm đã xóa',
+        sku: prod?.sku || '-',
+        type: tx.type,
+        change: tx.change,
+        stockBefore: tx.stockBefore,
+        stockAfter: tx.stockAfter,
+        createdBy: creator?.fullName || 'Hệ thống',
+        reference: tx.reference || '',
+        note: tx.note || '',
+      });
+    }
+
+    return Buffer.from(await workbook.xlsx.writeBuffer());
   }
 
   async getLowStockCount(): Promise<number> {

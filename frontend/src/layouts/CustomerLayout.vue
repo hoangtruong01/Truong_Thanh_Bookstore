@@ -208,6 +208,21 @@
                           >
                             {{ sub.name }}
                           </router-link>
+                          <!-- Level 3 Grandchildren links (TT-012) -->
+                          <div
+                            v-if="getChildrenOf(sub._id).length > 0"
+                            class="space-y-1 pl-2 border-l-2 border-red-100"
+                          >
+                            <router-link
+                              v-for="grand in getChildrenOf(sub._id)"
+                              :key="grand._id"
+                              :to="`/products?category=${grand._id}`"
+                              class="text-[11px] text-slate-500 hover:text-[#dc2626] font-medium block transition-colors truncate"
+                              @click="showMenu = false"
+                            >
+                              • {{ grand.name }}
+                            </router-link>
+                          </div>
                         </div>
                       </div>
 
@@ -1896,9 +1911,18 @@ const getSubcategoriesForActiveParent = computed(() => {
   return allCategories.value.filter((c) => {
     if (!c.parentId) return false;
     const pId = typeof c.parentId === "object" ? c.parentId._id : c.parentId;
-    return pId === activeParent.value?._id;
+    return String(pId) === String(activeParent.value?._id);
   });
 });
+
+function getChildrenOf(parentId: string) {
+  if (!Array.isArray(allCategories.value)) return [];
+  return allCategories.value.filter((c) => {
+    if (!c.parentId) return false;
+    const pId = typeof c.parentId === "object" ? (c.parentId as any)._id : c.parentId;
+    return String(pId) === String(parentId);
+  });
+}
 
 let notificationInterval: any = null;
 

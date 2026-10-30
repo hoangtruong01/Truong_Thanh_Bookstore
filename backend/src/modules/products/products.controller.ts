@@ -34,6 +34,7 @@ import { SubscribeStockAlertDto } from './dto/stock-alert.dto';
 import { CreateReviewDto, UpdateReviewDto } from '../reviews/dto/review.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { StaffPermission } from '../../common/enums';
 
 @ApiTags('products')
@@ -100,7 +101,10 @@ export class ProductsController {
   )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Import products from Excel file' })
-  async importExcel(@UploadedFile() file: Express.Multer.File) {
+  async importExcel(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser('_id') userId?: string,
+  ) {
     if (!file) {
       throw new BadRequestException('Vui lòng chọn file Excel để tải lên');
     }
@@ -109,7 +113,7 @@ export class ProductsController {
         'Chỉ chấp nhận file Excel định dạng .xlsx hoặc .xls',
       );
     }
-    return this.productsService.importFromExcel(file.buffer);
+    return this.productsService.importFromExcel(file.buffer, userId);
   }
 
   @Get('featured')
@@ -178,8 +182,8 @@ export class ProductsController {
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a product' })
-  create(@Body() dto: CreateProductDto) {
-    return this.productsService.create(dto);
+  create(@Body() dto: CreateProductDto, @CurrentUser('_id') userId?: string) {
+    return this.productsService.create(dto, userId);
   }
 
   @Patch(':id')

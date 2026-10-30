@@ -72,6 +72,38 @@ export class Product {
   @Prop()
   flashSaleExpiry: Date;
 
+  @Prop({ default: 'BOOK' })
+  productType: string;
+
+  // Thuộc tính chuyên sâu cho ngành Sách (TT-028)
+  @Prop()
+  pages: number;
+
+  @Prop()
+  coverType: string;
+
+  @Prop()
+  bookSize: string;
+
+  @Prop()
+  translator: string;
+
+  @Prop({ default: 'Tiếng Việt' })
+  language: string;
+
+  // Thuộc tính chuyên sâu cho Văn phòng phẩm & khác (TT-028)
+  @Prop()
+  origin: string;
+
+  @Prop()
+  color: string;
+
+  @Prop()
+  material: string;
+
+  @Prop()
+  packaging: string;
+
   @Prop({ default: false })
   isDeleted: boolean;
 
@@ -103,3 +135,4 @@ ProductSchema.index({ publisher: 1, isDeleted: 1 });
 ProductSchema.index({ brand: 1, isDeleted: 1 });
 ProductSchema.index({ sku: 1, isDeleted: 1 });
 ProductSchema.index({ isbn: 1, isDeleted: 1 });
+ProductSchema.index({ productType: 1, isDeleted: 1 });

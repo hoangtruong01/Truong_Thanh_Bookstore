@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
@@ -16,6 +17,8 @@ import {
 import {
   Inventory,
   InventoryDocument,
+  InventoryTransaction,
+  InventoryTransactionDocument,
 } from '../inventory/schemas/inventory.schema';
 import { ReviewsService } from '../reviews/reviews.service';
 import { CreateReviewDto, UpdateReviewDto } from '../reviews/dto/review.dto';
@@ -27,7 +30,11 @@ import {
   ProductQueryDto,
 } from './dto/product.dto';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
-import { InventoryStatus, ProductStatus } from '../../common/enums';
+import {
+  InventoryStatus,
+  InventoryTransactionType,
+  ProductStatus,
+} from '../../common/enums';
 
 interface LeanProductExportItem {
   sku?: string;
@@ -68,14 +75,6 @@ function makeDiacriticRegex(str: string): string {
   return pattern;
 }
 
-function removeDiacritics(str: string): string {
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D');
-}
-
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
@@ -92,16 +91,104 @@ export class ProductsService {
     private readonly reviewsService: ReviewsService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
+    @Optional()
+    @InjectModel(InventoryTransaction.name)
+    private readonly transactionModel?: Model<InventoryTransactionDocument>,
   ) {}
 
-  private generateSlug(name: string): string {
-    const base = removeDiacritics(name)
+  /**
+   * TT-009: Sinh mã SKU tuần tự tự động dạng SP000001, SP000002...
+   * Sử dụng atomic increment trên MongoDB counters collection để chống trùng lặp tuyệt đối.
+   */
+  async generateNextSku(): Promise<string> {
+    const counterCollection = this.productModel.db.collection('counters');
+
+    const counterDoc = await counterCollection.findOne({
+      _id: 'product_sku' as any,
+    });
+    if (!counterDoc) {
+      // Tìm SKU lớn nhất dạng SPxxxxxx hiện có trong CSDL để khởi tạo counter chính xác
+      const latestSpProduct = await this.productModel
+        .findOne({ sku: { $regex: /^SP\d{6}$/ } })
+        .sort({ sku: -1 })
+        .select('sku')
+        .lean()
+        .exec();
+
+      let initialSeq = 0;
+      if (latestSpProduct && latestSpProduct.sku) {
+        const numPart = parseInt(latestSpProduct.sku.replace('SP', ''), 10);
+        if (!isNaN(numPart)) {
+          initialSeq = numPart;
+        }
+      }
+      await counterCollection.updateOne(
+        { _id: 'product_sku' as any },
+        { $setOnInsert: { seq: initialSeq } },
+        { upsert: true },
+      );
+    }
+
+    const res = await counterCollection.findOneAndUpdate(
+      { _id: 'product_sku' as any },
+      { $inc: { seq: 1 } },
+      { upsert: true, returnDocument: 'after' },
+    );
+
+    const nextSeq = (res as any)?.seq || 1;
+    return `SP${String(nextSeq).padStart(6, '0')}`;
+  }
+
+  /**
+   * Sinh slug cơ bản từ text (dùng cho danh mục hoặc các tiện ích khác)
+   */
+  generateSlug(text: string): string {
+    return (
+      text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'd')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || 'danh-muc'
+    );
+  }
+
+  /**
+   * TT-018: Sinh slug chuẩn SEO tiếng Việt không bị mất chữ, không dùng chuỗi ngẫu nhiên.
+   * Nếu trùng lặp thì tự động thêm hậu tố số tăng dần (-1, -2...).
+   */
+  async generateUniqueSlug(name: string, excludeId?: string): Promise<string> {
+    const baseSlug = name
       .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-');
-    const suffix = Math.random().toString(36).substring(2, 6);
-    return `${base}-${suffix}`;
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'd')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    const base = baseSlug || 'san-pham';
+    let slug = base;
+    let counter = 1;
+    while (true) {
+      const query: Record<string, unknown> = { slug, isDeleted: false };
+      if (excludeId) {
+        query._id = { $ne: excludeId };
+      }
+      const existing = await this.productModel
+        .findOne(query)
+        .select('_id')
+        .lean()
+        .exec();
+      if (!existing) {
+        break;
+      }
+      slug = `${base}-${counter}`;
+      counter++;
+    }
+    return slug;
   }
 
   private safeString(val: unknown): string {
@@ -134,9 +221,51 @@ export class ProductsService {
     return this.safeString(cell);
   }
 
-  async create(dto: CreateProductDto): Promise<ProductDocument> {
-    const slug = dto.slug || this.generateSlug(dto.name);
-    const product = new this.productModel({ ...dto, slug });
+  async create(
+    dto: CreateProductDto,
+    userId?: string,
+  ): Promise<ProductDocument> {
+    // TT-011: Kiểm tra giá bán và giá khuyến mãi
+    if (dto.price < 0) {
+      throw new BadRequestException('Giá sản phẩm không được âm');
+    }
+    if (dto.discountPrice !== undefined && dto.discountPrice > 0) {
+      if (dto.discountPrice > dto.price) {
+        throw new BadRequestException(
+          'Giá khuyến mãi không được lớn hơn giá bán gốc',
+        );
+      }
+    }
+
+    // TT-009: Xử lý mã SKU (tự sinh SP000001 nếu không nhập, hoặc validate tính duy nhất)
+    let sku = (dto.sku || '').trim().toUpperCase();
+    if (sku) {
+      const existingSku = await this.productModel
+        .findOne({ sku, isDeleted: false })
+        .select('_id')
+        .lean()
+        .exec();
+      if (existingSku) {
+        throw new BadRequestException(
+          `Mã SKU "${sku}" đã tồn tại trên hệ thống`,
+        );
+      }
+    } else {
+      sku = await this.generateNextSku();
+    }
+
+    // TT-018: Sinh slug chuẩn SEO tiếng Việt
+    const slug = dto.slug
+      ? dto.slug.trim().toLowerCase()
+      : await this.generateUniqueSlug(dto.name);
+
+    const product = new this.productModel({
+      ...dto,
+      sku,
+      slug,
+      unit: dto.unit || 'cái',
+      productType: dto.productType || 'BOOK',
+    });
     const savedProduct = await product.save();
 
     // Automatically create inventory entry - BE-04: Do not swallow core inventory errors
@@ -157,6 +286,23 @@ export class ProductsService {
         status,
         lastUpdated: new Date(),
       });
+
+      // TT-007: Ghi nhận lịch sử tồn đầu kỳ nếu sản phẩm có số lượng ban đầu
+      if (currentStock > 0 && this.transactionModel) {
+        await this.transactionModel.create({
+          product: savedProduct._id,
+          type: InventoryTransactionType.OPENING_BALANCE,
+          quantity: currentStock,
+          change: currentStock,
+          stockBefore: 0,
+          stockAfter: currentStock,
+          note: 'Tồn kho ban đầu khi tạo sản phẩm',
+          createdBy:
+            userId && Types.ObjectId.isValid(userId)
+              ? new Types.ObjectId(userId)
+              : undefined,
+        });
+      }
     } catch (err) {
       this.logger.error(
         'Failed to auto-create inventory for new product:',
@@ -208,22 +354,53 @@ export class ProductsService {
 
     if (category) {
       try {
-        const catObjId = Types.ObjectId.isValid(category)
-          ? new Types.ObjectId(category)
-          : null;
-        const subCategories = catObjId
-          ? await this.categoryModel.find({ parentId: catObjId }).exec()
-          : [];
-        const categoryIds: Array<string | Types.ObjectId> = [
-          category,
-          ...(catObjId ? [catObjId] : []),
-          ...subCategories.map((c) => c._id),
-          ...subCategories.map((c) => c._id.toString()),
-        ];
-        filter.category = { $in: categoryIds };
+        let catObjId: Types.ObjectId | null = null;
+        if (Types.ObjectId.isValid(category)) {
+          catObjId = new Types.ObjectId(category);
+        } else {
+          const matchedBySlug = await this.categoryModel
+            .findOne({ slug: category })
+            .select('_id')
+            .lean()
+            .exec();
+          if (matchedBySlug) {
+            catObjId = matchedBySlug._id;
+          }
+        }
+
+        if (catObjId) {
+          // TT-010: Tìm đệ quy toàn bộ ID danh mục con và cháu cấp sâu để hiển thị đủ sản phẩm
+          const categoryIds: Types.ObjectId[] = [catObjId];
+          const queue: Types.ObjectId[] = [catObjId];
+          const visited = new Set<string>([catObjId.toString()]);
+          while (queue.length > 0) {
+            const current = queue.shift()!;
+            const children = await this.categoryModel
+              .find({ parentId: current })
+              .select('_id')
+              .lean()
+              .exec();
+            for (const child of children) {
+              const cId = child._id;
+              const cIdStr = cId.toString();
+              if (!visited.has(cIdStr)) {
+                visited.add(cIdStr);
+                categoryIds.push(cId);
+                queue.push(cId);
+              }
+            }
+          }
+          filter.category = { $in: categoryIds };
+        } else {
+          filter.category = category;
+        }
       } catch {
         filter.category = category;
       }
+    }
+
+    if (query.productType) {
+      filter.productType = query.productType;
     }
 
     if (brand) {
@@ -473,9 +650,48 @@ export class ProductsService {
   }
 
   async update(id: string, dto: UpdateProductDto): Promise<ProductDocument> {
-    if (dto.name && !dto.slug) {
-      dto.slug = this.generateSlug(dto.name);
+    const existing = await this.productModel.findById(id).exec();
+    if (!existing) throw new NotFoundException('Product not found');
+
+    // TT-011: Kiểm tra giá bán và giá khuyến mãi
+    const effectivePrice = dto.price !== undefined ? dto.price : existing.price;
+    const effectiveDiscountPrice =
+      dto.discountPrice !== undefined
+        ? dto.discountPrice
+        : existing.discountPrice;
+    if (effectivePrice < 0) {
+      throw new BadRequestException('Giá sản phẩm không được âm');
     }
+    if (effectiveDiscountPrice < 0) {
+      throw new BadRequestException('Giá khuyến mãi không được âm');
+    }
+    if (effectiveDiscountPrice > 0 && effectiveDiscountPrice > effectivePrice) {
+      throw new BadRequestException(
+        'Giá khuyến mãi không được lớn hơn giá gốc',
+      );
+    }
+
+    // TT-009: Nếu đổi SKU, kiểm tra tính duy nhất
+    if (dto.sku && dto.sku.trim().toUpperCase() !== existing.sku) {
+      const newSku = dto.sku.trim().toUpperCase();
+      const duplicateSku = await this.productModel
+        .findOne({ sku: newSku, _id: { $ne: id }, isDeleted: false })
+        .select('_id')
+        .lean()
+        .exec();
+      if (duplicateSku) {
+        throw new BadRequestException(
+          `Mã SKU "${newSku}" đã tồn tại trên hệ thống`,
+        );
+      }
+      dto.sku = newSku;
+    }
+
+    // TT-018: Cập nhật slug chuẩn SEO nếu đổi tên và không truyền slug thủ công
+    if (dto.name && !dto.slug && dto.name !== existing.name) {
+      dto.slug = await this.generateUniqueSlug(dto.name, id);
+    }
+
     // BE-04: Disallow modifying stock directly via generic product update.
     // All stock adjustments must go through InventoryService with actor and reason.
     const cleanDto = { ...dto };
@@ -636,24 +852,31 @@ export class ProductsService {
       .exec();
     if (updated) {
       const oldStock = updated.stock - quantity;
-      try {
-        const minStock = 10;
-        let status = InventoryStatus.IN_STOCK;
-        if (updated.stock <= 0) {
-          status = InventoryStatus.OUT_OF_STOCK;
-        } else if (updated.stock <= minStock) {
-          status = InventoryStatus.LOW_STOCK;
-        }
-        await this.inventoryModel
-          .findOneAndUpdate(
-            { product: id },
-            { currentStock: updated.stock, status, lastUpdated: new Date() },
-            { upsert: true, ...(session ? { session } : {}) },
-          )
-          .exec();
-      } catch {
-        // Ignore if model not registered
+
+      // TT-008: Lấy minStock thực tế cấu hình trong kho thay vì hardcode 10
+      let minStock = 10;
+      const invQuery = this.inventoryModel.findOne({ product: id });
+      if (session) invQuery.session(session);
+      const inv = await invQuery.exec();
+      if (inv && typeof inv.minStock === 'number') {
+        minStock = inv.minStock;
       }
+
+      let status = InventoryStatus.IN_STOCK;
+      if (updated.stock <= 0) {
+        status = InventoryStatus.OUT_OF_STOCK;
+      } else if (updated.stock <= minStock) {
+        status = InventoryStatus.LOW_STOCK;
+      }
+
+      // TT-002: Đồng bộ Inventory không nuốt lỗi để transaction rollback nếu thất bại
+      await this.inventoryModel
+        .findOneAndUpdate(
+          { product: id },
+          { currentStock: updated.stock, status, lastUpdated: new Date() },
+          { upsert: true, ...(session ? { session } : {}) },
+        )
+        .exec();
 
       // Trigger back-in-stock alerts if stock transitioned from <= 0 to > 0
       if (oldStock <= 0 && updated.stock > 0) {
@@ -664,32 +887,48 @@ export class ProductsService {
     }
   }
 
-  async setStock(id: string, quantity: number): Promise<void> {
-    const productBefore = await this.productModel.findById(id).exec();
+  async setStock(
+    id: string,
+    quantity: number,
+    session?: ClientSession,
+  ): Promise<void> {
+    const productBeforeQuery = this.productModel.findById(id);
+    if (session) productBeforeQuery.session(session);
+    const productBefore = await productBeforeQuery.exec();
     const oldStock = productBefore?.stock || 0;
 
     const updated = await this.productModel
-      .findByIdAndUpdate(id, { stock: quantity }, { returnDocument: 'after' })
+      .findByIdAndUpdate(
+        id,
+        { stock: quantity },
+        { returnDocument: 'after', ...(session ? { session } : {}) },
+      )
       .exec();
     if (updated) {
-      try {
-        const minStock = 10;
-        let status = InventoryStatus.IN_STOCK;
-        if (updated.stock <= 0) {
-          status = InventoryStatus.OUT_OF_STOCK;
-        } else if (updated.stock <= minStock) {
-          status = InventoryStatus.LOW_STOCK;
-        }
-        await this.inventoryModel
-          .findOneAndUpdate(
-            { product: id },
-            { currentStock: updated.stock, status, lastUpdated: new Date() },
-            { upsert: true },
-          )
-          .exec();
-      } catch {
-        // Ignore
+      // TT-008: Lấy minStock thực tế cấu hình trong kho thay vì hardcode 10
+      let minStock = 10;
+      const invQuery = this.inventoryModel.findOne({ product: id });
+      if (session) invQuery.session(session);
+      const inv = await invQuery.exec();
+      if (inv && typeof inv.minStock === 'number') {
+        minStock = inv.minStock;
       }
+
+      let status = InventoryStatus.IN_STOCK;
+      if (updated.stock <= 0) {
+        status = InventoryStatus.OUT_OF_STOCK;
+      } else if (updated.stock <= minStock) {
+        status = InventoryStatus.LOW_STOCK;
+      }
+
+      // TT-002: Đồng bộ Inventory không nuốt lỗi
+      await this.inventoryModel
+        .findOneAndUpdate(
+          { product: id },
+          { currentStock: updated.stock, status, lastUpdated: new Date() },
+          { upsert: true, ...(session ? { session } : {}) },
+        )
+        .exec();
 
       // Trigger back-in-stock alerts if stock transitioned from <= 0 to > 0
       if (oldStock <= 0 && updated.stock > 0) {
@@ -718,25 +957,31 @@ export class ProductsService {
         `Không đủ tồn kho cho sản phẩm (ID: ${id})`,
       );
     }
-    // Sync inventory status
-    try {
-      const minStock = 10;
-      let status = InventoryStatus.IN_STOCK;
-      if (updated.stock <= 0) {
-        status = InventoryStatus.OUT_OF_STOCK;
-      } else if (updated.stock <= minStock) {
-        status = InventoryStatus.LOW_STOCK;
-      }
-      await this.inventoryModel
-        .findOneAndUpdate(
-          { product: id },
-          { currentStock: updated.stock, status, lastUpdated: new Date() },
-          { upsert: true, ...(session ? { session } : {}) },
-        )
-        .exec();
-    } catch {
-      // Ignore if model not registered
+
+    // TT-008: Lấy minStock thực tế cấu hình trong kho thay vì hardcode 10
+    let minStock = 10;
+    const invQuery = this.inventoryModel.findOne({ product: id });
+    if (session) invQuery.session(session);
+    const inv = await invQuery.exec();
+    if (inv && typeof inv.minStock === 'number') {
+      minStock = inv.minStock;
     }
+
+    let status = InventoryStatus.IN_STOCK;
+    if (updated.stock <= 0) {
+      status = InventoryStatus.OUT_OF_STOCK;
+    } else if (updated.stock <= minStock) {
+      status = InventoryStatus.LOW_STOCK;
+    }
+
+    // TT-002: Đồng bộ Inventory không nuốt lỗi
+    await this.inventoryModel
+      .findOneAndUpdate(
+        { product: id },
+        { currentStock: updated.stock, status, lastUpdated: new Date() },
+        { upsert: true, ...(session ? { session } : {}) },
+      )
+      .exec();
   }
 
   async incrementSold(
@@ -818,6 +1063,12 @@ export class ProductsService {
     newStock: number,
   ): Promise<void> {
     if (newStock <= 0) return;
+    if (
+      !this.stockAlertModel ||
+      typeof this.stockAlertModel.find !== 'function'
+    ) {
+      return;
+    }
 
     // Fetch all alerts for this product
     const alerts = await this.stockAlertModel
@@ -1287,7 +1538,7 @@ export class ProductsService {
    * 3. Nhập sản phẩm từ file Excel (.xlsx), kiểm tra trùng lặp SKU & Tên,
    * từ chối tải lại những sản phẩm đã có và báo cáo thống kê chi tiết.
    */
-  async importFromExcel(buffer: Buffer) {
+  async importFromExcel(buffer: Buffer, userId?: string) {
     const workbook = new ExcelJS.Workbook();
     try {
       await workbook.xlsx.load(buffer as never);
@@ -1526,7 +1777,7 @@ export class ProductsService {
 
       // 4. TIẾN HÀNH TẠO MỚI SẢN PHẨM & TỒN KHO
       try {
-        const slug = this.generateSlug(name.trim());
+        const slug = await this.generateUniqueSlug(name.trim());
         const product = new this.productModel({
           name: name.trim(),
           sku: sku.trim(),
@@ -1542,7 +1793,7 @@ export class ProductsService {
           images: imagesList,
           description: description || '',
           sold: 0,
-          rating: 5,
+          rating: 0,
           isDeleted: false,
         });
 
@@ -1562,10 +1813,33 @@ export class ProductsService {
             status: invStatus,
             lastUpdated: new Date(),
           });
+
+          // TT-007: Ghi nhận lịch sử tồn đầu kỳ nếu sản phẩm import có số lượng ban đầu
+          if (stock > 0 && this.transactionModel) {
+            await this.transactionModel.create({
+              product: savedProduct._id,
+              type: InventoryTransactionType.OPENING_BALANCE,
+              quantity: stock,
+              change: stock,
+              stockBefore: 0,
+              stockAfter: stock,
+              note: 'Tồn kho đầu kỳ khi import Excel',
+              createdBy:
+                userId && Types.ObjectId.isValid(userId)
+                  ? new Types.ObjectId(userId)
+                  : undefined,
+            });
+          }
         } catch (invErr) {
           this.logger.error(
             'Lỗi khi tự động tạo kho cho sản phẩm import:',
             invErr,
+          );
+          // TT-003: Rollback sản phẩm vừa tạo để không tồn tại sản phẩm thiếu bản ghi kho
+          await this.productModel.deleteOne({ _id: savedProduct._id }).exec();
+          throw new Error(
+            'Lỗi tạo dữ liệu kho: ' +
+              (invErr instanceof Error ? invErr.message : String(invErr)),
           );
         }
 

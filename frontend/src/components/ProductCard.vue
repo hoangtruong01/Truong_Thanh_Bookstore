@@ -99,7 +99,7 @@
 
     <!-- Price & Info -->
     <div class="mt-2 flex flex-col gap-1">
-      <div class="flex items-baseline gap-2">
+      <div class="flex items-baseline gap-1.5 flex-wrap">
         <template v-if="product.discountPrice > 0">
           <span class="text-sm font-bold text-red-600">{{ formatCurrency(product.discountPrice) }}</span>
           <span class="text-[10px] text-slate-400 line-through">{{ formatCurrency(product.price) }}</span>
@@ -107,6 +107,7 @@
         <template v-else>
           <span class="text-sm font-bold text-red-600">{{ formatCurrency(product.price) }}</span>
         </template>
+        <span v-if="product.unit" class="text-[10px] text-slate-400 font-medium">/ {{ product.unit }}</span>
       </div>
       
       <div class="flex items-center justify-between text-[10px] text-slate-400">

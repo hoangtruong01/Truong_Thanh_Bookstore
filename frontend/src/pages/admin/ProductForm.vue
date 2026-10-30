@@ -25,12 +25,14 @@
         </div>
 
         <div>
-          <label class="text-xs font-bold text-slate-700">Mã SKU *</label>
+          <label class="text-xs font-bold text-slate-700">
+            Mã SKU <span v-if="isEdit" class="text-red-500">*</span><span v-else class="text-slate-400 font-normal">(Tự động sinh nếu để trống)</span>
+          </label>
           <input
             v-model="form.sku"
             type="text"
-            required
-            placeholder="Ví dụ: TL-027"
+            :required="isEdit"
+            placeholder="Để trống để tự sinh mã (VD: SP000001)"
             class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
           />
         </div>
@@ -283,9 +285,191 @@
             v-model="form.unit"
             type="text"
             required
-            placeholder="Ví dụ: cái, quyển, vỉ..."
+            placeholder="Ví dụ: cuốn, cái, ram..."
             class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
           />
+          <div class="flex flex-wrap gap-1 mt-1.5">
+            <button
+              v-for="u in commonUnits"
+              :key="u"
+              type="button"
+              class="text-[10px] px-2 py-0.5 rounded-lg border transition-all cursor-pointer select-none"
+              :class="form.unit === u ? 'bg-blue-50 border-blue-400 text-blue-700 font-bold' : 'border-slate-200 text-slate-500 hover:bg-slate-100'"
+              @click="form.unit = u"
+            >
+              {{ u }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TT-028: Product Type & Specifications -->
+      <div class="border-t border-slate-100 pt-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span>📋</span> Phân loại & Thông số kỹ thuật
+            </h3>
+            <p class="text-[11px] text-slate-400">Chọn loại sản phẩm để điền thuộc tính chuyên biệt</p>
+          </div>
+          <div class="flex p-1 bg-slate-100 rounded-xl self-start sm:self-auto">
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+              :class="form.productType === 'BOOK' ? 'bg-white text-blue-600 shadow-2xs font-extrabold' : 'text-slate-600 hover:text-slate-900'"
+              @click="form.productType = 'BOOK'"
+            >
+              📚 Sách & Ấn phẩm
+            </button>
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+              :class="form.productType === 'STATIONERY' ? 'bg-white text-blue-600 shadow-2xs font-extrabold' : 'text-slate-600 hover:text-slate-900'"
+              @click="form.productType = 'STATIONERY'"
+            >
+              ✏️ Văn phòng phẩm
+            </button>
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+              :class="form.productType === 'OTHER' ? 'bg-white text-blue-600 shadow-2xs font-extrabold' : 'text-slate-600 hover:text-slate-900'"
+              @click="form.productType = 'OTHER'"
+            >
+              📦 Khác
+            </button>
+          </div>
+        </div>
+
+        <!-- Book Specifications -->
+        <div v-if="form.productType === 'BOOK'" class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-blue-50/30 border border-blue-100 rounded-2xl p-5">
+          <div>
+            <label class="text-xs font-bold text-slate-700">Tác giả</label>
+            <input
+              v-model="form.author"
+              type="text"
+              placeholder="Ví dụ: Nguyễn Nhật Ánh..."
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-blue-600"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Nhà xuất bản</label>
+            <input
+              v-model="form.publisher"
+              type="text"
+              placeholder="Ví dụ: NXB Giáo dục, NXB Trẻ..."
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-blue-600"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Năm xuất bản</label>
+            <input
+              v-model.number="form.publicationYear"
+              type="number"
+              min="1900"
+              max="2099"
+              placeholder="Ví dụ: 2024"
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-blue-600"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Mã ISBN</label>
+            <input
+              v-model="form.isbn"
+              type="text"
+              placeholder="Ví dụ: 978-604-0-12345-6"
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-blue-600"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Số trang</label>
+            <input
+              v-model.number="form.pages"
+              type="number"
+              min="1"
+              placeholder="Ví dụ: 256"
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-blue-600"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Hình thức bìa</label>
+            <select
+              v-model="form.coverType"
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-blue-600 font-medium"
+            >
+              <option value="">-- Chọn hình thức bìa --</option>
+              <option value="Bìa mềm">Bìa mềm</option>
+              <option value="Bìa cứng">Bìa cứng</option>
+              <option value="Bìa gập (Tay gập)">Bìa gập (Tay gập)</option>
+              <option value="Bìa da cao cấp">Bìa da cao cấp</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Kích thước</label>
+            <input
+              v-model="form.bookSize"
+              type="text"
+              placeholder="Ví dụ: 14 x 20.5 cm, 19 x 26.5 cm..."
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-blue-600"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Người dịch</label>
+            <input
+              v-model="form.translator"
+              type="text"
+              placeholder="Ví dụ: Hoàng Anh..."
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-blue-600"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Ngôn ngữ</label>
+            <input
+              v-model="form.language"
+              type="text"
+              placeholder="Ví dụ: Tiếng Việt, Tiếng Anh..."
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-blue-600"
+            />
+          </div>
+        </div>
+
+        <!-- Stationery Specifications -->
+        <div v-else-if="form.productType === 'STATIONERY'" class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-emerald-50/30 border border-emerald-100 rounded-2xl p-5">
+          <div>
+            <label class="text-xs font-bold text-slate-700">Xuất xứ / Nơi sản xuất</label>
+            <input
+              v-model="form.origin"
+              type="text"
+              placeholder="Ví dụ: Việt Nam, Nhật Bản, Đức..."
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-600"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Màu sắc</label>
+            <input
+              v-model="form.color"
+              type="text"
+              placeholder="Ví dụ: Xanh, Đen, Đỏ, Nhiều màu..."
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-600"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Chất liệu</label>
+            <input
+              v-model="form.material"
+              type="text"
+              placeholder="Ví dụ: Nhựa PP, Kim loại, Giấy bãi bằng 70gsm..."
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-600"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-700">Quy cách đóng gói</label>
+            <input
+              v-model="form.packaging"
+              type="text"
+              placeholder="Ví dụ: Hộp 12 cây, Ram 500 tờ, Thùng 5 ram..."
+              class="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-600"
+            />
+          </div>
         </div>
       </div>
 
@@ -444,6 +628,8 @@ function applyPercentageDiscount(percent: number) {
 // Image state
 const imagesList = ref<string[]>([])
 
+const commonUnits = ['cuốn', 'bộ', 'tập', 'cây', 'cái', 'hộp', 'ram', 'thùng', 'xấp', 'cuộn', 'gói']
+
 const form = reactive({
   name: '',
   sku: '',
@@ -457,6 +643,21 @@ const form = reactive({
   status: 'ACTIVE',
   isFeatured: false,
   subOptions: [] as string[],
+  // TT-028: Category-specific attributes
+  productType: 'BOOK' as 'BOOK' | 'STATIONERY' | 'OTHER',
+  author: '',
+  publisher: '',
+  publicationYear: undefined as number | undefined,
+  isbn: '',
+  pages: undefined as number | undefined,
+  coverType: '',
+  bookSize: '',
+  translator: '',
+  language: '',
+  origin: '',
+  color: '',
+  material: '',
+  packaging: '',
 })
 
 const activeCategoryOptions = computed(() => {
@@ -476,14 +677,14 @@ function isComboCategory(cat: any): boolean {
 }
 
 function getSubcategories(parentId: string) {
-  const parent = categories.value.find(c => c._id === parentId)
+  const parent = categories.value.find(c => String(c._id) === String(parentId))
   if (parent && isComboCategory(parent)) {
     return []
   }
   return categories.value.filter(c => {
     if (!c.parentId) return false
     const pId = typeof c.parentId === 'object' ? (c.parentId as any)._id : c.parentId
-    return pId === parentId && !isComboCategory(c)
+    return String(pId) === String(parentId) && !isComboCategory(c)
   })
 }
 const newQuickOptionVal = ref('')
@@ -665,6 +866,21 @@ onMounted(() => {
         form.isFeatured = data.isFeatured || false
         form.subOptions = data.subOptions || []
         imagesList.value = data.images || []
+        // TT-028: Category-specific attributes
+        form.productType = data.productType || 'BOOK'
+        form.author = data.author || ''
+        form.publisher = data.publisher || ''
+        form.publicationYear = data.publicationYear
+        form.isbn = data.isbn || ''
+        form.pages = data.pages
+        form.coverType = data.coverType || ''
+        form.bookSize = data.bookSize || ''
+        form.translator = data.translator || ''
+        form.language = data.language || ''
+        form.origin = data.origin || ''
+        form.color = data.color || ''
+        form.material = data.material || ''
+        form.packaging = data.packaging || ''
       })
       .catch(() => {
         toast.error('Lỗi khi tải thông tin sản phẩm')
@@ -674,13 +890,34 @@ onMounted(() => {
 })
 
 async function handleSubmit() {
+  // TT-011: Minimum price rules
+  if (form.price < 0) {
+    toast.error('Giá bán không được âm (cho phép 0đ cho hàng khuyến mãi/quà tặng)')
+    return
+  }
+  if (isHotDeal.value && form.discountPrice > form.price) {
+    toast.error('Giá khuyến mãi không được lớn hơn giá gốc')
+    return
+  }
+  if (isHotDeal.value && form.discountPrice < 0) {
+    toast.error('Giá khuyến mãi không được âm')
+    return
+  }
+
   submitting.value = true
   try {
     const finalImages = imagesList.value.filter(url => url.trim() !== '')
-    const payload = {
+    const payload: any = {
       ...form,
       discountPrice: isHotDeal.value ? form.discountPrice : 0,
       images: finalImages.length > 0 ? finalImages : ['https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400'],
+    }
+
+    // TT-009: Auto-generated sequential SKU when empty
+    if (!payload.sku || !payload.sku.trim()) {
+      delete payload.sku
+    } else {
+      payload.sku = payload.sku.trim().toUpperCase()
     }
 
     if (isEdit.value) {

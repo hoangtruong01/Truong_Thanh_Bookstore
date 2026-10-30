@@ -7,14 +7,15 @@
       <!-- Filters Sidebar -->
       <aside class="w-full lg:w-72 flex-shrink-0 space-y-5">
         <!-- Categories -->
+        <!-- Categories Filter (TT-012 Multi-level Category Tree) -->
         <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
           <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
-            <span>Danh mục</span>
+            <span>Danh mục sản phẩm</span>
             <span v-if="selectedCategory" class="text-[10px] font-bold text-[#dc2626] hover:underline cursor-pointer" @click="selectCategory('')">
               Xóa chọn
             </span>
           </h3>
-          <div class="space-y-1 max-h-64 overflow-y-auto pr-1">
+          <div class="space-y-1 max-h-80 overflow-y-auto pr-1">
             <button
               class="w-full text-left text-xs font-bold py-1.5 px-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-between"
               :class="[!selectedCategory ? 'bg-red-50 text-[#dc2626]' : 'text-slate-600 hover:bg-slate-50']"
@@ -22,15 +23,98 @@
             >
               <span>Tất cả sản phẩm</span>
             </button>
-            <div v-for="cat in categories" :key="cat._id" class="space-y-1">
-              <button
-                class="w-full text-left text-xs font-semibold py-1.5 px-2.5 rounded-xl transition-all cursor-pointer flex justify-between items-center"
-                :class="[selectedCategory === cat._id ? 'bg-red-50 text-[#dc2626] font-bold' : 'text-slate-600 hover:bg-slate-50']"
-                @click="selectCategory(cat._id)"
-              >
-                <span class="truncate">{{ cat.name }}</span>
-              </button>
+            <div v-for="parent in parentCategories" :key="parent._id" class="space-y-0.5">
+              <div class="flex items-center justify-between group rounded-xl hover:bg-slate-50 transition-all">
+                <button
+                  class="flex-1 text-left text-xs font-semibold py-1.5 px-2.5 rounded-xl cursor-pointer truncate"
+                  :class="[selectedCategory === parent._id ? 'bg-red-50 text-[#dc2626] font-bold' : 'text-slate-700']"
+                  @click="selectCategory(parent._id)"
+                >
+                  <span class="truncate">{{ parent.name }}</span>
+                </button>
+                <button
+                  v-if="getChildren(parent._id).length"
+                  type="button"
+                  class="p-1.5 text-slate-400 hover:text-slate-700 cursor-pointer text-xs"
+                  :title="isBranchActive(parent._id) ? 'Thu gọn' : 'Mở rộng'"
+                  @click.stop="toggleCategoryExpand(parent._id)"
+                >
+                  <span class="text-[10px]">{{ isBranchActive(parent._id) ? '▼' : '▶' }}</span>
+                </button>
+              </div>
+
+              <!-- Level 2 Subcategories -->
+              <div v-if="getChildren(parent._id).length && isBranchActive(parent._id)" class="pl-3 border-l-2 border-red-100 ml-2 space-y-0.5 my-1">
+                <div v-for="sub in getChildren(parent._id)" :key="sub._id" class="space-y-0.5">
+                  <div class="flex items-center justify-between group rounded-lg hover:bg-slate-50 transition-all">
+                    <button
+                      class="flex-1 text-left text-[11px] font-medium py-1 px-2 rounded-lg cursor-pointer truncate"
+                      :class="[selectedCategory === sub._id ? 'bg-red-100/70 text-[#dc2626] font-bold' : 'text-slate-600 hover:text-slate-900']"
+                      @click="selectCategory(sub._id)"
+                    >
+                      <span class="truncate">↳ {{ sub.name }}</span>
+                    </button>
+                    <button
+                      v-if="getChildren(sub._id).length"
+                      type="button"
+                      class="p-1 text-slate-400 hover:text-slate-700 cursor-pointer text-[10px]"
+                      @click.stop="toggleCategoryExpand(sub._id)"
+                    >
+                      <span>{{ isBranchActive(sub._id) ? '▼' : '▶' }}</span>
+                    </button>
+                  </div>
+
+                  <!-- Level 3 Grandchildren -->
+                  <div v-if="getChildren(sub._id).length && isBranchActive(sub._id)" class="pl-2.5 border-l border-slate-200 ml-2 space-y-0.5 my-0.5">
+                    <button
+                      v-for="grand in getChildren(sub._id)"
+                      :key="grand._id"
+                      class="w-full text-left text-[10.5px] py-1 px-1.5 rounded cursor-pointer truncate block"
+                      :class="[selectedCategory === grand._id ? 'text-[#dc2626] font-bold bg-red-50' : 'text-slate-500 hover:text-slate-800']"
+                      @click="selectCategory(grand._id)"
+                    >
+                      • {{ grand.name }}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Product Type Filter (TT-028) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+          <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
+            <span>Loại sản phẩm</span>
+            <span v-if="selectedProductType" class="text-[10px] font-bold text-[#dc2626] hover:underline cursor-pointer" @click="selectProductType('')">
+              Xóa chọn
+            </span>
+          </h3>
+          <div class="grid grid-cols-1 gap-1.5">
+            <button
+              type="button"
+              class="w-full text-left text-xs font-medium py-1.5 px-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-between"
+              :class="!selectedProductType ? 'bg-red-50 text-[#dc2626] font-bold' : 'text-slate-600 hover:bg-slate-50'"
+              @click="selectProductType('')"
+            >
+              <span>Tất cả</span>
+            </button>
+            <button
+              type="button"
+              class="w-full text-left text-xs font-medium py-1.5 px-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-between"
+              :class="selectedProductType === 'BOOK' ? 'bg-red-50 text-[#dc2626] font-bold' : 'text-slate-600 hover:bg-slate-50'"
+              @click="selectProductType('BOOK')"
+            >
+              <span>📚 Sách & Ấn phẩm</span>
+            </button>
+            <button
+              type="button"
+              class="w-full text-left text-xs font-medium py-1.5 px-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-between"
+              :class="selectedProductType === 'STATIONERY' ? 'bg-red-50 text-[#dc2626] font-bold' : 'text-slate-600 hover:bg-slate-50'"
+              @click="selectProductType('STATIONERY')"
+            >
+              <span>✏️ Văn phòng phẩm</span>
+            </button>
           </div>
         </div>
 
@@ -411,16 +495,59 @@ const cartStore = useCartStore()
 const toast = useToast()
 
 const categories = ref<Category[]>([])
+const parentCategories = computed(() => categories.value.filter((c) => !c.parentId))
+const expandedCategories = ref<Set<string>>(new Set())
 const selectedCategory = ref((route.query.category as string) || '')
+const selectedProductType = ref((route.query.productType as string) || '')
+
+function getChildren(parentId: string) {
+  return categories.value.filter(c => {
+    if (!c.parentId) return false
+    const pId = typeof c.parentId === 'object' ? (c.parentId as any)._id : c.parentId
+    return String(pId) === String(parentId)
+  })
+}
+
+function isBranchActive(catId: string): boolean {
+  if (expandedCategories.value.has(catId)) return true
+  if (String(selectedCategory.value) === String(catId)) return true
+  let curr = categories.value.find(c => String(c._id) === String(selectedCategory.value))
+  const visited = new Set<string>()
+  while (curr && !visited.has(String(curr._id))) {
+    visited.add(String(curr._id))
+    const pId = typeof curr.parentId === 'object' && curr.parentId ? (curr.parentId as any)._id : curr.parentId
+    if (String(pId) === String(catId)) return true
+    if (!pId) break
+    curr = categories.value.find(c => String(c._id) === String(pId))
+  }
+  return false
+}
+
+function toggleCategoryExpand(catId: string) {
+  if (expandedCategories.value.has(catId)) {
+    expandedCategories.value.delete(catId)
+  } else {
+    expandedCategories.value.add(catId)
+  }
+}
 
 const breadcrumbItems = computed(() => {
   const items = [
     { label: 'Trang chủ', to: '/' },
     { label: 'Sản phẩm', to: '/products' },
   ]
-  if (selectedCategory.value) {
-    const cat = categories.value.find((c) => c._id === selectedCategory.value)
-    if (cat) {
+  if (selectedCategory.value && categories.value.length > 0) {
+    const path: Category[] = []
+    let curr = categories.value.find((c) => String(c._id) === String(selectedCategory.value))
+    const visited = new Set<string>()
+    while (curr && !visited.has(String(curr._id))) {
+      visited.add(String(curr._id))
+      path.unshift(curr)
+      const pId = typeof curr.parentId === 'object' && curr.parentId ? (curr.parentId as any)._id : curr.parentId
+      if (!pId) break
+      curr = categories.value.find((c) => String(c._id) === String(pId))
+    }
+    for (const cat of path) {
       items.push({
         label: cat.name,
         to: `/products?category=${cat._id}`,
@@ -569,7 +696,8 @@ onMounted(() => {
   categoryService
     .getAll()
     .then((catRes) => {
-      categories.value = catRes.data.filter((c: any) => !c.parentId)
+      const raw = catRes.data?.data || catRes.data || []
+      categories.value = Array.isArray(raw) ? raw : []
     })
     .catch((err) => {
       console.error('Error fetching categories', err)
@@ -581,6 +709,7 @@ watch(
   () => route.query,
   (newQuery) => {
     selectedCategory.value = (newQuery.category as string) || ''
+    selectedProductType.value = (newQuery.productType as string) || ''
     searchQuery.value = (newQuery.q as string) || ''
     isDiscounted.value = newQuery.discounted === 'true'
     selectedSubOption.value = ''
@@ -597,6 +726,7 @@ async function fetchProducts() {
       page: currentPage.value,
       limit,
       category: selectedCategory.value || undefined,
+      productType: selectedProductType.value || undefined,
       q: combinedQ || undefined,
       minPrice: minPrice.value || undefined,
       maxPrice: maxPrice.value || undefined,
@@ -629,6 +759,18 @@ function selectCategory(catId: string) {
     query: {
       ...route.query,
       category: catId || undefined,
+    },
+  })
+}
+
+function selectProductType(type: string) {
+  selectedProductType.value = type
+  currentPage.value = 1
+  router.push({
+    path: '/products',
+    query: {
+      ...route.query,
+      productType: type || undefined,
     },
   })
 }

@@ -146,9 +146,13 @@ describe('CategoriesService (TASK 11: Multi-level Category Tree & Slug)', () => 
       exec: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
     });
 
-    mockCategoryModel.countDocuments = jest.fn().mockReturnValue({
-      exec: jest.fn().mockResolvedValue(3),
-    });
+    mockCategoryModel.countDocuments = jest.fn().mockResolvedValue(0);
+
+    mockCategoryModel.db = {
+      model: jest.fn().mockReturnValue({
+        countDocuments: jest.fn().mockResolvedValue(0),
+      }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -309,12 +313,59 @@ describe('CategoriesService (TASK 11: Multi-level Category Tree & Slug)', () => 
       );
     });
 
-    it('should safely delete category and re-parent its subcategories', async () => {
+    it('TT-010: should throw BadRequestException when deleting category that still has subcategories', async () => {
+      mockCategoryModel.countDocuments.mockResolvedValueOnce(2); // 2 subcategories
+
+      await expect(service.delete(mockRootCat._id)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('TT-010: should throw BadRequestException when deleting category that still has products', async () => {
+      mockCategoryModel.countDocuments.mockResolvedValueOnce(0); // 0 subcategories
+      mockCategoryModel.db.model().countDocuments.mockResolvedValueOnce(5); // 5 products
+
+      await expect(service.delete(mockRootCat._id)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('TT-010: should delete category successfully when it has 0 subcategories and 0 products', async () => {
+      mockCategoryModel.countDocuments.mockResolvedValueOnce(0);
+      mockCategoryModel.db.model().countDocuments.mockResolvedValueOnce(0);
+
       await expect(service.delete(mockRootCat._id)).resolves.toBeUndefined();
-      expect(mockCategoryModel.updateMany).toHaveBeenCalled();
       expect(mockCategoryModel.findByIdAndDelete).toHaveBeenCalledWith(
         mockRootCat._id,
       );
+    });
+
+    it('TT-010: should get all descendant category IDs recursively', async () => {
+      mockCategoryModel.find.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue([{ _id: mockChildCat._id }]),
+          }),
+        }),
+      });
+      mockCategoryModel.find.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue([{ _id: mockSubChildCat._id }]),
+          }),
+        }),
+      });
+      mockCategoryModel.find.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const ids = await service.getAllDescendantCategoryIds(mockRootCat._id);
+      expect(ids).toBeDefined();
+      expect(ids.length).toBe(3);
     });
 
     it('should toggle category active status', async () => {

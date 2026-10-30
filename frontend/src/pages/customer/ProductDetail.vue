@@ -175,16 +175,20 @@
           <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex items-center justify-between">
             <div class="space-y-1">
               <template v-if="product.discountPrice > 0">
-                <div class="flex items-baseline gap-3">
+                <div class="flex items-baseline gap-3 flex-wrap">
                   <span class="text-3xl font-black text-[#dc2626]">{{ formatCurrency(product.discountPrice) }}</span>
                   <span class="text-slate-400 line-through text-sm font-medium">{{ formatCurrency(product.price) }}</span>
+                  <span v-if="product.unit" class="text-sm font-semibold text-slate-500">/ {{ product.unit }}</span>
                 </div>
                 <p class="text-xs text-red-500 font-bold">
                   Tiết kiệm {{ formatCurrency(product.price - product.discountPrice) }} (-{{ getDiscountPercent(product.price, product.discountPrice) }}%)
                 </p>
               </template>
               <template v-else>
-                <span class="text-3xl font-black text-slate-800">{{ formatCurrency(product.price) }}</span>
+                <div class="flex items-baseline gap-2">
+                  <span class="text-3xl font-black text-slate-800">{{ formatCurrency(product.price) }}</span>
+                  <span v-if="product.unit" class="text-sm font-semibold text-slate-500">/ {{ product.unit }}</span>
+                </div>
               </template>
             </div>
           </div>
@@ -247,7 +251,9 @@
 
           <!-- Quantity Selector -->
           <div class="space-y-3">
-            <span class="text-sm font-bold text-slate-700">Số lượng</span>
+            <span class="text-sm font-bold text-slate-700">
+              Số lượng <span v-if="product.unit" class="text-xs text-slate-400 font-normal">({{ product.unit }})</span>
+            </span>
             <div class="flex items-center gap-3">
               <div class="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-1">
                 <button
@@ -452,6 +458,10 @@
             <span class="w-1/3 text-slate-400 font-medium">Tác giả</span>
             <span class="w-2/3 text-slate-800 font-bold text-red-600">{{ product.author }}</span>
           </div>
+          <div v-if="product.translator" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Người dịch</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.translator }}</span>
+          </div>
           <div v-if="product.publisher" class="flex py-2.5 border-b border-slate-100/70">
             <span class="w-1/3 text-slate-400 font-medium">Nhà xuất bản</span>
             <span class="w-2/3 text-slate-800 font-semibold">{{ product.publisher }}</span>
@@ -460,13 +470,41 @@
             <span class="w-1/3 text-slate-400 font-medium">Năm xuất bản</span>
             <span class="w-2/3 text-slate-800 font-semibold">{{ product.publicationYear }}</span>
           </div>
+          <div v-if="product.language" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Ngôn ngữ</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.language }}</span>
+          </div>
+          <div v-if="product.pages" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Số trang</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.pages }} trang</span>
+          </div>
+          <div v-if="product.coverType" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Hình thức bìa</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.coverType }}</span>
+          </div>
+          <div v-if="product.bookSize" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Kích thước</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.bookSize }}</span>
+          </div>
           <div v-if="product.isbn" class="flex py-2.5 border-b border-slate-100/70">
             <span class="w-1/3 text-slate-400 font-medium">Mã ISBN</span>
             <span class="w-2/3 text-slate-800 font-mono font-semibold">{{ product.isbn }}</span>
           </div>
-          <div class="flex py-2.5 border-b border-slate-100/70">
-            <span class="w-1/3 text-slate-400 font-medium">Thương hiệu</span>
-            <span class="w-2/3 text-slate-800 font-semibold">{{ product.brand || 'Khác' }}</span>
+          <div v-if="product.brand" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Thương hiệu / Hãng</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.brand }}</span>
+          </div>
+          <div v-if="product.color" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Màu sắc</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.color }}</span>
+          </div>
+          <div v-if="product.material" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Chất liệu</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.material }}</span>
+          </div>
+          <div v-if="product.packaging" class="flex py-2.5 border-b border-slate-100/70">
+            <span class="w-1/3 text-slate-400 font-medium">Quy cách đóng gói</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.packaging }}</span>
           </div>
           <div class="flex py-2.5 border-b border-slate-100/70">
             <span class="w-1/3 text-slate-400 font-medium">Mã SKU</span>
@@ -478,7 +516,7 @@
           </div>
           <div class="flex py-2.5 border-b border-slate-100/70">
             <span class="w-1/3 text-slate-400 font-medium">Đơn vị tính</span>
-            <span class="w-2/3 text-slate-800 font-semibold">{{ product.unit || 'Quyển/Cái' }}</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.unit || 'cái' }}</span>
           </div>
           <div class="flex py-2.5 border-b border-slate-100/70">
             <span class="w-1/3 text-slate-400 font-medium">Tình trạng kho</span>
@@ -488,7 +526,7 @@
           </div>
           <div class="flex py-2.5 border-b border-slate-100/70">
             <span class="w-1/3 text-slate-400 font-medium">Xuất xứ</span>
-            <span class="w-2/3 text-slate-800 font-semibold">Việt Nam</span>
+            <span class="w-2/3 text-slate-800 font-semibold">{{ product.origin || 'Việt Nam' }}</span>
           </div>
           <div class="flex py-2.5 border-b border-slate-100/70">
             <span class="w-1/3 text-slate-400 font-medium">Nhà phân phối</span>
@@ -990,16 +1028,40 @@ const isBuyingNow = ref(false)
 const isSubscribingAlert = ref(false)
 const isSubmittingReview = ref(false)
 
+const allCategories = ref<Category[]>([])
+
 const breadcrumbItems = computed(() => {
   const items = [
     { label: 'Trang chủ', to: '/' },
     { label: 'Sản phẩm', to: '/products' }
   ]
   if (product.value) {
-    if (typeof product.value.category === 'object' && product.value.category) {
+    const catId = typeof product.value.category === 'object' && product.value.category
+      ? (product.value.category as any)._id
+      : (product.value.category || (categoryDetail.value ? categoryDetail.value._id : ''))
+
+    if (catId && allCategories.value.length > 0) {
+      // Build ancestry path from root down to this category (TT-012)
+      const path: Category[] = []
+      let curr = allCategories.value.find(c => String(c._id) === String(catId))
+      const visited = new Set<string>()
+      while (curr && !visited.has(String(curr._id))) {
+        visited.add(String(curr._id))
+        path.unshift(curr)
+        const pId = typeof curr.parentId === 'object' && curr.parentId ? (curr.parentId as any)._id : curr.parentId
+        if (!pId) break
+        curr = allCategories.value.find(c => String(c._id) === String(pId))
+      }
+      for (const cat of path) {
+        items.push({
+          label: cat.name,
+          to: `/products?category=${cat._id}`,
+        })
+      }
+    } else if (typeof product.value.category === 'object' && product.value.category) {
       items.push({
-        label: product.value.category.name,
-        to: `/products?category=${product.value.category._id}`
+        label: (product.value.category as any).name,
+        to: `/products?category=${(product.value.category as any)._id}`
       })
     } else if (categoryDetail.value) {
       items.push({
@@ -1489,7 +1551,13 @@ async function loadProduct() {
   }
 }
 
-onMounted(loadProduct)
+onMounted(() => {
+  loadProduct()
+  categoryService.getAll().then((res: any) => {
+    const raw = res.data?.data || res.data || []
+    allCategories.value = Array.isArray(raw) ? raw : []
+  }).catch(() => {})
+})
 watch(() => route.params.id, () => {
   stopAutoplay()
   loadProduct()
