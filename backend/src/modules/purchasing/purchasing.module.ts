@@ -15,6 +15,7 @@ import { GoodsReceiptsController } from './goods-receipts.controller';
 import { SuppliersModule } from '../suppliers/suppliers.module';
 import { ProductsModule } from '../products/products.module';
 import { InventoryModule } from '../inventory/inventory.module';
+import { FinanceModule } from '../finance/finance.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { InventoryModule } from '../inventory/inventory.module';
     SuppliersModule,
     ProductsModule,
     InventoryModule,
+    FinanceModule,
   ],
   controllers: [PurchaseOrdersController, GoodsReceiptsController],
   providers: [PurchaseOrdersService, GoodsReceiptsService],

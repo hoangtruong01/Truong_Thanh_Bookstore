@@ -304,5 +304,30 @@ describe('SuppliersService (ERP-01)', () => {
       expect(res[0].code).toBe('NCC-0001');
       expect(res[0].lastPurchasePrice).toBe(8500);
     });
+
+    it('DOC-04: exportSuppliersToExcel xuất buffer Excel hợp lệ', async () => {
+      supplierModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          limit: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue([
+              {
+                code: 'NCC-0001',
+                name: 'Thiên Long',
+                phone: '0901234567',
+                email: 'thienlong@example.com',
+                contactPerson: 'Anh Ba',
+                address: 'TP.HCM',
+                status: 'ACTIVE',
+                notes: 'Nhà cung cấp bút',
+              },
+            ]),
+          }),
+        }),
+      });
+
+      const buffer = await service.exportSuppliersToExcel();
+      expect(buffer).toBeInstanceOf(Buffer);
+      expect(buffer.length).toBeGreaterThan(0);
+    });
   });
 });

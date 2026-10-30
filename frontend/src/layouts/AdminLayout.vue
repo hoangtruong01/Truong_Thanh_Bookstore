@@ -450,6 +450,14 @@ const StockAuditIcon = {
   template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" /></svg>`
 }
 
+const PricingIcon = {
+  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>`
+}
+
+const CashbookIcon = {
+  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0H3m0 0h18m-18 0a3 3 0 0 0-3 3v9.75a3 3 0 0 0 3 3h18a3 3 0 0 0 3-3V9a3 3 0 0 0-3-3m-18 0V4.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 4.5V6" /></svg>`
+}
+
 const navItems = computed(() => {
   const items = [
     { name: 'AdminDashboard', label: locale.value === 'en' ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
@@ -460,6 +468,8 @@ const navItems = computed(() => {
     { name: 'AdminPurchases', label: locale.value === 'en' ? 'Purchases & Receipts' : 'Mua hàng & PO', to: '/admin/purchases', icon: PurchasesIcon, permission: 'MANAGE_INVENTORY' },
     { name: 'AdminSuppliers', label: locale.value === 'en' ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: SuppliersIcon, permission: 'MANAGE_INVENTORY' },
     { name: 'AdminStockAudits', label: locale.value === 'en' ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: StockAuditIcon, permission: 'MANAGE_INVENTORY' },
+    { name: 'AdminPricing', label: locale.value === 'en' ? 'Pricing & Margin' : 'Chính sách giá & Lãi', to: '/admin/pricing', icon: PricingIcon, permission: 'MANAGE_PRICING' },
+    { name: 'AdminCashbook', label: locale.value === 'en' ? 'Cashbook & Finance' : 'Sổ quỹ & Thu chi', to: '/admin/cashbook', icon: CashbookIcon, permission: 'MANAGE_FINANCE' },
     { name: 'AdminCombos', label: locale.value === 'en' ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon, permission: 'MANAGE_PRODUCTS' },
     { name: 'AdminReviews', label: locale.value === 'en' ? 'Reviews' : 'Đánh giá', to: '/admin/reviews', icon: ReviewsIcon, permission: 'MANAGE_PRODUCTS' },
     { name: 'AdminCustomers', label: locale.value === 'en' ? 'Customers' : 'Khách hàng', to: '/admin/customers', icon: CustomersIcon, permission: 'MANAGE_CUSTOMERS' },

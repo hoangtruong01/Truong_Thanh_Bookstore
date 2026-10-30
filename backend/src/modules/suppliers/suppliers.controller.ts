@@ -8,7 +8,9 @@ import {
   Param,
   Query,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SuppliersService } from './suppliers.service';
@@ -55,6 +57,21 @@ export class SuppliersController {
   })
   async getSuppliersForProduct(@Param('productId') productId: string) {
     return this.suppliersService.getSuppliersForProduct(productId);
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'DOC-04: Xuất file Excel danh sách nhà cung cấp' })
+  async exportToExcel(@Query() query: SupplierQueryDto, @Res() res: Response) {
+    const buffer = await this.suppliersService.exportSuppliersToExcel(query);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=danh-sach-nha-cung-cap.xlsx',
+    );
+    res.send(buffer);
   }
 
   @Get(':id')

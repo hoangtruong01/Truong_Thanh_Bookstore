@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
+  Optional,
   Logger,
 } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
@@ -23,6 +24,7 @@ import {
 } from './dto/goods-receipt.dto';
 import { InventoryService } from '../inventory/inventory.service';
 import { SuppliersService } from '../suppliers/suppliers.service';
+import { FinanceService } from '../finance/finance.service';
 import { paginate, PaginatedResult } from '../../common/dto/pagination.dto';
 
 @Injectable()
@@ -38,6 +40,8 @@ export class GoodsReceiptsService {
     private readonly connection: Connection,
     private readonly inventoryService: InventoryService,
     private readonly suppliersService: SuppliersService,
+    @Optional()
+    private readonly financeService?: FinanceService,
   ) {}
 
   /**
@@ -273,6 +277,18 @@ export class GoodsReceiptsService {
         savedReceipt = await newReceipt.save({ session });
       } else {
         savedReceipt = await newReceipt.save();
+      }
+
+      // FIN-03: Tự động ghi nhận công nợ nhà cung cấp khi nhập hàng
+      if (this.financeService && totalAmount > 0) {
+        await this.financeService.createPayableFromGoodsReceipt(
+          po.supplier,
+          savedReceipt._id,
+          po._id,
+          receiptCode,
+          totalAmount,
+          session || undefined,
+        );
       }
 
       // 5. Cập nhật tồn kho và giá vốn (Moving Weighted Average Cost)

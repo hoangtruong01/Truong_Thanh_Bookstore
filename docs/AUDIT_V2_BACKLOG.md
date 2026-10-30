@@ -388,7 +388,7 @@ Các module dưới đây nên phát triển theo thứ tự phụ thuộc nghi�
 - Có lịch sử nguyên nhân và người chịu trách nhiệm.
 - Chỉ cập nhật kho sau phê duyệt và kiểm tra xung đột.
 
-### ERP-05 — Báo cáo nhập xuất tồn và lãi gộp
+### ERP-05 — Báo cáo nhập xuất tồn và lãi gộp [✅ ĐÃ HOÀN THÀNH - SPRINT 5]
 
 **Yêu cầu:**
 - Tồn đầu kỳ.
@@ -401,7 +401,7 @@ Các module dưới đây nên phát triển theo thứ tự phụ thuộc nghi�
 - Lãi gộp.
 - Lọc theo SKU, nhà cung cấp, nhóm hàng, kênh và thời gian.
 
-### ERP-06 — Đề xuất nhập hàng thông minh
+### ERP-06 — Đề xuất nhập hàng thông minh [✅ ĐÃ HOÀN THÀNH - SPRINT 5]
 
 **Yêu cầu:**
 - Mức tồn tối thiểu và tồn mục tiêu.
@@ -467,8 +467,8 @@ NEW-011 đến NEW-016.
 **Sprint 4 — Mua hàng và vận hành** [✅ ĐÃ HOÀN THÀNH - Branch: `feature/sprint4-purchasing-operations`]
 ERP-01, ERP-02, ERP-03, ERP-04.
 
-**Sprint 5 — Quản trị và tối ưu** [⏳ TIẾP THEO]
-ERP-05, ERP-06, QA-01, QA-02 và hoàn thiện kiểm thử.
+**Sprint 5 — Quản trị, tài chính và tối ưu** [✅ ĐÃ HOÀN THÀNH - Branch: `feature/sprint5-operations-finance-reporting`]
+PRC-01 to PRC-05 (Chính sách giá & Biên lợi nhuận), FIN-01 to FIN-03 (Sổ quỹ & Công nợ NCC), ERP-05 (Báo cáo nhập xuất tồn & lãi gộp), ERP-06 (Đề xuất nhập hàng thông minh), DOC-04 (Xuất Excel sổ quỹ, NCC, nhập xuất tồn), QA-01, QA-02.
 
 ---
 

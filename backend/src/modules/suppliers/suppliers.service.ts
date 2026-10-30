@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, ClientSession } from 'mongoose';
+import * as ExcelJS from 'exceljs';
 import {
   Supplier,
   SupplierDocument,
@@ -325,5 +326,59 @@ export class SuppliersService {
         lastPurchasedAt: productInfo?.lastPurchasedAt,
       };
     });
+  }
+
+  /**
+   * DOC-04: Xuất Excel danh sách nhà cung cấp
+   */
+  async exportSuppliersToExcel(query?: SupplierQueryDto): Promise<Buffer> {
+    const filter: Record<string, any> = { isDeleted: false };
+    if (query?.status) filter.status = query.status;
+    if (query?.search && query.search.trim()) {
+      const searchRegex = new RegExp(query.search.trim(), 'i');
+      filter.$or = [
+        { code: searchRegex },
+        { name: searchRegex },
+        { phone: searchRegex },
+        { contactPerson: searchRegex },
+      ];
+    }
+
+    const suppliers = await this.supplierModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .limit(5000)
+      .exec();
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('NhaCungCap');
+
+    worksheet.columns = [
+      { header: 'Mã NCC', key: 'code', width: 15 },
+      { header: 'Tên nhà cung cấp', key: 'name', width: 35 },
+      { header: 'Số điện thoại', key: 'phone', width: 16 },
+      { header: 'Email', key: 'email', width: 25 },
+      { header: 'Người liên hệ', key: 'contactPerson', width: 22 },
+      { header: 'Địa chỉ', key: 'address', width: 35 },
+      { header: 'Trạng thái', key: 'status', width: 15 },
+      { header: 'Ghi chú', key: 'note', width: 25 },
+    ];
+
+    worksheet.getRow(1).font = { bold: true };
+
+    for (const s of suppliers) {
+      worksheet.addRow({
+        code: s.code,
+        name: s.name,
+        phone: s.phone,
+        email: s.email || '-',
+        contactPerson: s.contactPerson || '-',
+        address: s.address || '-',
+        status: s.status,
+        note: s.notes || '',
+      });
+    }
+
+    return Buffer.from(await workbook.xlsx.writeBuffer());
   }
 }
