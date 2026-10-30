@@ -618,13 +618,44 @@
           <button class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer" @click="showPrintModal = false">✕</button>
         </div>
 
-        <!-- Printable Bill Area -->
-        <div id="pos-print-area" class="border border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50 text-xs font-mono space-y-3">
+        <!-- NEW-010: Bộ chọn khổ giấy in hóa đơn (K80 / K58) -->
+        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+          <span class="font-bold text-slate-700">Khổ giấy in:</span>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              class="px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer"
+              :class="printPaperSize === '80mm' ? 'bg-[#dc2626] text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'"
+              @click="printPaperSize = '80mm'"
+            >
+              K80 (80mm Chuẩn)
+            </button>
+            <button
+              type="button"
+              class="px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer"
+              :class="printPaperSize === '58mm' ? 'bg-[#dc2626] text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'"
+              @click="printPaperSize = '58mm'"
+            >
+              K58 (58mm Nhỏ)
+            </button>
+          </div>
+        </div>
+
+        <!-- Printable Bill Area (NEW-010: Dùng storeInfo thực tế, chống text tràn, hỗ trợ K80/K58) -->
+        <div
+          id="pos-print-area"
+          class="border border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50 font-mono space-y-3 mx-auto transition-all"
+          :class="printPaperSize === '58mm' ? 'print-k58 max-w-[280px] text-[10px]' : 'print-k80 max-w-md text-xs'"
+        >
           <!-- Header -->
           <div class="text-center space-y-0.5 border-b border-dashed border-slate-300 pb-2">
-            <h2 class="text-sm font-extrabold uppercase text-slate-900 font-sans">NHÀ SÁCH TRƯỜNG THÀNH</h2>
-            <p class="text-[10px] text-slate-500">Đ/c: 123 Đường Sách, Q. Ninh Kiều, Cần Thơ</p>
-            <p class="text-[10px] text-slate-500">Hotline: 0987 654 321</p>
+            <h2 class="text-sm font-extrabold uppercase text-slate-900 font-sans tracking-wide">
+              {{ storeInfo.name }}
+            </h2>
+            <p class="text-[10px] text-slate-500 break-words leading-tight">
+              Đ/c: {{ storeInfo.address }}
+            </p>
+            <p class="text-[10px] text-slate-500">Hotline: {{ storeInfo.hotline }}</p>
             <h3 class="text-xs font-bold uppercase pt-1 text-slate-800 font-sans">HÓA ĐƠN BÁN LẺ</h3>
           </div>
 
@@ -656,7 +687,7 @@
               class="flex justify-between text-[11px]"
             >
               <div class="min-w-0 pr-2">
-                <span class="font-bold block truncate">{{ it.name }}</span>
+                <span class="font-bold block break-words leading-tight text-slate-900">{{ it.name }}</span>
                 <span class="text-[9px] text-slate-500">{{ it.quantity }} {{ it.unit }} x {{ formatPrice(it.unitPrice) }}</span>
               </div>
               <span class="font-bold flex-shrink-0">{{ formatPrice(it.lineTotal) }}</span>
@@ -811,8 +842,13 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useToast } from 'vue-toastification'
 import posService from '@/services/pos.service'
 import { productService } from '@/services/product.service'
+import { getStoreInfo } from '@/services/store-info.service'
 
 const toast = useToast()
+
+// Store configuration for receipts (NEW-010)
+const storeInfo = ref(getStoreInfo())
+const printPaperSize = ref<'80mm' | '58mm'>('80mm')
 
 // Active Mode: pos | history | report
 const activeMode = ref<'pos' | 'history' | 'report'>('pos')
@@ -978,14 +1014,33 @@ async function handleBarcodeEnter() {
     const res: any = await posService.searchProducts(barcode)
     const matches = res.data?.data || res.data || []
     if (matches.length > 0) {
-      // Prioritize exact barcode or SKU match
-      const exact = matches.find((m: any) =>
+      // NEW-007: Phân loại khớp chính xác mã vạch / SKU / đơn vị quy đổi
+      const exactMatches = matches.filter((m: any) =>
         m.barcode?.toLowerCase() === barcode.toLowerCase() ||
         m.sku?.toLowerCase() === barcode.toLowerCase() ||
-        m.unitConversions?.some((c: any) => c.barcode?.toLowerCase() === barcode.toLowerCase())
-      ) || matches[0]
+        m.unitConversions?.some((c: any) => c.barcode?.toLowerCase() === barcode.toLowerCase()) ||
+        m.matchType === 'BARCODE' ||
+        m.matchType === 'UNIT_CONVERSION' ||
+        m.matchType === 'SKU'
+      )
 
-      addProductToCart(exact)
+      if (exactMatches.length > 1) {
+        // NEW-007: Trùng mã vạch ở nhiều sản phẩm -> Cảnh báo và mở danh sách để người dùng chọn
+        toast.warning(
+          `Tìm thấy ${exactMatches.length} sản phẩm trùng mã vạch "${barcode}". Vui lòng chọn sản phẩm chính xác bên dưới!`
+        )
+        searchResults.value = exactMatches
+        return
+      }
+
+      const exact = exactMatches.length === 1 ? exactMatches[0] : matches[0]
+
+      // NEW-007: Nhận diện đúng đơn vị quy đổi từ mã vạch (ví dụ: quét mã vạch hộp -> thêm hộp)
+      const targetUnit = exact.matchedUnit || (
+        exact.unitConversions?.find((c: any) => c.barcode?.toLowerCase() === barcode.toLowerCase())?.unit
+      )
+
+      addProductToCart(exact, targetUnit)
       productSearchQuery.value = ''
       searchResults.value = []
     } else {
@@ -996,40 +1051,76 @@ async function handleBarcodeEnter() {
   }
 }
 
-function addProductToCart(product: any) {
-  const existing = currentCart.value.items.find((it) => it.productId === product._id)
+function addProductToCart(product: any, preferredUnit?: string) {
+  const baseUnit = product.unit || 'cái'
+  const targetUnit = preferredUnit || product.matchedUnit || baseUnit
+
+  // Danh sách các đơn vị quy đổi khả dụng
+  const availableUnits = [{ unit: baseUnit, ratio: 1, price: getItemEffectivePrice(product) }]
+  if (product.unitConversions && Array.isArray(product.unitConversions)) {
+    product.unitConversions.forEach((c: any) => {
+      availableUnits.push({
+        unit: c.unit,
+        ratio: c.ratio,
+        price: c.price,
+      })
+    })
+  }
+
+  const selectedUnitObj =
+    availableUnits.find((u) => u.unit.toLowerCase() === targetUnit.toLowerCase()) ||
+    availableUnits[0]
+
+  const unitRatio = selectedUnitObj.ratio || 1
+  let effectiveUnitPrice = selectedUnitObj.price
+  if (!effectiveUnitPrice || effectiveUnitPrice <= 0) {
+    const baseP =
+      currentCart.value.customerType === 'WHOLESALE' &&
+      product.wholesalePrice &&
+      product.wholesalePrice > 0
+        ? product.wholesalePrice
+        : getItemEffectivePrice(product)
+    effectiveUnitPrice = baseP * unitRatio
+  }
+
+  // NEW-007: Tìm item trong giỏ có cùng productId VÀ cùng đơn vị tính
+  const existing = currentCart.value.items.find(
+    (it) =>
+      it.productId === product._id &&
+      it.unit.toLowerCase() === selectedUnitObj.unit.toLowerCase()
+  )
+
+  // Tính tổng số lượng base unit đang có trong giỏ của sản phẩm này
+  const currentBaseQtyInCart = currentCart.value.items
+    .filter((it) => it.productId === product._id)
+    .reduce((sum, it) => sum + it.quantity * it.conversionRatio, 0)
+
+  const availableStock = existing?.stock ?? product.stock ?? 0
+
   if (existing) {
-    if (existing.quantity + 1 > existing.stock) {
-      toast.warning(`Sản phẩm "${product.name}" chỉ còn ${existing.stock} trong kho`)
+    if (currentBaseQtyInCart + unitRatio > availableStock) {
+      toast.warning(
+        `Sản phẩm "${product.name}" chỉ còn ${availableStock} ${baseUnit} trong kho, không đủ thêm 1 ${selectedUnitObj.unit} (${unitRatio} ${baseUnit})`
+      )
       return
     }
     existing.quantity += 1
   } else {
-    if (product.stock <= 0) {
-      toast.warning(`Sản phẩm "${product.name}" đã hết hàng trong kho`)
+    if (currentBaseQtyInCart + unitRatio > availableStock) {
+      toast.warning(
+        availableStock <= 0
+          ? `Sản phẩm "${product.name}" đã hết hàng trong kho`
+          : `Sản phẩm "${product.name}" chỉ còn ${availableStock} ${baseUnit} trong kho, không đủ thêm 1 ${selectedUnitObj.unit} (${unitRatio} ${baseUnit})`
+      )
       return
     }
-
-    const baseUnit = product.unit || 'cái'
-    const availableUnits = [{ unit: baseUnit, ratio: 1, price: getItemEffectivePrice(product) }]
-    if (product.unitConversions && Array.isArray(product.unitConversions)) {
-      product.unitConversions.forEach((c: any) => {
-        availableUnits.push({
-          unit: c.unit,
-          ratio: c.ratio,
-          price: c.price,
-        })
-      })
-    }
-
-    const effectiveUnitPrice = getItemEffectivePrice(product)
 
     currentCart.value.items.push({
       productId: product._id,
       sku: product.sku || '',
       name: product.name,
-      unit: baseUnit,
-      conversionRatio: 1,
+      unit: selectedUnitObj.unit,
+      conversionRatio: unitRatio,
       availableUnits,
       unitPrice: effectiveUnitPrice,
       wholesalePrice: product.wholesalePrice,
@@ -1291,17 +1382,24 @@ onMounted(() => {
   body * {
     visibility: hidden;
   }
-  #pos-print-area, #pos-print-area * {
+  #pos-print-area,
+  #pos-print-area * {
     visibility: visible;
   }
   #pos-print-area {
     position: absolute;
     left: 0;
     top: 0;
-    width: 80mm;
     border: none !important;
     background: transparent !important;
-    padding: 0 !important;
+    padding: 3mm !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  }
+  #pos-print-area.print-k80 {
+    width: 80mm;
+  }
+  #pos-print-area.print-k58 {
+    width: 58mm;
   }
 }
 </style>

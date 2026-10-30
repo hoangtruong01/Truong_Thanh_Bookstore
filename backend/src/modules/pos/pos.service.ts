@@ -893,17 +893,47 @@ export class PosService {
   }
 
   /**
-   * Tra cứu danh sách hóa đơn POS có phân trang và bộ lọc (POS-04)
+   * NEW-009: Mặt nạ dữ liệu nhạy cảm (SĐT khách hàng) nếu người dùng không có quyền quản lý khách hàng
+   */
+  private maskPhone(phone?: string): string {
+    if (!phone || phone.length < 6) return phone || '';
+    const clean = phone.trim();
+    if (clean.length <= 6) return '***';
+    const start = clean.slice(0, 3);
+    const end = clean.slice(-3);
+    return `${start}****${end}`;
+  }
+
+  /**
+   * Tra cứu danh sách hóa đơn POS có phân trang và bộ lọc (POS-04 / NEW-008 / NEW-009)
    */
   async findAll(
     query: POSOrderQueryDto,
-    userRole?: string,
-  ): Promise<PaginatedResult<POSOrderDocument>> {
+    user?: {
+      _id: string;
+      role?: string;
+      permissions?: string[];
+    },
+  ): Promise<PaginatedResult<any>> {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(query.limit) || 15));
     const skip = (page - 1) * limit;
 
     const filter: Record<string, any> = {};
+
+    const isManager =
+      user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN;
+    const canViewAll =
+      isManager ||
+      user?.permissions?.includes(StaffPermission.POS_VIEW_ORDERS) ||
+      user?.permissions?.includes(StaffPermission.MANAGE_ORDERS);
+
+    // NEW-009: Nếu thu ngân không có quyền xem toàn bộ, chỉ hiển thị hóa đơn của chính mình
+    if (!canViewAll && user?._id) {
+      filter.cashier = new Types.ObjectId(user._id);
+    } else if (query.cashierId && Types.ObjectId.isValid(query.cashierId)) {
+      filter.cashier = new Types.ObjectId(query.cashierId);
+    }
 
     if (query.search && query.search.trim()) {
       const q = query.search.trim();
@@ -913,10 +943,6 @@ export class PosService {
         { customerPhone: { $regex: escaped, $options: 'i' } },
         { customerName: { $regex: escaped, $options: 'i' } },
       ];
-    }
-
-    if (query.cashierId && Types.ObjectId.isValid(query.cashierId)) {
-      filter.cashier = new Types.ObjectId(query.cashierId);
     }
 
     if (query.status) {
@@ -948,16 +974,20 @@ export class PosService {
       this.posOrderModel.countDocuments(filter).exec(),
     ]);
 
-    // POS-08: Ẩn giá vốn (costPrice) đối với nhân viên thu ngân thông thường
-    const isManager =
-      userRole === UserRole.ADMIN || userRole === UserRole.SUPER_ADMIN;
+    const canManageCustomers =
+      isManager ||
+      user?.permissions?.includes(StaffPermission.MANAGE_CUSTOMERS);
 
+    // POS-08 & NEW-009: Ẩn giá vốn và che SĐT nhạy cảm theo phân quyền
     const sanitizedItems = items.map((doc) => {
       const obj = doc.toObject();
       if (!isManager && obj.items) {
         obj.items.forEach((it: any) => {
           delete it.costPrice;
         });
+      }
+      if (!canManageCustomers && obj.customerPhone) {
+        obj.customerPhone = this.maskPhone(obj.customerPhone);
       }
       return obj;
     });
@@ -972,28 +1002,54 @@ export class PosService {
   }
 
   /**
-   * Xem chi tiết hóa đơn theo ID để xem lại hoặc in lại hóa đơn (POS-04)
+   * Xem chi tiết hóa đơn theo ID để xem lại hoặc in lại hóa đơn (POS-04 / NEW-008 / NEW-009)
    */
-  async findById(id: string, userRole?: string): Promise<POSOrderDocument> {
+  async findById(
+    id: string,
+    user?: {
+      _id: string;
+      role?: string;
+      permissions?: string[];
+    },
+  ): Promise<any> {
     const order = await this.posOrderModel.findById(id).exec();
     if (!order) {
       throw new NotFoundException(`Không tìm thấy hóa đơn POS ID: ${id}`);
     }
 
     const isManager =
-      userRole === UserRole.ADMIN || userRole === UserRole.SUPER_ADMIN;
+      user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN;
+    const canViewAll =
+      isManager ||
+      user?.permissions?.includes(StaffPermission.POS_VIEW_ORDERS) ||
+      user?.permissions?.includes(StaffPermission.MANAGE_ORDERS);
 
-    if (!isManager) {
-      const obj: any = order.toObject();
-      if (obj.items) {
-        obj.items.forEach((it: any) => {
-          delete it.costPrice;
-        });
-      }
-      return obj;
+    // NEW-009: Chống IDOR - Nhân viên không có quyền xem toàn bộ không được xem hóa đơn của nhân viên khác
+    if (
+      !canViewAll &&
+      user?._id &&
+      order.cashier.toString() !== user._id.toString()
+    ) {
+      throw new ForbiddenException(
+        'Bạn không có quyền xem hóa đơn của nhân viên khác (IDOR Protection)',
+      );
     }
 
-    return order;
+    const canManageCustomers =
+      isManager ||
+      user?.permissions?.includes(StaffPermission.MANAGE_CUSTOMERS);
+
+    const obj: any = order.toObject();
+    if (!isManager && obj.items) {
+      obj.items.forEach((it: any) => {
+        delete it.costPrice;
+      });
+    }
+    if (!canManageCustomers && obj.customerPhone) {
+      obj.customerPhone = this.maskPhone(obj.customerPhone);
+    }
+
+    return obj;
   }
 
   /**
@@ -1075,12 +1131,14 @@ export class PosService {
   }
 
   /**
-   * Tìm kiếm sản phẩm nhanh cho POS bằng SKU, Barcode hoặc tên (POS-02)
+   * Tìm kiếm sản phẩm nhanh cho POS bằng SKU, Barcode hoặc tên (POS-02 / NEW-007)
+   * Nhận diện chính xác đơn vị bán tương ứng với mã vạch được quét
    */
   async searchProductsForPOS(keyword: string): Promise<any[]> {
     if (!keyword || !keyword.trim()) return [];
     const safeK = keyword.trim().substring(0, 100);
     const rawEscaped = safeK.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const kwLower = safeK.toLowerCase();
 
     const products = await this.productModel
       .find({
@@ -1105,6 +1163,44 @@ export class PosService {
       .lean()
       .exec();
 
-    return products;
+    // NEW-007: Xác định chính xác mã vạch quét khớp với SKU, Barcode gốc hay Barcode đơn vị quy đổi
+    return products.map((p: any) => {
+      let matchType: 'SKU' | 'BARCODE' | 'UNIT_CONVERSION' | 'NAME' = 'NAME';
+      let matchedUnit = p.unit || 'cái';
+      let matchedConversionRatio = 1;
+      let matchedPrice = p.discountPrice > 0 ? p.discountPrice : p.price;
+      let matchedBarcode = p.barcode || '';
+
+      if (p.sku && p.sku.toLowerCase() === kwLower) {
+        matchType = 'SKU';
+        matchedBarcode = p.sku;
+      } else if (p.barcode && p.barcode.toLowerCase() === kwLower) {
+        matchType = 'BARCODE';
+        matchedBarcode = p.barcode;
+      } else if (Array.isArray(p.unitConversions)) {
+        const matchedConv = p.unitConversions.find(
+          (c: any) => c.barcode && c.barcode.toLowerCase() === kwLower,
+        );
+        if (matchedConv) {
+          matchType = 'UNIT_CONVERSION';
+          matchedUnit = matchedConv.unit;
+          matchedConversionRatio = matchedConv.ratio || 1;
+          matchedPrice =
+            matchedConv.price && matchedConv.price > 0
+              ? matchedConv.price
+              : matchedPrice * matchedConversionRatio;
+          matchedBarcode = matchedConv.barcode;
+        }
+      }
+
+      return {
+        ...p,
+        matchType,
+        matchedUnit,
+        matchedConversionRatio,
+        matchedPrice,
+        matchedBarcode,
+      };
+    });
   }
 }

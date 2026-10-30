@@ -442,7 +442,7 @@ const navItems = computed(() => {
   const items = [
     { name: 'AdminDashboard', label: locale.value === 'en' ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
     { name: 'AdminProducts', label: locale.value === 'en' ? 'Products' : 'Sản phẩm', to: '/admin/products', icon: ProductsIcon, permission: 'MANAGE_PRODUCTS' },
-    { name: 'AdminPOS', label: locale.value === 'en' ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: PosIcon, permission: 'MANAGE_ORDERS' },
+    { name: 'AdminPOS', label: locale.value === 'en' ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: PosIcon, permission: 'POS_ACCESS' },
     { name: 'AdminOrders', label: locale.value === 'en' ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: OrdersIcon, permission: 'MANAGE_ORDERS' },
     { name: 'AdminInventory', label: locale.value === 'en' ? 'Inventory' : 'Kho hàng', to: '/admin/inventory', icon: InventoryIcon, permission: 'MANAGE_INVENTORY' },
     { name: 'AdminCombos', label: locale.value === 'en' ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon, permission: 'MANAGE_PRODUCTS' },
