@@ -563,11 +563,13 @@ export class ProductsService {
 
   async findBySlug(slug: string): Promise<ProductDocument> {
     const product = await this.productModel
-      .findOne({ slug, isDeleted: false })
+      .findOne({ slug, isDeleted: false, status: ProductStatus.ACTIVE })
       .populate('category')
       .exec();
     if (!product) {
-      throw new NotFoundException('Sản phẩm không tồn tại hoặc đã bị xóa');
+      throw new NotFoundException(
+        'Sản phẩm không tồn tại hoặc đã ngừng kinh doanh',
+      );
     }
     return product;
   }
@@ -620,6 +622,7 @@ export class ProductsService {
     const query: Record<string, unknown> = {
       _id: { $ne: currentProduct._id },
       isDeleted: false,
+      status: ProductStatus.ACTIVE,
     };
 
     if (conditions.length > 0) {
@@ -639,6 +642,7 @@ export class ProductsService {
         .find({
           _id: { $ne: currentProduct._id },
           isDeleted: false,
+          status: ProductStatus.ACTIVE,
         })
         .populate('category')
         .sort({ rating: -1, sold: -1, createdAt: -1 })
@@ -716,7 +720,11 @@ export class ProductsService {
 
   async getFeatured(): Promise<ProductDocument[]> {
     return this.productModel
-      .find({ isFeatured: true, isDeleted: false })
+      .find({
+        isFeatured: true,
+        isDeleted: false,
+        status: ProductStatus.ACTIVE,
+      })
       .populate('category')
       .limit(12)
       .exec();
@@ -731,6 +739,7 @@ export class ProductsService {
     return this.productModel
       .find({
         isDeleted: false,
+        status: ProductStatus.ACTIVE,
         $or: [
           { name: { $regex: regexPattern, $options: 'i' } },
           { description: { $regex: regexPattern, $options: 'i' } },
@@ -774,6 +783,7 @@ export class ProductsService {
       this.productModel
         .find({
           isDeleted: false,
+          status: ProductStatus.ACTIVE,
           $or: [
             { name: { $regex: regexPattern, $options: 'i' } },
             { sku: { $regex: rawEscaped, $options: 'i' } },
@@ -809,7 +819,7 @@ export class ProductsService {
 
   async getBestSelling(limit = 10): Promise<ProductDocument[]> {
     return this.productModel
-      .find({ isDeleted: false })
+      .find({ isDeleted: false, status: ProductStatus.ACTIVE })
       .sort({ sold: -1 })
       .limit(limit)
       .populate('category')
@@ -818,7 +828,11 @@ export class ProductsService {
 
   async getDiscounted(limit = 10): Promise<ProductDocument[]> {
     return this.productModel
-      .find({ isDeleted: false, discountPrice: { $gt: 0 } })
+      .find({
+        isDeleted: false,
+        status: ProductStatus.ACTIVE,
+        discountPrice: { $gt: 0 },
+      })
       .sort({ createdAt: -1 })
       .limit(limit)
       .populate('category')
@@ -827,7 +841,7 @@ export class ProductsService {
 
   async getNew(limit = 10): Promise<ProductDocument[]> {
     return this.productModel
-      .find({ isDeleted: false })
+      .find({ isDeleted: false, status: ProductStatus.ACTIVE })
       .sort({ createdAt: -1 })
       .limit(limit)
       .populate('category')
@@ -1694,45 +1708,63 @@ export class ProductsService {
 
       // 3. Khớp danh mục sản phẩm (Category Matching)
       let categoryId: Types.ObjectId | null = null;
-      let matchedCategoryName = categoryName || 'Văn phòng phẩm';
+      let matchedCategoryName = categoryName || '';
 
-      if (categoryName) {
-        const normalizedInputCat = categoryName.trim().toLowerCase();
-        const matched = existingCategories.find(
-          (c) =>
-            c.name.trim().toLowerCase() === normalizedInputCat ||
-            (c.slug && c.slug.toLowerCase() === normalizedInputCat) ||
-            String(c._id) === categoryName.trim() ||
-            makeDiacriticRegex(c.name).toLowerCase() ===
-              makeDiacriticRegex(categoryName).toLowerCase(),
-        );
+      if (!categoryName || !categoryName.trim()) {
+        errors.push({
+          row: r,
+          sku: sku.trim(),
+          name: name.trim(),
+          reason: 'Thiếu tên danh mục cho sản phẩm.',
+        });
+        continue;
+      }
 
-        if (matched) {
-          categoryId = matched._id;
-          matchedCategoryName = matched.name;
-        } else {
-          // Nếu danh mục chưa có trong DB, tạo danh mục mới tự động
-          try {
-            const newCat = new this.categoryModel({
-              name: categoryName.trim(),
-              slug: this.generateSlug(categoryName.trim()),
-              description: 'Danh mục được tạo tự động từ Import Excel',
-              status: true,
-            });
-            const savedCat = await newCat.save();
-            existingCategories.push(savedCat.toObject());
-            categoryId = savedCat._id;
-            matchedCategoryName = savedCat.name;
-          } catch {
-            if (existingCategories.length > 0) {
-              categoryId = existingCategories[0]._id;
-              matchedCategoryName = existingCategories[0].name;
-            }
-          }
+      const normalizedInputCat = categoryName.trim().toLowerCase();
+      const matched = existingCategories.find(
+        (c) =>
+          c.name.trim().toLowerCase() === normalizedInputCat ||
+          (c.slug && c.slug.toLowerCase() === normalizedInputCat) ||
+          String(c._id) === categoryName.trim() ||
+          makeDiacriticRegex(c.name).toLowerCase() ===
+            makeDiacriticRegex(categoryName).toLowerCase(),
+      );
+
+      if (matched) {
+        categoryId = matched._id;
+        matchedCategoryName = matched.name;
+      } else {
+        // Nếu danh mục chưa có trong DB, tạo danh mục mới tự động
+        try {
+          const newCat = new this.categoryModel({
+            name: categoryName.trim(),
+            slug: this.generateSlug(categoryName.trim()),
+            description: 'Danh mục được tạo tự động từ Import Excel',
+            status: true,
+          });
+          const savedCat = await newCat.save();
+          existingCategories.push(savedCat.toObject());
+          categoryId = savedCat._id;
+          matchedCategoryName = savedCat.name;
+        } catch (catErr: any) {
+          errors.push({
+            row: r,
+            sku: sku.trim(),
+            name: name.trim(),
+            reason: `Không thể tạo danh mục mới "${categoryName.trim()}": ${catErr?.message || 'Lỗi không xác định'}`,
+          });
+          continue;
         }
-      } else if (existingCategories.length > 0) {
-        categoryId = existingCategories[0]._id;
-        matchedCategoryName = existingCategories[0].name;
+      }
+
+      if (!categoryId) {
+        errors.push({
+          row: r,
+          sku: sku.trim(),
+          name: name.trim(),
+          reason: `Không xác định được danh mục "${categoryName}".`,
+        });
+        continue;
       }
 
       // Xử lý các trường phụ

@@ -737,6 +737,7 @@ async function fetchProducts() {
       publisher: selectedPublishers.value.length > 0 ? selectedPublishers.value.join(',') : undefined,
       minRating: selectedRating.value || undefined,
       inStock: onlyInStock.value ? true : undefined,
+      status: 'ACTIVE',
     }
     const res: any = await productService.getAll(params)
     const items = Array.isArray(res.data) ? res.data : res.data?.data || []
