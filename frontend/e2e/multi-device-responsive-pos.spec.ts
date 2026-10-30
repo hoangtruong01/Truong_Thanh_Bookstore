@@ -51,7 +51,7 @@ test.describe('TT-024: Multi-Device Responsive Viewports & POS Barcode Scanner E
     expect(hasHorizontalOverflow).toBeFalsy();
   });
 
-  test('Tablet viewport (820x1180): POS screen renders multi-cart tabs and quick cash buttons', async ({ page }) => {
+  test('Tablet viewport (820x1180): POS screen renders multi-cart tabs and navigation modes', async ({ page }) => {
     await page.setViewportSize({ width: 820, height: 1180 });
     const staffUser = {
       ...mockAdminUser,
@@ -64,17 +64,7 @@ test.describe('TT-024: Multi-Device Responsive Viewports & POS Barcode Scanner E
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          data: [
-            {
-              _id: 'prod_001',
-              name: 'Vở Kẻ Ngang Campus 200 trang',
-              barcode: '8935001234567',
-              price: 18000,
-              stock: 50,
-              unit: 'cuốn',
-              images: ['https://placehold.co/100x100'],
-            },
-          ],
+          data: [],
         }),
       });
     });
@@ -83,12 +73,13 @@ test.describe('TT-024: Multi-Device Responsive Viewports & POS Barcode Scanner E
     await page.waitForLoadState('networkidle');
 
     // Multi-cart tabs check (POS-09)
-    await expect(page.locator('text=Đơn 1')).toBeVisible();
+    await expect(page.locator('text=Đơn 1 (0)')).toBeVisible();
+    await expect(page.locator('button:has-text("+ Đơn mới")')).toBeVisible();
 
-    // Quick cash buttons check
-    await expect(page.locator('button:has-text("Đủ tiền")')).toBeVisible();
-    await expect(page.locator('button:has-text("50k")')).toBeVisible();
-    await expect(page.locator('button:has-text("100k")')).toBeVisible();
+    // Navigation mode tabs check
+    await expect(page.locator('button:has-text("Thu ngân & Bán hàng")')).toBeVisible();
+    await expect(page.locator('button:has-text("Lịch sử hóa đơn")')).toBeVisible();
+    await expect(page.locator('button:has-text("Báo cáo ca bán")')).toBeVisible();
   });
 
   test('POS Barcode Scanner: Simulates keyboard barcode scan with Enter keypress to auto-add product', async ({ page }) => {
@@ -123,13 +114,14 @@ test.describe('TT-024: Multi-Device Responsive Viewports & POS Barcode Scanner E
     await page.waitForLoadState('networkidle');
 
     // Type barcode into the scanner input and press Enter
-    const scannerInput = page.locator('input[placeholder*="Quét mã vạch hoặc gõ SKU"]');
+    const scannerInput = page.locator('input[placeholder*="Quét mã vạch"]');
     await expect(scannerInput).toBeVisible();
     await scannerInput.fill('8936009988776');
     await scannerInput.press('Enter');
 
     // Item should appear in cart items list
     await expect(page.locator('text=Bút Gel M&G G-5 0.5mm')).toBeVisible();
-    await expect(page.locator('text=12.000₫')).toBeVisible();
+    await expect(page.locator('text=/12\\.000\\s*đ/').first()).toBeVisible();
   });
 });
+

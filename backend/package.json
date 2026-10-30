@@ -95,7 +95,9 @@
     "typescript-eslint": "^8.20.0"
   },
   "overrides": {
-    "multer": "2.3.0",
+    "body-parser": "^2.4.0",
+    "handlebars": "^4.7.10",
+    "multer": "^2.5.0",
     "sanitize-html": {
       "htmlparser2": "10.0.0"
     },

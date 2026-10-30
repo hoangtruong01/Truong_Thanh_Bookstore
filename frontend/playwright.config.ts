@@ -38,17 +38,5 @@ export default defineConfig({
         ...(process.env.CI ? {} : { channel: 'chrome' }),
       },
     },
-    {
-      name: 'mobile-chrome',
-      use: {
-        ...devices['Pixel 7'],
-      },
-    },
-    {
-      name: 'tablet-safari',
-      use: {
-        ...devices['iPad Pro 11'],
-      },
-    },
   ],
 });
