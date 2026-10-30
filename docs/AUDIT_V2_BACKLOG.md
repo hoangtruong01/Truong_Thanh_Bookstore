@@ -461,10 +461,10 @@ Kiểm thử theo vai trò:
 - NEW-009: Hạn chế dữ liệu khách hàng theo quyền và phạm vi công việc
 - NEW-010: Không in thông tin liên hệ mẫu lên phiếu bán
 
-**Sprint 3 — Báo cáo, tồn kho và giá vốn** [⏳ TIẾP THEO]
+**Sprint 3 — Báo cáo, tồn kho và giá vốn** [✅ ĐÃ HOÀN THÀNH - Branch: `feature/sprint3-inventory-reports-cost`]
 NEW-011 đến NEW-016.
 
-**Sprint 4 — Mua hàng và vận hành**
+**Sprint 4 — Mua hàng và vận hành** [⏳ TIẾP THEO]
 ERP-01, ERP-02, ERP-03, ERP-04.
 
 **Sprint 5 — Quản trị và tối ưu**
