@@ -25,6 +25,7 @@ import { UsersService } from '../../users/users.service';
 import { CartService } from '../../cart/cart.service';
 import { OrderStatus, PaymentMethod, OrderSource } from '../../../common/enums';
 import { OrderInventoryService } from './order-inventory.service';
+import { InventoryService } from '../../inventory/inventory.service';
 import { OrderLoyaltyService } from './order-loyalty.service';
 import { OrderNotificationService } from './order-notification.service';
 
@@ -48,6 +49,7 @@ export class CheckoutService {
     @Optional()
     @InjectModel(LandingPage.name)
     private readonly landingPageModel?: Model<LandingPageDocument>,
+    @Optional() private readonly inventoryService?: InventoryService,
   ) {}
 
   generateOrderCode(): string {
@@ -395,12 +397,18 @@ export class CheckoutService {
 
     const products = await this.productsService.findByIds(uniqueProductIds);
     const productMap = new Map(products.map((p: any) => [p._id.toString(), p]));
+    const costMap =
+      this.inventoryService &&
+      typeof this.inventoryService.getCostPrices === 'function'
+        ? await this.inventoryService.getCostPrices(uniqueProductIds)
+        : new Map<string, number>();
 
     const verifiedItems: Array<{
       product: string;
       name: string;
       price: number;
       quantity: number;
+      costPrice: number;
       image: string;
     }> = [];
 
@@ -459,6 +467,8 @@ export class CheckoutService {
         name: effectiveName,
         price: effectivePrice,
         quantity: item.quantity,
+        costPrice:
+          costMap.get(product._id.toString()) || product.costPrice || 0,
         image: product.images?.[0] || item.image || '',
       });
     }

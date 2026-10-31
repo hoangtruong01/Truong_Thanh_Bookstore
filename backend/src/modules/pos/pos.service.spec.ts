@@ -204,6 +204,29 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
         }
         return Promise.resolve(null);
       }),
+      findByIdWithPassword: jest.fn().mockImplementation((id: string) => {
+        if (id === adminUser._id) {
+          return Promise.resolve({
+            _id: new Types.ObjectId(adminUser._id),
+            fullName: adminUser.fullName,
+            role: adminUser.role,
+            status: true,
+            permissions: [],
+            password: 'adminPassword123',
+          });
+        }
+        if (id === '507f1f77bcf86cd799439011') {
+          return Promise.resolve({
+            _id: new Types.ObjectId('507f1f77bcf86cd799439011'),
+            fullName: 'Locked Admin',
+            role: UserRole.ADMIN,
+            status: false,
+            permissions: [],
+            password: 'adminPassword123',
+          });
+        }
+        return Promise.resolve(null);
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -383,6 +406,7 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
         discountAmount: 15000, // 30%
         discountReason: 'Quản lý duyệt xả hàng',
         approvedById: adminUser._id,
+        managerPassword: 'adminPassword123',
       };
 
       const result = await service.createPOSOrder(dto, cashierUser);
@@ -390,6 +414,65 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
       expect(result.approvedBy?.toString()).toBe(adminUser._id);
       expect(result.approvedByName).toBe(adminUser.fullName);
       expect(result.totalDiscountPercent).toBe(30);
+    });
+
+    it('FIX-06-TC01: should block staff if approvedById is sent without managerPassword or approvalToken', async () => {
+      const dto = {
+        items: [
+          {
+            productId: sampleProduct._id.toString(),
+            quantity: 10,
+            unit: 'cây',
+          },
+        ],
+        discountAmount: 15000, // 30%
+        discountReason: 'Quản lý duyệt xả hàng',
+        approvedById: adminUser._id,
+      };
+
+      await expect(
+        service.createPOSOrder(dto as any, cashierUser),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('FIX-06-TC02: should block staff if managerPassword is incorrect', async () => {
+      const dto = {
+        items: [
+          {
+            productId: sampleProduct._id.toString(),
+            quantity: 10,
+            unit: 'cây',
+          },
+        ],
+        discountAmount: 15000, // 30%
+        discountReason: 'Quản lý duyệt xả hàng',
+        approvedById: adminUser._id,
+        managerPassword: 'wrongPassword',
+      };
+
+      await expect(
+        service.createPOSOrder(dto as any, cashierUser),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('FIX-06-TC05: should block approval if manager account is disabled', async () => {
+      const dto = {
+        items: [
+          {
+            productId: sampleProduct._id.toString(),
+            quantity: 10,
+            unit: 'cây',
+          },
+        ],
+        discountAmount: 15000, // 30%
+        discountReason: 'Quản lý duyệt xả hàng',
+        approvedById: '507f1f77bcf86cd799439011',
+        managerPassword: 'adminPassword123',
+      };
+
+      await expect(
+        service.createPOSOrder(dto as any, cashierUser),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should allow manager (ADMIN) to apply > 20% discount directly', async () => {

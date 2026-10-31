@@ -107,6 +107,7 @@ export class OrdersService {
         this.orderNotificationService,
         this.cartService,
         this.landingPageModel,
+        this.inventoryService,
       );
 
     this.orderLifecycleService =
@@ -481,6 +482,25 @@ export class OrdersService {
                 { $ifNull: ['$discount', 0] },
                 { $ifNull: ['$loyaltyDiscount', 0] },
               ],
+            },
+          },
+          cogs: {
+            $sum: {
+              $reduce: {
+                input: { $ifNull: ['$items', []] },
+                initialValue: 0,
+                in: {
+                  $add: [
+                    '$$value',
+                    {
+                      $multiply: [
+                        { $ifNull: ['$$this.costPrice', 0] },
+                        { $ifNull: ['$$this.quantity', 0] },
+                      ],
+                    },
+                  ],
+                },
+              },
             },
           },
           count: { $sum: 1 },

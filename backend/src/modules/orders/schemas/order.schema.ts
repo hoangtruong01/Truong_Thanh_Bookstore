@@ -22,6 +22,9 @@ export class OrderItem {
   @Prop({ required: true })
   quantity: number;
 
+  @Prop({ type: Number, default: 0 })
+  costPrice?: number;
+
   @Prop({ type: SchemaTypes.ObjectId, ref: 'Category' })
   category?: Types.ObjectId;
 

@@ -231,14 +231,16 @@ export class ReportsService {
         end,
       );
       for (const row of onlineRows) {
+        const rowCogs = row.cogs || 0;
+        const rowTotal = row.total || 0;
         dateMap.set(row._id, {
           _id: row._id,
-          subtotal: row.subtotal || row.total || 0,
+          subtotal: row.subtotal || rowTotal,
           discount: row.discount || 0,
           refund: 0,
-          total: row.total || 0,
-          cogs: 0,
-          grossProfit: row.total || 0,
+          total: rowTotal,
+          cogs: rowCogs,
+          grossProfit: rowTotal - rowCogs,
           count: row.count || 0,
         });
       }
@@ -296,7 +298,7 @@ export class ReportsService {
         existing.refund += ord.totalRefundedAmount || 0;
         existing.total += netFinal;
         existing.cogs += ordCogs;
-        existing.grossProfit = Math.max(0, existing.total - existing.cogs);
+        existing.grossProfit = existing.total - existing.cogs;
         existing.count += 1;
         dateMap.set(orderDateVN, existing);
       }
@@ -689,7 +691,13 @@ export class ReportsService {
 
     const txInPeriodByProduct = new Map<
       string,
-      { imports: number; exports: number; adjustments: number }
+      {
+        imports: number;
+        exports: number;
+        damages: number;
+        adjustments: number;
+        salesCogs: number;
+      }
     >();
     for (const tx of periodTx) {
       const pid = tx.product.toString();
@@ -697,17 +705,24 @@ export class ReportsService {
         txInPeriodByProduct.set(pid, {
           imports: 0,
           exports: 0,
+          damages: 0,
           adjustments: 0,
+          salesCogs: 0,
         });
       }
       const entry = txInPeriodByProduct.get(pid)!;
       if (tx.type === InventoryTransactionType.IMPORT) {
         entry.imports += tx.change || 0;
-      } else if (
-        tx.type === InventoryTransactionType.SALE ||
-        tx.type === InventoryTransactionType.DAMAGE
-      ) {
-        entry.exports += Math.abs(tx.change || 0);
+      } else if (tx.type === InventoryTransactionType.SALE) {
+        const qty = Math.abs(tx.change || 0);
+        entry.exports += qty;
+        const txUnitCost =
+          tx.costPrice !== undefined && tx.costPrice > 0
+            ? tx.costPrice
+            : invMap.get(pid)?.costPrice || 0;
+        entry.salesCogs += qty * txUnitCost;
+      } else if (tx.type === InventoryTransactionType.DAMAGE) {
+        entry.damages += Math.abs(tx.change || 0);
       } else if (tx.type === InventoryTransactionType.ADJUSTMENT) {
         entry.adjustments += tx.change || 0;
       }
@@ -828,7 +843,9 @@ export class ReportsService {
       const txPeriod = txInPeriodByProduct.get(pid) || {
         imports: 0,
         exports: 0,
+        damages: 0,
         adjustments: 0,
+        salesCogs: 0,
       };
       const netAfter = netChangeAfterByProduct.get(pid) || 0;
 
@@ -836,11 +853,11 @@ export class ReportsService {
       const openingStock =
         closingStock -
         txPeriod.imports +
-        txPeriod.exports -
+        (txPeriod.exports + txPeriod.damages) -
         txPeriod.adjustments;
 
       const revenue = revenueByProduct.get(pid) || 0;
-      const cogs = txPeriod.exports * costPrice;
+      const cogs = txPeriod.salesCogs;
       const grossProfit = revenue - cogs;
       const grossMargin =
         revenue > 0 ? Math.round((grossProfit / revenue) * 10000) / 100 : 0;

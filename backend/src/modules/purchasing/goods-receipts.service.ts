@@ -308,6 +308,7 @@ export class GoodsReceiptsService {
               note: `Nhập kho từ phiếu nhận hàng ${receiptCode} (PO: ${po.poCode})`,
             },
             userId,
+            session || undefined,
           );
 
           // 6. Ghi nhận lịch sử giá mua sản phẩm từ nhà cung cấp

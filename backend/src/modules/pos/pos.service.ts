@@ -9,6 +9,7 @@ import {
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Connection, Types, ClientSession } from 'mongoose';
 import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
 import {
   POSOrder,
   POSOrderDocument,
@@ -450,21 +451,61 @@ export class PosService {
           );
         }
 
-        const approver = await this.usersService.findById(dto.approvedById);
+        if (!dto.managerPassword && !dto.approvalToken) {
+          throw new ForbiddenException(
+            'Phê duyệt mức chiết khấu > 20% bắt buộc phải có xác thực từ Quản lý (managerPassword hoặc approvalToken).',
+          );
+        }
+
+        const approver = await this.usersService.findByIdWithPassword(
+          dto.approvedById,
+        );
+
+        if (!approver || approver.status === false) {
+          throw new ForbiddenException(
+            'Người phê duyệt không hợp lệ hoặc tài khoản Quản lý đã bị khóa.',
+          );
+        }
+
         const isApproverAuthorized =
-          approver &&
-          approver.status &&
-          (approver.role === UserRole.ADMIN ||
-            approver.role === UserRole.SUPER_ADMIN ||
-            (Array.isArray(approver.permissions) &&
-              approver.permissions.includes(
-                StaffPermission.POS_OVERRIDE_DISCOUNT,
-              )));
+          approver.role === UserRole.ADMIN ||
+          approver.role === UserRole.SUPER_ADMIN ||
+          (Array.isArray(approver.permissions) &&
+            approver.permissions.includes(
+              StaffPermission.POS_OVERRIDE_DISCOUNT,
+            ));
 
         if (!isApproverAuthorized) {
           throw new ForbiddenException(
             'Người phê duyệt không hợp lệ hoặc không có quyền phê duyệt mức chiết khấu trên 20%.',
           );
+        }
+
+        if (dto.managerPassword) {
+          const isPasswordValid =
+            approver.password === dto.managerPassword ||
+            (await bcrypt
+              .compare(dto.managerPassword, approver.password)
+              .catch(() => false));
+          if (!isPasswordValid) {
+            throw new ForbiddenException(
+              'Mật khẩu xác thực của Quản lý phê duyệt không chính xác.',
+            );
+          }
+        } else if (dto.approvalToken) {
+          const expectedPayload = `approval:${String(approver._id)}:${String(cashierId)}:${Math.round(totalDiscountPercent)}`;
+          const hmac = crypto
+            .createHmac(
+              'sha256',
+              process.env.JWT_SECRET || 'pos-override-secret',
+            )
+            .update(expectedPayload)
+            .digest('hex');
+          if (dto.approvalToken !== hmac) {
+            throw new ForbiddenException(
+              'Mã xác thực phê duyệt (approvalToken) không hợp lệ.',
+            );
+          }
         }
 
         approvedBy = approver._id;

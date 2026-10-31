@@ -392,15 +392,62 @@ export class InventoryService {
   async importStock(
     dto: InventoryTransactionDto,
     userId?: string,
+    session?: ClientSession,
   ): Promise<InventoryDocument> {
-    return this.applyMovement(dto, InventoryTransactionType.IMPORT, userId);
+    return this.applyMovement(
+      dto,
+      InventoryTransactionType.IMPORT,
+      userId,
+      1,
+      undefined,
+      session,
+    );
   }
 
   async exportStock(
     dto: InventoryTransactionDto,
     userId?: string,
+    session?: ClientSession,
   ): Promise<InventoryDocument> {
-    return this.applyMovement(dto, InventoryTransactionType.SALE, userId);
+    return this.applyMovement(
+      dto,
+      InventoryTransactionType.SALE,
+      userId,
+      1,
+      undefined,
+      session,
+    );
+  }
+
+  async ensureInventoryRecord(productId: string): Promise<InventoryDocument> {
+    let inv = await this.inventoryModel.findOne({ product: productId }).exec();
+    if (!inv) {
+      inv = await this.inventoryModel.create({
+        product: new Types.ObjectId(productId),
+        currentStock: 0,
+        minStock: 10,
+        maxStock: 1000,
+        status: InventoryStatus.OUT_OF_STOCK,
+        lastUpdated: new Date(),
+      });
+    }
+    return inv;
+  }
+
+  async getCostPrices(productIds: string[]): Promise<Map<string, number>> {
+    const objectIds = productIds
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+    const inventories = await this.inventoryModel
+      .find({ product: { $in: objectIds } })
+      .select('product costPrice')
+      .lean()
+      .exec();
+    const map = new Map<string, number>();
+    for (const inv of inventories) {
+      map.set(inv.product.toString(), inv.costPrice || 0);
+    }
+    return map;
   }
 
   /**
@@ -537,6 +584,7 @@ export class InventoryService {
       expectedCurrentStock?: number;
       targetNewStock?: number;
     },
+    externalSession?: ClientSession,
   ): Promise<InventoryDocument> {
     let delta = this.movementDelta(type, dto.quantity, adjustmentSign);
     const productId = dto.product.toString();
@@ -550,6 +598,8 @@ export class InventoryService {
       if (referenceKey) {
         const existingQuery = this.transactionModel.findOne({
           reference: referenceKey,
+          product: productId,
+          type: type,
         });
         if (session) existingQuery.session(session);
         const existing = await existingQuery.exec();
@@ -585,8 +635,23 @@ export class InventoryService {
       // NEW-011: Đọc và kiểm tra optimistic lock ngay TRONG transaction session
       const preInvQuery = this.inventoryModel.findOne({ product: productId });
       if (session) preInvQuery.session(session);
-      const preInv = await preInvQuery.exec();
-      if (!preInv) throw new NotFoundException('Inventory record not found');
+      let preInv = await preInvQuery.exec();
+      if (!preInv) {
+        const [createdInv] = await this.inventoryModel.create(
+          [
+            {
+              product: new Types.ObjectId(productId),
+              currentStock: 0,
+              minStock: 10,
+              maxStock: 1000,
+              status: InventoryStatus.OUT_OF_STOCK,
+              lastUpdated: new Date(),
+            },
+          ],
+          session ? { session } : {},
+        );
+        preInv = createdInv;
+      }
 
       // Kiểm tra optimistic lock: số lượng tồn có bị thay đổi giữa lúc xem và lúc ghi không
       if (
@@ -666,7 +731,9 @@ export class InventoryService {
       }
 
       const payload = {
-        product: new Types.ObjectId(productId),
+        product: Types.ObjectId.isValid(productId)
+          ? new Types.ObjectId(productId)
+          : (productId as any),
         type,
         quantity: Math.abs(
           options?.targetNewStock !== undefined ? delta : dto.quantity,
@@ -677,7 +744,10 @@ export class InventoryService {
         costPrice: txCostPrice,
         note: dto.note,
         reference: referenceKey,
-        createdBy: userId ? new Types.ObjectId(userId) : undefined,
+        createdBy:
+          userId && Types.ObjectId.isValid(userId)
+            ? new Types.ObjectId(userId)
+            : undefined,
       };
 
       try {
@@ -698,6 +768,10 @@ export class InventoryService {
       }
       return inventory;
     };
+
+    if (externalSession) {
+      return persist(externalSession);
+    }
 
     const connection = (this.inventoryModel as any).db;
     if (!connection?.startSession) {
@@ -788,6 +862,7 @@ export class InventoryService {
       change: delta,
       stockBefore: inventory.currentStock - delta,
       stockAfter: inventory.currentStock,
+      costPrice: inventory.costPrice || 0,
       note:
         type === InventoryTransactionType.SALE
           ? 'Xuất kho theo đơn hàng'

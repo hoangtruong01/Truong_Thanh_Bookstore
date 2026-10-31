@@ -187,6 +187,7 @@ describe('GoodsReceiptsService (ERP-03)', () => {
           reference: expect.stringMatching(/^GR\d{6}-\d{4}$/),
         }),
         userId,
+        expect.anything(),
       );
 
       // Verify supplier price history recorded
@@ -255,6 +256,7 @@ describe('GoodsReceiptsService (ERP-03)', () => {
           quantity: 40,
         }),
         userId,
+        expect.anything(),
       );
     });
 
@@ -351,6 +353,7 @@ describe('GoodsReceiptsService (ERP-03)', () => {
           quantity: 45,
         }),
         userId,
+        expect.anything(),
       );
     });
 

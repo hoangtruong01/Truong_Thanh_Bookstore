@@ -293,6 +293,53 @@ describe('InventoryService — Comprehensive Ledger & Consistency Tests', () => 
         }),
       ).rejects.toThrow(ConflictException);
     });
+
+    it('FIX-01: Multi-SKU GRN with same reference key does not conflict across different products', async () => {
+      const { service, transactionModel, products } = createService(20);
+      const prod1Id = '507f1f77bcf86cd799439011';
+      const prod2Id = '507f1f77bcf86cd799439022';
+
+      transactionModel.findOne.mockImplementation((filter: any) => {
+        if (filter.product === prod1Id) {
+          return query({
+            reference: 'GRN-2026-001',
+            product: prod1Id,
+            type: InventoryTransactionType.IMPORT,
+            change: 10,
+          });
+        }
+        return query(null);
+      });
+
+      const res = await service.importStock({
+        product: prod2Id,
+        quantity: 15,
+        reference: 'GRN-2026-001',
+      });
+
+      expect(products.updateStock).toHaveBeenCalledWith(prod2Id, 15, undefined);
+      expect(res.currentStock).toBe(20);
+    });
+
+    it('FIX-02: externalSession is passed directly to movement without creating new session', async () => {
+      const { service, products } = createService(20);
+      const mockExternalSession = { id: 'ext-session-1' } as any;
+
+      await service.importStock(
+        {
+          product: '507f1f77bcf86cd799439011',
+          quantity: 5,
+        },
+        '507f1f77bcf86cd799439099',
+        mockExternalSession,
+      );
+
+      expect(products.updateStock).toHaveBeenCalledWith(
+        '507f1f77bcf86cd799439011',
+        5,
+        mockExternalSession,
+      );
+    });
   });
 
   describe('TT-002: Reconciliation Tool', () => {

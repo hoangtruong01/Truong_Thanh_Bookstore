@@ -578,7 +578,7 @@ export class DataExchangeService {
               slug: uniqueSlug,
               category: category._id,
               price,
-              stock,
+              stock: 0,
               unit,
               barcode: barcode || undefined,
               status: ProductStatus.ACTIVE,
@@ -595,6 +595,10 @@ export class DataExchangeService {
                   note: 'Nhập tồn đầu kỳ qua Excel',
                 },
                 userId,
+              );
+            } else {
+              await this.inventoryService.ensureInventoryRecord(
+                newProduct._id.toString(),
               );
             }
             importedCount++;

@@ -421,7 +421,7 @@ const selectedChannel = ref('ALL')
 const selectedRange = ref('month')
 
 const rangePresets = [
-  { label: 'Hôm nay', value: 'today' },
+  { label: 'Hôm nay', value: 'day' },
   { label: '7 ngày qua', value: 'week' },
   { label: 'Tháng này', value: 'month' },
   { label: 'Năm nay', value: 'year' },
@@ -451,7 +451,7 @@ function updateDateRangeByPreset(preset: string) {
   const now = new Date()
   const todayStr = now.toISOString().slice(0, 10)
 
-  if (preset === 'today') {
+  if (preset === 'day' || preset === 'today') {
     startDate.value = todayStr
     endDate.value = todayStr
   } else if (preset === 'week') {
