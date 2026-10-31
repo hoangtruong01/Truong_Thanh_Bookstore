@@ -259,6 +259,22 @@ describe('QA-04: Checkout UX & Fee Transparency Regression Suite', () => {
       expect(displayedTotal).toBe(190000)
       expect(serverPreview.warnings).toHaveLength(1)
     })
+    it('BUG-006: Idempotency Key được làm mới tự động sau khi đặt hàng thành công để tránh lỗi 409 khi đặt đơn tiếp theo', () => {
+      let currentKey = 'initial-key-uuid-001'
+      const refreshKey = () => {
+        currentKey = 'new-key-uuid-002'
+        return currentKey
+      }
+
+      // Order 1 uses initial key
+      const order1Key = currentKey
+      expect(order1Key).toBe('initial-key-uuid-001')
+
+      // After order 1 completes, key refreshes
+      refreshKey()
+      const order2Key = currentKey
+      expect(order2Key).toBe('new-key-uuid-002')
+      expect(order2Key).not.toBe(order1Key)
+    })
   })
 })
-

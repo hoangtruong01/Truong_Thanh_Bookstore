@@ -266,6 +266,13 @@ export class CheckoutPreviewDto {
   @IsInt({ message: 'loyaltyPointsUsed phải là số nguyên' })
   @Min(0, { message: 'loyaltyPointsUsed không được âm' })
   loyaltyPointsUsed?: number;
+
+  @ApiPropertyOptional({
+    description: 'ID trang landing page nếu xem trước đơn hàng từ landing page',
+  })
+  @IsOptional()
+  @IsMongoObjectId({ message: 'landingPageId phải là ObjectId hợp lệ' })
+  landingPageId?: string;
 }
 
 export class RequestReturnDto {

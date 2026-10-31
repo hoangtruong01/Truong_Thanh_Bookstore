@@ -14,6 +14,10 @@ import { ClientSession, Model } from 'mongoose';
 import { createHash, createHmac, randomBytes } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { Order, OrderDocument } from '../schemas/order.schema';
+import {
+  LandingPage,
+  LandingPageDocument,
+} from '../../landing-pages/schemas/landing-page.schema';
 import { CreateOrderDto, CheckoutPreviewDto } from '../dto/order.dto';
 import { ProductsService } from '../../products/products.service';
 import { PromotionsService } from '../../promotions/promotions.service';
@@ -41,6 +45,9 @@ export class CheckoutService {
     private readonly orderLoyaltyService: OrderLoyaltyService,
     private readonly orderNotificationService: OrderNotificationService,
     @Optional() private readonly cartService?: CartService,
+    @Optional()
+    @InjectModel(LandingPage.name)
+    private readonly landingPageModel?: Model<LandingPageDocument>,
   ) {}
 
   generateOrderCode(): string {
@@ -104,6 +111,12 @@ export class CheckoutService {
   }
 
   async checkoutPreview(dto: CheckoutPreviewDto, userId?: string) {
+    let landingPage: any = null;
+    if (dto.landingPageId && this.landingPageModel) {
+      landingPage = await this.landingPageModel
+        .findById(dto.landingPageId)
+        .exec();
+    }
     const warnings: string[] = [];
     const verifiedItems: Array<{
       product: string;
@@ -143,10 +156,35 @@ export class CheckoutService {
         }
       }
 
-      const effectivePrice =
+      let effectivePrice =
         (product as any).discountPrice > 0
           ? (product as any).discountPrice
           : (product as any).price;
+      let effectiveName = product.name;
+
+      if (landingPage && landingPage.status) {
+        const matchingPkg = landingPage.packages?.find(
+          (pkg: any) =>
+            (pkg.productId?.toString() === product._id.toString() ||
+              landingPage.productId?.toString() === product._id.toString()) &&
+            item.price !== undefined &&
+            pkg.price === item.price,
+        );
+
+        if (matchingPkg) {
+          effectivePrice = matchingPkg.price;
+          effectiveName = item.name || `${product.name} (${matchingPkg.name})`;
+        } else if (
+          landingPage.price > 0 &&
+          item.price !== undefined &&
+          landingPage.price === item.price &&
+          (!landingPage.productId ||
+            landingPage.productId.toString() === product._id.toString())
+        ) {
+          effectivePrice = landingPage.price;
+          effectiveName = item.name || product.name;
+        }
+      }
 
       if (item.price && item.price !== effectivePrice) {
         warnings.push(`Giá sản phẩm "${product.name}" đã thay đổi.`);
@@ -154,7 +192,7 @@ export class CheckoutService {
 
       verifiedItems.push({
         product: product._id.toString(),
-        name: product.name,
+        name: effectiveName,
         price: effectivePrice,
         originalPrice: (product as any).price,
         quantity: effectiveQty,
@@ -344,6 +382,17 @@ export class CheckoutService {
       );
     }
 
+    let landingPage: any = null;
+    if (
+      dto.orderSource === OrderSource.LANDING_PAGE &&
+      dto.landingPageId &&
+      this.landingPageModel
+    ) {
+      landingPage = await this.landingPageModel
+        .findById(dto.landingPageId)
+        .exec();
+    }
+
     const products = await this.productsService.findByIds(uniqueProductIds);
     const productMap = new Map(products.map((p: any) => [p._id.toString(), p]));
 
@@ -377,12 +426,37 @@ export class CheckoutService {
           `Sản phẩm "${product.name}" không đủ số lượng tồn kho (còn ${product.stock}, yêu cầu ${item.quantity})`,
         );
       }
-      const effectivePrice =
+      let effectivePrice =
         product.discountPrice > 0 ? product.discountPrice : product.price;
+      let effectiveName = product.name;
+
+      if (landingPage && landingPage.status) {
+        const matchingPkg = landingPage.packages?.find(
+          (pkg: any) =>
+            (pkg.productId?.toString() === product._id.toString() ||
+              landingPage.productId?.toString() === product._id.toString()) &&
+            item.price !== undefined &&
+            pkg.price === item.price,
+        );
+
+        if (matchingPkg) {
+          effectivePrice = matchingPkg.price;
+          effectiveName = item.name || `${product.name} (${matchingPkg.name})`;
+        } else if (
+          landingPage.price > 0 &&
+          item.price !== undefined &&
+          landingPage.price === item.price &&
+          (!landingPage.productId ||
+            landingPage.productId.toString() === product._id.toString())
+        ) {
+          effectivePrice = landingPage.price;
+          effectiveName = item.name || product.name;
+        }
+      }
 
       verifiedItems.push({
         product: product._id.toString(),
-        name: product.name,
+        name: effectiveName,
         price: effectivePrice,
         quantity: item.quantity,
         image: product.images?.[0] || item.image || '',

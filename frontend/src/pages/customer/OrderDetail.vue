@@ -123,20 +123,27 @@
                   <p class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
                     <span>🏦</span> Hướng dẫn chuyển khoản ngân hàng
                   </p>
-                  <div class="text-[11px] text-slate-700 space-y-1">
-                    <p>Ngân hàng: <strong>MB Bank (Quân Đội)</strong></p>
-                    <p>Số tài khoản: <strong class="font-mono text-slate-900">0345678999</strong></p>
-                    <p>Chủ tài khoản: <strong>NHÀ SÁCH TRƯỜNG THÀNH</strong></p>
-                    <p>Số tiền: <strong class="text-red-600 font-bold">{{ formatCurrency(order.total) }}</strong></p>
-                    <p>Nội dung CK: <strong class="font-mono text-red-600 bg-red-100/60 px-1 py-0.5 rounded">{{ order.orderCode }}</strong></p>
+                  <div v-if="bankTransferConfig && bankTransferConfig.accountNumber" class="space-y-2">
+                    <div class="text-[11px] text-slate-700 space-y-1">
+                      <p>Ngân hàng: <strong>{{ bankTransferConfig.bankName || 'MB Bank' }}</strong></p>
+                      <p>Số tài khoản: <strong class="font-mono text-slate-900">{{ bankTransferConfig.accountNumber }}</strong></p>
+                      <p>Chủ tài khoản: <strong>{{ bankTransferConfig.accountHolder || 'TRUONG THANH BOOKSTORE' }}</strong></p>
+                      <p>Số tiền: <strong class="text-red-600 font-bold">{{ formatCurrency(order.total) }}</strong></p>
+                      <p>Nội dung CK: <strong class="font-mono text-red-600 bg-red-100/60 px-1 py-0.5 rounded">{{ order.orderCode }}</strong></p>
+                    </div>
+                    <div class="mt-2 text-center">
+                      <img
+                        :src="`https://img.vietqr.io/image/${encodeURIComponent(bankTransferConfig.bankName || 'MB')}-${encodeURIComponent(bankTransferConfig.accountNumber)}-compact2.png?amount=${order.total}&addInfo=${encodeURIComponent(order.orderCode)}&accountName=${encodeURIComponent(bankTransferConfig.accountHolder || 'TRUONG THANH BOOKSTORE')}`"
+                        alt="VietQR Chuyển Khoản"
+                        class="w-36 h-36 mx-auto rounded-lg border border-slate-200 bg-white p-1"
+                      />
+                      <p class="text-[10px] text-slate-400 mt-1">Quét mã QR bằng ứng dụng ngân hàng</p>
+                    </div>
                   </div>
-                  <div class="mt-2 text-center">
-                    <img
-                      :src="`https://img.vietqr.io/image/MB-0345678999-compact2.png?amount=${order.total}&addInfo=${encodeURIComponent(order.orderCode)}&accountName=TRUONG%20THANH%20BOOKSTORE`"
-                      alt="VietQR Chuyển Khoản"
-                      class="w-36 h-36 mx-auto rounded-lg border border-slate-200 bg-white p-1"
-                    />
-                    <p class="text-[10px] text-slate-400 mt-1">Quét mã QR bằng ứng dụng ngân hàng</p>
+                  <div v-else class="text-[11px] text-slate-700 space-y-1">
+                    <p>Mã đơn hàng: <strong class="font-mono text-red-600">#{{ order.orderCode }}</strong></p>
+                    <p>Số tiền: <strong class="text-red-600 font-bold">{{ formatCurrency(order.total) }}</strong></p>
+                    <p class="text-slate-600">Vui lòng liên hệ hotline <strong>0982938316</strong> để nhận thông tin tài khoản chuyển khoản.</p>
                   </div>
                 </div>
 
@@ -269,10 +276,23 @@ import { formatCurrency, formatDate, getStatusLabel } from '@/utils/helpers'
 import type { Order } from '@/types'
 import { computed } from 'vue'
 import { useToast } from 'vue-toastification'
-import { paymentService } from '@/services/payment.service'
+import { paymentService, type BankTransferConfig } from '@/services/payment.service'
 
 const toast = useToast()
 const isRetryingPayment = ref(false)
+const bankTransferConfig = ref<BankTransferConfig | null>(null)
+
+async function fetchBankTransferConfig() {
+  try {
+    const res = await paymentService.getEnabledMethods()
+    const data = (res.data as any)?.data || res.data
+    if (data?.bankTransfer) {
+      bankTransferConfig.value = data.bankTransfer
+    }
+  } catch {
+    // Fallback gracefully
+  }
+}
 
 const trackingUrl = computed(() => {
   if (!order.value) return ''
@@ -440,6 +460,9 @@ onMounted(async () => {
       ? await orderService.getGuestById(orderId, guestAccessToken.value)
       : await orderService.getById(orderId)
     order.value = res.data
+    if (order.value?.paymentMethod === 'BANK_TRANSFER') {
+      await fetchBankTransferConfig()
+    }
   } catch (err: any) {
     error.value = err.message || 'Không thể tìm thấy thông tin đơn hàng'
   } finally {

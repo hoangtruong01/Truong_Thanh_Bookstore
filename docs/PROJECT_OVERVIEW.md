@@ -710,7 +710,7 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 
 | Phân hệ | Lệnh | Kết quả |
 | :--- | :--- | :---: |
-| Backend Unit & Integration Tests | `cd backend && npm test` | **62/62 suites, 664/664 tests PASS (100%)** |
+| Backend Unit & Integration Tests | `cd backend && npm test` | **64/64 suites, 671/671 tests PASS (100%)** |
 | Comprehensive BA SRS Flows (Sprint 6) | `cd backend && npm test -- uat-e2e-flows.spec.ts` | **14/14 tests covering UAT-E2E-01 -> UAT-E2E-13 PASS (100%)** |
 | Customer Receivables & Cashbook (FIN-01..04) | `cd backend && npm test -- finance.service.spec.ts` | **13/13 financial tests PASS (100%)** |
 | Purchase Returns & Suppliers (PUR-04, SUP-01) | `cd backend && npm test -- purchase-returns.service.spec.ts suppliers.service.spec.ts` | **12/12 purchasing & returns tests PASS (100%)** |
@@ -720,10 +720,10 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | Backend POS & Concurrency Suite | `cd backend && npm test -- pos.service.spec.ts pos.omnichannel-concurrency.spec.ts` | **10/10 POS & Omnichannel race condition tests PASS** |
 | Backend Health & Release SHA (TT-014) | `cd backend && npm test -- app.controller.spec.ts` | **3/3 health readiness & release SHA tests PASS** |
 | Backend Security Suite | `cd backend && npm test -- security-p0-audit.spec.ts` | **16/16 security regression tests PASS** |
-| Backend Commerce Suite | `cd backend && npm test -- orders.commerce-regression.spec.ts` | **11/11 commerce invariant tests PASS** |
+| Backend Commerce Suite | `cd backend && npm test -- orders.commerce-regression.spec.ts` | **14/14 commerce invariant tests PASS** |
 | Backend Linting | `cd backend && npm run lint` | **0 errors** (2.060 warnings, --max-warnings 2100) |
 | Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
-| Frontend Unit Tests | `cd frontend && npm run test:unit` | **14/14 suites, 83/83 tests PASS (100%)** |
+| Frontend Unit Tests | `cd frontend && npm run test:unit` | **17/17 suites, 97/97 tests PASS (100%)** |
 | Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |
 | Frontend Linting | `cd frontend && npm run lint` | **0 errors, 0 warnings (Sạch 100%)** |
 | Frontend Build | `cd frontend && npm run build` | **Biên dịch thành công** |

@@ -160,4 +160,24 @@ export function parseMarkdown(text: string): string {
   return processedLines.join('<br />')
 }
 
-
+/**
+ * IMP-003: Appends Cloudinary dynamic transformation parameters (f_auto, q_auto)
+ * for automatic WebP/AVIF delivery and responsive sizing.
+ */
+export function optimizeCloudinaryUrl(
+  url: string,
+  options: { width?: number; quality?: string } = {},
+): string {
+  if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) {
+    return url
+  }
+  const parts = ['f_auto', options.quality ? `q_${options.quality}` : 'q_auto']
+  if (options.width) {
+    parts.push(`w_${options.width}`, 'c_limit')
+  }
+  const transform = parts.join(',')
+  if (url.includes('/image/upload/') && !url.includes('/image/upload/f_auto')) {
+    return url.replace('/image/upload/', `/image/upload/${transform}/`)
+  }
+  return url
+}

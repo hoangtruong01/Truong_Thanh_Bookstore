@@ -99,7 +99,7 @@ services:
     container_name: truongthanh-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "80:8080"
     depends_on:
       backend:
         condition: service_healthy

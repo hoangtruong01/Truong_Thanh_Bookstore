@@ -9,6 +9,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { createHash, timingSafeEqual } from 'crypto';
 import { Order, OrderDocument } from './schemas/order.schema';
+import {
+  LandingPage,
+  LandingPageDocument,
+} from '../landing-pages/schemas/landing-page.schema';
 import * as PDFDocument from 'pdfkit';
 import * as fs from 'fs';
 import * as QRCode from 'qrcode';
@@ -69,6 +73,9 @@ export class OrdersService {
     @Optional() orderInventoryService?: OrderInventoryService,
     @Optional() orderLoyaltyService?: OrderLoyaltyService,
     @Optional() orderNotificationService?: OrderNotificationService,
+    @Optional()
+    @InjectModel(LandingPage.name)
+    private landingPageModel?: Model<LandingPageDocument>,
   ) {
     // Fallback instantiation ensures 100% backward-compatibility for unit tests
     this.orderInventoryService =
@@ -99,6 +106,7 @@ export class OrdersService {
         this.orderLoyaltyService,
         this.orderNotificationService,
         this.cartService,
+        this.landingPageModel,
       );
 
     this.orderLifecycleService =

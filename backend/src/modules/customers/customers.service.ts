@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
-import { UserRole } from '../../common/enums';
+import { UserRole, OrderStatus, PaymentStatus } from '../../common/enums';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
 
 @Injectable()
@@ -42,12 +42,35 @@ export class CustomersService {
     // Enrich with order stats (Bulk Aggregate to avoid N+1 queries)
     const userIds = users.map((user) => user._id);
     const orderStats = await this.orderModel.aggregate([
-      { $match: { customer: { $in: userIds } } },
+      {
+        $match: {
+          customer: { $in: userIds },
+          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+        },
+      },
       {
         $group: {
           _id: '$customer',
           totalOrders: { $sum: 1 },
-          totalSpent: { $sum: '$total' },
+          totalSpent: {
+            $sum: {
+              $cond: [
+                {
+                  $or: [
+                    { $eq: ['$paymentStatus', PaymentStatus.PAID] },
+                    {
+                      $in: [
+                        '$orderStatus',
+                        [OrderStatus.DELIVERED, OrderStatus.COMPLETED],
+                      ],
+                    },
+                  ],
+                },
+                '$total',
+                0,
+              ],
+            },
+          },
         },
       },
     ]);
@@ -85,12 +108,35 @@ export class CustomersService {
       .exec();
 
     const orderStats = await this.orderModel.aggregate([
-      { $match: { customer: user._id } },
+      {
+        $match: {
+          customer: user._id,
+          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+        },
+      },
       {
         $group: {
           _id: null,
           totalOrders: { $sum: 1 },
-          totalSpent: { $sum: '$total' },
+          totalSpent: {
+            $sum: {
+              $cond: [
+                {
+                  $or: [
+                    { $eq: ['$paymentStatus', PaymentStatus.PAID] },
+                    {
+                      $in: [
+                        '$orderStatus',
+                        [OrderStatus.DELIVERED, OrderStatus.COMPLETED],
+                      ],
+                    },
+                  ],
+                },
+                '$total',
+                0,
+              ],
+            },
+          },
         },
       },
     ]);

@@ -56,6 +56,7 @@ export class CloudinaryService {
       const uploadResponse = await cloudinary.uploader.upload(base64Str, {
         folder,
         resource_type: 'image',
+        transformation: [{ quality: 'auto', fetch_format: 'auto' }],
       });
       return uploadResponse.secure_url;
     } catch (error: unknown) {

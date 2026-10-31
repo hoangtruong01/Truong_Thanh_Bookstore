@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
@@ -163,17 +164,35 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   SizedBox(
                     height: 36,
                     child: OutlinedButton.icon(
-                      onPressed: () {
+                      onPressed: () async {
                         final url = '${ApiConstants.baseUrl}/orders/${order.id}/invoice';
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Hóa đơn PDF khả dụng tại: $url'),
-                            action: SnackBarAction(
-                              label: 'Đóng',
-                              onPressed: () {},
-                            ),
-                          ),
-                        );
+                        final uri = Uri.parse(url);
+                        try {
+                          final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          if (!launched && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Không thể mở liên kết: $url'),
+                                action: SnackBarAction(
+                                  label: 'Đóng',
+                                  onPressed: () {},
+                                ),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Lỗi khi mở hóa đơn: $e'),
+                                action: SnackBarAction(
+                                  label: 'Đóng',
+                                  onPressed: () {},
+                                ),
+                              ),
+                            );
+                          }
+                        }
                       },
                       icon: const Icon(Icons.picture_as_pdf, size: 16, color: AppTheme.primaryRed),
                       label: const Text('Tải hóa đơn PDF', style: TextStyle(fontSize: 11, color: AppTheme.primaryRed)),

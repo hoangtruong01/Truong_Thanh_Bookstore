@@ -318,30 +318,25 @@ describe('QA-02: Payment & Order Safety Verification Suite', () => {
       );
     });
 
-    it('BE-02: Auto-reconciliation cancels expired online pending payments', async () => {
-      const expiredPayments = [
-        {
-          _id: new Types.ObjectId(),
-          provider: PaymentMethod.VNPAY,
-          status: PaymentStatus.PENDING,
-          save: jest.fn().mockResolvedValue(true),
-        },
-        {
-          _id: new Types.ObjectId(),
-          provider: PaymentMethod.MOMO,
-          status: PaymentStatus.PENDING,
-          save: jest.fn().mockResolvedValue(true),
-        },
-      ];
-
-      paymentModel.find.mockReturnValue({
-        exec: jest.fn().mockResolvedValue(expiredPayments),
-      });
+    it('BE-02 & BUG-003: Auto-reconciliation atomically cancels expired online pending payments without race condition', async () => {
+      paymentModel.updateMany = jest
+        .fn()
+        .mockResolvedValue({ modifiedCount: 2 });
 
       const count = await paymentsService.reconcilePendingPayments();
       expect(count).toBe(2);
-      expect(expiredPayments[0].status).toBe(PaymentStatus.FAILED);
-      expect(expiredPayments[1].status).toBe(PaymentStatus.FAILED);
+      expect(paymentModel.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: PaymentStatus.PENDING,
+          callbackProcessedAt: { $exists: false },
+          provider: { $in: [PaymentMethod.VNPAY, PaymentMethod.MOMO] },
+        }),
+        expect.objectContaining({
+          $set: expect.objectContaining({
+            status: PaymentStatus.FAILED,
+          }),
+        }),
+      );
     });
   });
 

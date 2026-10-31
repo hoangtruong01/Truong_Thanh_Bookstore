@@ -905,14 +905,23 @@ function copyText(text: string, label: string) {
   toast.success(`Đã sao chép ${label}!`)
 }
 
+const checkoutIdempotencyKey = ref<string>(
+  sessionStorage.getItem('checkout-idempotency-key') || crypto.randomUUID()
+)
+sessionStorage.setItem('checkout-idempotency-key', checkoutIdempotencyKey.value)
+
+function refreshIdempotencyKey(): string {
+  const newKey = crypto.randomUUID()
+  checkoutIdempotencyKey.value = newKey
+  sessionStorage.setItem('checkout-idempotency-key', newKey)
+  return newKey
+}
+
 function resetOrderError() {
   orderFailed.value = false
   orderFailReason.value = ''
+  refreshIdempotencyKey()
 }
-
-const checkoutIdempotencyKey =
-  sessionStorage.getItem('checkout-idempotency-key') || crypto.randomUUID()
-sessionStorage.setItem('checkout-idempotency-key', checkoutIdempotencyKey)
 
 // UX-06: Phone validation
 const isPhoneValid = computed(() => {
@@ -1017,7 +1026,7 @@ async function placeOrder() {
       loyaltyPointsUsed: loyaltyPointsToSpend.value > 0 ? loyaltyPointsToSpend.value : undefined,
       customerName: shippingInfo.fullName,
       customerEmail: shippingInfo.email,
-      idempotencyKey: checkoutIdempotencyKey,
+      idempotencyKey: checkoutIdempotencyKey.value,
     }
 
     // Pre-checkout safe validation
@@ -1075,6 +1084,7 @@ async function placeOrder() {
     }
 
     sessionStorage.removeItem('checkout-idempotency-key')
+    refreshIdempotencyKey()
     orderSuccess.value = true
     cartStore.clearCheckedOutItems()
   } catch (err: any) {

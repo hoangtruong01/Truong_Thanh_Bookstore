@@ -23,9 +23,27 @@
         </button>
       </div>
 
-      <!-- Body -->
-      <div class="p-6 space-y-6 overflow-y-auto">
-        <!-- Avatar Section -->
+      <!-- Navigation Tabs (IMP-001) -->
+      <div class="px-6 pt-3 flex border-b border-slate-150 gap-4 text-xs font-bold bg-slate-50/30">
+        <button
+          type="button"
+          :class="activeTab === 'profile' ? 'text-[#dc2626] border-b-2 border-[#dc2626] pb-2 font-black cursor-pointer' : 'text-slate-400 hover:text-slate-600 pb-2 cursor-pointer'"
+          @click="activeTab = 'profile'"
+        >
+          Thông tin cá nhân
+        </button>
+        <button
+          type="button"
+          :class="activeTab === 'password' ? 'text-[#dc2626] border-b-2 border-[#dc2626] pb-2 font-black cursor-pointer' : 'text-slate-400 hover:text-slate-600 pb-2 cursor-pointer'"
+          @click="activeTab = 'password'"
+        >
+          Đổi mật khẩu
+        </button>
+      </div>
+
+      <!-- Body: Tab 1 (Profile) -->
+      <div v-if="activeTab === 'profile'" class="p-6 space-y-6 overflow-y-auto">
+        <!-- Avatar Section (BUG-005: Compressed client-side) -->
         <div class="flex flex-col items-center justify-center space-y-3">
           <div class="relative group">
             <div class="w-24 h-24 rounded-full overflow-hidden border-2 border-slate-150 shadow-md bg-slate-100 flex items-center justify-center">
@@ -61,7 +79,7 @@
             @change="handleFileChange"
           />
           <p class="text-[9.5px] text-slate-400 font-bold uppercase tracking-wider">
-            Định dạng JPG, PNG, WEBP. Tối đa 5MB.
+            Tự động tối ưu dung lượng ảnh (dưới 200KB).
           </p>
         </div>
 
@@ -129,21 +147,74 @@
         </div>
       </div>
 
+      <!-- Body: Tab 2 (Change Password - IMP-001) -->
+      <div v-else class="p-6 space-y-5 overflow-y-auto text-left">
+        <div>
+          <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Mật khẩu hiện tại</label>
+          <input
+            v-model="passwordForm.currentPassword"
+            type="password"
+            placeholder="Nhập mật khẩu hiện tại..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:border-[#dc2626] transition-all font-medium text-slate-700"
+          />
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Mật khẩu mới</label>
+          <input
+            v-model="passwordForm.newPassword"
+            type="password"
+            placeholder="Tối thiểu 8 ký tự, có chữ hoa, thường & số..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:border-[#dc2626] transition-all font-medium text-slate-700"
+          />
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Xác nhận mật khẩu mới</label>
+          <input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            placeholder="Nhập lại mật khẩu mới..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#dc2626] focus:border-[#dc2626] transition-all font-medium text-slate-700"
+          />
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-800 space-y-1">
+          <p class="font-bold">Lưu ý bảo mật:</p>
+          <p>Mật khẩu mới phải có ít nhất 8 ký tự, gồm ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số. Khi đổi mật khẩu thành công, các phiên đăng nhập khác sẽ tự động bị thu hồi.</p>
+        </div>
+      </div>
+
       <!-- Footer Actions -->
       <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
         <button
+          type="button"
           class="px-4.5 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all cursor-pointer"
           @click="closeModal"
         >
           Hủy bỏ
         </button>
+
         <button
+          v-if="activeTab === 'profile'"
+          type="button"
           :disabled="saving"
           class="px-5 py-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
           @click="saveProfile"
         >
           <span v-if="saving" class="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span>
           <span>Lưu thông tin</span>
+        </button>
+
+        <button
+          v-else
+          type="button"
+          :disabled="changingPassword"
+          class="px-5 py-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+          @click="handleChangePassword"
+        >
+          <span v-if="changingPassword" class="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+          <span>Cập nhật mật khẩu</span>
         </button>
       </div>
     </div>
@@ -153,6 +224,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { authService } from '@/services/auth.service'
 import { useToast } from 'vue-toastification'
 
 const props = defineProps<{
@@ -166,8 +238,10 @@ const emit = defineEmits<{
 const authStore = useAuthStore()
 const toast = useToast()
 
+const activeTab = ref<'profile' | 'password'>('profile')
 const fileInput = ref<HTMLInputElement | null>(null)
 const saving = ref(false)
+const changingPassword = ref(false)
 const avatarPreview = ref('')
 const avatarBase64 = ref('')
 
@@ -179,6 +253,12 @@ const form = ref({
   role: '',
   loyaltyPoints: 0,
   loyaltyTier: 'BRONZE'
+})
+
+const passwordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
 })
 
 // Compute initials when no avatar is set
@@ -225,8 +305,10 @@ watch(() => props.isOpen, (newVal) => {
     }
     avatarPreview.value = ''
     avatarBase64.value = ''
+    activeTab.value = 'profile'
+    passwordForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
   }
-})
+}, { immediate: true })
 
 function closeModal() {
   emit('close')
@@ -236,12 +318,56 @@ function triggerFileInput() {
   fileInput.value?.click()
 }
 
-function handleFileChange(event: Event) {
+/**
+ * BUG-005 Fix: Compress image client-side to max 400x400 JPEG (0.8 quality)
+ * to keep payload strictly below 200KB and avoid Express 1MB payload limits.
+ */
+function compressImage(file: File, maxWidth = 400, maxHeight = 400, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let width = img.width
+      let height = img.height
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width)
+          width = maxWidth
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height)
+          height = maxHeight
+        }
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        const reader = new FileReader()
+        reader.onload = (e: any) => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+        return
+      }
+      ctx.drawImage(img, 0, 0, width, height)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
+
+async function handleFileChange(event: Event) {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (!file) return
 
-  // Validate file size (max 5MB)
+  // Validate file size limit
   if (file.size > 5 * 1024 * 1024) {
     toast.error('File quá lớn, vui lòng chọn file dưới 5MB.')
     return
@@ -250,12 +376,16 @@ function handleFileChange(event: Event) {
   // Create preview url
   avatarPreview.value = URL.createObjectURL(file)
 
-  // Convert to base64
-  const reader = new FileReader()
-  reader.onload = (e: any) => {
-    avatarBase64.value = e.target.result
+  try {
+    avatarBase64.value = await compressImage(file, 400, 400, 0.8)
+  } catch {
+    // Fallback if canvas is not available
+    const reader = new FileReader()
+    reader.onload = (e: any) => {
+      avatarBase64.value = e.target.result
+    }
+    reader.readAsDataURL(file)
   }
-  reader.readAsDataURL(file)
 }
 
 async function saveProfile() {
@@ -282,6 +412,48 @@ async function saveProfile() {
     toast.error('Lỗi khi cập nhật hồ sơ: ' + (error.response?.data?.message || error.message || error))
   } finally {
     saving.value = false
+  }
+}
+
+/**
+ * IMP-001: Change password connecting to PUT /api/auth/change-password
+ */
+async function handleChangePassword() {
+  if (!passwordForm.value.currentPassword) {
+    toast.warning('Vui lòng nhập mật khẩu hiện tại.')
+    return
+  }
+  if (!passwordForm.value.newPassword) {
+    toast.warning('Vui lòng nhập mật khẩu mới.')
+    return
+  }
+  if (passwordForm.value.newPassword.length < 8) {
+    toast.warning('Mật khẩu mới phải có ít nhất 8 ký tự.')
+    return
+  }
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/.test(passwordForm.value.newPassword)) {
+    toast.warning('Mật khẩu mới phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số.')
+    return
+  }
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    toast.warning('Xác nhận mật khẩu mới không trùng khớp.')
+    return
+  }
+
+  changingPassword.value = true
+  try {
+    await authService.changePassword({
+      currentPassword: passwordForm.value.currentPassword,
+      newPassword: passwordForm.value.newPassword,
+    })
+    toast.success('Đổi mật khẩu thành công! Các phiên đăng nhập khác đã được thu hồi.')
+    passwordForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
+    activeTab.value = 'profile'
+    closeModal()
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || err.message || 'Đổi mật khẩu thất bại.')
+  } finally {
+    changingPassword.value = false
   }
 }
 </script>

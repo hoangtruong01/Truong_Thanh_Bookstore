@@ -681,9 +681,10 @@ export class PaymentsService {
   async reconcilePendingPayments(): Promise<number> {
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
     try {
-      const expiredPending = await this.paymentModel
-        .find({
+      const result = await (this.paymentModel as any).updateMany(
+        {
           status: PaymentStatus.PENDING,
+          callbackProcessedAt: { $exists: false },
           provider: { $in: [PaymentMethod.VNPAY, PaymentMethod.MOMO] },
           $or: [
             { expiresAt: { $lt: new Date() } },
@@ -692,29 +693,22 @@ export class PaymentsService {
               createdAt: { $lt: fifteenMinutesAgo },
             },
           ],
-        })
-        .exec();
-
-      if (!expiredPending || expiredPending.length === 0) {
-        return 0;
-      }
-
-      let count = 0;
-      for (const p of expiredPending) {
-        if (p.status === PaymentStatus.PENDING) {
-          p.status = PaymentStatus.FAILED;
-          p.failureReason =
-            'Phiên thanh toán hết hạn chờ phản hồi từ cổng thanh toán (Auto-reconciled)';
-          if (typeof p.save === 'function') {
-            await p.save();
-          }
-          count++;
-        }
-      }
-
-      this.logger.log(
-        `[Reconcile] Đã tự động đánh dấu thất bại ${count} giao dịch trực tuyến quá hạn.`,
+        },
+        {
+          $set: {
+            status: PaymentStatus.FAILED,
+            failureReason:
+              'Phiên thanh toán hết hạn chờ phản hồi từ cổng thanh toán (Auto-reconciled)',
+          },
+        },
       );
+
+      const count = result?.modifiedCount ?? 0;
+      if (count > 0) {
+        this.logger.log(
+          `[Reconcile] Đã tự động đánh dấu thất bại ${count} giao dịch trực tuyến quá hạn.`,
+        );
+      }
       return count;
     } catch (error: any) {
       this.logger.error(

@@ -12,6 +12,8 @@ test('Offline capture uses actual revenue filters and category snapshot pipeline
   }
   const dateMatch = pipelines.revenueByDateRange[0].$match.$and[0];
   assert.deepEqual(dateMatch.$or[0].revenueRecognizedAt, { $gte: start, $lte: end });
+  const projectStage = pipelines.categoryRevenue.find(stage => stage.$project && stage.$project.netItemRevenue).$project;
   const group = pipelines.categoryRevenue.find(stage => stage.$group).$group;
-  assert.deepEqual(group.revenue.$sum.$multiply, ['$items.price', '$items.quantity']);
+  assert.equal(group.revenue.$sum, '$netItemRevenue');
+  assert.deepEqual(projectStage.netItemRevenue.$round[0].$multiply[0].$multiply, ['$items.price', '$items.quantity']);
 });

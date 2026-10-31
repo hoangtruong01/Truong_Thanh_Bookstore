@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Order, OrderSchema } from './schemas/order.schema';
+import {
+  LandingPage,
+  LandingPageSchema,
+} from '../landing-pages/schemas/landing-page.schema';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { OrderScheduleService } from './order-schedule.service';
@@ -22,7 +26,10 @@ import {
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
+    MongooseModule.forFeature([
+      { name: Order.name, schema: OrderSchema },
+      { name: LandingPage.name, schema: LandingPageSchema },
+    ]),
     ProductsModule,
     PromotionsModule,
     NotificationsModule,
