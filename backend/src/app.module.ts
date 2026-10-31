@@ -38,6 +38,7 @@ import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { StockAuditsModule } from './modules/stock-audits/stock-audits.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { FinanceModule } from './modules/finance/finance.module';
+import { DataExchangeModule } from './modules/data-exchange/data-exchange.module';
 
 @Module({
   imports: [
@@ -111,6 +112,7 @@ import { FinanceModule } from './modules/finance/finance.module';
     StockAuditsModule,
     PricingModule,
     FinanceModule,
+    DataExchangeModule,
   ],
   controllers: [AppController],
   providers: [
