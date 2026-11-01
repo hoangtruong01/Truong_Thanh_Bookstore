@@ -56,6 +56,15 @@ export class CreatePOSOrderItemDto {
   @IsNumber()
   @Min(0)
   discount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Đơn giá tùy chỉnh dòng (VND)',
+    example: 45000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  unitPrice?: number;
 }
 
 export class CreatePOSOrderDto {

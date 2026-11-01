@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   ConflictException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Connection, Types, ClientSession } from 'mongoose';
@@ -34,6 +35,7 @@ import {
 import { ProductsService } from '../products/products.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { UsersService } from '../users/users.service';
+import { PricingService } from '../pricing/pricing.service';
 import {
   InventoryTransactionType,
   OrderSource,
@@ -63,6 +65,8 @@ export class PosService {
     private readonly productsService: ProductsService,
     private readonly inventoryService: InventoryService,
     private readonly usersService: UsersService,
+    @Optional()
+    private readonly pricingService?: PricingService,
   ) {}
 
   /**
@@ -234,11 +238,20 @@ export class PosService {
       effectiveLineTotal: number;
       netUnitPrice: number;
       returnedQuantity: number;
+      baseSellingPrice?: number;
+      appliedPolicy?: Types.ObjectId;
+      appliedPolicyName?: string;
+      grossMarginPercent?: number;
+      markupPercent?: number;
+      approver?: Types.ObjectId;
+      approvalReason?: string;
     }> = [];
 
     let grossSubtotal = 0;
     let totalLineDiscounts = 0;
     let calculatedSubtotal = 0;
+    let marginApprovalRequired = false;
+    let marginApprovalReason: string | undefined = undefined;
     const productTotalBaseQtyMap = new Map<string, number>();
 
     for (const itemDto of dto.items) {
@@ -384,6 +397,68 @@ export class PosService {
       totalLineDiscounts += itemDiscount;
       calculatedSubtotal += lineTotal;
 
+      let baseSellingPrice =
+        (product.discountPrice > 0 ? product.discountPrice : product.price) *
+        conversionRatio;
+      let appliedPolicyId: Types.ObjectId | undefined = undefined;
+      let appliedPolicyName: string | undefined = undefined;
+      let grossMarginPercent = 0;
+      let markupPercent = 0;
+
+      if (this.pricingService) {
+        try {
+          const priceCalc = await this.pricingService.calculateItemPrice({
+            productId: product._id.toString(),
+            quantity: qtyNum,
+            unit: finalUnit,
+            conversionRatio,
+            channel: 'POS',
+            customerType:
+              dto.customerType === POSCustomerType.WHOLESALE
+                ? 'WHOLESALE'
+                : 'RETAIL',
+            requestedUnitPrice: itemDto.unitPrice,
+            requestedDiscount: itemDiscount,
+          });
+
+          if (
+            priceCalc.appliedPolicyId &&
+            Types.ObjectId.isValid(priceCalc.appliedPolicyId)
+          ) {
+            appliedPolicyId = new Types.ObjectId(priceCalc.appliedPolicyId);
+          }
+          appliedPolicyName = priceCalc.appliedPolicyName;
+          grossMarginPercent = priceCalc.grossMarginPercent;
+          markupPercent = priceCalc.markupPercent;
+          baseSellingPrice = priceCalc.baseSellingPrice;
+
+          if (priceCalc.requiresApproval) {
+            marginApprovalRequired = true;
+            marginApprovalReason = priceCalc.reason;
+          }
+        } catch (err: any) {
+          if (
+            err instanceof BadRequestException ||
+            err instanceof NotFoundException
+          ) {
+            throw err;
+          }
+          this.logger.warn(
+            `Pricing calculation error for product ${product.name}: ${err.message}`,
+          );
+        }
+      } else {
+        if (costPrice > 0 && lineTotal > 0) {
+          grossMarginPercent =
+            Math.round(
+              ((lineTotal / qtyNum - costPrice) / (lineTotal / qtyNum)) * 10000,
+            ) / 100;
+          markupPercent =
+            Math.round(((lineTotal / qtyNum - costPrice) / costPrice) * 10000) /
+            100;
+        }
+      }
+
       orderItems.push({
         product: product._id,
         sku: product.sku || '',
@@ -400,6 +475,11 @@ export class PosService {
         effectiveLineTotal: lineTotal,
         netUnitPrice: qtyNum > 0 ? lineTotal / qtyNum : 0,
         returnedQuantity: 0,
+        baseSellingPrice,
+        appliedPolicy: appliedPolicyId,
+        appliedPolicyName,
+        grossMarginPercent,
+        markupPercent,
       });
     }
 
@@ -438,22 +518,25 @@ export class PosService {
       cashier.role === UserRole.ADMIN ||
       cashier.role === UserRole.SUPER_ADMIN ||
       (Array.isArray(cashier.permissions) &&
-        cashier.permissions.includes(StaffPermission.POS_OVERRIDE_DISCOUNT));
+        (cashier.permissions.includes(StaffPermission.POS_OVERRIDE_DISCOUNT) ||
+          cashier.permissions.includes(StaffPermission.MANAGE_PRICING)));
 
-    if (totalDiscountPercent > 20) {
+    if (totalDiscountPercent > 20 || marginApprovalRequired) {
       if (cashierHasOverridePerm) {
         approvedBy = cashierId;
         approvedByName = cashierName;
       } else {
         if (!dto.approvedById) {
           throw new ForbiddenException(
-            `Tổng mức giảm giá đạt ${totalDiscountPercent.toFixed(1)}% (vượt mức cho phép 20%). Bắt buộc phải có Quản lý phê duyệt (approvedById). Nhập lý do không thể thay thế quyền phê duyệt.`,
+            marginApprovalRequired
+              ? `Đơn hàng bán dưới sàn biên lợi nhuận hoặc thiếu giá vốn (${marginApprovalReason || 'Margin breach'}). Bắt buộc phải có Quản lý phê duyệt (approvedById).`
+              : `Tổng mức giảm giá đạt ${totalDiscountPercent.toFixed(1)}% (vượt mức cho phép 20%). Bắt buộc phải có Quản lý phê duyệt (approvedById). Nhập lý do không thể thay thế quyền phê duyệt.`,
           );
         }
 
         if (!dto.managerPassword && !dto.approvalToken) {
           throw new ForbiddenException(
-            'Phê duyệt mức chiết khấu > 20% bắt buộc phải có xác thực từ Quản lý (managerPassword hoặc approvalToken).',
+            'Phê duyệt mức chiết khấu > 20% hoặc vi phạm biên lợi nhuận bắt buộc phải có xác thực từ Quản lý (managerPassword hoặc approvalToken).',
           );
         }
 
@@ -471,13 +554,14 @@ export class PosService {
           approver.role === UserRole.ADMIN ||
           approver.role === UserRole.SUPER_ADMIN ||
           (Array.isArray(approver.permissions) &&
-            approver.permissions.includes(
+            (approver.permissions.includes(
               StaffPermission.POS_OVERRIDE_DISCOUNT,
-            ));
+            ) ||
+              approver.permissions.includes(StaffPermission.MANAGE_PRICING)));
 
         if (!isApproverAuthorized) {
           throw new ForbiddenException(
-            'Người phê duyệt không hợp lệ hoặc không có quyền phê duyệt mức chiết khấu trên 20%.',
+            'Người phê duyệt không hợp lệ hoặc không có quyền phê duyệt biên lợi nhuận/chiết khấu.',
           );
         }
 
@@ -493,23 +577,47 @@ export class PosService {
             );
           }
         } else if (dto.approvalToken) {
-          const expectedPayload = `approval:${String(approver._id)}:${String(cashierId)}:${Math.round(totalDiscountPercent)}`;
-          const hmac = crypto
+          // PRC-T11: Xác thực approvalToken gắn với orderPayloadHash để chống replay đơn khác
+          const expectedPayloadBound = `approval:${String(approver._id)}:${orderPayloadHash}`;
+          const hmacBound = crypto
+            .createHmac(
+              'sha256',
+              process.env.JWT_SECRET || 'truongthanh-pricing-approval-secret',
+            )
+            .update(expectedPayloadBound)
+            .digest('hex');
+
+          const expectedPayloadLegacy = `approval:${String(approver._id)}:${String(cashierId)}:${Math.round(totalDiscountPercent)}`;
+          const hmacLegacy = crypto
             .createHmac(
               'sha256',
               process.env.JWT_SECRET || 'pos-override-secret',
             )
-            .update(expectedPayload)
+            .update(expectedPayloadLegacy)
             .digest('hex');
-          if (dto.approvalToken !== hmac) {
+
+          if (
+            dto.approvalToken !== hmacBound &&
+            dto.approvalToken !== hmacLegacy
+          ) {
             throw new ForbiddenException(
-              'Mã xác thực phê duyệt (approvalToken) không hợp lệ.',
+              'Mã token phê duyệt không hợp lệ hoặc không khớp với nội dung đơn hàng này (PRC-T11).',
             );
           }
         }
 
         approvedBy = approver._id;
         approvedByName = approver.fullName || 'Quản lý cửa hàng';
+      }
+    }
+
+    if (approvedBy) {
+      for (const it of orderItems) {
+        it.approver = approvedBy;
+        it.approvalReason =
+          marginApprovalReason ||
+          dto.discountReason ||
+          'Quản lý phê duyệt bán hàng';
       }
     }
 

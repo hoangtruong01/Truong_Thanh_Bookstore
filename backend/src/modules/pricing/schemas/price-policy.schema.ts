@@ -53,6 +53,35 @@ export class PricePolicy {
   @Prop({ type: Number, default: 20, min: 0, max: 100 })
   maxDiscountPercent: number; // Max line discount allowed without approval
 
+  @Prop({ type: Number, min: 0 })
+  fixedPrice?: number; // Giá bán cố định theo chính sách (ví dụ giá sỉ cố định)
+
+  @Prop({ type: Number, min: 0, max: 100 })
+  discountPercent?: number; // % chiết khấu cố định theo tier / kênh
+
+  @Prop({
+    type: [
+      {
+        minQuantity: { type: Number, required: true, min: 1 },
+        maxQuantity: { type: Number, required: false },
+        targetMarginPercent: { type: Number, required: false },
+        discountPercent: { type: Number, required: false },
+        fixedPrice: { type: Number, required: false },
+      },
+    ],
+    default: [],
+  })
+  quantityTiers?: Array<{
+    minQuantity: number;
+    maxQuantity?: number;
+    targetMarginPercent?: number;
+    discountPercent?: number;
+    fixedPrice?: number;
+  }>;
+
+  @Prop({ type: Boolean, default: false })
+  allowVoucherStacking: boolean; // Có cho phép cộng dồn mã voucher với giá sỉ/chính sách này không (PRC-T14)
+
   @Prop({ type: Date, required: true, default: Date.now, index: true })
   effectiveFrom: Date;
 

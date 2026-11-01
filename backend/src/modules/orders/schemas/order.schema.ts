@@ -33,6 +33,28 @@ export class OrderItem {
 
   @Prop()
   image: string;
+
+  // Snapshot chính sách giá & biên lợi nhuận (PRC-01)
+  @Prop({ type: Number, default: 0 })
+  baseSellingPrice?: number;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'PricePolicy' })
+  appliedPolicy?: Types.ObjectId;
+
+  @Prop({ type: String })
+  appliedPolicyName?: string;
+
+  @Prop({ type: Number, default: 0 })
+  grossMarginPercent?: number;
+
+  @Prop({ type: Number, default: 0 })
+  markupPercent?: number;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
+  approver?: Types.ObjectId;
+
+  @Prop({ type: String })
+  approvalReason?: string;
 }
 
 export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);

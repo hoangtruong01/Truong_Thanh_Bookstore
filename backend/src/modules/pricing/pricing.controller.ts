@@ -21,6 +21,7 @@ import {
   PricePolicyQueryDto,
   CalculatePriceDto,
   CheckMarginDto,
+  CalculateItemPriceDto,
 } from './dto/price-policy.dto';
 
 @Controller('pricing')
@@ -52,6 +53,19 @@ export class PricingController {
   )
   checkMargin(@Body() dto: CheckMarginDto) {
     return this.pricingService.checkMargin(dto);
+  }
+
+  /**
+   * PRC-01: Engine tính giá dùng chung (server-side single source of truth)
+   */
+  @Post('calculate-item')
+  @Permissions(
+    StaffPermission.MANAGE_PRICING,
+    StaffPermission.MANAGE_PRODUCTS,
+    StaffPermission.POS_ACCESS,
+  )
+  calculateItem(@Body() dto: CalculateItemPriceDto) {
+    return this.pricingService.calculateItemPrice(dto);
   }
 
   /**

@@ -8,6 +8,9 @@ import {
   Max,
   IsDateString,
   IsMongoId,
+  IsBoolean,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
@@ -15,6 +18,39 @@ import {
   PricePolicyStatus,
 } from '../schemas/price-policy.schema';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+
+export class QuantityTierDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  minQuantity: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  maxQuantity?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(99.99)
+  targetMarginPercent?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  discountPercent?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  fixedPrice?: number;
+}
 
 export class CreatePricePolicyDto {
   @IsString()
@@ -65,6 +101,29 @@ export class CreatePricePolicyDto {
   @Min(0)
   @Max(100)
   maxDiscountPercent?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  fixedPrice?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  discountPercent?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => QuantityTierDto)
+  quantityTiers?: QuantityTierDto[];
+
+  @IsOptional()
+  @IsBoolean()
+  allowVoucherStacking?: boolean;
 
   @IsOptional()
   @IsDateString({}, { message: 'Ngày bắt đầu hiệu lực không hợp lệ' })
@@ -119,6 +178,29 @@ export class UpdatePricePolicyDto {
   @Min(0)
   @Max(100)
   maxDiscountPercent?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  fixedPrice?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  discountPercent?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => QuantityTierDto)
+  quantityTiers?: QuantityTierDto[];
+
+  @IsOptional()
+  @IsBoolean()
+  allowVoucherStacking?: boolean;
 
   @IsOptional()
   @IsDateString()
@@ -204,4 +286,46 @@ export class CheckMarginDto {
   @IsOptional()
   @IsString()
   customerTier?: string;
+}
+
+export class CalculateItemPriceDto {
+  @IsMongoId({ message: 'ID sản phẩm không hợp lệ' })
+  @IsNotEmpty()
+  productId: string;
+
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Số lượng phải là số' })
+  @Min(0.001)
+  quantity: number;
+
+  @IsOptional()
+  @IsString()
+  unit?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  conversionRatio?: number;
+
+  @IsOptional()
+  @IsString()
+  channel?: string;
+
+  @IsOptional()
+  @IsString()
+  customerTier?: string;
+
+  @IsOptional()
+  @IsString()
+  customerType?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  requestedUnitPrice?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  requestedDiscount?: number;
 }

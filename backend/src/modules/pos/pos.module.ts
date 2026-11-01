@@ -13,6 +13,7 @@ import {
 import { ProductsModule } from '../products/products.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { UsersModule } from '../users/users.module';
+import { PricingModule } from '../pricing/pricing.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { UsersModule } from '../users/users.module';
     ProductsModule,
     InventoryModule,
     UsersModule,
+    PricingModule,
   ],
   controllers: [PosController],
   providers: [PosService],

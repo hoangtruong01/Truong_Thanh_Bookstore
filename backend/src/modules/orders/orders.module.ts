@@ -15,6 +15,7 @@ import { UsersModule } from '../users/users.module';
 import { CartModule } from '../cart/cart.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { OutboxModule } from '../outbox/outbox.module';
+import { PricingModule } from '../pricing/pricing.module';
 
 import {
   CheckoutService,
@@ -37,6 +38,7 @@ import {
     CartModule,
     InventoryModule,
     OutboxModule,
+    PricingModule,
   ],
   controllers: [OrdersController],
   providers: [

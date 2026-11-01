@@ -28,6 +28,8 @@ import { OrderInventoryService } from './order-inventory.service';
 import { InventoryService } from '../../inventory/inventory.service';
 import { OrderLoyaltyService } from './order-loyalty.service';
 import { OrderNotificationService } from './order-notification.service';
+import { PricingService } from '../../pricing/pricing.service';
+import { Types } from 'mongoose';
 
 const FREE_SHIPPING_THRESHOLD = 299000;
 const SHIPPING_FEE = 30000;
@@ -50,6 +52,7 @@ export class CheckoutService {
     @InjectModel(LandingPage.name)
     private readonly landingPageModel?: Model<LandingPageDocument>,
     @Optional() private readonly inventoryService?: InventoryService,
+    @Optional() private readonly pricingService?: PricingService,
   ) {}
 
   generateOrderCode(): string {
@@ -462,15 +465,68 @@ export class CheckoutService {
         }
       }
 
+      const itemCostPrice =
+        costMap.get(product._id.toString()) || product.costPrice || 0;
+      let baseSellingPrice = product.price;
+      let appliedPolicyId: Types.ObjectId | undefined = undefined;
+      let appliedPolicyName: string | undefined = undefined;
+      let grossMarginPercent = 0;
+      let markupPercent = 0;
+
+      if (this.pricingService) {
+        try {
+          const calc = await this.pricingService.calculateItemPrice({
+            productId: product._id.toString(),
+            quantity: item.quantity,
+            channel: 'WEB',
+            requestedUnitPrice: effectivePrice,
+          });
+          if (
+            calc.appliedPolicyId &&
+            Types.ObjectId.isValid(calc.appliedPolicyId)
+          ) {
+            appliedPolicyId = new Types.ObjectId(calc.appliedPolicyId);
+          }
+          appliedPolicyName = calc.appliedPolicyName;
+          grossMarginPercent = calc.grossMarginPercent;
+          markupPercent = calc.markupPercent;
+          baseSellingPrice = calc.baseSellingPrice;
+        } catch {
+          if (itemCostPrice > 0 && effectivePrice > 0) {
+            grossMarginPercent =
+              Math.round(
+                ((effectivePrice - itemCostPrice) / effectivePrice) * 10000,
+              ) / 100;
+            markupPercent =
+              Math.round(
+                ((effectivePrice - itemCostPrice) / itemCostPrice) * 10000,
+              ) / 100;
+          }
+        }
+      } else if (itemCostPrice > 0 && effectivePrice > 0) {
+        grossMarginPercent =
+          Math.round(
+            ((effectivePrice - itemCostPrice) / effectivePrice) * 10000,
+          ) / 100;
+        markupPercent =
+          Math.round(
+            ((effectivePrice - itemCostPrice) / itemCostPrice) * 10000,
+          ) / 100;
+      }
+
       verifiedItems.push({
         product: product._id.toString(),
         name: effectiveName,
         price: effectivePrice,
         quantity: item.quantity,
-        costPrice:
-          costMap.get(product._id.toString()) || product.costPrice || 0,
+        costPrice: itemCostPrice,
         image: product.images?.[0] || item.image || '',
-      });
+        baseSellingPrice,
+        appliedPolicy: appliedPolicyId,
+        appliedPolicyName,
+        grossMarginPercent,
+        markupPercent,
+      } as any);
     }
 
     const subtotal = verifiedItems.reduce(
@@ -489,6 +545,12 @@ export class CheckoutService {
       try {
         let discount = 0;
         if (dto.promotionCode) {
+          if (this.pricingService) {
+            this.pricingService.validatePromotionStacking({
+              isWholesale: false,
+              promotionCode: dto.promotionCode,
+            });
+          }
           const promoResult = await this.promotionsService.apply(
             { code: dto.promotionCode, orderTotal: subtotal },
             userId,
