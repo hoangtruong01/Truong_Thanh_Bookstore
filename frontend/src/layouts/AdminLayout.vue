@@ -5,58 +5,93 @@
 
     <!-- Sidebar (Matches Screenshot: light background) -->
     <aside 
-      class="fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex flex-col shadow-xs flex-shrink-0 z-40 transition-transform duration-300 md:translate-x-0 md:relative"
+      class="fixed inset-y-0 left-0 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xs flex-shrink-0 z-40 transition-transform duration-300 md:translate-x-0 md:relative"
       :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full']"
     >
       <!-- Sidebar Header / Logo -->
-      <div class="h-20 flex items-center px-6 border-b border-slate-200 gap-2.5 bg-white">
+      <div class="h-20 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 gap-2.5 bg-white dark:bg-slate-900">
         <!-- Emblem -->
-        <img src="@/assets/logo.jpg" class="w-8.5 h-8.5 rounded-full object-cover border border-slate-200" alt="Trường Thành Logo" />
+        <img src="@/assets/logo.jpg" class="w-8.5 h-8.5 rounded-full object-cover border border-slate-200 dark:border-slate-700" alt="Trường Thành Logo" />
         <div class="flex flex-col leading-none">
           <span class="text-sm font-black text-[#dc2626] tracking-tight uppercase">TRƯỜNG THÀNH</span>
           <span class="text-[8px] font-bold text-slate-400 tracking-wider uppercase">ADMIN PANEL</span>
         </div>
       </div>
 
-      <!-- Navigation links (Grouped by business domain) -->
-      <nav class="flex-grow p-3 space-y-4 overflow-y-auto">
-        <div v-for="group in navGroups" :key="group.key" class="space-y-1">
-          <!-- Section Header -->
+      <!-- Navigation links (Styled as Distinct Functional Cards) -->
+      <nav class="flex-grow p-3 space-y-3 overflow-y-auto">
+        <div
+          v-for="group in navGroups"
+          :key="group.key"
+          class="bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/60 rounded-2xl p-1.5 transition-all shadow-2xs hover:border-slate-300/80 dark:hover:border-slate-600/80"
+        >
+          <!-- Section Card Header -->
           <div
             v-if="group.items.length > 0"
-            class="px-3 pt-1 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400 select-none"
+            class="px-2.5 pt-1.5 pb-1 flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 select-none"
           >
-            {{ group.label }}
+            <span class="flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+              <span>{{ group.label }}</span>
+            </span>
+            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 px-1.5 py-0.2 rounded-full shadow-2xs">
+              {{ group.items.length }}
+            </span>
           </div>
 
-          <!-- Section Navigation Links -->
-          <router-link
-            v-for="item in group.items"
-            :key="item.name"
-            :to="item.to"
-            class="flex items-center gap-3 px-3.5 py-2.2 rounded-lg text-xs font-bold transition-all group"
-            :class="[
-              $route.name === item.name || route.path.startsWith(item.to)
-                ? 'bg-[#dc2626] text-white shadow-xs'
-                : 'hover:bg-slate-50 hover:text-slate-900 text-slate-600'
-            ]"
-          >
-            <component :is="item.icon" class="w-4 h-4 flex-shrink-0" />
-            <span>{{ item.label }}</span>
-          </router-link>
+          <!-- Section Navigation Links inside Card -->
+          <div class="space-y-0.5 mt-0.5">
+            <router-link
+              v-for="item in group.items"
+              :key="item.name"
+              :to="item.to"
+              class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all group"
+              :class="[
+                $route.name === item.name || route.path.startsWith(item.to)
+                  ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-sm shadow-red-500/25 font-black'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white hover:shadow-2xs'
+              ]"
+            >
+              <div class="flex items-center gap-2.5 truncate">
+                <component
+                  :is="item.icon"
+                  class="w-4 h-4 flex-shrink-0 transition-colors"
+                  :class="[
+                    $route.name === item.name || route.path.startsWith(item.to)
+                      ? 'text-white'
+                      : 'text-slate-400 group-hover:text-red-600 dark:group-hover:text-red-400'
+                  ]"
+                />
+                <span class="truncate">{{ item.label }}</span>
+              </div>
+              <div
+                v-if="$route.name === item.name || route.path.startsWith(item.to)"
+                class="w-1.5 h-1.5 rounded-full bg-white flex-shrink-0 animate-pulse"
+              ></div>
+            </router-link>
+          </div>
         </div>
       </nav>
 
-      <!-- Sidebar Footer (Matches Screenshot) -->
-      <div class="p-4 border-t border-slate-200 bg-white flex flex-col gap-2">
-        <router-link to="/" class="flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-600 border border-slate-200 transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+      <!-- Sidebar Footer -->
+      <div class="p-3 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col gap-1.5">
+        <router-link
+          to="/"
+          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700 transition-all shadow-2xs"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 text-slate-400">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
           </svg>
           <span>Về trang bán hàng</span>
         </router-link>
 
-        <button class="flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-red-50 hover:bg-red-100 text-xs font-bold text-red-600 border border-red-100 transition-colors cursor-pointer" @click="handleLogout">
+        <button
+          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-bold text-rose-600 dark:text-rose-400 border border-rose-100/90 dark:border-rose-900/40 transition-all cursor-pointer"
+          @click="handleLogout"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+          </svg>
           <span>Đăng xuất</span>
         </button>
       </div>
@@ -488,11 +523,12 @@ const navGroups = computed<NavGroup[]>(() => {
 
   const rawGroups: NavGroup[] = [
     {
-      key: 'overview',
-      label: isEn ? 'Overview' : 'Tổng quan',
+      key: 'overview_finance',
+      label: isEn ? 'Overview & Finance' : 'Tổng quan & Tài chính',
       items: [
         { name: 'AdminDashboard', label: isEn ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
         { name: 'AdminReports', label: isEn ? 'Reports' : 'Báo cáo', to: '/admin/reports', icon: ReportsIcon, permission: 'VIEW_REPORTS' },
+        { name: 'AdminCashbook', label: isEn ? 'Cashbook & Finance' : 'Sổ quỹ & Thu chi', to: '/admin/cashbook', icon: CashbookIcon, permission: 'MANAGE_FINANCE' },
       ],
     },
     {
@@ -522,13 +558,6 @@ const navGroups = computed<NavGroup[]>(() => {
         { name: 'AdminPurchases', label: isEn ? 'Purchases & PO' : 'Mua hàng & PO', to: '/admin/purchases', icon: PurchasesIcon, permission: 'MANAGE_INVENTORY' },
         { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: StockAuditIcon, permission: 'MANAGE_INVENTORY' },
         { name: 'AdminSuppliers', label: isEn ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: SuppliersIcon, permission: 'MANAGE_INVENTORY' },
-      ],
-    },
-    {
-      key: 'finance',
-      label: isEn ? 'Finance & Cashbook' : 'Tài chính & Sổ quỹ',
-      items: [
-        { name: 'AdminCashbook', label: isEn ? 'Cashbook & Finance' : 'Sổ quỹ & Thu chi', to: '/admin/cashbook', icon: CashbookIcon, permission: 'MANAGE_FINANCE' },
       ],
     },
     {
