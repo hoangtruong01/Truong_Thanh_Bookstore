@@ -100,8 +100,15 @@ export class FinanceController {
 
   @Get('entries/export')
   @Permissions(StaffPermission.MANAGE_FINANCE, StaffPermission.VIEW_REPORTS)
-  async exportEntries(@Query() query: CashEntryQueryDto, @Res() res: Response) {
-    const buffer = await this.financeService.exportCashEntriesToExcel(query);
+  async exportEntries(
+    @Query() query: CashEntryQueryDto,
+    @Request() req: any,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.financeService.exportCashEntriesToExcel(
+      query,
+      req.user,
+    );
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

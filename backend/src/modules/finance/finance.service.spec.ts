@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken, getConnectionToken } from '@nestjs/mongoose';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Types } from 'mongoose';
+import * as ExcelJS from 'exceljs';
 import { FinanceService } from './finance.service';
 import {
   CashAccount,
@@ -1547,6 +1548,186 @@ describe('FinanceService', () => {
       };
 
       expect(guard.canActivate(mockContextStaffWithPerm)).toBe(true);
+    });
+  });
+
+  describe('TASK CASH-01: Export sổ quỹ chuẩn hóa bộ lọc và thống kê', () => {
+    const mockEntriesQueryChain = (items: any[]) => {
+      const exec = jest.fn().mockResolvedValue(items);
+      const pop2 = jest.fn().mockReturnValue({ exec });
+      const pop1 = jest.fn().mockReturnValue({ populate: pop2 });
+      const sort = jest.fn().mockReturnValue({ populate: pop1 });
+      mockEntryModel.find.mockReturnValue({ sort });
+      return { exec, pop2, pop1, sort };
+    };
+
+    it('CASH-T01: Filter accountId -> Shared builder và export filter đúng account', async () => {
+      const accountId = new Types.ObjectId().toString();
+      const filter = service.buildCashEntryFilter({ accountId });
+      expect(filter.account).toEqual(new Types.ObjectId(accountId));
+      expect(filter.isDeleted).toBe(false);
+    });
+
+    it('CASH-T02: Filter direction OUT -> Shared builder và export filter chỉ lấy phiếu chi', () => {
+      const filter = service.buildCashEntryFilter({
+        direction: CashEntryDirection.OUT,
+      });
+      expect(filter.direction).toBe(CashEntryDirection.OUT);
+    });
+
+    it('CASH-T03: Filter date range -> Shared builder thiết lập $gte và $lte cho postedAt', () => {
+      const filter = service.buildCashEntryFilter({
+        startDate: '2026-05-01',
+        endDate: '2026-05-31',
+      });
+      expect(filter.postedAt.$gte).toEqual(new Date('2026-05-01'));
+      expect(filter.postedAt.$lte).toBeDefined();
+    });
+
+    it('CASH-T04: Search theo mã phiếu/đối tác -> Shared builder tạo $or search regex', () => {
+      const filter = service.buildCashEntryFilter({ search: 'PT-2026' });
+      expect(filter.$or).toBeDefined();
+      expect(filter.$or.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('CASH-T05: Kết hợp nhiều filter -> Filter chứa đủ các tiêu chí lọc', () => {
+      const accountId = new Types.ObjectId().toString();
+      const filter = service.buildCashEntryFilter({
+        accountId,
+        direction: CashEntryDirection.IN,
+        category: CashEntryCategory.WHOLESALE_COLLECTION,
+        status: CashEntryStatus.POSTED,
+        search: 'Khách sỉ ABC',
+      });
+      expect(filter.account).toEqual(new Types.ObjectId(accountId));
+      expect(filter.direction).toBe(CashEntryDirection.IN);
+      expect(filter.category).toBe(CashEntryCategory.WHOLESALE_COLLECTION);
+      expect(filter.status).toBe(CashEntryStatus.POSTED);
+      expect(filter.$or).toBeDefined();
+    });
+
+    it('CASH-T06: Có trên 5.000 record -> Không mất dữ liệu âm thầm, xuất đủ toàn bộ', async () => {
+      const largeList = Array.from({ length: 5200 }, (_, i) => ({
+        entryCode: `PT-${10000 + i}`,
+        postedAt: new Date(),
+        account: { name: 'Quỹ Tiền Mặt', code: 'CASH-01' },
+        direction: CashEntryDirection.IN,
+        category: CashEntryCategory.POS_REVENUE,
+        amount: 100000,
+        partnerName: `Khách hàng ${i}`,
+        status: CashEntryStatus.POSTED,
+        createdBy: { name: 'Thu ngân' },
+        note: 'Bán lẻ',
+      }));
+
+      mockEntriesQueryChain(largeList);
+
+      const buffer = await service.exportCashEntriesToExcel({});
+      expect(buffer).toBeDefined();
+
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const sheet = workbook.getWorksheet('So_Quy_Thu_Chi');
+
+      expect(sheet).toBeDefined();
+      // 5 tiêu đề/metadata + 1 header + 5200 data rows + 1 total row = 5207 rows
+      expect(sheet!.rowCount).toBeGreaterThanOrEqual(5206);
+    });
+
+    it('CASH-T07: Không có dữ liệu -> File hợp lệ và hiển thị thông báo không có record', async () => {
+      mockEntriesQueryChain([]);
+
+      const buffer = await service.exportCashEntriesToExcel({});
+      expect(buffer).toBeDefined();
+
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const sheet = workbook.getWorksheet('So_Quy_Thu_Chi');
+
+      expect(sheet).toBeDefined();
+      const emptyRow = sheet!.getRow(7);
+      expect(emptyRow.getCell(2).value).toContain(
+        'Không có dữ liệu phiếu thu chi phù hợp',
+      );
+    });
+
+    it('CASH-T08: User không có VIEW_REPORTS hoặc MANAGE_FINANCE -> 403 Forbidden', async () => {
+      const { Reflector } = await import('@nestjs/core');
+      const { PermissionsGuard } =
+        await import('../../common/guards/permissions.guard');
+      const { FinanceController } = await import('./finance.controller');
+      const { StaffPermission, UserRole } = await import('../../common/enums');
+      const { ForbiddenException } = await import('@nestjs/common');
+
+      const reflector = new Reflector();
+      const guard = new PermissionsGuard(reflector);
+
+      const requiredPermissions = reflector.get<string[]>(
+        'permissions',
+        FinanceController.prototype.exportEntries,
+      );
+      expect(requiredPermissions).toContain(StaffPermission.MANAGE_FINANCE);
+      expect(requiredPermissions).toContain(StaffPermission.VIEW_REPORTS);
+
+      const mockContextStaffUnauthorized: any = {
+        getHandler: () => FinanceController.prototype.exportEntries,
+        getClass: () => FinanceController,
+        switchToHttp: () => ({
+          getRequest: () => ({
+            user: {
+              role: UserRole.STAFF,
+              permissions: [StaffPermission.POS_ACCESS], // Không có MANAGE_FINANCE hay VIEW_REPORTS
+              status: true,
+            },
+          }),
+        }),
+      };
+
+      expect(() => guard.canActivate(mockContextStaffUnauthorized)).toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('CASH-T09: Tổng thu / chi trên Excel khớp chính xác tổng số liệu thực tế', async () => {
+      const sampleItems = [
+        {
+          entryCode: 'PT-01',
+          postedAt: new Date(),
+          account: { name: 'Quỹ Tiền Mặt', code: 'CASH-01' },
+          direction: CashEntryDirection.IN,
+          category: CashEntryCategory.POS_REVENUE,
+          amount: 500000,
+          partnerName: 'Khách A',
+          status: CashEntryStatus.POSTED,
+          createdBy: { name: 'Admin' },
+        },
+        {
+          entryCode: 'PC-01',
+          postedAt: new Date(),
+          account: { name: 'Quỹ Tiền Mặt', code: 'CASH-01' },
+          direction: CashEntryDirection.OUT,
+          category: CashEntryCategory.SUPPLIER_PAYMENT,
+          amount: 200000,
+          partnerName: 'NCC B',
+          status: CashEntryStatus.POSTED,
+          createdBy: { name: 'Admin' },
+        },
+      ];
+
+      mockEntriesQueryChain(sampleItems);
+
+      const buffer = await service.exportCashEntriesToExcel(
+        {},
+        { name: 'Kế toán viên' },
+      );
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const sheet = workbook.getWorksheet('So_Quy_Thu_Chi');
+
+      expect(sheet).toBeDefined();
+      expect(sheet!.getCell('D4').value).toContain('500.000'); // Tổng thu
+      expect(sheet!.getCell('G4').value).toContain('200.000'); // Tổng chi
+      expect(sheet!.getCell('J4').value).toContain('300.000'); // Chênh lệch (500k - 200k)
     });
   });
 });

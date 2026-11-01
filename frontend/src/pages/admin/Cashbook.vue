@@ -160,6 +160,22 @@
               {{ acc.name }} ({{ acc.code }})
             </option>
           </select>
+
+          <input
+            v-model="entriesFilter.startDate"
+            type="date"
+            class="px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-xs"
+            title="Từ ngày"
+            @change="fetchEntries"
+          />
+
+          <input
+            v-model="entriesFilter.endDate"
+            type="date"
+            class="px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-xs"
+            title="Đến ngày"
+            @change="fetchEntries"
+          />
         </div>
       </div>
 
@@ -560,6 +576,10 @@ const entriesFilter = ref({
   search: '',
   direction: '',
   accountId: '',
+  category: '',
+  status: '',
+  startDate: '',
+  endDate: '',
 });
 
 const entryFormData = ref({
@@ -658,6 +678,10 @@ async function fetchEntries() {
       search: entriesFilter.value.search || undefined,
       direction: entriesFilter.value.direction || undefined,
       accountId: entriesFilter.value.accountId || undefined,
+      category: entriesFilter.value.category || undefined,
+      status: entriesFilter.value.status || undefined,
+      startDate: entriesFilter.value.startDate || undefined,
+      endDate: entriesFilter.value.endDate || undefined,
     });
     entries.value = res.data || [];
     entriesTotal.value = res.total || 0;
@@ -767,7 +791,15 @@ async function submitPaySupplier() {
 
 async function exportExcel() {
   try {
-    const blob = await financeService.exportEntries();
+    const blob = await financeService.exportEntries({
+      search: entriesFilter.value.search || undefined,
+      direction: entriesFilter.value.direction || undefined,
+      accountId: entriesFilter.value.accountId || undefined,
+      category: entriesFilter.value.category || undefined,
+      status: entriesFilter.value.status || undefined,
+      startDate: entriesFilter.value.startDate || undefined,
+      endDate: entriesFilter.value.endDate || undefined,
+    });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;

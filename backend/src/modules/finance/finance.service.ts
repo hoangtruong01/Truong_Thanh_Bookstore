@@ -716,50 +716,50 @@ export class FinanceService {
   /**
    * Lấy danh sách phiếu thu chi (phân trang, lọc theo sổ quỹ, loại, ngày)
    */
-  async findAllEntries(
-    query: CashEntryQueryDto,
-  ): Promise<PaginatedResult<CashEntryDocument>> {
-    const {
-      page = 1,
-      limit = 20,
-      accountId,
-      direction,
-      category,
-      status,
-      startDate,
-      endDate,
-      search,
-    } = query;
-    const skip = (page - 1) * limit;
-
+  /**
+   * CASH-01: Shared query filter builder cho cả findAllEntries và exportCashEntriesToExcel
+   */
+  public buildCashEntryFilter(query: CashEntryQueryDto): Record<string, any> {
     const filter: Record<string, any> = { isDeleted: false };
 
-    if (accountId && Types.ObjectId.isValid(accountId)) {
-      filter.account = new Types.ObjectId(accountId);
+    if (query.accountId && Types.ObjectId.isValid(query.accountId)) {
+      filter.account = new Types.ObjectId(query.accountId);
     }
 
-    if (direction) filter.direction = direction;
-    if (category) filter.category = category;
-    if (status) filter.status = status;
+    if (query.direction) filter.direction = query.direction;
+    if (query.category) filter.category = query.category;
+    if (query.status) filter.status = query.status;
 
-    if (search && search.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i');
+    if (query.search && query.search.trim()) {
+      const searchRegex = new RegExp(query.search.trim(), 'i');
       filter.$or = [
         { entryCode: searchRegex },
         { partnerName: searchRegex },
         { note: searchRegex },
+        { referenceId: searchRegex },
       ];
     }
 
-    if (startDate || endDate) {
+    if (query.startDate || query.endDate) {
       filter.postedAt = {};
-      if (startDate) filter.postedAt.$gte = new Date(startDate);
-      if (endDate) {
-        const end = new Date(endDate);
+      if (query.startDate) filter.postedAt.$gte = new Date(query.startDate);
+      if (query.endDate) {
+        const end = new Date(query.endDate);
         end.setHours(23, 59, 59, 999);
         filter.postedAt.$lte = end;
       }
     }
+
+    return filter;
+  }
+
+  async findAllEntries(
+    query: CashEntryQueryDto,
+  ): Promise<PaginatedResult<CashEntryDocument>> {
+    const { page = 1, limit = 20 } = query;
+    const skip = (page - 1) * limit;
+
+    const filter = this.buildCashEntryFilter(query);
 
     const [items, total] = await Promise.all([
       this.entryModel
@@ -1160,63 +1160,241 @@ export class FinanceService {
   }
 
   /**
-   * DOC-04: Xuất Excel sổ quỹ và phiếu thu chi
+   * CASH-01: Xuất Excel sổ quỹ và phiếu thu chi khớp chuẩn bộ lọc, không cắt dữ liệu âm thầm
    */
-  async exportCashEntriesToExcel(query: CashEntryQueryDto): Promise<Buffer> {
-    const filter: Record<string, any> = { isDeleted: false };
-    if (query.accountId && Types.ObjectId.isValid(query.accountId)) {
-      filter.account = new Types.ObjectId(query.accountId);
-    }
-    if (query.direction) filter.direction = query.direction;
-    if (query.category) filter.category = query.category;
+  async exportCashEntriesToExcel(
+    query: CashEntryQueryDto,
+    user?: any,
+  ): Promise<Buffer> {
+    const filter = this.buildCashEntryFilter(query);
 
+    // Không dùng limit 5000 rồi âm thầm cắt dữ liệu (CASH-T06)
     const entries = await this.entryModel
       .find(filter)
-      .sort({ postedAt: -1 })
-      .limit(5000)
-      .populate('account', 'code name')
-      .populate('createdBy', 'name')
+      .sort({ postedAt: -1, createdAt: -1 })
+      .populate('account', 'code name type')
+      .populate('createdBy', 'name email')
       .exec();
 
+    let accountName = 'Tất cả sổ quỹ';
+    if (query.accountId && Types.ObjectId.isValid(query.accountId)) {
+      const acc = await this.accountModel.findById(query.accountId);
+      if (acc) accountName = `${acc.name} (${acc.code})`;
+    }
+
+    // Tính toán tổng thu, tổng chi, chênh lệch
+    let totalInflow = 0;
+    let totalOutflow = 0;
+    for (const item of entries) {
+      if (item.status === CashEntryStatus.POSTED) {
+        if (item.direction === CashEntryDirection.IN) {
+          totalInflow += item.amount || 0;
+        } else if (item.direction === CashEntryDirection.OUT) {
+          totalOutflow += item.amount || 0;
+        }
+      }
+    }
+    const netCashflow = totalInflow - totalOutflow;
+
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('SoQuyThuChi');
+    workbook.creator = 'Truong Thanh Bookstore ERP';
+    workbook.created = new Date();
+    const worksheet = workbook.addWorksheet('So_Quy_Thu_Chi');
+
+    // Dòng 1: Tiêu đề báo cáo
+    worksheet.mergeCells('A1:K1');
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = 'BÁO CÁO SỔ QUỸ THU CHI (CASHBOOK)';
+    titleCell.font = { bold: true, size: 16, color: { argb: 'FF1E40AF' } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(1).height = 30;
+
+    // Dòng 2: Thông tin xuất file
+    const exportedByName = user?.name || user?.email || 'Quản trị viên';
+    const exportTimeStr = new Date().toLocaleString('vi-VN');
+    worksheet.mergeCells('A2:K2');
+    worksheet.getCell('A2').value =
+      `Thời gian xuất: ${exportTimeStr}  |  Người xuất: ${exportedByName}`;
+    worksheet.getCell('A2').font = {
+      italic: true,
+      size: 10,
+      color: { argb: 'FF64748B' },
+    };
+    worksheet.getCell('A2').alignment = { horizontal: 'center' };
+
+    // Dòng 3: Bộ lọc đã áp dụng
+    const filterParts: string[] = [`Sổ quỹ: ${accountName}`];
+    if (query.direction) {
+      filterParts.push(
+        `Loại: ${query.direction === CashEntryDirection.IN ? 'Thu (IN)' : 'Chi (OUT)'}`,
+      );
+    }
+    if (query.category) filterParts.push(`Danh mục: ${query.category}`);
+    if (query.status) filterParts.push(`Trạng thái: ${query.status}`);
+    if (query.startDate || query.endDate) {
+      filterParts.push(
+        `Thời gian: ${query.startDate || '...'} đến ${query.endDate || '...'}`,
+      );
+    }
+    if (query.search) filterParts.push(`Từ khóa: "${query.search}"`);
+    worksheet.mergeCells('A3:K3');
+    worksheet.getCell('A3').value =
+      `Bộ lọc áp dụng: ${filterParts.join('  •  ')}`;
+    worksheet.getCell('A3').font = { size: 10, color: { argb: 'FF334155' } };
+    worksheet.getCell('A3').alignment = { horizontal: 'center' };
+
+    // Dòng 4: Thống kê tổng hợp (Summary Cards)
+    worksheet.mergeCells('A4:C4');
+    worksheet.getCell('A4').value = `Tổng số chứng từ: ${entries.length}`;
+    worksheet.getCell('A4').font = { bold: true, size: 11 };
+
+    worksheet.mergeCells('D4:F4');
+    worksheet.getCell('D4').value =
+      `Tổng thu (IN): ${totalInflow.toLocaleString('vi-VN')} đ`;
+    worksheet.getCell('D4').font = {
+      bold: true,
+      size: 11,
+      color: { argb: 'FF16A34A' },
+    };
+
+    worksheet.mergeCells('G4:I4');
+    worksheet.getCell('G4').value =
+      `Tổng chi (OUT): ${totalOutflow.toLocaleString('vi-VN')} đ`;
+    worksheet.getCell('G4').font = {
+      bold: true,
+      size: 11,
+      color: { argb: 'FFDC2626' },
+    };
+
+    worksheet.mergeCells('J4:K4');
+    worksheet.getCell('J4').value =
+      `Chênh lệch: ${netCashflow.toLocaleString('vi-VN')} đ`;
+    worksheet.getCell('J4').font = {
+      bold: true,
+      size: 11,
+      color: { argb: netCashflow >= 0 ? 'FF16A34A' : 'FFDC2626' },
+    };
+
+    // Dòng 5: Trống
+    worksheet.addRow([]);
+
+    // Dòng 6: Tiêu đề cột
+    const headerRow = worksheet.addRow([
+      'STT',
+      'Mã chứng từ',
+      'Ngày ghi sổ',
+      'Sổ quỹ',
+      'Loại phiếu',
+      'Danh mục',
+      'Số tiền (VND)',
+      'Đối tác / Người nộp nhận',
+      'Chứng từ tham chiếu',
+      'Trạng thái',
+      'Người lập',
+      'Ghi chú',
+    ]);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1E293B' },
+    };
+    headerRow.height = 24;
 
     worksheet.columns = [
-      { header: 'Mã phiếu', key: 'entryCode', width: 18 },
-      { header: 'Ngày ghi sổ', key: 'postedAt', width: 20 },
-      { header: 'Sổ quỹ', key: 'accountName', width: 25 },
-      { header: 'Loại', key: 'direction', width: 12 },
-      { header: 'Danh mục', key: 'category', width: 22 },
-      { header: 'Số tiền (VND)', key: 'amount', width: 18 },
-      { header: 'Đối tác / Người nộp nhận', key: 'partnerName', width: 28 },
-      { header: 'Chứng từ tham chiếu', key: 'reference', width: 20 },
-      { header: 'Trạng thái', key: 'status', width: 14 },
-      { header: 'Người lập', key: 'createdBy', width: 20 },
-      { header: 'Ghi chú', key: 'note', width: 30 },
+      { key: 'stt', width: 8 },
+      { key: 'entryCode', width: 18 },
+      { key: 'postedAt', width: 20 },
+      { key: 'accountName', width: 25 },
+      { key: 'direction', width: 14 },
+      { key: 'category', width: 22 },
+      { key: 'amount', width: 18 },
+      { key: 'partnerName', width: 28 },
+      { key: 'reference', width: 22 },
+      { key: 'status', width: 14 },
+      { key: 'createdBy', width: 20 },
+      { key: 'note', width: 30 },
     ];
 
-    worksheet.getRow(1).font = { bold: true };
+    // Dòng dữ liệu
+    if (entries.length === 0) {
+      // CASH-T07: File hợp lệ, có thông báo không có record
+      const emptyRow = worksheet.addRow([
+        '',
+        'Không có dữ liệu phiếu thu chi phù hợp với bộ lọc đã chọn',
+      ]);
+      worksheet.mergeCells(`B${emptyRow.number}:L${emptyRow.number}`);
+      emptyRow.getCell(2).font = { italic: true, color: { argb: 'FF94A3B8' } };
+      emptyRow.getCell(2).alignment = { horizontal: 'center' };
+    } else {
+      let stt = 1;
+      for (const item of entries) {
+        const acc: any = item.account;
+        const creator: any = item.createdBy;
 
-    for (const item of entries) {
-      const acc: any = item.account;
-      const creator: any = item.createdBy;
-      worksheet.addRow({
-        entryCode: item.entryCode,
-        postedAt: item.postedAt
-          ? new Date(item.postedAt).toLocaleString('vi-VN')
-          : '',
-        accountName: acc?.name || '-',
-        direction:
-          item.direction === CashEntryDirection.IN ? 'THU (+)' : 'CHI (-)',
-        category: item.category,
-        amount: item.amount,
-        partnerName: item.partnerName || '-',
-        reference:
-          `${item.referenceType || ''} ${item.referenceId || ''}`.trim(),
-        status: item.status,
-        createdBy: creator?.name || 'Hệ thống',
-        note: item.note || '',
+        const row = worksheet.addRow({
+          stt: stt++,
+          entryCode: item.entryCode,
+          postedAt: item.postedAt
+            ? new Date(item.postedAt).toLocaleString('vi-VN')
+            : '',
+          accountName: acc?.name ? `${acc.name} (${acc.code})` : '-',
+          direction:
+            item.direction === CashEntryDirection.IN ? 'THU (+)' : 'CHI (-)',
+          category: item.category,
+          amount: item.amount,
+          partnerName: item.partnerName || '-',
+          reference:
+            `${item.referenceType || ''} ${item.referenceId || ''}`.trim() ||
+            '-',
+          status: item.status,
+          createdBy: creator?.name || 'Hệ thống',
+          note: item.note || '',
+        });
+
+        // Định dạng màu cho loại Thu / Chi
+        if (item.direction === CashEntryDirection.IN) {
+          row.getCell('direction').font = {
+            color: { argb: 'FF16A34A' },
+            bold: true,
+          };
+          row.getCell('amount').font = {
+            color: { argb: 'FF16A34A' },
+            bold: true,
+          };
+        } else {
+          row.getCell('direction').font = {
+            color: { argb: 'FFDC2626' },
+            bold: true,
+          };
+          row.getCell('amount').font = {
+            color: { argb: 'FFDC2626' },
+            bold: true,
+          };
+        }
+      }
+
+      // Dòng tổng kết cuối bảng
+      const totalRow = worksheet.addRow({
+        stt: '',
+        entryCode: 'TỔNG CỘNG',
+        postedAt: '',
+        accountName: '',
+        direction: `Thu: ${totalInflow.toLocaleString('vi-VN')} đ`,
+        category: `Chi: ${totalOutflow.toLocaleString('vi-VN')} đ`,
+        amount: netCashflow,
+        partnerName: '',
+        reference: '',
+        status: '',
+        createdBy: '',
+        note: `Chênh lệch: ${netCashflow.toLocaleString('vi-VN')} đ`,
       });
+      totalRow.font = { bold: true };
+      totalRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF1F5F9' },
+      };
     }
 
     return Buffer.from(await workbook.xlsx.writeBuffer());
