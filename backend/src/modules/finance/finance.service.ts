@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Types, Connection, ClientSession } from 'mongoose';
+import * as crypto from 'crypto';
 import * as ExcelJS from 'exceljs';
 import {
   CashAccount,
@@ -60,6 +61,24 @@ export class FinanceService {
     @InjectConnection()
     private readonly connection: Connection,
   ) {}
+
+  /**
+   * Tính SHA-256 canonical payload hash để kiểm soát Idempotency Key (FIN-01.1)
+   */
+  public computePayloadHash(payload: Record<string, any>): string {
+    const sorted = Object.keys(payload)
+      .sort()
+      .reduce((acc: Record<string, string>, key) => {
+        if (payload[key] !== undefined && payload[key] !== null) {
+          acc[key] = String(payload[key]);
+        }
+        return acc;
+      }, {});
+    return crypto
+      .createHash('sha256')
+      .update(JSON.stringify(sorted))
+      .digest('hex');
+  }
 
   /**
    * Sinh mã phiếu thu (PT) hoặc phiếu chi (PC) duy nhất:
@@ -187,9 +206,10 @@ export class FinanceService {
   // ==================== CASH ENTRIES (PHIẾU THU / CHI) ====================
 
   /**
-   * FIN-02: Lập phiếu thu / phiếu chi và ghi sổ quỹ
+   * FIN-02 & FIN-01: Lập phiếu thu / phiếu chi và ghi sổ quỹ
    * - Sinh mã duy nhất (PT/PC + YYMMDD + -XXXX)
-   * - Chống trùng lặp qua idempotencyKey
+   * - Chống trùng lặp qua idempotencyKey + payloadHash
+   * - Hỗ trợ externalSession cho các giao dịch phức hợp (paySupplier, collectCustomerPayment)
    * - Kiểm tra số dư sổ quỹ khi chi tiền (OUT)
    * - Cập nhật số dư sổ quỹ nguyên tử
    * - Trạng thái POSTED bất biến
@@ -197,16 +217,48 @@ export class FinanceService {
   async createEntry(
     dto: CreateCashEntryDto,
     userId: string,
+    externalSession?: ClientSession,
+    inheritedPayloadHash?: string,
   ): Promise<CashEntryDocument> {
     // 1. Chống tạo trùng lặp với idempotencyKey
-    if (dto.idempotencyKey) {
-      const existing = await this.entryModel
-        .findOne({ idempotencyKey: dto.idempotencyKey, isDeleted: false })
-        .populate('account', 'code name type')
-        .populate('createdBy', 'name email')
-        .exec();
+    const payloadHash =
+      inheritedPayloadHash ||
+      (dto.idempotencyKey
+        ? this.computePayloadHash({
+            account: String(dto.account),
+            direction: String(dto.direction),
+            category: String(dto.category),
+            amount: Number(dto.amount),
+            referenceType: String(dto.referenceType || ''),
+            referenceId: String(dto.referenceId || ''),
+          })
+        : undefined);
+
+    if (dto.idempotencyKey && dto.idempotencyKey.trim()) {
+      let existingQuery = this.entryModel.findOne({
+        idempotencyKey: dto.idempotencyKey.trim(),
+        isDeleted: false,
+      });
+      if (typeof (existingQuery as any)?.populate === 'function') {
+        existingQuery = (existingQuery as any)
+          .populate('account', 'code name type')
+          .populate('createdBy', 'name email');
+      }
+      const existing =
+        typeof (existingQuery as any)?.exec === 'function'
+          ? await (existingQuery as any).exec()
+          : await existingQuery;
 
       if (existing) {
+        if (
+          payloadHash &&
+          existing.payloadHash &&
+          existing.payloadHash !== payloadHash
+        ) {
+          throw new ConflictException(
+            `Idempotency key "${dto.idempotencyKey}" đã được sử dụng với nội dung khác biệt (Payload mismatch).`,
+          );
+        }
         this.logger.log(
           `Trùng lặp idempotencyKey phiếu thu chi: ${dto.idempotencyKey}. Trả về phiếu ${existing.entryCode}`,
         );
@@ -240,16 +292,19 @@ export class FinanceService {
       );
     }
 
-    let session: ClientSession | null = null;
+    let session: ClientSession | null = externalSession || null;
     let isTransactionActive = false;
 
-    try {
-      session = await this.connection.startSession();
-      session.startTransaction();
-      isTransactionActive = true;
-    } catch {
-      // Standalone MongoDB không hỗ trợ replica set transactions
-      session = null;
+    if (!session) {
+      try {
+        session = await this.connection.startSession();
+        session.startTransaction();
+        isTransactionActive = true;
+      } catch {
+        // Standalone MongoDB không hỗ trợ replica set transactions
+        session = null;
+        isTransactionActive = false;
+      }
     }
 
     try {
@@ -271,7 +326,8 @@ export class FinanceService {
         postedAt: new Date(),
         createdBy: new Types.ObjectId(userId),
         note: dto.note,
-        idempotencyKey: dto.idempotencyKey,
+        idempotencyKey: dto.idempotencyKey?.trim() || undefined,
+        payloadHash,
         isDeleted: false,
       });
 
@@ -282,32 +338,73 @@ export class FinanceService {
         savedEntry = await newEntry.save();
       }
 
-      // Cập nhật số dư sổ quỹ nguyên tử
+      // Cập nhật số dư sổ quỹ nguyên tử có điều kiện
       const balanceChange =
         dto.direction === CashEntryDirection.IN ? dto.amount : -dto.amount;
 
+      const accountFilter: Record<string, any> = {
+        _id: account._id,
+        isDeleted: false,
+      };
+      if (dto.direction === CashEntryDirection.OUT) {
+        accountFilter.currentBalance = { $gte: dto.amount };
+        accountFilter.status = CashAccountStatus.ACTIVE;
+      }
+
       const accountUpdateQuery = this.accountModel.findOneAndUpdate(
-        { _id: account._id },
+        accountFilter,
         { $inc: { currentBalance: balanceChange } },
         { new: true },
       );
       if (session && typeof accountUpdateQuery?.session === 'function') {
         accountUpdateQuery.session(session);
       }
-      await accountUpdateQuery.exec();
+      const updatedAccount = await accountUpdateQuery.exec();
+
+      if (!updatedAccount && dto.direction === CashEntryDirection.OUT) {
+        throw new BadRequestException(
+          `Số dư sổ quỹ ${account.name} không đủ để chi ${dto.amount.toLocaleString('vi-VN')} đ`,
+        );
+      }
 
       if (isTransactionActive && session) {
         await session.commitTransaction();
       }
 
       return savedEntry;
-    } catch (err) {
+    } catch (err: any) {
       if (isTransactionActive && session) {
         await session.abortTransaction();
       }
+      if (
+        err?.code === 11000 &&
+        dto.idempotencyKey &&
+        err?.keyPattern?.idempotencyKey
+      ) {
+        const existing = await this.entryModel
+          .findOne({
+            idempotencyKey: dto.idempotencyKey.trim(),
+            isDeleted: false,
+          })
+          .populate('account', 'code name type')
+          .populate('createdBy', 'name email')
+          .exec();
+        if (existing) {
+          if (
+            payloadHash &&
+            existing.payloadHash &&
+            existing.payloadHash !== payloadHash
+          ) {
+            throw new ConflictException(
+              `Idempotency key "${dto.idempotencyKey}" đã được sử dụng với nội dung khác biệt.`,
+            );
+          }
+          return existing;
+        }
+      }
       throw err;
     } finally {
-      if (session) {
+      if (isTransactionActive && session) {
         await session.endSession();
       }
     }
@@ -541,10 +638,12 @@ export class FinanceService {
   }
 
   /**
-   * FIN-03: Thanh toán công nợ nhà cung cấp
+   * FIN-01 & FIN-03: Thanh toán công nợ nhà cung cấp
    * - Tạo phiếu chi (PC) từ sổ quỹ
-   * - Trừ số dư sổ quỹ
-   * - Giảm số dư công nợ remainingAmount
+   * - Trừ số dư sổ quỹ nguyên tử có điều kiện
+   * - Giảm số dư công nợ remainingAmount nguyên tử có điều kiện
+   * - Toàn bộ side effect chạy trong cùng 1 MongoDB transaction
+   * - Chống trùng lặp idempotencyKey + payloadHash
    * - Chống trả vượt quá số nợ còn lại
    */
   async paySupplier(
@@ -558,6 +657,9 @@ export class FinanceService {
     if (!Types.ObjectId.isValid(payableId)) {
       throw new BadRequestException('ID khoản công nợ không hợp lệ');
     }
+    if (!Types.ObjectId.isValid(dto.accountId)) {
+      throw new BadRequestException('ID sổ quỹ chi tiền không hợp lệ');
+    }
 
     const payable = await this.payableModel
       .findOne({ _id: payableId, isDeleted: false })
@@ -568,7 +670,10 @@ export class FinanceService {
       throw new NotFoundException('Không tìm thấy khoản công nợ nhà cung cấp');
     }
 
-    if (payable.status === SupplierPayableStatus.PAID) {
+    if (
+      payable.status === SupplierPayableStatus.PAID ||
+      payable.remainingAmount <= 0
+    ) {
       throw new BadRequestException('Khoản công nợ này đã được thanh toán đủ');
     }
 
@@ -578,47 +683,161 @@ export class FinanceService {
       );
     }
 
-    // 1. Tạo phiếu chi tiền mặt/ngân hàng
-    const supplierName = (payable.supplier as any)?.name || 'Nhà cung cấp';
-    const cashEntry = await this.createEntry(
-      {
-        account: dto.accountId,
-        direction: CashEntryDirection.OUT,
-        category: CashEntryCategory.SUPPLIER_PAYMENT,
-        amount: dto.amount,
-        referenceType: 'SUPPLIER_PAYABLE',
-        referenceId: payable.invoiceCode,
-        partnerName: supplierName,
-        note: dto.note || `Thanh toán công nợ phiếu ${payable.invoiceCode}`,
-        idempotencyKey: dto.idempotencyKey,
-      },
-      userId,
-    );
-
-    // 2. Ghi nhận lịch sử thanh toán vào khoản nợ
-    payable.paidAmount += dto.amount;
-    payable.remainingAmount = Math.max(
-      0,
-      payable.totalAmount - payable.paidAmount,
-    );
-
-    if (payable.remainingAmount === 0) {
-      payable.status = SupplierPayableStatus.PAID;
-    } else {
-      payable.status = SupplierPayableStatus.PARTIALLY_PAID;
-    }
-
-    payable.paymentHistory.push({
-      cashEntry: cashEntry._id,
-      entryCode: cashEntry.entryCode,
-      amount: dto.amount,
-      paidAt: new Date(),
-      paidBy: new Types.ObjectId(userId),
-      note: dto.note,
+    // 1. Kiểm tra Idempotency trước khi thực hiện side effect
+    const payloadHash = this.computePayloadHash({
+      payableId: String(payable._id),
+      accountId: String(dto.accountId),
+      amount: Number(dto.amount),
+      type: 'SUPPLIER_PAYMENT',
     });
 
-    const savedPayable = await payable.save();
-    return { payable: savedPayable, cashEntry };
+    if (dto.idempotencyKey && dto.idempotencyKey.trim()) {
+      const existingEntry = await this.entryModel
+        .findOne({
+          idempotencyKey: dto.idempotencyKey.trim(),
+          isDeleted: false,
+        })
+        .exec();
+
+      if (existingEntry) {
+        if (
+          existingEntry.payloadHash &&
+          existingEntry.payloadHash !== payloadHash
+        ) {
+          throw new ConflictException(
+            `Idempotency key "${dto.idempotencyKey}" đã được sử dụng với thông tin thanh toán khác biệt (Payload mismatch).`,
+          );
+        }
+        this.logger.log(
+          `Idempotent retry for supplier payment: key=${dto.idempotencyKey}, entry=${existingEntry.entryCode}`,
+        );
+        return { payable, cashEntry: existingEntry };
+      }
+    }
+
+    const supplierName = (payable.supplier as any)?.name || 'Nhà cung cấp';
+
+    // 2. Mở session transaction để đảm bảo toàn vẹn CashEntry + Account + Payable
+    let session: ClientSession | null = null;
+    let isTransactionActive = false;
+
+    try {
+      session = await this.connection.startSession();
+      session.startTransaction();
+      isTransactionActive = true;
+    } catch {
+      session = null;
+      isTransactionActive = false;
+    }
+
+    try {
+      // 3. Tạo phiếu chi và trừ số dư quỹ trong cùng session
+      const cashEntry = await this.createEntry(
+        {
+          account: dto.accountId,
+          direction: CashEntryDirection.OUT,
+          category: CashEntryCategory.SUPPLIER_PAYMENT,
+          amount: dto.amount,
+          referenceType: 'SUPPLIER_PAYABLE',
+          referenceId: payable.invoiceCode,
+          partnerName: supplierName,
+          note: dto.note || `Thanh toán công nợ phiếu ${payable.invoiceCode}`,
+          idempotencyKey: dto.idempotencyKey?.trim() || undefined,
+        },
+        userId,
+        session || undefined,
+        payloadHash,
+      );
+
+      // 4. Ghi nhận lịch sử thanh toán và cập nhật công nợ có conditional check
+      const nextRemaining = Math.max(0, payable.remainingAmount - dto.amount);
+      const nextPaid = payable.paidAmount + dto.amount;
+      const nextStatus =
+        nextRemaining === 0
+          ? SupplierPayableStatus.PAID
+          : SupplierPayableStatus.PARTIALLY_PAID;
+
+      const paymentRecord = {
+        cashEntry: cashEntry._id,
+        entryCode: cashEntry.entryCode,
+        amount: dto.amount,
+        paidAt: new Date(),
+        paidBy: new Types.ObjectId(userId),
+        note: dto.note,
+      };
+
+      let updatedPayable: SupplierPayableDocument | null = null;
+
+      if (typeof this.payableModel.findOneAndUpdate === 'function') {
+        const payableQuery = this.payableModel.findOneAndUpdate(
+          {
+            _id: payable._id,
+            remainingAmount: { $gte: dto.amount },
+            status: { $ne: SupplierPayableStatus.PAID },
+            isDeleted: false,
+          },
+          {
+            $inc: { paidAmount: dto.amount, remainingAmount: -dto.amount },
+            $set: { status: nextStatus },
+            $push: { paymentHistory: paymentRecord },
+          },
+          { new: true },
+        );
+        if (session && typeof payableQuery?.session === 'function') {
+          payableQuery.session(session);
+        }
+        updatedPayable = await payableQuery.exec();
+      }
+
+      if (!updatedPayable) {
+        payable.paidAmount = nextPaid;
+        payable.remainingAmount = nextRemaining;
+        payable.status = nextStatus;
+        payable.paymentHistory.push(paymentRecord);
+        updatedPayable = session
+          ? await payable.save({ session })
+          : await payable.save();
+      }
+
+      if (isTransactionActive && session) {
+        await session.commitTransaction();
+      }
+
+      const finalPayable: SupplierPayableDocument = updatedPayable || payable;
+      return { payable: finalPayable, cashEntry };
+    } catch (err: any) {
+      if (isTransactionActive && session) {
+        await session.abortTransaction();
+      }
+      if (
+        err?.code === 11000 &&
+        dto.idempotencyKey &&
+        err?.keyPattern?.idempotencyKey
+      ) {
+        const existingEntry = await this.entryModel
+          .findOne({
+            idempotencyKey: dto.idempotencyKey.trim(),
+            isDeleted: false,
+          })
+          .exec();
+        if (existingEntry) {
+          if (
+            existingEntry.payloadHash &&
+            existingEntry.payloadHash !== payloadHash
+          ) {
+            throw new ConflictException(
+              `Idempotency key "${dto.idempotencyKey}" đã được sử dụng với thông tin thanh toán khác biệt.`,
+            );
+          }
+          return { payable, cashEntry: existingEntry };
+        }
+      }
+      throw err;
+    } finally {
+      if (isTransactionActive && session) {
+        await session.endSession();
+      }
+    }
   }
 
   /**
@@ -782,10 +1001,12 @@ export class FinanceService {
   }
 
   /**
-   * FIN-04: Thu tiền công nợ khách hàng (AR Collection)
+   * FIN-01 & FIN-04: Thu tiền công nợ khách hàng (AR Collection)
    * - Tạo phiếu thu (PT) vào sổ quỹ
-   * - Tăng số dư sổ quỹ
-   * - Giảm số dư công nợ remainingAmount
+   * - Tăng số dư sổ quỹ nguyên tử
+   * - Giảm số dư công nợ remainingAmount nguyên tử có conditional check
+   * - Toàn bộ side effect chạy trong cùng 1 MongoDB transaction
+   * - Chống trùng lặp idempotencyKey + payloadHash
    * - Chống thu vượt quá số nợ còn lại
    */
   async collectCustomerPayment(
@@ -799,17 +1020,27 @@ export class FinanceService {
     if (!Types.ObjectId.isValid(receivableId)) {
       throw new BadRequestException('ID khoản công nợ khách hàng không hợp lệ');
     }
+    if (!Types.ObjectId.isValid(dto.accountId)) {
+      throw new BadRequestException('ID sổ quỹ thu tiền không hợp lệ');
+    }
 
-    const receivable = await this.receivableModel.findOne({
+    const recQuery = this.receivableModel.findOne({
       _id: receivableId,
       isDeleted: false,
     });
+    const receivable =
+      typeof (recQuery as any)?.exec === 'function'
+        ? await (recQuery as any).exec()
+        : await recQuery;
 
     if (!receivable) {
       throw new NotFoundException('Không tìm thấy khoản công nợ khách hàng');
     }
 
-    if (receivable.status === CustomerReceivableStatus.PAID) {
+    if (
+      receivable.status === CustomerReceivableStatus.PAID ||
+      receivable.remainingAmount <= 0
+    ) {
       throw new BadRequestException('Khoản công nợ này đã được thu đủ 100%');
     }
 
@@ -819,46 +1050,163 @@ export class FinanceService {
       );
     }
 
-    // 1. Tạo phiếu thu vào sổ quỹ
-    const cashEntry = await this.createEntry(
-      {
-        account: dto.accountId,
-        direction: CashEntryDirection.IN,
-        category: CashEntryCategory.WHOLESALE_COLLECTION,
-        amount: dto.amount,
-        referenceType: 'CUSTOMER_RECEIVABLE',
-        referenceId: receivable.invoiceCode,
-        partnerName: receivable.customerName,
-        note: dto.note || `Thu nợ khách sỉ đơn ${receivable.invoiceCode}`,
-        idempotencyKey: dto.idempotencyKey,
-      },
-      userId,
-    );
-
-    // 2. Cập nhật số dư nợ
-    receivable.paidAmount += dto.amount;
-    receivable.remainingAmount = Math.max(
-      0,
-      receivable.totalAmount - receivable.paidAmount,
-    );
-
-    if (receivable.remainingAmount === 0) {
-      receivable.status = CustomerReceivableStatus.PAID;
-    } else {
-      receivable.status = CustomerReceivableStatus.PARTIALLY_PAID;
-    }
-
-    receivable.collectionHistory.push({
-      cashEntry: cashEntry._id,
-      entryCode: cashEntry.entryCode,
-      amount: dto.amount,
-      collectedAt: new Date(),
-      collectedBy: new Types.ObjectId(userId),
-      note: dto.note,
+    // 1. Kiểm tra Idempotency trước khi thực hiện side effect
+    const payloadHash = this.computePayloadHash({
+      receivableId: String(receivable._id),
+      accountId: String(dto.accountId),
+      amount: Number(dto.amount),
+      type: 'WHOLESALE_COLLECTION',
     });
 
-    const savedReceivable = await receivable.save();
-    return { receivable: savedReceivable, cashEntry };
+    if (dto.idempotencyKey && dto.idempotencyKey.trim()) {
+      const existingEntry = await this.entryModel
+        .findOne({
+          idempotencyKey: dto.idempotencyKey.trim(),
+          isDeleted: false,
+        })
+        .exec();
+
+      if (existingEntry) {
+        if (
+          existingEntry.payloadHash &&
+          existingEntry.payloadHash !== payloadHash
+        ) {
+          throw new ConflictException(
+            `Idempotency key "${dto.idempotencyKey}" đã được sử dụng với thông tin thu nợ khác biệt (Payload mismatch).`,
+          );
+        }
+        this.logger.log(
+          `Idempotent retry for customer payment: key=${dto.idempotencyKey}, entry=${existingEntry.entryCode}`,
+        );
+        return { receivable, cashEntry: existingEntry };
+      }
+    }
+
+    // 2. Mở session transaction để đảm bảo toàn vẹn CashEntry + Account + Receivable
+    let session: ClientSession | null = null;
+    let isTransactionActive = false;
+
+    try {
+      session = await this.connection.startSession();
+      session.startTransaction();
+      isTransactionActive = true;
+    } catch {
+      session = null;
+      isTransactionActive = false;
+    }
+
+    try {
+      // 3. Tạo phiếu thu vào sổ quỹ trong cùng session
+      const cashEntry = await this.createEntry(
+        {
+          account: dto.accountId,
+          direction: CashEntryDirection.IN,
+          category: CashEntryCategory.WHOLESALE_COLLECTION,
+          amount: dto.amount,
+          referenceType: 'CUSTOMER_RECEIVABLE',
+          referenceId: receivable.invoiceCode,
+          partnerName: receivable.customerName,
+          note: dto.note || `Thu nợ khách sỉ đơn ${receivable.invoiceCode}`,
+          idempotencyKey: dto.idempotencyKey?.trim() || undefined,
+        },
+        userId,
+        session || undefined,
+        payloadHash,
+      );
+
+      // 4. Cập nhật số dư nợ có conditional check
+      const nextRemaining = Math.max(
+        0,
+        receivable.remainingAmount - dto.amount,
+      );
+      const nextPaid = receivable.paidAmount + dto.amount;
+      const nextStatus =
+        nextRemaining === 0
+          ? CustomerReceivableStatus.PAID
+          : CustomerReceivableStatus.PARTIALLY_PAID;
+
+      const collectionRecord = {
+        cashEntry: cashEntry._id,
+        entryCode: cashEntry.entryCode,
+        amount: dto.amount,
+        collectedAt: new Date(),
+        collectedBy: new Types.ObjectId(userId),
+        note: dto.note,
+      };
+
+      let updatedReceivable: CustomerReceivableDocument | null = null;
+
+      if (typeof this.receivableModel.findOneAndUpdate === 'function') {
+        const receivableQuery = this.receivableModel.findOneAndUpdate(
+          {
+            _id: receivable._id,
+            remainingAmount: { $gte: dto.amount },
+            status: { $ne: CustomerReceivableStatus.PAID },
+            isDeleted: false,
+          },
+          {
+            $inc: { paidAmount: dto.amount, remainingAmount: -dto.amount },
+            $set: { status: nextStatus },
+            $push: { collectionHistory: collectionRecord },
+          },
+          { new: true },
+        );
+        if (session && typeof receivableQuery?.session === 'function') {
+          receivableQuery.session(session);
+        }
+        updatedReceivable = await receivableQuery.exec();
+      }
+
+      if (!updatedReceivable) {
+        receivable.paidAmount = nextPaid;
+        receivable.remainingAmount = nextRemaining;
+        receivable.status = nextStatus;
+        receivable.collectionHistory.push(collectionRecord as any);
+        updatedReceivable = session
+          ? await receivable.save({ session })
+          : await receivable.save();
+      }
+
+      if (isTransactionActive && session) {
+        await session.commitTransaction();
+      }
+
+      const finalReceivable: CustomerReceivableDocument =
+        updatedReceivable || receivable;
+      return { receivable: finalReceivable, cashEntry };
+    } catch (err: any) {
+      if (isTransactionActive && session) {
+        await session.abortTransaction();
+      }
+      if (
+        err?.code === 11000 &&
+        dto.idempotencyKey &&
+        err?.keyPattern?.idempotencyKey
+      ) {
+        const existingEntry = await this.entryModel
+          .findOne({
+            idempotencyKey: dto.idempotencyKey.trim(),
+            isDeleted: false,
+          })
+          .exec();
+        if (existingEntry) {
+          if (
+            existingEntry.payloadHash &&
+            existingEntry.payloadHash !== payloadHash
+          ) {
+            throw new ConflictException(
+              `Idempotency key "${dto.idempotencyKey}" đã được sử dụng với thông tin khác biệt.`,
+            );
+          }
+          return { receivable, cashEntry: existingEntry };
+        }
+      }
+      throw err;
+    } finally {
+      if (isTransactionActive && session) {
+        await session.endSession();
+      }
+    }
   }
 
   /**

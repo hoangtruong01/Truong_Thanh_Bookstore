@@ -83,3 +83,4 @@ export const SupplierPayableSchema =
 
 SupplierPayableSchema.index({ supplier: 1, status: 1 });
 SupplierPayableSchema.index({ dueDate: 1, status: 1 });
+SupplierPayableSchema.index({ invoiceCode: 1, isDeleted: 1 });

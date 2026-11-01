@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsOptional,
   IsNumber,
+  IsInt,
   Min,
   IsMongoId,
   IsDateString,
@@ -70,7 +71,7 @@ export class CreateCashEntryDto {
   category: CashEntryCategory;
 
   @Type(() => Number)
-  @IsNumber({}, { message: 'Số tiền phải là số' })
+  @IsInt({ message: 'Số tiền phải là số nguyên' })
   @Min(1, { message: 'Số tiền phải lớn hơn 0' })
   amount: number;
 
@@ -136,7 +137,7 @@ export class PaySupplierDto {
   accountId: string;
 
   @Type(() => Number)
-  @IsNumber()
+  @IsInt({ message: 'Số tiền thanh toán phải là số nguyên' })
   @Min(1, { message: 'Số tiền thanh toán phải lớn hơn 0' })
   amount: number;
 
@@ -219,7 +220,7 @@ export class CollectCustomerPaymentDto {
   accountId: string;
 
   @Type(() => Number)
-  @IsNumber()
+  @IsInt({ message: 'Số tiền thu phải là số nguyên' })
   @Min(1, { message: 'Số tiền thu phải lớn hơn 0' })
   amount: number;
 

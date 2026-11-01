@@ -99,6 +99,9 @@ export class CashEntry {
   @Prop({ type: String, trim: true, index: true })
   idempotencyKey?: string;
 
+  @Prop({ type: String, trim: true })
+  payloadHash?: string;
+
   @Prop({ default: false, index: true })
   isDeleted: boolean;
 }
@@ -107,3 +110,12 @@ export const CashEntrySchema = SchemaFactory.createForClass(CashEntry);
 CashEntrySchema.index({ account: 1, postedAt: -1 });
 CashEntrySchema.index({ category: 1, postedAt: -1 });
 CashEntrySchema.index({ direction: 1, postedAt: -1 });
+CashEntrySchema.index(
+  { idempotencyKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      idempotencyKey: { $type: 'string', $gt: '' },
+    },
+  },
+);
