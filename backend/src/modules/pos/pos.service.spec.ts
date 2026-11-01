@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import {
@@ -24,10 +25,16 @@ import { UsersService } from '../users/users.service';
 import { Types } from 'mongoose';
 import {
   PaymentMethod,
+  PaymentStatus,
   ProductStatus,
   StaffPermission,
   UserRole,
 } from '../../common/enums';
+import {
+  CustomerReceivable,
+  CustomerReceivableStatus,
+} from '../finance/schemas/customer-receivable.schema';
+import { CustomerCreditService } from '../finance/services/customer-credit.service';
 import { POSShift } from './dto/pos.dto';
 
 describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
@@ -41,6 +48,8 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
   let mockInventoryService: any;
   let mockUsersService: any;
   let mockCountersCollection: any;
+  let mockReceivableModel: any;
+  let mockCustomerCreditService: any;
 
   const cashierUser = {
     _id: '507f1f77bcf86cd799439011',
@@ -229,6 +238,38 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
       }),
     };
 
+    mockReceivableModel = {
+      create: jest.fn().mockImplementation((docs) =>
+        Promise.resolve(
+          docs.map((d: any) => ({
+            _id: new Types.ObjectId(),
+            ...d,
+            save: jest.fn().mockResolvedValue(d),
+          })),
+        ),
+      ),
+      findById: jest.fn(),
+      updateOne: jest.fn().mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
+      }),
+    };
+
+    mockCustomerCreditService = {
+      checkCreditEligibility: jest.fn().mockResolvedValue({
+        eligible: true,
+        profile: {
+          creditLimit: 50000000,
+          currentExposure: 0,
+          paymentTermDays: 30,
+        },
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      }),
+      reserveCreditExposureAtomic: jest.fn().mockResolvedValue({}),
+      releaseCreditExposureAtomic: jest.fn().mockResolvedValue(undefined),
+      getProfile: jest.fn().mockResolvedValue({ paymentTermDays: 30 }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PosService,
@@ -246,6 +287,14 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
         { provide: ProductsService, useValue: mockProductsService },
         { provide: InventoryService, useValue: mockInventoryService },
         { provide: UsersService, useValue: mockUsersService },
+        {
+          provide: getModelToken(CustomerReceivable.name),
+          useValue: mockReceivableModel,
+        },
+        {
+          provide: CustomerCreditService,
+          useValue: mockCustomerCreditService,
+        },
       ],
     }).compile();
 
@@ -1401,6 +1450,128 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
       expect(report.totalRefundedAmount).toBe(120000); // 120k refunded during today morning
       expect(report.totalRevenue).toBe(180000); // 300k - 120k = 180k
       expect(report.cashTotal).toBe(180000);
+    });
+  });
+
+  describe('AR-01: Bán chịu công nợ tại quầy POS (Credit Sale & Receivables)', () => {
+    it('AR-T01: Chặn bán chịu khi không cung cấp customerId', async () => {
+      const dto = {
+        paymentMethod: PaymentMethod.CREDIT,
+        items: [{ productId: sampleProduct._id.toString(), quantity: 1 }],
+      };
+
+      await expect(
+        service.createPOSOrder(dto as any, cashierUser),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('AR-T01 & AR-T02: Gọi checkCreditEligibility & reserveCreditExposureAtomic khi bán chịu', async () => {
+      const customerId = new Types.ObjectId().toString();
+      const dto = {
+        paymentMethod: PaymentMethod.CREDIT,
+        customerId,
+        items: [{ productId: sampleProduct._id.toString(), quantity: 2 }],
+      };
+
+      const order = await service.createPOSOrder(dto, cashierUser);
+      expect(order).toBeDefined();
+      expect(
+        mockCustomerCreditService.checkCreditEligibility,
+      ).toHaveBeenCalledWith(customerId, order.finalAmount);
+      expect(
+        mockCustomerCreditService.reserveCreditExposureAtomic,
+      ).toHaveBeenCalledWith(customerId, order.finalAmount, expect.anything());
+      expect(order.paymentStatus).toBe(PaymentStatus.UNPAID);
+    });
+
+    it('AR-T10: paymentStatus là PARTIALLY_PAID khi trả trước một phần', async () => {
+      const customerId = new Types.ObjectId().toString();
+      const dto = {
+        paymentMethod: PaymentMethod.CREDIT,
+        customerId,
+        paidAmount: 20000,
+        items: [{ productId: sampleProduct._id.toString(), quantity: 10 }],
+      };
+
+      const order = await service.createPOSOrder(dto, cashierUser);
+      expect(order.paymentStatus).toBe(PaymentStatus.PARTIALLY_PAID);
+      expect(order.paidAmount).toBe(20000);
+      expect(order.remainingDebt).toBe(order.finalAmount - 20000);
+    });
+
+    it('AR-T09: Hoàn trả đơn hàng bán chịu giải phóng nợ và release exposure', async () => {
+      const customerId = new Types.ObjectId();
+      const receivableId = new Types.ObjectId();
+      const creditOrder = {
+        _id: new Types.ObjectId(),
+        invoiceCode: 'HD-CREDIT-REFUND',
+        finalAmount: 100000,
+        paidAmount: 0,
+        remainingDebt: 100000,
+        customer: customerId,
+        customerReceivable: receivableId,
+        paymentMethod: PaymentMethod.CREDIT,
+        items: [
+          {
+            product: sampleProduct._id,
+            sku: sampleProduct.sku,
+            name: sampleProduct.name,
+            unit: 'cái',
+            conversionRatio: 1,
+            quantity: 10,
+            effectiveLineTotal: 100000,
+            netUnitPrice: 10000,
+            returnedQuantity: 0,
+          },
+        ],
+        refundHistory: [],
+        totalRefundedAmount: 0,
+        save: jest.fn().mockImplementation(function () {
+          return Promise.resolve(this);
+        }),
+      };
+
+      mockPOSOrderModel.findById.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(creditOrder),
+      });
+
+      const mockReceivableDoc = {
+        _id: receivableId,
+        remainingAmount: 100000,
+        status: CustomerReceivableStatus.UNPAID,
+        save: jest.fn().mockImplementation(function () {
+          return Promise.resolve(this);
+        }),
+      };
+
+      mockReceivableModel.findById.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockReceivableDoc),
+      });
+
+      const refundDto = {
+        items: [
+          {
+            productId: sampleProduct._id.toString(),
+            quantity: 5,
+            condition: POSItemCondition.GOOD,
+          },
+        ],
+        reason: 'Khách đổi ý trả bớt 5 cái',
+      };
+
+      const refundedOrder = await service.refundPOSOrder(
+        creditOrder._id.toString(),
+        refundDto,
+        cashierUser,
+      );
+
+      expect(refundedOrder).toBeDefined();
+      expect(mockReceivableDoc.remainingAmount).toBe(50000);
+      expect(
+        mockCustomerCreditService.releaseCreditExposureAtomic,
+      ).toHaveBeenCalledWith(customerId.toString(), 50000, expect.anything());
     });
   });
 });

@@ -33,12 +33,14 @@ export enum PaymentMethod {
   VNPAY = 'VNPAY',
   MOMO = 'MOMO',
   CASH = 'CASH',
+  CREDIT = 'CREDIT',
 }
 
 export enum PaymentStatus {
   UNPAID = 'UNPAID',
   PENDING = 'PENDING',
   PAID = 'PAID',
+  PARTIALLY_PAID = 'PARTIALLY_PAID',
   FAILED = 'FAILED',
   REFUNDED = 'REFUNDED',
   CANCELLED = 'CANCELLED',

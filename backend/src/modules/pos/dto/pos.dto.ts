@@ -76,6 +76,14 @@ export class CreatePOSOrderDto {
   items: CreatePOSOrderItemDto[];
 
   @ApiPropertyOptional({
+    description: 'ID khách hàng (bắt buộc khi bán chịu công nợ)',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @IsOptional()
+  @IsMongoId({ message: 'customerId phải là ObjectId hợp lệ' })
+  customerId?: string;
+
+  @ApiPropertyOptional({
     description: 'Tên khách hàng',
     example: 'Khách lẻ tại quầy',
   })
@@ -152,13 +160,38 @@ export class CreatePOSOrderDto {
   cashGiven?: number;
 
   @ApiPropertyOptional({
-    enum: [PaymentMethod.CASH, PaymentMethod.BANK_TRANSFER],
+    description: 'Số tiền trả trước (khi bán chịu nợ một phần)',
+    example: 50000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  paidAmount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Hạn thanh toán công nợ',
+    example: '2026-12-01',
+  })
+  @IsOptional()
+  @IsString()
+  dueDate?: string;
+
+  @ApiPropertyOptional({
+    enum: [
+      PaymentMethod.CASH,
+      PaymentMethod.BANK_TRANSFER,
+      PaymentMethod.CREDIT,
+    ],
     default: PaymentMethod.CASH,
   })
   @IsOptional()
-  @IsEnum([PaymentMethod.CASH, PaymentMethod.BANK_TRANSFER], {
-    message: 'Hình thức thanh toán tại quầy phải là CASH hoặc BANK_TRANSFER',
-  })
+  @IsEnum(
+    [PaymentMethod.CASH, PaymentMethod.BANK_TRANSFER, PaymentMethod.CREDIT],
+    {
+      message:
+        'Hình thức thanh toán tại quầy phải là CASH, BANK_TRANSFER hoặc CREDIT',
+    },
+  )
   paymentMethod?: PaymentMethod;
 
   @ApiPropertyOptional({ description: 'Ghi chú đơn hàng quầy' })

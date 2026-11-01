@@ -16,6 +16,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { StaffPermission } from '../../common/enums';
 import { FinanceService } from './finance.service';
+import { CustomerCreditService } from './services/customer-credit.service';
 import {
   CreateCashAccountDto,
   UpdateCashAccountDto,
@@ -28,11 +29,20 @@ import {
   CollectCustomerPaymentDto,
   CustomerReceivableQueryDto,
 } from './dto/finance.dto';
+import {
+  CreateCustomerCreditProfileDto,
+  UpdateCustomerCreditProfileDto,
+  CustomerCreditProfileQueryDto,
+  AgingReportQueryDto,
+} from './dto/customer-credit.dto';
 
 @Controller('finance')
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
 export class FinanceController {
-  constructor(private readonly financeService: FinanceService) {}
+  constructor(
+    private readonly financeService: FinanceService,
+    private readonly customerCreditService: CustomerCreditService,
+  ) {}
 
   // ==================== CASH ACCOUNTS ====================
 
@@ -173,5 +183,75 @@ export class FinanceController {
   ) {
     const num = amount ? Number(amount) : 0;
     return this.financeService.checkCustomerCreditLimit(customerId, num);
+  }
+
+  // ==================== CUSTOMER CREDIT PROFILES (AR-01) ====================
+
+  @Get('credit-profiles')
+  @Permissions(StaffPermission.MANAGE_FINANCE, StaffPermission.MANAGE_ORDERS)
+  findAllCreditProfiles(@Query() query: CustomerCreditProfileQueryDto) {
+    return this.customerCreditService.findAllProfiles(query);
+  }
+
+  @Get('credit-profiles/:customerId')
+  @Permissions(StaffPermission.MANAGE_FINANCE, StaffPermission.MANAGE_ORDERS)
+  getCreditProfile(@Param('customerId') customerId: string) {
+    return this.customerCreditService.getProfile(customerId);
+  }
+
+  @Post('credit-profiles')
+  @Permissions(StaffPermission.MANAGE_FINANCE)
+  createCreditProfile(
+    @Body() dto: CreateCustomerCreditProfileDto,
+    @Request() req: any,
+  ) {
+    return this.customerCreditService.createProfile(
+      dto,
+      req.user.id || req.user._id,
+      req.user.fullName || req.user.name || 'Quản lý tài chính',
+    );
+  }
+
+  @Put('credit-profiles/:customerId')
+  @Permissions(StaffPermission.MANAGE_FINANCE)
+  updateCreditProfile(
+    @Param('customerId') customerId: string,
+    @Body() dto: UpdateCustomerCreditProfileDto,
+    @Request() req: any,
+  ) {
+    return this.customerCreditService.updateProfile(customerId, dto, req.user);
+  }
+
+  @Post('credit-profiles/:customerId/reconcile')
+  @Permissions(StaffPermission.MANAGE_FINANCE)
+  reconcileCreditProfile(@Param('customerId') customerId: string) {
+    return this.customerCreditService.reconcileExposure(customerId);
+  }
+
+  // ==================== AGING REPORT (AR-01) ====================
+
+  @Get('reports/aging')
+  @Permissions(StaffPermission.MANAGE_FINANCE, StaffPermission.VIEW_REPORTS)
+  getAgingReport(@Query() query: AgingReportQueryDto) {
+    return this.customerCreditService.getAgingReport(query);
+  }
+
+  @Get('reports/aging/export')
+  @Permissions(StaffPermission.MANAGE_FINANCE, StaffPermission.VIEW_REPORTS)
+  async exportAgingReport(
+    @Query() query: AgingReportQueryDto,
+    @Res() res: Response,
+  ) {
+    const buffer =
+      await this.customerCreditService.exportAgingReportExcel(query);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=BaoCaoTuoiNo_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+    res.send(buffer);
   }
 }

@@ -37,6 +37,12 @@ import { InventoryService } from '../inventory/inventory.service';
 import { UsersService } from '../users/users.service';
 import { PricingService } from '../pricing/pricing.service';
 import {
+  CustomerReceivable,
+  CustomerReceivableDocument,
+  CustomerReceivableStatus,
+} from '../finance/schemas/customer-receivable.schema';
+import { CustomerCreditService } from '../finance/services/customer-credit.service';
+import {
   InventoryTransactionType,
   OrderSource,
   PaymentMethod,
@@ -67,6 +73,11 @@ export class PosService {
     private readonly usersService: UsersService,
     @Optional()
     private readonly pricingService?: PricingService,
+    @Optional()
+    @InjectModel(CustomerReceivable.name)
+    private readonly receivableModel?: Model<CustomerReceivableDocument>,
+    @Optional()
+    private readonly customerCreditService?: CustomerCreditService,
   ) {}
 
   /**
@@ -662,12 +673,98 @@ export class PosService {
       }
     }
 
+    const isCreditSale = dto.paymentMethod === PaymentMethod.CREDIT;
+    let creditCustomerId: Types.ObjectId | undefined = undefined;
+    let paidAmount = 0;
+    let unpaidDebt = 0;
+    let creditDueDate = new Date();
+
+    if (isCreditSale) {
+      if (!dto.customerId || !Types.ObjectId.isValid(dto.customerId)) {
+        throw new BadRequestException(
+          'Bán chịu (CREDIT) bắt buộc phải chọn khách hàng hợp lệ (customerId).',
+        );
+      }
+      creditCustomerId = new Types.ObjectId(dto.customerId);
+      paidAmount = Math.max(0, Number(dto.paidAmount || 0));
+
+      if (paidAmount >= finalAmount) {
+        throw new BadRequestException(
+          'Đơn hàng đã thanh toán đủ tiền, vui lòng chọn hình thức thanh toán Tiền mặt hoặc Chuyển khoản thay vì Bán chịu.',
+        );
+      }
+
+      unpaidDebt = finalAmount - paidAmount;
+
+      // AR-T01, AR-T02, AR-T04, AR-T05: Kiểm tra tính hợp lệ về tín dụng của khách hàng
+      if (this.customerCreditService) {
+        await this.customerCreditService.checkCreditEligibility(
+          dto.customerId,
+          unpaidDebt,
+        );
+      }
+
+      if (dto.dueDate) {
+        creditDueDate = new Date(dto.dueDate);
+      } else {
+        let termDays = 30;
+        if (this.customerCreditService) {
+          const profile = await this.customerCreditService
+            .getProfile(dto.customerId)
+            .catch(() => null);
+          if (profile?.paymentTermDays) {
+            termDays = profile.paymentTermDays;
+          }
+        }
+        creditDueDate = new Date();
+        creditDueDate.setDate(creditDueDate.getDate() + termDays);
+      }
+    }
+
     // 5. Thực thi giao dịch MongoDB Transaction nguyên tử
     const session = await this.connection.startSession();
     try {
       session.startTransaction();
 
       const invoiceCode = await this.generateInvoiceCode(session);
+
+      // AR-T08: Khóa và tăng hạn mức nợ đang dùng nguyên tử
+      let receivableDocId: Types.ObjectId | undefined = undefined;
+
+      if (isCreditSale && unpaidDebt > 0) {
+        if (this.customerCreditService && creditCustomerId) {
+          await this.customerCreditService.reserveCreditExposureAtomic(
+            creditCustomerId.toString(),
+            unpaidDebt,
+            session,
+          );
+        }
+
+        if (this.receivableModel && creditCustomerId) {
+          const [rec] = await this.receivableModel.create(
+            [
+              {
+                customer: creditCustomerId,
+                customerName: dto.customerName?.trim() || 'Khách bán sỉ/chịu',
+                customerPhone: dto.customerPhone?.trim() || '',
+                invoiceCode,
+                totalAmount: finalAmount,
+                paidAmount,
+                remainingAmount: unpaidDebt,
+                creditLimit: 0,
+                dueDate: creditDueDate,
+                status:
+                  paidAmount > 0
+                    ? CustomerReceivableStatus.PARTIALLY_PAID
+                    : CustomerReceivableStatus.UNPAID,
+                note: dto.note || `Bán chịu đơn hàng POS ${invoiceCode}`,
+              },
+            ],
+            { session },
+          );
+          receivableDocId = rec._id;
+        }
+      }
 
       // Trừ kho nguyên tử và ghi nhận lịch sử biến động kho (SALE)
       for (const item of orderItems) {
@@ -706,6 +803,12 @@ export class PosService {
         );
       }
 
+      const paymentStatus = isCreditSale
+        ? paidAmount > 0
+          ? PaymentStatus.PARTIALLY_PAID
+          : PaymentStatus.UNPAID
+        : PaymentStatus.PAID;
+
       // Tạo bản ghi hóa đơn POSOrder
       const [savedOrder] = await this.posOrderModel.create(
         [
@@ -714,6 +817,7 @@ export class PosService {
             orderSource: OrderSource.POS,
             cashier: cashierId,
             cashierName,
+            customer: creditCustomerId,
             customerName: dto.customerName?.trim() || 'Khách lẻ tại quầy',
             customerPhone: dto.customerPhone?.trim() || '',
             customerType: dto.customerType || POSCustomerType.RETAIL,
@@ -727,10 +831,14 @@ export class PosService {
             approvedBy,
             approvedByName,
             finalAmount,
-            cashGiven,
-            changeGiven,
+            cashGiven: isCreditSale ? paidAmount : cashGiven,
+            changeGiven: isCreditSale ? 0 : changeGiven,
+            paidAmount: isCreditSale ? paidAmount : finalAmount,
+            remainingDebt: isCreditSale ? unpaidDebt : 0,
+            dueDate: isCreditSale ? creditDueDate : undefined,
+            customerReceivable: receivableDocId,
             paymentMethod: dto.paymentMethod || PaymentMethod.CASH,
-            paymentStatus: PaymentStatus.PAID,
+            paymentStatus,
             status: POSOrderStatus.COMPLETED,
             refundHistory: [],
             totalRefundedAmount: 0,
@@ -741,6 +849,14 @@ export class PosService {
         ],
         { session },
       );
+
+      if (receivableDocId && this.receivableModel) {
+        await this.receivableModel.updateOne(
+          { _id: receivableDocId },
+          { $set: { posOrder: savedOrder._id } },
+          { session },
+        );
+      }
 
       await session.commitTransaction();
       this.logger.log(
@@ -1025,6 +1141,34 @@ export class PosService {
         idempotencyKey: dto.idempotencyKey?.trim() || undefined,
         payloadHash: refundPayloadHash,
       });
+
+      // AR-T09: Nếu đơn hàng có công nợ khách hàng (customerReceivable), giảm trừ công nợ & hoàn trả hạn mức
+      if (order.customerReceivable && this.receivableModel) {
+        const rec = await this.receivableModel
+          .findById(order.customerReceivable)
+          .session(session)
+          .exec();
+        if (rec && rec.status !== CustomerReceivableStatus.CANCELLED) {
+          const debtRelief = Math.min(rec.remainingAmount, totalRefundAmount);
+          if (debtRelief > 0) {
+            rec.remainingAmount -= debtRelief;
+            if (rec.remainingAmount <= 0) {
+              rec.status = isFullyReturned
+                ? CustomerReceivableStatus.CANCELLED
+                : CustomerReceivableStatus.PAID;
+            }
+            await rec.save({ session });
+            if (this.customerCreditService && order.customer) {
+              await this.customerCreditService.releaseCreditExposureAtomic(
+                order.customer.toString(),
+                debtRelief,
+                session,
+              );
+            }
+            order.remainingDebt = rec.remainingAmount;
+          }
+        }
+      }
 
       await order.save({ session });
       await session.commitTransaction();

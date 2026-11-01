@@ -241,7 +241,11 @@ export class POSOrder {
 
   @Prop({
     type: String,
-    enum: [PaymentMethod.CASH, PaymentMethod.BANK_TRANSFER],
+    enum: [
+      PaymentMethod.CASH,
+      PaymentMethod.BANK_TRANSFER,
+      PaymentMethod.CREDIT,
+    ],
     default: PaymentMethod.CASH,
   })
   paymentMethod: PaymentMethod;
@@ -252,6 +256,19 @@ export class POSOrder {
     default: PaymentStatus.PAID,
   })
   paymentStatus: PaymentStatus;
+
+  // Bán chịu công nợ (AR-01)
+  @Prop({ type: Number, default: 0 })
+  paidAmount?: number;
+
+  @Prop({ type: Number, default: 0 })
+  remainingDebt?: number;
+
+  @Prop({ type: Date })
+  dueDate?: Date;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'CustomerReceivable' })
+  customerReceivable?: Types.ObjectId;
 
   @Prop({
     type: String,

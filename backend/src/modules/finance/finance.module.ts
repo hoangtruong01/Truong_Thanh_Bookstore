@@ -10,7 +10,13 @@ import {
   CustomerReceivable,
   CustomerReceivableSchema,
 } from './schemas/customer-receivable.schema';
+import {
+  CustomerCreditProfile,
+  CustomerCreditProfileSchema,
+} from './schemas/customer-credit-profile.schema';
+import { User, UserSchema } from '../users/schemas/user.schema';
 import { FinanceService } from './finance.service';
+import { CustomerCreditService } from './services/customer-credit.service';
 import { FinanceController } from './finance.controller';
 
 @Module({
@@ -20,10 +26,15 @@ import { FinanceController } from './finance.controller';
       { name: CashEntry.name, schema: CashEntrySchema },
       { name: SupplierPayable.name, schema: SupplierPayableSchema },
       { name: CustomerReceivable.name, schema: CustomerReceivableSchema },
+      {
+        name: CustomerCreditProfile.name,
+        schema: CustomerCreditProfileSchema,
+      },
+      { name: User.name, schema: UserSchema },
     ]),
   ],
   controllers: [FinanceController],
-  providers: [FinanceService],
-  exports: [FinanceService, MongooseModule],
+  providers: [FinanceService, CustomerCreditService],
+  exports: [FinanceService, CustomerCreditService, MongooseModule],
 })
 export class FinanceModule {}

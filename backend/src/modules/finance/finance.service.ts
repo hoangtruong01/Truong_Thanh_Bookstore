@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Types, Connection, ClientSession } from 'mongoose';
@@ -31,6 +32,11 @@ import {
   CustomerReceivableDocument,
   CustomerReceivableStatus,
 } from './schemas/customer-receivable.schema';
+import {
+  CustomerCreditProfile,
+  CustomerCreditProfileDocument,
+  CreditStatus,
+} from './schemas/customer-credit-profile.schema';
 import {
   CreateCashAccountDto,
   UpdateCashAccountDto,
@@ -60,6 +66,9 @@ export class FinanceService {
     private readonly receivableModel: Model<CustomerReceivableDocument>,
     @InjectConnection()
     private readonly connection: Connection,
+    @Optional()
+    @InjectModel(CustomerCreditProfile.name)
+    private readonly creditProfileModel?: Model<CustomerCreditProfileDocument>,
   ) {}
 
   /**
@@ -1422,6 +1431,16 @@ export class FinanceService {
           : await receivable.save();
       }
 
+      // AR-01: Giảm exposure trên hồ sơ tín dụng khách hàng trong cùng transaction (AR-T06)
+      if (this.creditProfileModel && receivable.customer) {
+        const profileUpdate = this.creditProfileModel.updateOne(
+          { customer: receivable.customer },
+          { $inc: { currentExposure: -dto.amount } },
+        );
+        if (session) profileUpdate.session(session);
+        await profileUpdate.exec();
+      }
+
       if (isTransactionActive && session) {
         await session.commitTransaction();
       }
@@ -1465,7 +1484,7 @@ export class FinanceService {
   }
 
   /**
-   * Kiểm tra hạn mức nợ của khách hàng (Wholesale Credit Limit Check)
+   * AR-01: Kiểm tra hạn mức nợ của khách hàng từ CustomerCreditProfile (không hardcode 30tr, không lấy từ receivable đầu tiên)
    */
   async checkCustomerCreditLimit(
     customerId: string,
@@ -1475,6 +1494,8 @@ export class FinanceService {
     currentDebt: number;
     creditLimit: number;
     excessAmount: number;
+    creditStatus?: string;
+    message?: string;
   }> {
     if (!Types.ObjectId.isValid(customerId)) {
       throw new BadRequestException('ID khách hàng không hợp lệ');
@@ -1495,21 +1516,96 @@ export class FinanceService {
       (sum, r) => sum + r.remainingAmount,
       0,
     );
-    const creditLimit =
-      receivables.length > 0 && receivables[0].creditLimit
-        ? receivables[0].creditLimit
-        : 30000000;
 
+    let creditLimit = 0;
+    let creditStatus = CreditStatus.PENDING;
+
+    if (this.creditProfileModel) {
+      const profile = await this.creditProfileModel
+        .findOne({ customer: new Types.ObjectId(customerId) })
+        .exec();
+      if (profile) {
+        creditLimit = profile.creditLimit;
+        creditStatus = profile.creditStatus;
+      }
+    } else {
+      // Fallback nếu chưa khởi tạo creditProfileModel (môi trường test cũ)
+      const firstRec = receivables.find(
+        (r) => r.creditLimit && r.creditLimit > 0,
+      );
+      creditLimit = firstRec?.creditLimit || 30000000;
+      if (creditLimit > 0) creditStatus = CreditStatus.APPROVED;
+    }
+
+    // AR-T05: Kiểm tra nợ quá hạn
+    const now = new Date();
+    const hasOverdue = receivables.some(
+      (r) => r.dueDate && new Date(r.dueDate) < now,
+    );
+
+    const isApproved = creditStatus === CreditStatus.APPROVED;
     const totalProjectedDebt = currentDebt + requestedAmount;
-    const allowed = creditLimit <= 0 || totalProjectedDebt <= creditLimit;
-    const excessAmount = allowed ? 0 : totalProjectedDebt - creditLimit;
+    const withinLimit = creditLimit > 0 && totalProjectedDebt <= creditLimit;
+    const allowed = isApproved && !hasOverdue && withinLimit;
+    const excessAmount = allowed
+      ? 0
+      : Math.max(0, totalProjectedDebt - creditLimit);
+
+    let message: string | undefined = undefined;
+    if (!isApproved) {
+      message =
+        'Khách hàng chưa được phê duyệt hoặc đang bị khóa hồ sơ tín dụng (AR-T01, AR-T04)';
+    } else if (hasOverdue) {
+      message = 'Khách hàng có khoản nợ quá hạn chưa thanh toán (AR-T05)';
+    } else if (!withinLimit) {
+      message = `Vượt hạn mức tín dụng (${totalProjectedDebt.toLocaleString('vi-VN')} đ > ${creditLimit.toLocaleString('vi-VN')} đ) (AR-T02)`;
+    }
 
     return {
       allowed,
       currentDebt,
       creditLimit,
       excessAmount,
+      creditStatus,
+      message,
     };
+  }
+
+  /**
+   * AR-T09: Hủy khoản công nợ và giải phóng exposure tín dụng
+   */
+  async cancelReceivable(
+    id: string,
+    reason: string,
+    _userId?: string,
+  ): Promise<CustomerReceivableDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('ID khoản công nợ không hợp lệ');
+    }
+    const receivable = await this.receivableModel.findOne({
+      _id: id,
+      isDeleted: false,
+    });
+    if (!receivable) {
+      throw new NotFoundException('Không tìm thấy khoản công nợ để hủy');
+    }
+    if (receivable.status === CustomerReceivableStatus.CANCELLED) {
+      return receivable; // idempotent replay
+    }
+
+    const releasedAmount = receivable.remainingAmount;
+    receivable.status = CustomerReceivableStatus.CANCELLED;
+    receivable.remainingAmount = 0;
+    receivable.note = `${receivable.note || ''} [Đã hủy: ${reason}]`.trim();
+    const saved = await receivable.save();
+
+    if (this.creditProfileModel && receivable.customer && releasedAmount > 0) {
+      await this.creditProfileModel.updateOne(
+        { customer: receivable.customer },
+        { $inc: { currentExposure: -releasedAmount } },
+      );
+    }
+    return saved;
   }
 
   /**

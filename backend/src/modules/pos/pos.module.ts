@@ -14,6 +14,11 @@ import { ProductsModule } from '../products/products.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { UsersModule } from '../users/users.module';
 import { PricingModule } from '../pricing/pricing.module';
+import { FinanceModule } from '../finance/finance.module';
+import {
+  CustomerReceivable,
+  CustomerReceivableSchema,
+} from '../finance/schemas/customer-receivable.schema';
 
 @Module({
   imports: [
@@ -22,11 +27,13 @@ import { PricingModule } from '../pricing/pricing.module';
       { name: Product.name, schema: ProductSchema },
       { name: Inventory.name, schema: InventorySchema },
       { name: InventoryTransaction.name, schema: InventoryTransactionSchema },
+      { name: CustomerReceivable.name, schema: CustomerReceivableSchema },
     ]),
     ProductsModule,
     InventoryModule,
     UsersModule,
     PricingModule,
+    FinanceModule,
   ],
   controllers: [PosController],
   providers: [PosService],
