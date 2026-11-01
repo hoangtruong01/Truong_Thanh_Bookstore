@@ -35,6 +35,17 @@ import {
   CustomerReceivableStatus,
 } from '../finance/schemas/customer-receivable.schema';
 import { CustomerCreditService } from '../finance/services/customer-credit.service';
+import {
+  CashAccount,
+  CashAccountType,
+} from '../finance/schemas/cash-account.schema';
+import {
+  CashEntry,
+  CashEntryDirection,
+  CashEntryCategory,
+  CashEntryStatus,
+} from '../finance/schemas/cash-entry.schema';
+import { FinanceService } from '../finance/finance.service';
 import { POSShift } from './dto/pos.dto';
 
 describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
@@ -44,12 +55,16 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
   let mockInventoryModel: any;
   let mockTransactionModel: any;
   let mockConnection: any;
+  let mockSession: any;
   let mockProductsService: any;
   let mockInventoryService: any;
   let mockUsersService: any;
   let mockCountersCollection: any;
   let mockReceivableModel: any;
   let mockCustomerCreditService: any;
+  let mockCashAccountModel: any;
+  let mockCashEntryModel: any;
+  let mockFinanceService: any;
 
   const cashierUser = {
     _id: '507f1f77bcf86cd799439011',
@@ -179,7 +194,7 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
       create: jest.fn().mockResolvedValue([]),
     };
 
-    const mockSession = {
+    mockSession = {
       startTransaction: jest.fn(),
       commitTransaction: jest.fn(),
       abortTransaction: jest.fn(),
@@ -270,6 +285,39 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
       getProfile: jest.fn().mockResolvedValue({ paymentTermDays: 30 }),
     };
 
+    mockCashAccountModel = {
+      findOne: jest.fn().mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue({
+          _id: new Types.ObjectId(),
+          code: 'TIEN_MAT',
+          name: 'Quỹ tiền mặt quầy',
+          type: CashAccountType.CASH_DRAWER,
+          currentBalance: 5000000,
+        }),
+      }),
+      findById: jest.fn(),
+    };
+
+    mockCashEntryModel = {
+      create: jest.fn(),
+      find: jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([]),
+      }),
+      findOne: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      }),
+    };
+
+    mockFinanceService = {
+      createEntry: jest.fn().mockResolvedValue({
+        _id: new Types.ObjectId(),
+        entryCode: 'PT261101-0001',
+        amount: 500000,
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PosService,
@@ -294,6 +342,18 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
         {
           provide: CustomerCreditService,
           useValue: mockCustomerCreditService,
+        },
+        {
+          provide: getModelToken(CashAccount.name),
+          useValue: mockCashAccountModel,
+        },
+        {
+          provide: getModelToken(CashEntry.name),
+          useValue: mockCashEntryModel,
+        },
+        {
+          provide: FinanceService,
+          useValue: mockFinanceService,
         },
       ],
     }).compile();
@@ -1564,7 +1624,7 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
       const refundedOrder = await service.refundPOSOrder(
         creditOrder._id.toString(),
         refundDto,
-        cashierUser,
+        adminUser,
       );
 
       expect(refundedOrder).toBeDefined();
@@ -1572,6 +1632,346 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
       expect(
         mockCustomerCreditService.releaseCreditExposureAtomic,
       ).toHaveBeenCalledWith(customerId.toString(), 50000, expect.anything());
+    });
+  });
+
+  describe('TASK POS-CASH-01: Đồng bộ POS với sổ quỹ Cashbook và đối soát ca', () => {
+    it('POS-CASH-T01: POS bán tiền mặt -> POSOrder + CashEntry IN + CashAccount tăng', async () => {
+      const dto = {
+        paymentMethod: PaymentMethod.CASH,
+        items: [{ productId: sampleProduct._id.toString(), quantity: 1 }],
+      };
+
+      const order = await service.createPOSOrder(dto, cashierUser);
+      expect(order).toBeDefined();
+      expect(mockFinanceService.createEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          direction: CashEntryDirection.IN,
+          category: CashEntryCategory.POS_REVENUE,
+          amount: order.finalAmount,
+          referenceType: 'POS_ORDER',
+          referenceId: order.invoiceCode,
+        }),
+        expect.anything(),
+        expect.anything(),
+      );
+      expect(order.paymentMovements.length).toBe(1);
+      expect(order.paymentMovements[0].method).toBe(PaymentMethod.CASH);
+    });
+
+    it('POS-CASH-T02: Khách chuyển khoản ngân hàng -> Tăng đúng bank account, không cộng quỹ tiền mặt', async () => {
+      const mockBankAcc = {
+        _id: new Types.ObjectId(),
+        name: 'Tài khoản Vietcombank',
+        type: CashAccountType.BANK_ACCOUNT,
+        currentBalance: 10000000,
+      };
+
+      mockCashAccountModel.findOne.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockBankAcc),
+      });
+
+      const dto = {
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        items: [{ productId: sampleProduct._id.toString(), quantity: 1 }],
+      };
+
+      const order = await service.createPOSOrder(dto, cashierUser);
+      expect(order).toBeDefined();
+      expect(mockFinanceService.createEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account: mockBankAcc._id.toString(),
+          direction: CashEntryDirection.IN,
+          category: CashEntryCategory.POS_REVENUE,
+        }),
+        expect.anything(),
+        expect.anything(),
+      );
+      expect(order.paymentMovements[0].method).toBe(
+        PaymentMethod.BANK_TRANSFER,
+      );
+      expect(order.paymentMovements[0].account).toBe(mockBankAcc._id);
+    });
+
+    it('POS-CASH-T03: Bán chịu nợ (CREDIT) không trả trước -> Không tạo CashEntry, không tăng CashAccount', async () => {
+      mockFinanceService.createEntry.mockClear();
+      const customerId = new Types.ObjectId().toString();
+      const dto = {
+        paymentMethod: PaymentMethod.CREDIT,
+        customerId,
+        paidAmount: 0,
+        items: [{ productId: sampleProduct._id.toString(), quantity: 2 }],
+      };
+
+      const order = await service.createPOSOrder(dto, cashierUser);
+      expect(order).toBeDefined();
+      expect(order.remainingDebt).toBe(order.finalAmount);
+      // Không tạo bất kỳ CashEntry nào khi chưa thực thu
+      expect(mockFinanceService.createEntry).not.toHaveBeenCalled();
+      expect(order.paymentMovements.length).toBe(0);
+    });
+
+    it('POS-CASH-T04: Split payment (200k cash + 300k bank) -> Tạo 2 payment movements đúng account', async () => {
+      const cashAccId = new Types.ObjectId();
+      const bankAccId = new Types.ObjectId();
+
+      mockCashAccountModel.findOne.mockImplementation((filter: any) => ({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue({
+          _id:
+            filter._id ||
+            (filter.type === CashAccountType.BANK_ACCOUNT
+              ? bankAccId
+              : cashAccId),
+          name:
+            filter.type === CashAccountType.BANK_ACCOUNT
+              ? 'Ngân hàng VCB'
+              : 'Quỹ tiền mặt quầy',
+          type: filter.type || CashAccountType.CASH_DRAWER,
+        }),
+      }));
+
+      // sampleProduct wholesalePrice = 4,000đ -> qty 50 = 200,000đ
+      const dto = {
+        items: [{ productId: sampleProduct._id.toString(), quantity: 50 }],
+        splitPayments: [
+          {
+            method: PaymentMethod.CASH,
+            amount: 80000,
+            accountId: cashAccId.toString(),
+          },
+          {
+            method: PaymentMethod.BANK_TRANSFER,
+            amount: 120000,
+            accountId: bankAccId.toString(),
+          },
+        ],
+      };
+
+      const order = await service.createPOSOrder(dto, cashierUser);
+      expect(order).toBeDefined();
+      expect(order.paymentMovements.length).toBe(2);
+      expect(order.paymentMovements[0].method).toBe(PaymentMethod.CASH);
+      expect(order.paymentMovements[0].amount).toBe(80000);
+      expect(order.paymentMovements[1].method).toBe(
+        PaymentMethod.BANK_TRANSFER,
+      );
+      expect(order.paymentMovements[1].amount).toBe(120000);
+    });
+
+    it('POS-CASH-T05: Split payment không khớp finalAmount -> Bị từ chối BadRequestException', async () => {
+      const dto = {
+        items: [{ productId: sampleProduct._id.toString(), quantity: 10 }],
+        splitPayments: [
+          { method: PaymentMethod.CASH, amount: 40000 },
+          { method: PaymentMethod.BANK_TRANSFER, amount: 50000 },
+        ],
+      };
+
+      await expect(
+        service.createPOSOrder(dto as any, cashierUser),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('POS-CASH-T06: Lỗi ghi CashEntry sau khi trừ kho -> Transaction abort rollback toàn bộ', async () => {
+      mockFinanceService.createEntry.mockRejectedValueOnce(
+        new BadRequestException('Lỗi khóa số dư sổ quỹ'),
+      );
+
+      const dto = {
+        paymentMethod: PaymentMethod.CASH,
+        items: [{ productId: sampleProduct._id.toString(), quantity: 1 }],
+      };
+
+      await expect(
+        service.createPOSOrder(dto as any, cashierUser),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockSession.abortTransaction).toHaveBeenCalled();
+    });
+
+    it('POS-CASH-T07 & POS-CASH-T08: Hoàn tiền đơn hàng tạo CashEntry OUT từ sổ quỹ tương ứng', async () => {
+      const mockDrawerAcc = {
+        _id: new Types.ObjectId(),
+        name: 'Quỹ tiền mặt quầy',
+        type: CashAccountType.CASH_DRAWER,
+        currentBalance: 5000000,
+      };
+
+      mockCashAccountModel.findOne.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockDrawerAcc),
+      });
+
+      const cashOrder = {
+        _id: new Types.ObjectId(),
+        invoiceCode: 'HD-CASH-REFUND-01',
+        finalAmount: 100000,
+        paidAmount: 100000,
+        remainingDebt: 0,
+        paymentMethod: PaymentMethod.CASH,
+        customerName: 'Khách lẻ',
+        paymentMovements: [
+          {
+            method: PaymentMethod.CASH,
+            amount: 100000,
+            account: mockDrawerAcc._id,
+          },
+        ],
+        items: [
+          {
+            product: sampleProduct._id,
+            sku: sampleProduct.sku,
+            name: sampleProduct.name,
+            unit: 'cái',
+            conversionRatio: 1,
+            quantity: 10,
+            effectiveLineTotal: 100000,
+            netUnitPrice: 10000,
+            returnedQuantity: 0,
+          },
+        ],
+        refundHistory: [],
+        totalRefundedAmount: 0,
+        save: jest.fn().mockImplementation(function () {
+          return Promise.resolve(this);
+        }),
+      };
+
+      mockPOSOrderModel.findById.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(cashOrder),
+      });
+
+      const refundDto = {
+        items: [
+          {
+            productId: sampleProduct._id.toString(),
+            quantity: 4,
+            condition: POSItemCondition.GOOD,
+          },
+        ],
+        reason: 'Khách trả bớt 4 cái',
+      };
+
+      const refunded = await service.refundPOSOrder(
+        cashOrder._id.toString(),
+        refundDto,
+        adminUser,
+      );
+      expect(refunded).toBeDefined();
+      expect(mockFinanceService.createEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          direction: CashEntryDirection.OUT,
+          category: CashEntryCategory.REFUND,
+          amount: 40000,
+          referenceType: 'POS_ORDER',
+          referenceId: cashOrder.invoiceCode,
+        }),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('POS-CASH-T10: Nhân viên không có quyền POS_REFUND -> Bị từ chối 403 ForbiddenException', async () => {
+      const unauthorizedStaff = {
+        _id: '507f1f77bcf86cd799439011',
+        role: UserRole.STAFF,
+        permissions: [StaffPermission.POS_ACCESS],
+      };
+
+      const refundDto = {
+        items: [
+          {
+            productId: sampleProduct._id.toString(),
+            quantity: 1,
+            condition: POSItemCondition.GOOD,
+          },
+        ],
+        reason: 'Khách muốn trả hàng',
+      };
+
+      await expect(
+        service.refundPOSOrder(
+          new Types.ObjectId().toString(),
+          refundDto,
+          unauthorizedStaff,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('POS-CASH-T09: Đóng ca POS -> Expected cash khớp chuẩn xác (opening + cashSales - cashRefunded)', async () => {
+      const todayOrder = {
+        invoiceCode: 'HD-TODAY-01',
+        createdAt: new Date('2026-10-30T01:00:00.000Z'),
+        status: POSOrderStatus.COMPLETED,
+        finalAmount: 400000,
+        paymentMethod: PaymentMethod.CASH,
+        items: [{ quantity: 4, returnedQuantity: 0 }],
+        refundHistory: [],
+      };
+
+      mockPOSOrderModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([todayOrder]),
+      });
+
+      const report = await service.getSessionReport({
+        date: '2026-10-30',
+        shift: POSShift.MORNING,
+        openingCash: 500000,
+        actualCash: 900000,
+      });
+
+      expect(report.openingCash).toBe(500000);
+      expect(report.cashTotal).toBe(400000);
+      expect(report.expectedCash).toBe(900000);
+      expect(report.actualCash).toBe(900000);
+      expect(report.variance).toBe(0);
+    });
+
+    it('POS-CASH-T11: Đối soát POSOrder với Cashbook -> Nhận diện chính xác cân đối và sai lệch', async () => {
+      const order1 = {
+        _id: new Types.ObjectId(),
+        invoiceCode: 'HD-BALANCED-01',
+        createdAt: new Date(),
+        status: POSOrderStatus.COMPLETED,
+        finalAmount: 200000,
+        paymentMethod: PaymentMethod.CASH,
+      };
+
+      const order2Discrepant = {
+        _id: new Types.ObjectId(),
+        invoiceCode: 'HD-DISCREPANT-02',
+        createdAt: new Date(),
+        status: POSOrderStatus.COMPLETED,
+        finalAmount: 300000,
+        paymentMethod: PaymentMethod.CASH,
+      };
+
+      mockPOSOrderModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue([order1, order2Discrepant]),
+        }),
+      });
+
+      mockCashEntryModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([
+          {
+            referenceType: 'POS_ORDER',
+            referenceId: 'HD-BALANCED-01',
+            direction: CashEntryDirection.IN,
+            amount: 200000,
+          },
+        ]),
+      });
+
+      const result = await service.reconcilePOSWithCashbook({});
+      expect(result.totalOrdersChecked).toBe(2);
+      expect(result.matchedCount).toBe(1);
+      expect(result.discrepancyCount).toBe(1);
+      expect(result.isBalanced).toBe(false);
+      expect(result.discrepancies[0].invoiceCode).toBe('HD-DISCREPANT-02');
+      expect(result.discrepancies[0].difference).toBe(300000);
     });
   });
 });

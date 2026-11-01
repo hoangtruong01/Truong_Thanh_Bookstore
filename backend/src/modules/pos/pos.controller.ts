@@ -15,6 +15,7 @@ import {
   RefundPOSOrderDto,
   POSOrderQueryDto,
   POSSessionReportQueryDto,
+  ReconcilePOSQueryDto,
 } from './dto/pos.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -117,6 +118,16 @@ export class PosController {
       query.cashierId = user._id;
     }
     return this.posService.getSessionReport(query);
+  }
+
+  @Get('reconcile/cashbook')
+  @Permissions(StaffPermission.POS_VIEW_REPORTS, StaffPermission.MANAGE_FINANCE)
+  @ApiOperation({
+    summary:
+      'Đối soát các đơn bán lẻ POS với chứng từ sổ quỹ Cashbook (POS-CASH-T11)',
+  })
+  reconcilePOSWithCashbook(@Query() query: ReconcilePOSQueryDto) {
+    return this.posService.reconcilePOSWithCashbook(query);
   }
 
   @Get('products/search')

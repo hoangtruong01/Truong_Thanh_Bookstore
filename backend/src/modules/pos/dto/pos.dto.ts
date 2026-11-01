@@ -67,6 +67,35 @@ export class CreatePOSOrderItemDto {
   unitPrice?: number;
 }
 
+export class POSSplitPaymentItemDto {
+  @ApiProperty({
+    enum: [PaymentMethod.CASH, PaymentMethod.BANK_TRANSFER],
+    example: PaymentMethod.CASH,
+  })
+  @IsEnum([PaymentMethod.CASH, PaymentMethod.BANK_TRANSFER], {
+    message: 'Hình thức thanh toán split phải là CASH hoặc BANK_TRANSFER',
+  })
+  method: PaymentMethod;
+
+  @ApiProperty({ description: 'Số tiền thanh toán', example: 200000 })
+  @IsNumber()
+  @Min(1)
+  amount: number;
+
+  @ApiPropertyOptional({
+    description: 'ID sổ quỹ chỉ định',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @IsOptional()
+  @IsMongoId({ message: 'accountId phải là ObjectId hợp lệ' })
+  accountId?: string;
+
+  @ApiPropertyOptional({ description: 'Mã tham chiếu / giao dịch ngân hàng' })
+  @IsOptional()
+  @IsString()
+  reference?: string;
+}
+
 export class CreatePOSOrderDto {
   @ApiProperty({ type: [CreatePOSOrderItemDto] })
   @IsArray()
@@ -193,6 +222,24 @@ export class CreatePOSOrderDto {
     },
   )
   paymentMethod?: PaymentMethod;
+
+  @ApiPropertyOptional({
+    description: 'ID sổ quỹ chỉ định nhận tiền',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @IsOptional()
+  @IsMongoId({ message: 'accountId phải là ObjectId hợp lệ' })
+  accountId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Chi tiết thanh toán chia tách (Split Payment)',
+    type: [POSSplitPaymentItemDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => POSSplitPaymentItemDto)
+  splitPayments?: POSSplitPaymentItemDto[];
 
   @ApiPropertyOptional({ description: 'Ghi chú đơn hàng quầy' })
   @IsOptional()
@@ -327,4 +374,34 @@ export class POSSessionReportQueryDto {
   @IsOptional()
   @IsString()
   endTime?: string;
+
+  @ApiPropertyOptional({
+    description: 'Tiền mặt đầu ca (VND)',
+    example: 1000000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  openingCash?: number;
+
+  @ApiPropertyOptional({
+    description: 'Tiền mặt thực tế kiểm đếm cuối ca (VND)',
+    example: 3500000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  actualCash?: number;
+}
+
+export class ReconcilePOSQueryDto {
+  @ApiPropertyOptional({ description: 'Từ ngày (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  fromDate?: string;
+
+  @ApiPropertyOptional({ description: 'Đến ngày (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  toDate?: string;
 }

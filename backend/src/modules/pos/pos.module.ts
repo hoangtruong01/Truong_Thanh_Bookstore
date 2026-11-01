@@ -19,6 +19,14 @@ import {
   CustomerReceivable,
   CustomerReceivableSchema,
 } from '../finance/schemas/customer-receivable.schema';
+import {
+  CashAccount,
+  CashAccountSchema,
+} from '../finance/schemas/cash-account.schema';
+import {
+  CashEntry,
+  CashEntrySchema,
+} from '../finance/schemas/cash-entry.schema';
 
 @Module({
   imports: [
@@ -28,6 +36,8 @@ import {
       { name: Inventory.name, schema: InventorySchema },
       { name: InventoryTransaction.name, schema: InventoryTransactionSchema },
       { name: CustomerReceivable.name, schema: CustomerReceivableSchema },
+      { name: CashAccount.name, schema: CashAccountSchema },
+      { name: CashEntry.name, schema: CashEntrySchema },
     ]),
     ProductsModule,
     InventoryModule,

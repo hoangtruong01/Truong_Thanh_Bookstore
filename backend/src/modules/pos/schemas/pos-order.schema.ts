@@ -158,6 +158,39 @@ export class POSRefundRecord {
 export const POSRefundRecordSchema =
   SchemaFactory.createForClass(POSRefundRecord);
 
+@Schema({ _id: false })
+export class POSPaymentMovement {
+  @Prop({
+    type: String,
+    enum: Object.values(PaymentMethod),
+    required: true,
+  })
+  method: PaymentMethod;
+
+  @Prop({ type: Number, required: true, min: 0 })
+  amount: number;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'CashAccount' })
+  account?: Types.ObjectId;
+
+  @Prop({ type: String, trim: true })
+  accountName?: string;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'CashEntry' })
+  cashEntry?: Types.ObjectId;
+
+  @Prop({ type: String, trim: true })
+  entryCode?: string;
+
+  @Prop({ type: String, trim: true })
+  reference?: string;
+
+  @Prop({ default: Date.now })
+  paidAt: Date;
+}
+export const POSPaymentMovementSchema =
+  SchemaFactory.createForClass(POSPaymentMovement);
+
 export type POSOrderDocument = POSOrder & Document;
 
 @Schema({ timestamps: true })
@@ -269,6 +302,10 @@ export class POSOrder {
 
   @Prop({ type: SchemaTypes.ObjectId, ref: 'CustomerReceivable' })
   customerReceivable?: Types.ObjectId;
+
+  // Lịch sử biến động thanh toán thực tế (POS-CASH-01)
+  @Prop({ type: [POSPaymentMovementSchema], default: [] })
+  paymentMovements: POSPaymentMovement[];
 
   @Prop({
     type: String,

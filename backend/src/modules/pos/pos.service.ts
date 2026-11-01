@@ -43,6 +43,19 @@ import {
 } from '../finance/schemas/customer-receivable.schema';
 import { CustomerCreditService } from '../finance/services/customer-credit.service';
 import {
+  CashAccount,
+  CashAccountDocument,
+  CashAccountType,
+} from '../finance/schemas/cash-account.schema';
+import {
+  CashEntry,
+  CashEntryDocument,
+  CashEntryCategory,
+  CashEntryDirection,
+  CashEntryStatus,
+} from '../finance/schemas/cash-entry.schema';
+import { FinanceService } from '../finance/finance.service';
+import {
   InventoryTransactionType,
   OrderSource,
   PaymentMethod,
@@ -52,6 +65,8 @@ import {
   UserRole,
 } from '../../common/enums';
 import { PaginatedResult } from '../../common/dto/pagination.dto';
+import { POSPaymentMovement } from './schemas/pos-order.schema';
+import { ReconcilePOSQueryDto } from './dto/pos.dto';
 
 @Injectable()
 export class PosService {
@@ -78,6 +93,14 @@ export class PosService {
     private readonly receivableModel?: Model<CustomerReceivableDocument>,
     @Optional()
     private readonly customerCreditService?: CustomerCreditService,
+    @Optional()
+    @InjectModel(CashAccount.name)
+    private readonly accountModel?: Model<CashAccountDocument>,
+    @Optional()
+    @InjectModel(CashEntry.name)
+    private readonly entryModel?: Model<CashEntryDocument>,
+    @Optional()
+    private readonly financeService?: FinanceService,
   ) {}
 
   /**
@@ -90,6 +113,12 @@ export class PosService {
       discountAmount: Number(dto.discountAmount || 0),
       discountType: dto.discountType || 'FIXED',
       paymentMethod: dto.paymentMethod || PaymentMethod.CASH,
+      paidAmount: Number(dto.paidAmount || 0),
+      splitPayments: (dto.splitPayments || []).map((sp) => ({
+        method: sp.method,
+        amount: Number(sp.amount),
+        accountId: sp.accountId || '',
+      })),
       items: (dto.items || [])
         .map((it) => ({
           productId: String(it.productId),
@@ -803,6 +832,187 @@ export class PosService {
         );
       }
 
+      // POS-CASH-01: Ghi nhận các bút toán luân chuyển tiền (Payment Movements & CashEntry)
+      const paymentMovements: POSPaymentMovement[] = [];
+
+      // A. Nếu là Split Payment (POS-CASH-T04)
+      if (dto.splitPayments && dto.splitPayments.length > 0) {
+        const totalSplit = dto.splitPayments.reduce(
+          (sum, p) => sum + Number(p.amount || 0),
+          0,
+        );
+        if (totalSplit !== finalAmount) {
+          throw new BadRequestException(
+            `Tổng số tiền chia tách (${totalSplit.toLocaleString('vi-VN')} đ) không khớp với tổng tiền đơn hàng (${finalAmount.toLocaleString('vi-VN')} đ) (POS-CASH-T04).`,
+          );
+        }
+
+        for (let idx = 0; idx < dto.splitPayments.length; idx++) {
+          const comp = dto.splitPayments[idx];
+          const compAmount = Number(comp.amount);
+          if (compAmount <= 0) continue;
+
+          let targetAccount: CashAccountDocument | null = null;
+          if (comp.accountId && this.accountModel) {
+            targetAccount = await this.accountModel
+              .findOne({ _id: comp.accountId, isDeleted: false })
+              .session(session)
+              .exec();
+          } else if (this.accountModel) {
+            const expectedType =
+              comp.method === PaymentMethod.BANK_TRANSFER
+                ? CashAccountType.BANK_ACCOUNT
+                : CashAccountType.CASH_DRAWER;
+            targetAccount = await this.accountModel
+              .findOne({ type: expectedType, isDeleted: false })
+              .session(session)
+              .exec();
+          }
+
+          let cashEntryDoc: CashEntryDocument | null = null;
+          if (targetAccount && this.financeService) {
+            const splitIdemp = dto.idempotencyKey
+              ? `${dto.idempotencyKey}:split:${idx}`
+              : undefined;
+            cashEntryDoc = await this.financeService.createEntry(
+              {
+                account: targetAccount._id.toString(),
+                direction: CashEntryDirection.IN,
+                category: CashEntryCategory.POS_REVENUE,
+                amount: compAmount,
+                referenceType: 'POS_ORDER',
+                referenceId: invoiceCode,
+                partnerName: dto.customerName?.trim() || 'Khách lẻ tại quầy',
+                note: `Bán lẻ tại quầy POS (Split ${comp.method}): ${invoiceCode}`,
+                idempotencyKey: splitIdemp,
+              },
+              cashierId.toString(),
+              session,
+            );
+          }
+
+          paymentMovements.push({
+            method: comp.method,
+            amount: compAmount,
+            account: targetAccount?._id,
+            accountName:
+              targetAccount?.name ||
+              (comp.method === PaymentMethod.BANK_TRANSFER
+                ? 'Tài khoản ngân hàng'
+                : 'Quỹ tiền mặt'),
+            cashEntry: cashEntryDoc?._id,
+            entryCode: cashEntryDoc?.entryCode,
+            reference: comp.reference,
+            paidAt: new Date(),
+          });
+        }
+      } else if (isCreditSale) {
+        // B. Bán chịu công nợ (CREDIT):
+        // POS-CASH-T03: Bán chịu không tăng CashAccount. Chỉ ghi nhận khi có tiền trả trước (paidAmount > 0).
+        if (paidAmount > 0) {
+          let targetAccount: CashAccountDocument | null = null;
+          if (dto.accountId && this.accountModel) {
+            targetAccount = await this.accountModel
+              .findOne({ _id: dto.accountId, isDeleted: false })
+              .session(session)
+              .exec();
+          } else if (this.accountModel) {
+            targetAccount = await this.accountModel
+              .findOne({ type: CashAccountType.CASH_DRAWER, isDeleted: false })
+              .session(session)
+              .exec();
+          }
+
+          let cashEntryDoc: CashEntryDocument | null = null;
+          if (targetAccount && this.financeService) {
+            const creditIdemp = dto.idempotencyKey
+              ? `${dto.idempotencyKey}:deposit`
+              : undefined;
+            cashEntryDoc = await this.financeService.createEntry(
+              {
+                account: targetAccount._id.toString(),
+                direction: CashEntryDirection.IN,
+                category: CashEntryCategory.POS_REVENUE,
+                amount: paidAmount,
+                referenceType: 'POS_ORDER',
+                referenceId: invoiceCode,
+                partnerName: dto.customerName?.trim() || 'Khách bán sỉ/chịu',
+                note: `Thu tiền cọc/trả trước đơn bán chịu POS: ${invoiceCode}`,
+                idempotencyKey: creditIdemp,
+              },
+              cashierId.toString(),
+              session,
+            );
+          }
+
+          paymentMovements.push({
+            method: PaymentMethod.CASH,
+            amount: paidAmount,
+            account: targetAccount?._id,
+            accountName: targetAccount?.name || 'Quỹ tiền mặt',
+            cashEntry: cashEntryDoc?._id,
+            entryCode: cashEntryDoc?.entryCode,
+            paidAt: new Date(),
+          });
+        }
+      } else {
+        // C. Thanh toán toàn bộ: CASH hoặc BANK_TRANSFER
+        const pMethod = dto.paymentMethod || PaymentMethod.CASH;
+        const expectedType =
+          pMethod === PaymentMethod.BANK_TRANSFER
+            ? CashAccountType.BANK_ACCOUNT
+            : CashAccountType.CASH_DRAWER;
+
+        let targetAccount: CashAccountDocument | null = null;
+        if (dto.accountId && this.accountModel) {
+          targetAccount = await this.accountModel
+            .findOne({ _id: dto.accountId, isDeleted: false })
+            .session(session)
+            .exec();
+        } else if (this.accountModel) {
+          targetAccount = await this.accountModel
+            .findOne({ type: expectedType, isDeleted: false })
+            .session(session)
+            .exec();
+        }
+
+        let cashEntryDoc: CashEntryDocument | null = null;
+        if (targetAccount && this.financeService && finalAmount > 0) {
+          const entryIdemp = dto.idempotencyKey
+            ? `${dto.idempotencyKey}:${pMethod.toLowerCase()}`
+            : undefined;
+          cashEntryDoc = await this.financeService.createEntry(
+            {
+              account: targetAccount._id.toString(),
+              direction: CashEntryDirection.IN,
+              category: CashEntryCategory.POS_REVENUE,
+              amount: finalAmount,
+              referenceType: 'POS_ORDER',
+              referenceId: invoiceCode,
+              partnerName: dto.customerName?.trim() || 'Khách lẻ tại quầy',
+              note: `Bán lẻ tại quầy POS (${pMethod}): ${invoiceCode}`,
+              idempotencyKey: entryIdemp,
+            },
+            cashierId.toString(),
+            session,
+          );
+        }
+
+        paymentMovements.push({
+          method: pMethod,
+          amount: finalAmount,
+          account: targetAccount?._id,
+          accountName:
+            targetAccount?.name ||
+            (pMethod === PaymentMethod.BANK_TRANSFER
+              ? 'Tài khoản ngân hàng'
+              : 'Quỹ tiền mặt'),
+          cashEntry: cashEntryDoc?._id,
+          entryCode: cashEntryDoc?.entryCode,
+          paidAt: new Date(),
+        });
+      }
+
       const paymentStatus = isCreditSale
         ? paidAmount > 0
           ? PaymentStatus.PARTIALLY_PAID
@@ -837,6 +1047,7 @@ export class PosService {
             remainingDebt: isCreditSale ? unpaidDebt : 0,
             dueDate: isCreditSale ? creditDueDate : undefined,
             customerReceivable: receivableDocId,
+            paymentMovements,
             paymentMethod: dto.paymentMethod || PaymentMethod.CASH,
             paymentStatus,
             status: POSOrderStatus.COMPLETED,
@@ -908,10 +1119,29 @@ export class PosService {
   async refundPOSOrder(
     id: string,
     dto: RefundPOSOrderDto,
-    actor: { _id: string; fullName?: string; name?: string; role?: string },
+    actor: {
+      _id: string;
+      fullName?: string;
+      name?: string;
+      role?: string;
+      permissions?: string[];
+    },
   ): Promise<POSOrderDocument> {
     const actorId = new Types.ObjectId(actor._id);
     const actorName = actor.fullName || actor.name || 'Quản lý quầy';
+
+    // POS-CASH-T10: Kiểm tra phân quyền nhân viên thực hiện hoàn trả POS
+    const isAuthorized =
+      actor.role === UserRole.ADMIN ||
+      actor.role === UserRole.SUPER_ADMIN ||
+      (Array.isArray(actor.permissions) &&
+        actor.permissions.includes(StaffPermission.POS_REFUND));
+
+    if (!isAuthorized) {
+      throw new ForbiddenException(
+        'Bạn không có quyền thực hiện hoàn trả hàng tại quầy POS (POS-CASH-T10).',
+      );
+    }
 
     const refundPayloadHash = this.computeRefundPayloadHash(dto);
 
@@ -1143,13 +1373,14 @@ export class PosService {
       });
 
       // AR-T09: Nếu đơn hàng có công nợ khách hàng (customerReceivable), giảm trừ công nợ & hoàn trả hạn mức
+      let debtRelief = 0;
       if (order.customerReceivable && this.receivableModel) {
         const rec = await this.receivableModel
           .findById(order.customerReceivable)
           .session(session)
           .exec();
         if (rec && rec.status !== CustomerReceivableStatus.CANCELLED) {
-          const debtRelief = Math.min(rec.remainingAmount, totalRefundAmount);
+          debtRelief = Math.min(rec.remainingAmount, totalRefundAmount);
           if (debtRelief > 0) {
             rec.remainingAmount -= debtRelief;
             if (rec.remainingAmount <= 0) {
@@ -1167,6 +1398,50 @@ export class PosService {
             }
             order.remainingDebt = rec.remainingAmount;
           }
+        }
+      }
+
+      // POS-CASH-01: Nếu hoàn tiền thực tế (vượt qua phần công nợ giảm trừ), tạo Phiếu Chi (CashEntry OUT)
+      const cashRefund = Math.max(0, totalRefundAmount - debtRelief);
+      if (cashRefund > 0 && this.financeService) {
+        let refundAccount: CashAccountDocument | null = null;
+        if (this.accountModel) {
+          const originalMov = (order.paymentMovements || []).find(
+            (m) => m.account,
+          );
+          if (originalMov?.account) {
+            refundAccount = await this.accountModel
+              .findOne({ _id: originalMov.account, isDeleted: false })
+              .session(session)
+              .exec();
+          }
+          if (!refundAccount) {
+            refundAccount = await this.accountModel
+              .findOne({ type: CashAccountType.CASH_DRAWER, isDeleted: false })
+              .session(session)
+              .exec();
+          }
+        }
+
+        if (refundAccount) {
+          const refundIdemp = dto.idempotencyKey
+            ? `${dto.idempotencyKey}:refund`
+            : undefined;
+          await this.financeService.createEntry(
+            {
+              account: refundAccount._id.toString(),
+              direction: CashEntryDirection.OUT,
+              category: CashEntryCategory.REFUND,
+              amount: cashRefund,
+              referenceType: 'POS_ORDER',
+              referenceId: order.invoiceCode,
+              partnerName: order.customerName,
+              note: `Hoàn tiền trả hàng POS: ${order.invoiceCode} - Lý do: ${dto.reason.trim()}`,
+              idempotencyKey: refundIdemp,
+            },
+            actorId.toString(),
+            session,
+          );
         }
       }
 
@@ -1360,9 +1635,14 @@ export class PosService {
     totalRevenue: number;
     cashTotal: number;
     transferTotal: number;
+    creditTotal?: number;
     refundedOrdersCount: number;
     totalRefundedAmount: number;
     itemsSoldCount: number;
+    openingCash?: number;
+    expectedCash?: number;
+    actualCash?: number;
+    variance?: number;
   }> {
     const vnOffsetMs = 7 * 60 * 60 * 1000;
     const nowVN = new Date(Date.now() + vnOffsetMs);
@@ -1437,6 +1717,7 @@ export class PosService {
     let grossRevenue = 0;
     let cashSales = 0;
     let transferSales = 0;
+    let creditSales = 0;
     let itemsSoldCount = 0;
     let completedOrdersCount = 0;
     let sessionRefundedAmount = 0;
@@ -1449,10 +1730,26 @@ export class PosService {
         completedOrdersCount++;
         grossRevenue += ord.finalAmount;
 
-        if (ord.paymentMethod === PaymentMethod.CASH) {
-          cashSales += ord.finalAmount;
+        if (ord.paymentMovements && ord.paymentMovements.length > 0) {
+          for (const mov of ord.paymentMovements) {
+            if (mov.method === PaymentMethod.CASH) {
+              cashSales += mov.amount;
+            } else if (mov.method === PaymentMethod.BANK_TRANSFER) {
+              transferSales += mov.amount;
+            }
+          }
+          if (ord.remainingDebt && ord.remainingDebt > 0) {
+            creditSales += ord.remainingDebt;
+          }
         } else {
-          transferSales += ord.finalAmount;
+          if (ord.paymentMethod === PaymentMethod.CASH) {
+            cashSales += ord.finalAmount;
+          } else if (ord.paymentMethod === PaymentMethod.BANK_TRANSFER) {
+            transferSales += ord.finalAmount;
+          } else if (ord.paymentMethod === PaymentMethod.CREDIT) {
+            cashSales += ord.paidAmount || 0;
+            creditSales += ord.remainingDebt || 0;
+          }
         }
 
         for (const it of ord.items || []) {
@@ -1516,6 +1813,11 @@ export class PosService {
     const netTotalRevenue = Math.max(0, grossRevenue - sessionRefundedAmount);
     const netCashTotal = Math.max(0, cashSales - cashRefunded);
     const netTransferTotal = Math.max(0, transferSales - transferRefunded);
+    const openingCash = Math.max(0, Number(query.openingCash || 0));
+    const expectedCash = openingCash + cashSales - cashRefunded;
+    const actualCash =
+      query.actualCash !== undefined ? Number(query.actualCash) : expectedCash;
+    const variance = actualCash - expectedCash;
 
     return {
       date: dateStr,
@@ -1526,9 +1828,131 @@ export class PosService {
       totalRevenue: netTotalRevenue,
       cashTotal: netCashTotal,
       transferTotal: netTransferTotal,
+      creditTotal: creditSales,
       refundedOrdersCount: sessionRefundRecordsCount,
       totalRefundedAmount: sessionRefundedAmount,
       itemsSoldCount,
+      openingCash,
+      expectedCash,
+      actualCash,
+      variance,
+    };
+  }
+
+  /**
+   * POS-CASH-T11: Đối soát giữa đơn hàng POS (POSOrder) và chứng từ sổ quỹ (CashEntry)
+   * Kiểm tra không có đơn đã thanh toán thiếu movement hoặc movement không có reference hợp lệ
+   */
+  async reconcilePOSWithCashbook(query: ReconcilePOSQueryDto): Promise<{
+    totalOrdersChecked: number;
+    matchedCount: number;
+    discrepancyCount: number;
+    isBalanced: boolean;
+    discrepancies: Array<{
+      orderId: string;
+      invoiceCode: string;
+      createdAt: Date;
+      orderFinalAmount: number;
+      orderPaidAmount: number;
+      cashbookInflow: number;
+      cashbookOutflow: number;
+      netCashbookAmount: number;
+      difference: number;
+      paymentMethod: string;
+      status: string;
+    }>;
+  }> {
+    const filter: Record<string, any> = {
+      status: { $ne: POSOrderStatus.CANCELLED },
+    };
+
+    if (query.fromDate || query.toDate) {
+      filter.createdAt = {};
+      if (query.fromDate) filter.createdAt.$gte = new Date(query.fromDate);
+      if (query.toDate) {
+        const end = new Date(query.toDate);
+        end.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = end;
+      }
+    }
+
+    const orders = await this.posOrderModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .exec();
+
+    const invoiceCodes = orders.map((o) => o.invoiceCode);
+    let entries: CashEntryDocument[] = [];
+    if (this.entryModel) {
+      entries = await this.entryModel
+        .find({
+          referenceType: 'POS_ORDER',
+          referenceId: { $in: invoiceCodes },
+          isDeleted: false,
+          status: { $ne: CashEntryStatus.CANCELLED },
+        })
+        .exec();
+    }
+
+    const entriesByInvoice = new Map<string, CashEntryDocument[]>();
+    for (const ent of entries) {
+      if (ent.referenceId) {
+        const list = entriesByInvoice.get(ent.referenceId) || [];
+        list.push(ent);
+        entriesByInvoice.set(ent.referenceId, list);
+      }
+    }
+
+    const discrepancies: any[] = [];
+    let matchedCount = 0;
+
+    for (const ord of orders) {
+      const ordEntries = entriesByInvoice.get(ord.invoiceCode) || [];
+
+      // Tính tổng thu và chi trên sổ quỹ cho hóa đơn này
+      const inflow = ordEntries
+        .filter((e) => e.direction === CashEntryDirection.IN)
+        .reduce((sum, e) => sum + e.amount, 0);
+      const outflow = ordEntries
+        .filter((e) => e.direction === CashEntryDirection.OUT)
+        .reduce((sum, e) => sum + e.amount, 0);
+      const netCashbook = inflow - outflow;
+
+      // Số tiền thực thu dự kiến từ đơn:
+      // Nếu là CREDIT: số tiền thực trả trước (paidAmount) - hoàn tiền
+      // Nếu là CASH/BANK: finalAmount - hoàn tiền
+      const expectedActualPaid =
+        ord.paymentMethod === PaymentMethod.CREDIT
+          ? Math.max(0, (ord.paidAmount || 0) - (ord.totalRefundedAmount || 0))
+          : Math.max(0, ord.finalAmount - (ord.totalRefundedAmount || 0));
+
+      const diff = expectedActualPaid - netCashbook;
+
+      if (diff !== 0) {
+        discrepancies.push({
+          orderId: ord._id.toString(),
+          invoiceCode: ord.invoiceCode,
+          createdAt: ord.createdAt,
+          orderFinalAmount: ord.finalAmount,
+          orderPaidAmount: expectedActualPaid,
+          cashbookInflow: inflow,
+          cashbookOutflow: outflow,
+          netCashbookAmount: netCashbook,
+          difference: diff,
+          paymentMethod: ord.paymentMethod,
+          status: ord.status,
+        });
+      } else {
+        matchedCount++;
+      }
+    }
+
+    return {
+      totalOrdersChecked: orders.length,
+      matchedCount,
+      discrepancyCount: discrepancies.length,
+      isBalanced: discrepancies.length === 0,
+      discrepancies,
     };
   }
 
