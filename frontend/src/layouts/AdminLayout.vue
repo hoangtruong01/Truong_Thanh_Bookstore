@@ -18,58 +18,81 @@
         </div>
       </div>
 
-      <!-- Navigation links (Styled as Distinct Functional Cards) -->
-      <nav class="flex-grow p-3 space-y-3 overflow-y-auto">
+      <!-- Navigation links (Collapsible Accordion Style matching reference) -->
+      <nav class="flex-grow p-3 space-y-1.5 overflow-y-auto">
+        <!-- Top Standalone Quick Links (e.g. Dashboard) -->
+        <div class="space-y-0.5 pb-2 mb-1.5 border-b border-slate-100 dark:border-slate-800">
+          <router-link
+            v-for="item in topNavItems"
+            :key="item.name"
+            :to="item.to"
+            class="flex items-center gap-3 px-3.5 py-2.2 rounded-xl text-xs font-semibold transition-all group"
+            :class="[
+              $route.name === item.name || route.path.startsWith(item.to)
+                ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-2xs'
+                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+            ]"
+          >
+            <span class="text-base flex-shrink-0 leading-none">{{ item.icon }}</span>
+            <span class="truncate">{{ item.label }}</span>
+          </router-link>
+        </div>
+
+        <!-- Collapsible Groups -->
         <div
           v-for="group in navGroups"
           :key="group.key"
-          class="bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/60 rounded-2xl p-1.5 transition-all shadow-2xs hover:border-slate-300/80 dark:hover:border-slate-600/80"
+          class="space-y-0.5"
         >
-          <!-- Section Card Header -->
-          <div
-            v-if="group.items.length > 0"
-            class="px-2.5 pt-1.5 pb-1 flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 select-none"
+          <!-- Group Header Button -->
+          <button
+            type="button"
+            class="w-full flex items-center justify-between px-3.5 py-2 text-xs font-extrabold uppercase tracking-wider text-[#991b1b] dark:text-rose-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors cursor-pointer select-none"
+            @click="toggleGroup(group.key)"
           >
-            <span class="flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-red-600"></span>
-              <span>{{ group.label }}</span>
-            </span>
-            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 px-1.5 py-0.2 rounded-full shadow-2xs">
-              {{ group.items.length }}
-            </span>
-          </div>
-
-          <!-- Section Navigation Links inside Card -->
-          <div class="space-y-0.5 mt-0.5">
-            <router-link
-              v-for="item in group.items"
-              :key="item.name"
-              :to="item.to"
-              class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all group"
-              :class="[
-                $route.name === item.name || route.path.startsWith(item.to)
-                  ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-sm shadow-red-500/25 font-black'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white hover:shadow-2xs'
-              ]"
+            <div class="flex items-center gap-2.5 truncate">
+              <span class="text-sm flex-shrink-0 leading-none">{{ group.icon }}</span>
+              <span class="truncate">{{ group.label }}</span>
+            </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2.5"
+              stroke="currentColor"
+              class="w-3.5 h-3.5 text-slate-400 dark:text-slate-400 transition-transform duration-200 flex-shrink-0"
+              :class="[isGroupOpen(group.key) ? 'rotate-180' : '']"
             >
-              <div class="flex items-center gap-2.5 truncate">
-                <component
-                  :is="item.icon"
-                  class="w-4 h-4 flex-shrink-0 transition-colors"
-                  :class="[
-                    $route.name === item.name || route.path.startsWith(item.to)
-                      ? 'text-white'
-                      : 'text-slate-400 group-hover:text-red-600 dark:group-hover:text-red-400'
-                  ]"
-                />
+              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+
+          <!-- Group Submenu -->
+          <transition
+            enter-active-class="transition-all duration-200 ease-out overflow-hidden"
+            leave-active-class="transition-all duration-150 ease-in overflow-hidden"
+            enter-from-class="max-h-0 opacity-0"
+            enter-to-class="max-h-96 opacity-100"
+            leave-from-class="max-h-96 opacity-100"
+            leave-to-class="max-h-0 opacity-0"
+          >
+            <div v-show="isGroupOpen(group.key)" class="space-y-0.5 pl-2">
+              <router-link
+                v-for="item in group.items"
+                :key="item.name"
+                :to="item.to"
+                class="flex items-center gap-3 px-3.5 py-2.2 rounded-xl text-xs font-semibold transition-all group"
+                :class="[
+                  $route.name === item.name || route.path.startsWith(item.to)
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-2xs'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+                ]"
+              >
+                <span class="text-base flex-shrink-0 leading-none">{{ item.icon }}</span>
                 <span class="truncate">{{ item.label }}</span>
-              </div>
-              <div
-                v-if="$route.name === item.name || route.path.startsWith(item.to)"
-                class="w-1.5 h-1.5 rounded-full bg-white flex-shrink-0 animate-pulse"
-              ></div>
-            </router-link>
-          </div>
+              </router-link>
+            </div>
+          </transition>
         </div>
       </nav>
 
@@ -443,130 +466,120 @@ onMounted(() => {
   })
 })
 
-// Simple SVG Icons
-const DashboardIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" /></svg>`
-}
-const ProductsIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>`
-}
-const OrdersIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5A3.375 3.375 0 0 0 10.125 2.25H3.75A1.125 1.125 0 0 0 2.625 3.375v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125v-3a3.375 3.375 0 0 0-3.375-3.375H12" /></svg>`
-}
-const InventoryIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9.75v6.75m0 0l-3-3m3 3l3-3m-8.25 6h10.5a2.25 2.25 0 0 0 2.25-2.25v-10.5A2.25 2.25 0 0 0 18 3.75H6a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 6 18Z" /></svg>`
-}
-const CategoriesIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5" /></svg>`
-}
-const CustomersIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.97 5.97 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg>`
-}
-const PromotionsIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581a1.5 1.5 0 0 0 2.122 0l4.318-4.318a1.5 1.5 0 0 0 0-2.122L11.16 3.659A2.25 2.25 0 0 0 9.568 3Z" /></svg>`
-}
-const ReportsIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" /></svg>`
-}
-const SparklingIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 21l-.813-5.096L3.096 15.09 8 14.277l.813-5.096.813 5.096 5.096.813-5.096.813ZM19.062 7.938 18.5 11.5l-.563-3.562L14.375 7.38 18 6.813l.563-3.563.563 3.563 3.562.563-3.562.562ZM19.062 17.938l-.562 3.562-.563-3.562-3.563-.563 3.563-.563.563-3.562.562 3.562 3.563.563-3.563.563Z" /></svg>`
-}
-
-const BannersIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" /></svg>`
-}
-
-const ReviewsIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>`
-}
-
-const PosIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v-.75A.75.75 0 0 1 3 4.5h.75m0 0h16.5m0 0h.75A.75.75 0 0 1 21 5.25v.75m0 0h-.75A.75.75 0 0 1 19.5 5.25v-.75m0 0v14.25m-16.5 0v-14.25" /></svg>`
-}
-
-const SuppliersIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>`
-}
-
-const PurchasesIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25V3.75A1.125 1.125 0 0 0 13.125 2.625H3.375A1.125 1.125 0 0 0 2.25 3.75v10.5H16.5v-6.75Z" /></svg>`
-}
-
-const StockAuditIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" /></svg>`
-}
-
-const PricingIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>`
-}
-
-const CashbookIcon = {
-  template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0H3m0 0h18m-18 0a3 3 0 0 0-3 3v9.75a3 3 0 0 0 3 3h18a3 3 0 0 0 3-3V9a3 3 0 0 0-3-3m-18 0V4.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 4.5V6" /></svg>`
-}
-
 interface NavItem {
   name: string
   label: string
   to: string
-  icon: any
+  icon: string
   permission?: string
 }
 
 interface NavGroup {
   key: string
   label: string
+  icon: string
   items: NavItem[]
 }
+
+// Top Standalone Quick Links (like E-Form, Bãi đỗ xe in reference)
+const topNavItems = computed<NavItem[]>(() => {
+  const isEn = locale.value === 'en'
+  const rawItems: NavItem[] = [
+    { name: 'AdminDashboard', label: isEn ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: '📈' },
+  ]
+  const user = authStore.user
+  if (!user) return []
+  if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') return rawItems
+
+  const userPermissions = user.permissions || []
+  return rawItems.filter(item => !item.permission || userPermissions.includes(item.permission))
+})
+
+// Collapsible group state
+const openGroups = ref<Record<string, boolean>>({
+  sales: true,
+  catalog: true,
+  inventory: true,
+  finance: true,
+  marketing: true,
+})
+
+function toggleGroup(key: string) {
+  openGroups.value[key] = !openGroups.value[key]
+}
+
+function isGroupOpen(key: string): boolean {
+  return openGroups.value[key] ?? true
+}
+
+function autoExpandActiveGroup() {
+  for (const group of navGroups.value) {
+    const hasActiveItem = group.items.some(
+      item => route.name === item.name || route.path.startsWith(item.to)
+    )
+    if (hasActiveItem) {
+      openGroups.value[group.key] = true
+    }
+  }
+}
+
+watch(() => route.path, () => {
+  autoExpandActiveGroup()
+}, { immediate: true })
 
 const navGroups = computed<NavGroup[]>(() => {
   const isEn = locale.value === 'en'
 
   const rawGroups: NavGroup[] = [
     {
-      key: 'overview_finance',
-      label: isEn ? 'Overview & Finance' : 'Tổng quan & Tài chính',
-      items: [
-        { name: 'AdminDashboard', label: isEn ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
-        { name: 'AdminReports', label: isEn ? 'Reports' : 'Báo cáo', to: '/admin/reports', icon: ReportsIcon, permission: 'VIEW_REPORTS' },
-        { name: 'AdminCashbook', label: isEn ? 'Cashbook & Finance' : 'Sổ quỹ & Thu chi', to: '/admin/cashbook', icon: CashbookIcon, permission: 'MANAGE_FINANCE' },
-      ],
-    },
-    {
       key: 'sales',
-      label: isEn ? 'Sales & POS' : 'Bán hàng & Đơn hàng',
+      label: isEn ? 'Sales & Orders' : 'BÁN HÀNG & ĐƠN HÀNG',
+      icon: '🛒',
       items: [
-        { name: 'AdminPOS', label: isEn ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: PosIcon, permission: 'POS_ACCESS' },
-        { name: 'AdminOrders', label: isEn ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: OrdersIcon, permission: 'MANAGE_ORDERS' },
-        { name: 'AdminCustomers', label: isEn ? 'Customers' : 'Khách hàng', to: '/admin/customers', icon: CustomersIcon, permission: 'MANAGE_CUSTOMERS' },
+        { name: 'AdminPOS', label: isEn ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: '🖥️', permission: 'POS_ACCESS' },
+        { name: 'AdminOrders', label: isEn ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: '🧾', permission: 'MANAGE_ORDERS' },
+        { name: 'AdminCustomers', label: isEn ? 'Customers' : 'Khách hàng', to: '/admin/customers', icon: '👥', permission: 'MANAGE_CUSTOMERS' },
       ],
     },
     {
       key: 'catalog',
-      label: isEn ? 'Catalog & Pricing' : 'Sản phẩm & Giá bán',
+      label: isEn ? 'Products & Pricing' : 'SẢN PHẨM & GIÁ BÁN',
+      icon: '📚',
       items: [
-        { name: 'AdminProducts', label: isEn ? 'Products' : 'Sản phẩm', to: '/admin/products', icon: ProductsIcon, permission: 'MANAGE_PRODUCTS' },
-        { name: 'AdminCombos', label: isEn ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon, permission: 'MANAGE_PRODUCTS' },
-        { name: 'AdminPricing', label: isEn ? 'Pricing & Margin' : 'Chính sách giá & Lãi', to: '/admin/pricing', icon: PricingIcon, permission: 'MANAGE_PRICING' },
-        { name: 'AdminReviews', label: isEn ? 'Reviews' : 'Đánh giá', to: '/admin/reviews', icon: ReviewsIcon, permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminProducts', label: isEn ? 'Products' : 'Sản phẩm', to: '/admin/products', icon: '📖', permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminCombos', label: isEn ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: '🎁', permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminPricing', label: isEn ? 'Pricing & Margin' : 'Chính sách giá & Lãi', to: '/admin/pricing', icon: '💲', permission: 'MANAGE_PRICING' },
+        { name: 'AdminReviews', label: isEn ? 'Reviews' : 'Đánh giá', to: '/admin/reviews', icon: '⭐', permission: 'MANAGE_PRODUCTS' },
       ],
     },
     {
       key: 'inventory',
-      label: isEn ? 'Inventory & Procurement' : 'Kho & Thu mua',
+      label: isEn ? 'Inventory & Procurement' : 'KHO & THU MUA',
+      icon: '🏢',
       items: [
-        { name: 'AdminInventory', label: isEn ? 'Inventory' : 'Kho hàng', to: '/admin/inventory', icon: InventoryIcon, permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminPurchases', label: isEn ? 'Purchases & PO' : 'Mua hàng & PO', to: '/admin/purchases', icon: PurchasesIcon, permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: StockAuditIcon, permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminSuppliers', label: isEn ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: SuppliersIcon, permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminInventory', label: isEn ? 'Inventory' : 'Kho hàng', to: '/admin/inventory', icon: '📦', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminPurchases', label: isEn ? 'Purchases & PO' : 'Mua hàng & PO', to: '/admin/purchases', icon: '🚚', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: '📋', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminSuppliers', label: isEn ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: '🏭', permission: 'MANAGE_INVENTORY' },
+      ],
+    },
+    {
+      key: 'finance',
+      label: isEn ? 'Finance & Reports' : 'TÀI CHÍNH & BÁO CÁO',
+      icon: '💰',
+      items: [
+        { name: 'AdminReports', label: isEn ? 'Reports' : 'Báo cáo', to: '/admin/reports', icon: '📊', permission: 'VIEW_REPORTS' },
+        { name: 'AdminCashbook', label: isEn ? 'Cashbook & Finance' : 'Sổ quỹ & Thu chi', to: '/admin/cashbook', icon: '💼', permission: 'MANAGE_FINANCE' },
       ],
     },
     {
       key: 'marketing',
-      label: isEn ? 'Marketing & Growth' : 'Tiếp thị & Tăng trưởng',
+      label: isEn ? 'Marketing & Growth' : 'TRUYỀN THÔNG & TIẾP THỊ',
+      icon: '📣',
       items: [
-        { name: 'AdminPromotions', label: isEn ? 'Promotions' : 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon, permission: 'MANAGE_PROMOTIONS' },
-        { name: 'AdminBanners', label: isEn ? 'Banners' : 'Banners', to: '/admin/banners', icon: BannersIcon, permission: 'MANAGE_BANNERS' },
-        { name: 'AdminLandingPages', label: isEn ? 'Quick Pages' : 'Tạo Page Nhanh', to: '/admin/landing-pages', icon: SparklingIcon, permission: 'MANAGE_LANDING_PAGES' },
+        { name: 'AdminPromotions', label: isEn ? 'Promotions' : 'Khuyến mãi', to: '/admin/promotions', icon: '🏷️', permission: 'MANAGE_PROMOTIONS' },
+        { name: 'AdminBanners', label: isEn ? 'Banners' : 'Banners', to: '/admin/banners', icon: '🖼️', permission: 'MANAGE_BANNERS' },
+        { name: 'AdminLandingPages', label: isEn ? 'Quick Pages' : 'Tạo Page Nhanh', to: '/admin/landing-pages', icon: '⚡', permission: 'MANAGE_LANDING_PAGES' },
       ],
     },
   ]
