@@ -85,8 +85,8 @@ export const financeService = {
     return api.post('/finance/entries', data).then((res) => res.data?.data ?? res.data);
   },
 
-  reverseEntry(id: string, reason: string): Promise<{ original: CashEntry; reversal: CashEntry }> {
-    return api.post(`/finance/entries/${id}/reverse`, { reason }).then((res) => res.data?.data ?? res.data);
+  reverseEntry(id: string, reason: string, idempotencyKey?: string): Promise<{ original: CashEntry; reversal: CashEntry }> {
+    return api.post(`/finance/entries/${id}/reverse`, { reason, idempotencyKey }).then((res) => res.data?.data ?? res.data);
   },
 
   exportEntries(params?: any): Promise<Blob> {

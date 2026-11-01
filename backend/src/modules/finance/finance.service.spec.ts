@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken, getConnectionToken } from '@nestjs/mongoose';
 import { BadRequestException, ConflictException } from '@nestjs/common';
@@ -47,6 +47,8 @@ describe('FinanceService', () => {
     }));
     mockEntryModel.find = jest.fn();
     mockEntryModel.findOne = jest.fn();
+    mockEntryModel.findById = jest.fn();
+    mockEntryModel.findOneAndUpdate = jest.fn();
     mockEntryModel.countDocuments = jest.fn();
     mockEntryModel.db = {
       collection: jest.fn().mockReturnValue({
@@ -242,6 +244,12 @@ describe('FinanceService', () => {
     it('FIN02-T04: Hoàn đảo phiếu (Reversal) -> Đổi trạng thái phiếu gốc thành REVERSED và tạo phiếu đảo', async () => {
       const entryId = new Types.ObjectId().toString();
       const accountId = new Types.ObjectId();
+      const mockAcc = {
+        _id: accountId,
+        name: 'Quỹ tiền mặt',
+        status: CashAccountStatus.ACTIVE,
+        currentBalance: 5000000,
+      };
       const originalEntry: any = {
         _id: new Types.ObjectId(entryId),
         entryCode: 'PC261030-0005',
@@ -256,8 +264,20 @@ describe('FinanceService', () => {
       mockEntryModel.findOne.mockReturnValue({
         exec: jest.fn().mockResolvedValue(originalEntry),
       });
+      mockAccountModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAcc),
+      });
+      mockEntryModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          ...originalEntry,
+          status: CashEntryStatus.REVERSED,
+        }),
+      });
       mockAccountModel.findOneAndUpdate.mockReturnValue({
-        exec: jest.fn().mockResolvedValue(true),
+        exec: jest.fn().mockResolvedValue({
+          ...mockAcc,
+          currentBalance: 5500000,
+        }),
       });
 
       const res = await service.reverseEntry(
@@ -270,8 +290,9 @@ describe('FinanceService', () => {
       expect(res.reversal.direction).toBe(CashEntryDirection.IN);
       expect(res.reversal.amount).toBe(500000);
       expect(mockAccountModel.findOneAndUpdate).toHaveBeenCalledWith(
-        { _id: accountId },
+        expect.objectContaining({ _id: accountId }),
         { $inc: { currentBalance: 500000 } }, // Hoàn lại số tiền vào quỹ
+        { new: true },
       );
     });
   });
@@ -1093,6 +1114,439 @@ describe('FinanceService', () => {
       });
       const errsCollect = await validate(dtoCollectZero);
       expect(errsCollect.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('FIN-02: Safe Reversal of Cash Entries (Hoàn đảo phiếu thu/chi an toàn)', () => {
+    it('FIN-02-T01: Đảo phiếu chi 1 triệu -> Tạo phiếu thu đảo; balance tăng 1 triệu; gốc thành REVERSED', async () => {
+      const entryId = new Types.ObjectId().toString();
+      const accountId = new Types.ObjectId();
+      const mockAcc = {
+        _id: accountId,
+        name: 'Quỹ tiền mặt',
+        status: CashAccountStatus.ACTIVE,
+        currentBalance: 5000000,
+      };
+      const originalEntry: any = {
+        _id: new Types.ObjectId(entryId),
+        entryCode: 'PC261030-0010',
+        account: accountId,
+        direction: CashEntryDirection.OUT,
+        category: CashEntryCategory.OTHER_EXPENSE,
+        amount: 1000000,
+        status: CashEntryStatus.POSTED,
+        note: 'Chi phí vận hành',
+      };
+
+      mockEntryModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(originalEntry),
+      });
+      mockAccountModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAcc),
+      });
+      mockEntryModel.findOneAndUpdate.mockImplementation((filter: any) => {
+        if (filter.status === CashEntryStatus.POSTED) {
+          return {
+            exec: jest.fn().mockResolvedValue({
+              ...originalEntry,
+              status: CashEntryStatus.REVERSED,
+            }),
+          };
+        }
+        return {
+          exec: jest.fn().mockResolvedValue({
+            ...originalEntry,
+            status: CashEntryStatus.REVERSED,
+            note: `${originalEntry.note} (Đã hoàn đảo bởi PT...)`,
+          }),
+        };
+      });
+      mockAccountModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          ...mockAcc,
+          currentBalance: 6000000,
+        }),
+      });
+
+      const res = await service.reverseEntry(
+        entryId,
+        { reason: 'Sai lệch số tiền chi thực tế' },
+        new Types.ObjectId().toString(),
+      );
+
+      expect(res.original.status).toBe(CashEntryStatus.REVERSED);
+      expect(res.reversal.direction).toBe(CashEntryDirection.IN);
+      expect(res.reversal.amount).toBe(1000000);
+      expect(res.reversal.reversalOf).toEqual(originalEntry._id);
+      expect(mockAccountModel.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ _id: accountId }),
+        { $inc: { currentBalance: 1000000 } },
+        { new: true },
+      );
+    });
+
+    it('FIN-02-T02: Đảo phiếu thu khi account đủ tiền -> Tạo phiếu chi đảo; balance giảm 1 triệu', async () => {
+      const entryId = new Types.ObjectId().toString();
+      const accountId = new Types.ObjectId();
+      const mockAcc = {
+        _id: accountId,
+        name: 'Tài khoản Techcombank',
+        status: CashAccountStatus.ACTIVE,
+        currentBalance: 10000000,
+      };
+      const originalEntry: any = {
+        _id: new Types.ObjectId(entryId),
+        entryCode: 'PT261030-0010',
+        account: accountId,
+        direction: CashEntryDirection.IN,
+        category: CashEntryCategory.WHOLESALE_COLLECTION,
+        amount: 2000000,
+        status: CashEntryStatus.POSTED,
+      };
+
+      mockEntryModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(originalEntry),
+      });
+      mockAccountModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAcc),
+      });
+      mockEntryModel.findOneAndUpdate.mockImplementation((filter: any) => {
+        if (filter.status === CashEntryStatus.POSTED) {
+          return {
+            exec: jest.fn().mockResolvedValue({
+              ...originalEntry,
+              status: CashEntryStatus.REVERSED,
+            }),
+          };
+        }
+        return {
+          exec: jest.fn().mockResolvedValue({
+            ...originalEntry,
+            status: CashEntryStatus.REVERSED,
+          }),
+        };
+      });
+      mockAccountModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          ...mockAcc,
+          currentBalance: 8000000,
+        }),
+      });
+
+      const res = await service.reverseEntry(
+        entryId,
+        { reason: 'Khách hàng chuyển khoản nhầm' },
+        new Types.ObjectId().toString(),
+      );
+
+      expect(res.original.status).toBe(CashEntryStatus.REVERSED);
+      expect(res.reversal.direction).toBe(CashEntryDirection.OUT);
+      expect(res.reversal.amount).toBe(2000000);
+      expect(mockAccountModel.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          _id: accountId,
+          currentBalance: { $gte: 2000000 },
+        }),
+        { $inc: { currentBalance: -2000000 } },
+        { new: true },
+      );
+    });
+
+    it('FIN-02-T03: Đảo phiếu thu khi account không đủ tiền -> Bị từ chối (BadRequestException)', async () => {
+      const entryId = new Types.ObjectId().toString();
+      const accountId = new Types.ObjectId();
+      const mockAcc = {
+        _id: accountId,
+        name: 'Quỹ tiền mặt',
+        status: CashAccountStatus.ACTIVE,
+        currentBalance: 500000, // Chỉ có 500k
+      };
+      const originalEntry: any = {
+        _id: new Types.ObjectId(entryId),
+        entryCode: 'PT261030-0015',
+        account: accountId,
+        direction: CashEntryDirection.IN,
+        category: CashEntryCategory.WHOLESALE_COLLECTION,
+        amount: 2000000, // Cần hoàn đảo 2 triệu
+        status: CashEntryStatus.POSTED,
+      };
+
+      mockEntryModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(originalEntry),
+      });
+      mockAccountModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAcc),
+      });
+
+      await expect(
+        service.reverseEntry(
+          entryId,
+          { reason: 'Hoàn đảo giao dịch thu' },
+          new Types.ObjectId().toString(),
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('FIN-02-T04: Gửi 10 request đảo đồng thời -> Chỉ 1 reversal được tạo, 9 request bị từ chối', async () => {
+      const entryId = new Types.ObjectId().toString();
+      const accountId = new Types.ObjectId();
+      const mockAcc = {
+        _id: accountId,
+        name: 'Quỹ tiền mặt',
+        status: CashAccountStatus.ACTIVE,
+        currentBalance: 5000000,
+      };
+      const originalEntry: any = {
+        _id: new Types.ObjectId(entryId),
+        entryCode: 'PC261030-0020',
+        account: accountId,
+        direction: CashEntryDirection.OUT,
+        category: CashEntryCategory.OTHER_EXPENSE,
+        amount: 500000,
+        status: CashEntryStatus.POSTED,
+      };
+
+      let executionCount = 0;
+      mockEntryModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(originalEntry),
+      });
+      mockAccountModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAcc),
+      });
+      mockEntryModel.findOneAndUpdate.mockImplementation((filter: any) => {
+        if (filter.status === CashEntryStatus.POSTED) {
+          executionCount++;
+          // Chỉ request đầu tiên tìm thấy POSTED, các request sau nhận null do tài liệu đã chuyển sang REVERSED
+          if (executionCount === 1) {
+            return {
+              exec: jest.fn().mockResolvedValue({
+                ...originalEntry,
+                status: CashEntryStatus.REVERSED,
+              }),
+            };
+          }
+          return { exec: jest.fn().mockResolvedValue(null) };
+        }
+        return {
+          exec: jest.fn().mockResolvedValue({
+            ...originalEntry,
+            status: CashEntryStatus.REVERSED,
+          }),
+        };
+      });
+      mockAccountModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAcc),
+      });
+
+      const promises = Array.from({ length: 10 }).map(() =>
+        service
+          .reverseEntry(
+            entryId,
+            { reason: 'Concurrent reversal test' },
+            new Types.ObjectId().toString(),
+          )
+          .then(() => 'SUCCESS')
+          .catch((err) => err.message),
+      );
+
+      const results = await Promise.all(promises);
+      const successes = results.filter((r) => r === 'SUCCESS');
+      const failures = results.filter((r) => r !== 'SUCCESS');
+
+      expect(successes.length).toBe(1);
+      expect(failures.length).toBe(9);
+    });
+
+    it('FIN-02-T05: Retry cùng idempotency key -> Trả reversal cũ, không tạo thêm phiếu', async () => {
+      const entryId = new Types.ObjectId().toString();
+      const idempotencyKey = 'rev_key_test_001';
+      const existingReversal: any = {
+        _id: new Types.ObjectId(),
+        entryCode: 'PT261030-0099',
+        reversalOf: new Types.ObjectId(entryId),
+        direction: CashEntryDirection.IN,
+        amount: 1000000,
+        idempotencyKey,
+      };
+
+      mockEntryModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(existingReversal),
+      });
+      mockEntryModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          _id: new Types.ObjectId(entryId),
+          entryCode: 'PC261030-0010',
+          status: CashEntryStatus.REVERSED,
+        }),
+      });
+
+      const res = await service.reverseEntry(
+        entryId,
+        { reason: 'Thử lại cùng idempotency key', idempotencyKey },
+        new Types.ObjectId().toString(),
+      );
+
+      expect(res.reversal).toBe(existingReversal);
+      expect(res.reversal.entryCode).toBe('PT261030-0099');
+      // Không gọi cập nhật balance lần 2
+      expect(mockAccountModel.findOneAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('FIN-02-T06: Đảo phiếu đã REVERSED -> Bị từ chối (BadRequestException 400)', async () => {
+      const entryId = new Types.ObjectId().toString();
+      const alreadyReversedEntry: any = {
+        _id: new Types.ObjectId(entryId),
+        entryCode: 'PC261030-0030',
+        direction: CashEntryDirection.OUT,
+        status: CashEntryStatus.REVERSED,
+      };
+
+      mockEntryModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(alreadyReversedEntry),
+      });
+
+      await expect(
+        service.reverseEntry(
+          entryId,
+          { reason: 'Cố đảo phiếu đã REVERSED' },
+          new Types.ObjectId().toString(),
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('FIN-02-T07: Đảo phiếu DRAFT hoặc CANCELLED -> Bị từ chối (BadRequestException 400)', async () => {
+      const entryId = new Types.ObjectId().toString();
+      const cancelledEntry: any = {
+        _id: new Types.ObjectId(entryId),
+        entryCode: 'PC261030-0031',
+        direction: CashEntryDirection.OUT,
+        status: CashEntryStatus.CANCELLED,
+      };
+
+      mockEntryModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(cancelledEntry),
+      });
+
+      await expect(
+        service.reverseEntry(
+          entryId,
+          { reason: 'Cố đảo phiếu đã CANCELLED' },
+          new Types.ObjectId().toString(),
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('FIN-02-T08: Lỗi khi cập nhật account -> Transaction rollback toàn bộ', async () => {
+      const entryId = new Types.ObjectId().toString();
+      const accountId = new Types.ObjectId();
+      const mockAcc = {
+        _id: accountId,
+        name: 'Quỹ tiền mặt',
+        status: CashAccountStatus.ACTIVE,
+        currentBalance: 5000000,
+      };
+      const originalEntry: any = {
+        _id: new Types.ObjectId(entryId),
+        entryCode: 'PC261030-0040',
+        account: accountId,
+        direction: CashEntryDirection.OUT,
+        category: CashEntryCategory.OTHER_EXPENSE,
+        amount: 500000,
+        status: CashEntryStatus.POSTED,
+      };
+
+      const mockSession = {
+        startTransaction: jest.fn(),
+        commitTransaction: jest.fn(),
+        abortTransaction: jest.fn().mockResolvedValue(undefined),
+        endSession: jest.fn().mockResolvedValue(undefined),
+      };
+
+      mockConnection.startSession.mockResolvedValueOnce(mockSession);
+
+      mockEntryModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(originalEntry),
+      });
+      mockAccountModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAcc),
+      });
+      mockEntryModel.findOneAndUpdate.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue({
+          ...originalEntry,
+          status: CashEntryStatus.REVERSED,
+        }),
+      });
+
+      // Giả lập lỗi khi cập nhật account
+      mockAccountModel.findOneAndUpdate.mockImplementation(() => {
+        throw new Error('Database write error on account update');
+      });
+
+      await expect(
+        service.reverseEntry(
+          entryId,
+          { reason: 'Rollback test' },
+          new Types.ObjectId().toString(),
+        ),
+      ).rejects.toThrow('Database write error on account update');
+
+      expect(mockSession.abortTransaction).toHaveBeenCalled();
+    });
+
+    it('FIN-02-T09: User không có quyền MANAGE_FINANCE -> PermissionsGuard từ chối (403 Forbidden)', async () => {
+      const { Reflector } = await import('@nestjs/core');
+      const { PermissionsGuard } =
+        await import('../../common/guards/permissions.guard');
+      const { FinanceController } = await import('./finance.controller');
+      const { StaffPermission, UserRole } = await import('../../common/enums');
+      const { ForbiddenException } = await import('@nestjs/common');
+
+      const reflector = new Reflector();
+      const guard = new PermissionsGuard(reflector);
+
+      // 1. Kiểm tra metadata decorator trên controller handler
+      const requiredPermissions = reflector.get<string[]>(
+        'permissions',
+        FinanceController.prototype.reverseEntry,
+      );
+      expect(requiredPermissions).toContain(StaffPermission.MANAGE_FINANCE);
+
+      // 2. User role STAFF nhưng thiếu MANAGE_FINANCE -> Ném ForbiddenException (403)
+      const mockContextStaffWithoutPerm: any = {
+        getHandler: () => FinanceController.prototype.reverseEntry,
+        getClass: () => FinanceController,
+        switchToHttp: () => ({
+          getRequest: () => ({
+            user: {
+              role: UserRole.STAFF,
+              permissions: [StaffPermission.MANAGE_ORDERS], // Không có MANAGE_FINANCE
+              status: true,
+            },
+          }),
+        }),
+      };
+
+      expect(() => guard.canActivate(mockContextStaffWithoutPerm)).toThrow(
+        ForbiddenException,
+      );
+
+      // 3. User có MANAGE_FINANCE -> Cho phép (true)
+      const mockContextStaffWithPerm: any = {
+        getHandler: () => FinanceController.prototype.reverseEntry,
+        getClass: () => FinanceController,
+        switchToHttp: () => ({
+          getRequest: () => ({
+            user: {
+              role: UserRole.STAFF,
+              permissions: [StaffPermission.MANAGE_FINANCE],
+              status: true,
+            },
+          }),
+        }),
+      };
+
+      expect(guard.canActivate(mockContextStaffWithPerm)).toBe(true);
     });
   });
 });

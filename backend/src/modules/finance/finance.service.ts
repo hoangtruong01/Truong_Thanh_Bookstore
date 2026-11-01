@@ -411,8 +411,9 @@ export class FinanceService {
   }
 
   /**
-   * FIN-02: Hoàn đảo phiếu thu chi (Reversal)
-   * Chứng từ POSTED là bất biến, để sửa lỗi phải tạo chứng từ đảo chiều ngược lại
+   * FIN-02: Hoàn đảo phiếu thu chi (Reversal) an toàn
+   * Chứng từ POSTED là bất biến, để sửa lỗi phải tạo chứng từ đảo chiều ngược lại trong MongoDB Transaction
+   * Chống đảo trùng qua conditional update và unique partial index trên reversalOf
    */
   async reverseEntry(
     id: string,
@@ -423,6 +424,31 @@ export class FinanceService {
       throw new BadRequestException('ID phiếu thu chi không hợp lệ');
     }
 
+    // 1. Kiểm tra idempotency key trước nếu có
+    if (dto.idempotencyKey && dto.idempotencyKey.trim()) {
+      const trimmedKey = dto.idempotencyKey.trim();
+      const existingByKey = await this.entryModel
+        .findOne({ idempotencyKey: trimmedKey, isDeleted: false })
+        .exec();
+
+      if (existingByKey) {
+        if (
+          existingByKey.reversalOf &&
+          existingByKey.reversalOf.toString() === id.toString()
+        ) {
+          const orig = await this.entryModel.findById(id).exec();
+          return {
+            original: orig || (existingByKey as any),
+            reversal: existingByKey,
+          };
+        }
+        throw new ConflictException(
+          `Idempotency key "${dto.idempotencyKey}" đã được sử dụng cho giao dịch khác.`,
+        );
+      }
+    }
+
+    // 2. Tìm phiếu gốc
     const original = await this.entryModel
       .findOne({ _id: id, isDeleted: false })
       .exec();
@@ -431,10 +457,41 @@ export class FinanceService {
       throw new NotFoundException('Không tìm thấy phiếu thu chi');
     }
 
+    // 3. Kiểm tra trạng thái phiếu gốc
+    if (original.status === CashEntryStatus.REVERSED) {
+      if (dto.idempotencyKey && dto.idempotencyKey.trim()) {
+        const existingRev = await this.entryModel
+          .findOne({ reversalOf: original._id, isDeleted: false })
+          .exec();
+        if (
+          existingRev &&
+          existingRev.idempotencyKey === dto.idempotencyKey.trim()
+        ) {
+          return { original, reversal: existingRev };
+        }
+      }
+      throw new BadRequestException(
+        'Phiếu thu/chi này đã được hoàn đảo trước đó',
+      );
+    }
+
     if (original.status !== CashEntryStatus.POSTED) {
       throw new BadRequestException(
         `Không thể hoàn đảo phiếu ở trạng thái ${original.status}`,
       );
+    }
+
+    // 4. Kiểm tra sổ quỹ và số dư
+    const account = await this.accountModel
+      .findOne({ _id: original.account, isDeleted: false })
+      .exec();
+
+    if (!account) {
+      throw new NotFoundException('Không tìm thấy sổ quỹ của phiếu gốc');
+    }
+
+    if (account.status !== CashAccountStatus.ACTIVE) {
+      throw new BadRequestException('Sổ quỹ đang bị khóa hoặc không hoạt động');
     }
 
     // Chiều ngược lại của phiếu đảo
@@ -443,44 +500,208 @@ export class FinanceService {
         ? CashEntryDirection.OUT
         : CashEntryDirection.IN;
 
-    const reverseCode = await this.generateEntryCode(reverseDirection);
+    if (reverseDirection === CashEntryDirection.OUT) {
+      if (account.currentBalance < original.amount) {
+        throw new BadRequestException(
+          `Số dư sổ quỹ ${account.name} (${account.currentBalance.toLocaleString('vi-VN')} đ) không đủ để hoàn đảo khoản thu ${original.amount.toLocaleString('vi-VN')} đ`,
+        );
+      }
+    }
 
-    const reversal = new this.entryModel({
-      entryCode: reverseCode,
-      account: original.account,
-      direction: reverseDirection,
-      category: original.category,
-      amount: original.amount,
-      referenceType: 'REVERSAL',
-      referenceId: original.entryCode,
-      partnerName: original.partnerName,
-      status: CashEntryStatus.POSTED,
-      postedAt: new Date(),
-      createdBy: new Types.ObjectId(userId),
-      note: `Hoàn đảo phiếu ${original.entryCode}. Lý do: ${dto.reason}`,
-      reversalOf: original._id,
-      isDeleted: false,
-    });
+    // 5. Khởi tạo transaction session
+    let session: ClientSession | null = null;
+    let isTransactionActive = false;
 
-    const savedReversal = await reversal.save();
+    if (this.connection && typeof this.connection.startSession === 'function') {
+      try {
+        session = await this.connection.startSession();
+        session.startTransaction();
+        isTransactionActive = true;
+      } catch {
+        session = null;
+        isTransactionActive = false;
+      }
+    }
 
-    // Cập nhật trạng thái phiếu gốc thành REVERSED
-    original.status = CashEntryStatus.REVERSED;
-    original.note = `${original.note || ''} (Đã hoàn đảo bởi ${reverseCode})`;
-    await original.save();
+    try {
+      // 5a. Conditional update trạng thái phiếu gốc POSTED -> REVERSED
+      const updateOriginalQuery = this.entryModel.findOneAndUpdate(
+        {
+          _id: original._id,
+          status: CashEntryStatus.POSTED,
+          isDeleted: false,
+        },
+        {
+          $set: {
+            status: CashEntryStatus.REVERSED,
+          },
+        },
+        { new: true },
+      );
+      if (session && typeof updateOriginalQuery?.session === 'function') {
+        updateOriginalQuery.session(session);
+      }
+      const updatedOriginal =
+        typeof updateOriginalQuery?.exec === 'function'
+          ? await updateOriginalQuery.exec()
+          : await updateOriginalQuery;
 
-    // Cập nhật lại số dư sổ quỹ
-    const balanceChange =
-      reverseDirection === CashEntryDirection.IN
-        ? original.amount
-        : -original.amount;
+      if (!updatedOriginal) {
+        throw new BadRequestException(
+          'Phiếu thu/chi đã được hoàn đảo hoặc đang được xử lý bởi giao dịch khác',
+        );
+      }
 
-    await this.accountModel.findOneAndUpdate(
-      { _id: original.account },
-      { $inc: { currentBalance: balanceChange } },
-    );
+      // 5b. Tạo mã chứng từ cho phiếu đảo
+      const reverseCode = await this.generateEntryCode(
+        reverseDirection,
+        session || undefined,
+      );
 
-    return { original, reversal: savedReversal };
+      const reversalPayloadHash = dto.idempotencyKey?.trim()
+        ? this.computePayloadHash({
+            reversalOf: original._id.toString(),
+            direction: reverseDirection,
+            amount: original.amount,
+            reason: dto.reason,
+          })
+        : undefined;
+
+      const reversal = new this.entryModel({
+        entryCode: reverseCode,
+        account: original.account,
+        direction: reverseDirection,
+        category: original.category,
+        amount: original.amount,
+        referenceType: 'REVERSAL',
+        referenceId: original.entryCode,
+        partnerName: original.partnerName,
+        status: CashEntryStatus.POSTED,
+        postedAt: new Date(),
+        createdBy: new Types.ObjectId(userId),
+        note: `Hoàn đảo phiếu ${original.entryCode}. Lý do: ${dto.reason}`,
+        reversalOf: original._id,
+        idempotencyKey: dto.idempotencyKey?.trim() || undefined,
+        payloadHash: reversalPayloadHash,
+        isDeleted: false,
+      });
+
+      let savedReversal: CashEntryDocument;
+      if (session) {
+        savedReversal = await reversal.save({ session });
+      } else {
+        savedReversal = await reversal.save();
+      }
+
+      // 5c. Ghi nhận reversedBy và cập nhật ghi chú phiếu gốc
+      const linkOriginalQuery = this.entryModel.findOneAndUpdate(
+        { _id: original._id },
+        {
+          $set: {
+            reversedBy: savedReversal._id,
+            note: `${original.note ? original.note + ' ' : ''}(Đã hoàn đảo bởi ${reverseCode})`.trim(),
+          },
+        },
+        { new: true },
+      );
+      if (session && typeof linkOriginalQuery?.session === 'function') {
+        linkOriginalQuery.session(session);
+      }
+      const finalOriginal =
+        (typeof linkOriginalQuery?.exec === 'function'
+          ? await linkOriginalQuery.exec()
+          : await linkOriginalQuery) || updatedOriginal;
+
+      // 5d. Cập nhật số dư sổ quỹ nguyên tử có điều kiện
+      const balanceChange =
+        reverseDirection === CashEntryDirection.IN
+          ? original.amount
+          : -original.amount;
+
+      const accountFilter: Record<string, any> = {
+        _id: original.account,
+        isDeleted: false,
+        status: CashAccountStatus.ACTIVE,
+      };
+
+      if (reverseDirection === CashEntryDirection.OUT) {
+        accountFilter.currentBalance = { $gte: original.amount };
+      }
+
+      const accountUpdateQuery = this.accountModel.findOneAndUpdate(
+        accountFilter,
+        { $inc: { currentBalance: balanceChange } },
+        { new: true },
+      );
+      if (session && typeof accountUpdateQuery?.session === 'function') {
+        accountUpdateQuery.session(session);
+      }
+      const updatedAccount =
+        typeof accountUpdateQuery?.exec === 'function'
+          ? await accountUpdateQuery.exec()
+          : await accountUpdateQuery;
+
+      if (!updatedAccount && reverseDirection === CashEntryDirection.OUT) {
+        throw new BadRequestException(
+          `Số dư sổ quỹ không đủ để hoàn đảo phiếu thu ${original.amount.toLocaleString('vi-VN')} đ`,
+        );
+      }
+
+      if (isTransactionActive && session) {
+        await session.commitTransaction();
+      }
+
+      return { original: finalOriginal, reversal: savedReversal };
+    } catch (err: any) {
+      if (isTransactionActive && session) {
+        await session.abortTransaction();
+      }
+
+      // Xử lý duplicate key (Mongo error code 11000)
+      if (err?.code === 11000) {
+        if (dto.idempotencyKey && dto.idempotencyKey.trim()) {
+          const existing = await this.entryModel
+            .findOne({
+              idempotencyKey: dto.idempotencyKey.trim(),
+              isDeleted: false,
+            })
+            .exec();
+          if (existing) {
+            const orig = await this.entryModel.findById(id).exec();
+            return {
+              original: orig || original,
+              reversal: existing,
+            };
+          }
+        }
+
+        const existingReversal = await this.entryModel
+          .findOne({ reversalOf: original._id, isDeleted: false })
+          .exec();
+        if (existingReversal) {
+          if (
+            dto.idempotencyKey &&
+            existingReversal.idempotencyKey === dto.idempotencyKey.trim()
+          ) {
+            const orig = await this.entryModel.findById(id).exec();
+            return { original: orig || original, reversal: existingReversal };
+          }
+          throw new BadRequestException(
+            `Phiếu ${original.entryCode} đã được hoàn đảo bởi phiếu ${existingReversal.entryCode}`,
+          );
+        }
+
+        throw new BadRequestException(
+          'Phiếu thu/chi này đã được hoàn đảo hoặc bị trùng lặp giao dịch',
+        );
+      }
+
+      throw err;
+    } finally {
+      if (isTransactionActive && session) {
+        await session.endSession();
+      }
+    }
   }
 
   /**

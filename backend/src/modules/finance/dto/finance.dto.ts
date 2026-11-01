@@ -100,6 +100,10 @@ export class ReverseCashEntryDto {
   @IsString()
   @IsNotEmpty({ message: 'Lý do hoàn đảo phiếu bắt buộc phải có' })
   reason: string;
+
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
 }
 
 export class CashEntryQueryDto extends PaginationDto {

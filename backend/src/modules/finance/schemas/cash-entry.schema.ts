@@ -96,6 +96,9 @@ export class CashEntry {
   @Prop({ type: Types.ObjectId, ref: 'CashEntry' })
   reversalOf?: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'CashEntry' })
+  reversedBy?: Types.ObjectId;
+
   @Prop({ type: String, trim: true, index: true })
   idempotencyKey?: string;
 
@@ -116,6 +119,15 @@ CashEntrySchema.index(
     unique: true,
     partialFilterExpression: {
       idempotencyKey: { $type: 'string', $gt: '' },
+    },
+  },
+);
+CashEntrySchema.index(
+  { reversalOf: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      reversalOf: { $exists: true, $type: 'objectId' },
     },
   },
 );
