@@ -78,7 +78,7 @@ export class GoodsReceipt {
   @Prop({ default: Date.now })
   receivedAt: Date;
 
-  @Prop({ trim: true, sparse: true, index: true })
+  @Prop({ trim: true })
   idempotencyKey?: string;
 
   @Prop({ trim: true })

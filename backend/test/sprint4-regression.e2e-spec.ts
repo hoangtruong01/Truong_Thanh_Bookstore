@@ -145,6 +145,7 @@ describe('Sprint 4 regression on real MongoDB transactions and aggregation', () 
         total: 850000,
         subtotal: 1000000,
         discount: 150000,
+        cogs: 0,
         count: 1,
       },
     ]);
@@ -173,6 +174,7 @@ describe('Sprint 4 regression on real MongoDB transactions and aggregation', () 
         total: 190000,
         subtotal: 200000,
         discount: 10000,
+        cogs: 0,
         count: 1,
       },
     ]);
