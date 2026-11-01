@@ -18,22 +18,33 @@
         </div>
       </div>
 
-      <!-- Navigation links (Active links are solid red) -->
-      <nav class="flex-grow p-4 space-y-1 overflow-y-auto">
-        <router-link
-          v-for="item in navItems"
-          :key="item.name"
-          :to="item.to"
-          class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-bold transition-all group"
-          :class="[
-            $route.name === item.name || route.path.startsWith(item.to)
-              ? 'bg-[#dc2626] text-white shadow-xs'
-              : 'hover:bg-slate-50 hover:text-slate-900 text-slate-600'
-          ]"
-        >
-          <component :is="item.icon" class="w-4 h-4 flex-shrink-0" />
-          <span>{{ item.label }}</span>
-        </router-link>
+      <!-- Navigation links (Grouped by business domain) -->
+      <nav class="flex-grow p-3 space-y-4 overflow-y-auto">
+        <div v-for="group in navGroups" :key="group.key" class="space-y-1">
+          <!-- Section Header -->
+          <div
+            v-if="group.items.length > 0"
+            class="px-3 pt-1 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400 select-none"
+          >
+            {{ group.label }}
+          </div>
+
+          <!-- Section Navigation Links -->
+          <router-link
+            v-for="item in group.items"
+            :key="item.name"
+            :to="item.to"
+            class="flex items-center gap-3 px-3.5 py-2.2 rounded-lg text-xs font-bold transition-all group"
+            :class="[
+              $route.name === item.name || route.path.startsWith(item.to)
+                ? 'bg-[#dc2626] text-white shadow-xs'
+                : 'hover:bg-slate-50 hover:text-slate-900 text-slate-600'
+            ]"
+          >
+            <component :is="item.icon" class="w-4 h-4 flex-shrink-0" />
+            <span>{{ item.label }}</span>
+          </router-link>
+        </div>
       </nav>
 
       <!-- Sidebar Footer (Matches Screenshot) -->
@@ -458,36 +469,93 @@ const CashbookIcon = {
   template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0H3m0 0h18m-18 0a3 3 0 0 0-3 3v9.75a3 3 0 0 0 3 3h18a3 3 0 0 0 3-3V9a3 3 0 0 0-3-3m-18 0V4.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 4.5V6" /></svg>`
 }
 
-const navItems = computed(() => {
-  const items = [
-    { name: 'AdminDashboard', label: locale.value === 'en' ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
-    { name: 'AdminProducts', label: locale.value === 'en' ? 'Products' : 'Sản phẩm', to: '/admin/products', icon: ProductsIcon, permission: 'MANAGE_PRODUCTS' },
-    { name: 'AdminPOS', label: locale.value === 'en' ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: PosIcon, permission: 'POS_ACCESS' },
-    { name: 'AdminOrders', label: locale.value === 'en' ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: OrdersIcon, permission: 'MANAGE_ORDERS' },
-    { name: 'AdminInventory', label: locale.value === 'en' ? 'Inventory' : 'Kho hàng', to: '/admin/inventory', icon: InventoryIcon, permission: 'MANAGE_INVENTORY' },
-    { name: 'AdminPurchases', label: locale.value === 'en' ? 'Purchases & Receipts' : 'Mua hàng & PO', to: '/admin/purchases', icon: PurchasesIcon, permission: 'MANAGE_INVENTORY' },
-    { name: 'AdminSuppliers', label: locale.value === 'en' ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: SuppliersIcon, permission: 'MANAGE_INVENTORY' },
-    { name: 'AdminStockAudits', label: locale.value === 'en' ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: StockAuditIcon, permission: 'MANAGE_INVENTORY' },
-    { name: 'AdminPricing', label: locale.value === 'en' ? 'Pricing & Margin' : 'Chính sách giá & Lãi', to: '/admin/pricing', icon: PricingIcon, permission: 'MANAGE_PRICING' },
-    { name: 'AdminCashbook', label: locale.value === 'en' ? 'Cashbook & Finance' : 'Sổ quỹ & Thu chi', to: '/admin/cashbook', icon: CashbookIcon, permission: 'MANAGE_FINANCE' },
-    { name: 'AdminCombos', label: locale.value === 'en' ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon, permission: 'MANAGE_PRODUCTS' },
-    { name: 'AdminReviews', label: locale.value === 'en' ? 'Reviews' : 'Đánh giá', to: '/admin/reviews', icon: ReviewsIcon, permission: 'MANAGE_PRODUCTS' },
-    { name: 'AdminCustomers', label: locale.value === 'en' ? 'Customers' : 'Khách hàng', to: '/admin/customers', icon: CustomersIcon, permission: 'MANAGE_CUSTOMERS' },
-    { name: 'AdminPromotions', label: locale.value === 'en' ? 'Promotions' : 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon, permission: 'MANAGE_PROMOTIONS' },
-    { name: 'AdminBanners', label: locale.value === 'en' ? 'Banners' : 'Banners', to: '/admin/banners', icon: BannersIcon, permission: 'MANAGE_BANNERS' },
-    { name: 'AdminReports', label: locale.value === 'en' ? 'Reports' : 'Báo cáo', to: '/admin/reports', icon: ReportsIcon, permission: 'VIEW_REPORTS' },
-    { name: 'AdminLandingPages', label: locale.value === 'en' ? 'Quick Pages' : 'Tạo Page Nhanh', to: '/admin/landing-pages', icon: SparklingIcon, permission: 'MANAGE_LANDING_PAGES' },
+interface NavItem {
+  name: string
+  label: string
+  to: string
+  icon: any
+  permission?: string
+}
+
+interface NavGroup {
+  key: string
+  label: string
+  items: NavItem[]
+}
+
+const navGroups = computed<NavGroup[]>(() => {
+  const isEn = locale.value === 'en'
+
+  const rawGroups: NavGroup[] = [
+    {
+      key: 'overview',
+      label: isEn ? 'Overview' : 'Tổng quan',
+      items: [
+        { name: 'AdminDashboard', label: isEn ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: DashboardIcon },
+        { name: 'AdminReports', label: isEn ? 'Reports' : 'Báo cáo', to: '/admin/reports', icon: ReportsIcon, permission: 'VIEW_REPORTS' },
+      ],
+    },
+    {
+      key: 'sales',
+      label: isEn ? 'Sales & POS' : 'Bán hàng & Đơn hàng',
+      items: [
+        { name: 'AdminPOS', label: isEn ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: PosIcon, permission: 'POS_ACCESS' },
+        { name: 'AdminOrders', label: isEn ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: OrdersIcon, permission: 'MANAGE_ORDERS' },
+        { name: 'AdminCustomers', label: isEn ? 'Customers' : 'Khách hàng', to: '/admin/customers', icon: CustomersIcon, permission: 'MANAGE_CUSTOMERS' },
+      ],
+    },
+    {
+      key: 'catalog',
+      label: isEn ? 'Catalog & Pricing' : 'Sản phẩm & Giá bán',
+      items: [
+        { name: 'AdminProducts', label: isEn ? 'Products' : 'Sản phẩm', to: '/admin/products', icon: ProductsIcon, permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminCombos', label: isEn ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: CategoriesIcon, permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminPricing', label: isEn ? 'Pricing & Margin' : 'Chính sách giá & Lãi', to: '/admin/pricing', icon: PricingIcon, permission: 'MANAGE_PRICING' },
+        { name: 'AdminReviews', label: isEn ? 'Reviews' : 'Đánh giá', to: '/admin/reviews', icon: ReviewsIcon, permission: 'MANAGE_PRODUCTS' },
+      ],
+    },
+    {
+      key: 'inventory',
+      label: isEn ? 'Inventory & Procurement' : 'Kho & Thu mua',
+      items: [
+        { name: 'AdminInventory', label: isEn ? 'Inventory' : 'Kho hàng', to: '/admin/inventory', icon: InventoryIcon, permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminPurchases', label: isEn ? 'Purchases & PO' : 'Mua hàng & PO', to: '/admin/purchases', icon: PurchasesIcon, permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: StockAuditIcon, permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminSuppliers', label: isEn ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: SuppliersIcon, permission: 'MANAGE_INVENTORY' },
+      ],
+    },
+    {
+      key: 'finance',
+      label: isEn ? 'Finance & Cashbook' : 'Tài chính & Sổ quỹ',
+      items: [
+        { name: 'AdminCashbook', label: isEn ? 'Cashbook & Finance' : 'Sổ quỹ & Thu chi', to: '/admin/cashbook', icon: CashbookIcon, permission: 'MANAGE_FINANCE' },
+      ],
+    },
+    {
+      key: 'marketing',
+      label: isEn ? 'Marketing & Growth' : 'Tiếp thị & Tăng trưởng',
+      items: [
+        { name: 'AdminPromotions', label: isEn ? 'Promotions' : 'Khuyến mãi', to: '/admin/promotions', icon: PromotionsIcon, permission: 'MANAGE_PROMOTIONS' },
+        { name: 'AdminBanners', label: isEn ? 'Banners' : 'Banners', to: '/admin/banners', icon: BannersIcon, permission: 'MANAGE_BANNERS' },
+        { name: 'AdminLandingPages', label: isEn ? 'Quick Pages' : 'Tạo Page Nhanh', to: '/admin/landing-pages', icon: SparklingIcon, permission: 'MANAGE_LANDING_PAGES' },
+      ],
+    },
   ]
 
   const user = authStore.user
   if (!user) return []
-  if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') return items
+  if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') return rawGroups
 
   const userPermissions = user.permissions || []
-  return items.filter(item => {
-    if (!item.permission) return true
-    return userPermissions.includes(item.permission)
-  })
+  return rawGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (!item.permission) return true
+        return userPermissions.includes(item.permission)
+      }),
+    }))
+    .filter((group) => group.items.length > 0)
 })
 
 function handleLogout() {
