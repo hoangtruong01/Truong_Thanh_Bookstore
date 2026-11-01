@@ -1,15 +1,15 @@
 <template>
-  <div class="min-h-screen flex bg-slate-50 font-sans relative">
+  <div class="h-screen w-screen overflow-hidden flex bg-slate-50 dark:bg-slate-950 font-sans relative">
     <!-- Backdrop for mobile -->
     <div v-if="sidebarOpen" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 md:hidden" @click="sidebarOpen = false"></div>
 
     <!-- Sidebar (Matches Screenshot: light background) -->
     <aside 
-      class="fixed inset-y-0 left-0 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xs flex-shrink-0 z-40 transition-transform duration-300 md:translate-x-0 md:relative"
+      class="fixed inset-y-0 left-0 w-64 h-full md:h-screen md:max-h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xs flex-shrink-0 z-40 transition-transform duration-300 md:translate-x-0 md:static"
       :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full']"
     >
       <!-- Sidebar Header / Logo -->
-      <div class="h-20 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 gap-2.5 bg-white dark:bg-slate-900">
+      <div class="h-20 flex-shrink-0 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 gap-2.5 bg-white dark:bg-slate-900">
         <!-- Emblem -->
         <img src="@/assets/logo.jpg" class="w-8.5 h-8.5 rounded-full object-cover border border-slate-200 dark:border-slate-700" alt="Trường Thành Logo" />
         <div class="flex flex-col leading-none">
@@ -18,8 +18,8 @@
         </div>
       </div>
 
-      <!-- Navigation links (Collapsible Accordion Style matching reference) -->
-      <nav class="flex-grow p-3 space-y-1.5 overflow-y-auto">
+      <!-- Navigation links (Collapsible Accordion Style with Independent Scroll) -->
+      <nav class="flex-1 min-h-0 p-3 space-y-1.5 overflow-y-auto overscroll-contain custom-scrollbar">
         <!-- Top Standalone Quick Links (e.g. Dashboard) -->
         <div class="space-y-0.5 pb-2 mb-1.5 border-b border-slate-100 dark:border-slate-800">
           <router-link
@@ -97,7 +97,7 @@
       </nav>
 
       <!-- Sidebar Footer -->
-      <div class="p-3 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col gap-1.5">
+      <div class="flex-shrink-0 p-3 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col gap-1.5">
         <router-link
           to="/"
           class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700 transition-all shadow-2xs"
@@ -121,9 +121,9 @@
     </aside>
 
     <!-- Main Workspace -->
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <div class="flex-1 h-screen max-h-screen flex flex-col overflow-hidden min-w-0">
       <!-- Top Bar (Matches Screenshot) -->
-      <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between md:justify-end px-8 flex-shrink-0">
+      <header class="h-20 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between md:justify-end px-8">
         <!-- Mobile hamburger menu button -->
         <button 
           class="md:hidden text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg hover:bg-slate-100 cursor-pointer" 
@@ -263,8 +263,8 @@ class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-
         </div>
       </header>
 
-      <!-- Main Content Container -->
-      <main class="flex-grow overflow-y-auto p-8">
+      <!-- Main Content Container (Scrolls Independently from Left Sidebar) -->
+      <main class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-8 custom-scrollbar">
         <router-view />
       </main>
     </div>
@@ -605,3 +605,40 @@ function handleLogout() {
   router.push('/login')
 }
 </script>
+
+<style scoped>
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.65);
+}
+
+:global(.dark) .custom-scrollbar {
+  scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+}
+
+:global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+}
+
+:global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.65);
+}
+</style>
