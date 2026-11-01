@@ -15,6 +15,7 @@ export enum CreditAdjustmentStatus {
   PENDING = 'PENDING', // Đang chờ NCC xác nhận giảm trừ nợ / hoàn tiền
   APPLIED = 'APPLIED', // Đã bù trừ vào công nợ (AP) của NCC
   REJECTED = 'REJECTED', // NCC từ chối chấp nhận hàng trả
+  FAILED = 'FAILED', // Bù trừ thất bại
 }
 
 @Schema({ _id: false })
@@ -55,6 +56,9 @@ export class PurchaseReturnItem {
 
   @Prop({ required: true, trim: true })
   reason: string;
+
+  @Prop({ default: false })
+  isRejectedItem?: boolean;
 }
 
 export const PurchaseReturnItemSchema =
@@ -76,6 +80,15 @@ export class PurchaseReturn {
 
   @Prop({ required: true, min: 0 })
   totalAmount: number;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  adjustedDebtAmount: number;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  refundDueAmount: number;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  refundedAmount: number;
 
   @Prop({
     type: String,

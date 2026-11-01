@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsMongoId,
   IsNumber,
+  IsInt,
   Min,
   IsArray,
   ValidateNested,
@@ -29,9 +30,13 @@ export class PurchaseReturnItemDto {
   unit: string;
 
   @Type(() => Number)
-  @IsNumber()
+  @IsInt({ message: 'Số lượng trả phải là số nguyên' })
   @Min(1, { message: 'Số lượng trả phải lớn hơn hoặc bằng 1' })
   returnedQuantity: number;
+
+  @IsOptional()
+  @IsNumber()
+  unitCost?: number;
 
   @IsOptional()
   @IsEnum(ItemCondition, { message: 'Tình trạng hàng trả không hợp lệ' })

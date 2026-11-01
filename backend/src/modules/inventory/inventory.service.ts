@@ -460,6 +460,7 @@ export class InventoryService {
   async adjustStock(
     dto: AdjustInventoryDto,
     userId?: string,
+    session?: ClientSession,
   ): Promise<InventoryDocument> {
     const productId = dto.product.toString();
 
@@ -483,6 +484,7 @@ export class InventoryService {
           expectedCurrentStock: dto.expectedCurrentStock,
           targetNewStock: dto.newStock,
         },
+        session,
       );
     }
 
@@ -504,6 +506,7 @@ export class InventoryService {
         {
           expectedCurrentStock: dto.expectedCurrentStock,
         },
+        session,
       );
     }
 

@@ -5,8 +5,8 @@ import {
   Logger,
   Optional,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, ClientSession } from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { Model, Types, ClientSession, Connection } from 'mongoose';
 import {
   PurchaseReturn,
   PurchaseReturnDocument,
@@ -16,6 +16,7 @@ import {
 import {
   GoodsReceipt,
   GoodsReceiptDocument,
+  ItemCondition,
 } from './schemas/goods-receipt.schema';
 import {
   CreatePurchaseReturnDto,
@@ -35,6 +36,8 @@ export class PurchaseReturnsService {
     private readonly returnModel: Model<PurchaseReturnDocument>,
     @InjectModel(GoodsReceipt.name)
     private readonly receiptModel: Model<GoodsReceiptDocument>,
+    @InjectConnection()
+    private readonly connection: Connection,
     private readonly inventoryService: InventoryService,
     @Optional()
     private readonly financeService?: FinanceService,
@@ -94,11 +97,13 @@ export class PurchaseReturnsService {
   }
 
   /**
-   * PUR-04: Tạo phiếu trả hàng cho nhà cung cấp
-   * - Giảm tồn kho khả dụng
+   * PUR-04 & PUR-RET-01: Tạo phiếu trả hàng cho nhà cung cấp
+   * - Giảm tồn kho khả dụng (trừ hàng REJECTED chưa từng vào kho)
    * - Kiểm tra số lượng trả không vượt quá số nhận trong GRN
-   * - Kiểm tra tồn kho hiện tại không bị âm
-   * - Quản lý trạng thái bù trừ công nợ (Credit Adjustment)
+   * - Chống trả vượt lượng khi có nhiều dòng trùng productId
+   * - Giá trị tính theo snapshot giá vốn GRN (bỏ qua giá client gửi)
+   * - Quản lý trạng thái bù trừ công nợ (Credit Adjustment) và hoàn tiền (Supplier Credit)
+   * - Toàn bộ hoạt động thực hiện trong cùng MongoDB Transaction
    */
   async createReturn(
     dto: CreatePurchaseReturnDto,
@@ -108,12 +113,14 @@ export class PurchaseReturnsService {
       throw new BadRequestException('ID phiếu nhận hàng không hợp lệ');
     }
 
-    // 1. Kiểm tra idempotencyKey
-    if (dto.idempotencyKey) {
-      const existing = await this.returnModel.findOne({
-        idempotencyKey: dto.idempotencyKey,
-        isDeleted: false,
-      });
+    // 1. Kiểm tra idempotencyKey trước
+    if (dto.idempotencyKey && dto.idempotencyKey.trim()) {
+      const existing = await this.returnModel
+        .findOne({
+          idempotencyKey: dto.idempotencyKey.trim(),
+          isDeleted: false,
+        })
+        .exec();
       if (existing) {
         this.logger.log(
           `Idempotent retry: Phiếu trả ${existing.returnCode} đã tồn tại cho key ${dto.idempotencyKey}`,
@@ -123,36 +130,42 @@ export class PurchaseReturnsService {
     }
 
     // 2. Tìm phiếu nhận hàng gốc
-    const receipt = await this.receiptModel
+    const receiptQuery = this.receiptModel
       .findOne({ _id: dto.goodsReceiptId, isDeleted: false })
-      .populate('supplier')
-      .exec();
+      .populate('supplier');
+    const receipt =
+      typeof receiptQuery?.exec === 'function'
+        ? await receiptQuery.exec()
+        : await receiptQuery;
 
     if (!receipt) {
       throw new NotFoundException('Không tìm thấy phiếu nhận hàng tương ứng');
     }
 
     // 3. Lấy tất cả các phiếu trả hàng trước đó của GRN này để tính số đã trả
-    const previousReturns = await this.returnModel
-      .find({
-        goodsReceipt: receipt._id,
-        status: { $ne: PurchaseReturnStatus.CANCELLED },
-        isDeleted: false,
-      })
-      .exec();
+    const previousReturnsQuery = this.returnModel.find({
+      goodsReceipt: receipt._id,
+      status: { $ne: PurchaseReturnStatus.CANCELLED },
+      isDeleted: false,
+    });
+    const previousReturns =
+      typeof previousReturnsQuery?.exec === 'function'
+        ? await previousReturnsQuery.exec()
+        : await previousReturnsQuery;
 
     const returnedQuantitiesByProduct = new Map<string, number>();
-    for (const pr of previousReturns) {
-      for (const item of pr.items) {
-        const prodId = item.product.toString();
-        const current = returnedQuantitiesByProduct.get(prodId) || 0;
-        returnedQuantitiesByProduct.set(prodId, current + item.baseQuantity);
+    if (Array.isArray(previousReturns)) {
+      for (const pr of previousReturns) {
+        for (const item of pr.items) {
+          const prodId = item.product.toString();
+          const current = returnedQuantitiesByProduct.get(prodId) || 0;
+          returnedQuantitiesByProduct.set(prodId, current + item.baseQuantity);
+        }
       }
     }
 
-    const validatedItems: any[] = [];
-    let totalAmount = 0;
-
+    // 4. Cộng dồn số lượng yêu cầu theo productId để chống bypass trùng dòng (PUR-RET-T03)
+    const requestedQuantitiesByProduct = new Map<string, number>();
     for (const itemDto of dto.items) {
       if (!Types.ObjectId.isValid(itemDto.productId)) {
         throw new BadRequestException(
@@ -171,23 +184,55 @@ export class PurchaseReturnsService {
       }
 
       const conversionRatio = receiptItem.conversionRatio || 1;
-      const baseQuantity = itemDto.returnedQuantity * conversionRatio;
+      const lineBaseQty = itemDto.returnedQuantity * conversionRatio;
+      const currentReq =
+        requestedQuantitiesByProduct.get(itemDto.productId) || 0;
+      requestedQuantitiesByProduct.set(
+        itemDto.productId,
+        currentReq + lineBaseQty,
+      );
+    }
 
-      // Kiểm tra xem số lượng trả có vượt quá số nhận không
-      const alreadyReturned =
-        returnedQuantitiesByProduct.get(itemDto.productId) || 0;
+    // Kiểm tra tổng số lượng yêu cầu trả so với số lượng còn được trả
+    for (const [
+      prodId,
+      totalRequestedBaseQty,
+    ] of requestedQuantitiesByProduct.entries()) {
+      const receiptItem = receipt.items.find(
+        (it) => it.product.toString() === prodId,
+      )!;
+      const alreadyReturned = returnedQuantitiesByProduct.get(prodId) || 0;
       const eligibleQuantity = receiptItem.baseQuantity - alreadyReturned;
 
-      if (baseQuantity > eligibleQuantity) {
+      if (totalRequestedBaseQty > eligibleQuantity) {
         throw new BadRequestException(
-          `Số lượng trả cho sản phẩm "${receiptItem.productName}" (${baseQuantity} cái) vượt quá số lượng còn lại có thể trả (${eligibleQuantity} cái)`,
+          `Tổng số lượng trả cho sản phẩm "${receiptItem.productName}" (${totalRequestedBaseQty} cái) vượt quá số lượng còn lại có thể trả (${eligibleQuantity} cái)`,
         );
       }
+    }
 
-      // Giá vốn mỗi đơn vị tính
+    // 5. Tính toán chi tiết các dòng trả theo snapshot giá vốn GRN (PUR-RET-01.2)
+    const validatedItems: any[] = [];
+    let totalAmount = 0;
+
+    for (const itemDto of dto.items) {
+      const receiptItem = receipt.items.find(
+        (it) => it.product.toString() === itemDto.productId,
+      )!;
+      const conversionRatio = receiptItem.conversionRatio || 1;
+      const baseQuantity = itemDto.returnedQuantity * conversionRatio;
+
+      // Giá vốn mỗi đơn vị tính lấy từ snapshot GRN, bỏ qua giá client gửi
       const unitCost = receiptItem.actualUnitPrice;
       const lineTotal = Math.round(itemDto.returnedQuantity * unitCost);
       totalAmount += lineTotal;
+
+      // Hàng REJECTED trong GRN (acceptedQuantity === 0 hoặc condition === DAMAGED khi kiểm tra hàng)
+      // chưa từng vào tồn khả dụng -> không trừ tồn khả dụng lần nữa (PUR-RET-T04)
+      const isRejectedItem =
+        receiptItem.acceptedQuantity === 0 ||
+        (receiptItem.rejectedQuantity > 0 &&
+          itemDto.condition === ItemCondition.DAMAGED);
 
       validatedItems.push({
         product: receiptItem.product,
@@ -201,62 +246,139 @@ export class PurchaseReturnsService {
         lineTotal,
         condition: itemDto.condition || receiptItem.condition,
         reason: itemDto.reason,
+        isRejectedItem,
       });
     }
 
-    const returnCode = await this.generateReturnCode();
+    // 6. Thực thi trong MongoDB Transaction
+    let session: ClientSession | null = null;
+    let isTransactionActive = false;
 
-    const purchaseReturn = new this.returnModel({
-      returnCode,
-      goodsReceipt: receipt._id,
-      supplier: receipt.supplier,
-      items: validatedItems,
-      totalAmount,
-      status: PurchaseReturnStatus.POSTED,
-      creditAdjustmentStatus: dto.applyCreditAdjustmentImmediately
-        ? CreditAdjustmentStatus.APPLIED
-        : CreditAdjustmentStatus.PENDING,
-      returnedBy: new Types.ObjectId(userId),
-      returnedAt: new Date(),
-      idempotencyKey: dto.idempotencyKey,
-      note: dto.note,
-      isDeleted: false,
-    });
-
-    const savedReturn = await purchaseReturn.save();
-
-    // 4. Giảm trừ tồn kho thực tế bằng adjustStock với số âm
-    for (const vItem of validatedItems) {
-      await this.inventoryService.adjustStock(
-        {
-          product: vItem.product.toString(),
-          quantity: -vItem.baseQuantity,
-          reference: returnCode,
-          note: `Trả hàng nhà cung cấp theo phiếu ${returnCode} (GRN: ${receipt.receiptCode})`,
-        },
-        userId,
-      );
+    if (this.connection && typeof this.connection.startSession === 'function') {
+      try {
+        session = await this.connection.startSession();
+        session.startTransaction();
+        isTransactionActive = true;
+      } catch {
+        session = null;
+        isTransactionActive = false;
+      }
     }
 
-    // 5. Nếu quản lý chọn bù trừ công nợ ngay
-    if (
-      dto.applyCreditAdjustmentImmediately &&
-      this.financeService &&
-      totalAmount > 0
-    ) {
-      await this.financeService.applyPurchaseReturnCredit(
-        receipt._id,
-        totalAmount,
+    try {
+      const returnCode = await this.generateReturnCode(session || undefined);
+
+      const purchaseReturn = new this.returnModel({
         returnCode,
-        dto.note,
-      );
-    }
+        goodsReceipt: receipt._id,
+        supplier: receipt.supplier,
+        items: validatedItems,
+        totalAmount,
+        adjustedDebtAmount: 0,
+        refundDueAmount: 0,
+        refundedAmount: 0,
+        status: PurchaseReturnStatus.POSTED,
+        creditAdjustmentStatus: CreditAdjustmentStatus.PENDING,
+        returnedBy: new Types.ObjectId(userId),
+        returnedAt: new Date(),
+        idempotencyKey: dto.idempotencyKey?.trim() || undefined,
+        note: dto.note,
+        isDeleted: false,
+      });
 
-    return savedReturn;
+      let savedReturn: PurchaseReturnDocument;
+      if (session) {
+        savedReturn = await purchaseReturn.save({ session });
+      } else {
+        savedReturn = await purchaseReturn.save();
+      }
+
+      // 7. Giảm trừ tồn kho thực tế (chỉ trừ những mặt hàng đã nhập kho khả dụng)
+      for (const vItem of validatedItems) {
+        if (!vItem.isRejectedItem) {
+          const adjustStockDto = {
+            product: vItem.product.toString(),
+            quantity: -vItem.baseQuantity,
+            reference: returnCode,
+            note: `Trả hàng nhà cung cấp theo phiếu ${returnCode} (GRN: ${receipt.receiptCode})`,
+          };
+          if (session) {
+            await this.inventoryService.adjustStock(
+              adjustStockDto,
+              userId,
+              session,
+            );
+          } else {
+            await this.inventoryService.adjustStock(adjustStockDto, userId);
+          }
+        }
+      }
+
+      // 8. Nếu quản lý chọn bù trừ công nợ ngay
+      if (
+        dto.applyCreditAdjustmentImmediately &&
+        this.financeService &&
+        totalAmount > 0
+      ) {
+        const creditResult = session
+          ? await this.financeService.applyPurchaseReturnCredit(
+              receipt._id,
+              totalAmount,
+              returnCode,
+              dto.note,
+              session,
+            )
+          : await this.financeService.applyPurchaseReturnCredit(
+              receipt._id,
+              totalAmount,
+              returnCode,
+              dto.note,
+            );
+
+        if (creditResult) {
+          savedReturn.creditAdjustmentStatus = CreditAdjustmentStatus.APPLIED;
+          savedReturn.adjustedDebtAmount = creditResult.adjustedDebtAmount;
+          savedReturn.refundDueAmount = creditResult.refundDueAmount;
+          if (session) {
+            await savedReturn.save({ session });
+          } else {
+            await savedReturn.save();
+          }
+        }
+      }
+
+      if (isTransactionActive && session) {
+        await session.commitTransaction();
+      }
+
+      return savedReturn;
+    } catch (err: any) {
+      if (isTransactionActive && session) {
+        await session.abortTransaction();
+      }
+
+      if (err?.code === 11000 && dto.idempotencyKey) {
+        const existing = await this.returnModel
+          .findOne({
+            idempotencyKey: dto.idempotencyKey.trim(),
+            isDeleted: false,
+          })
+          .exec();
+        if (existing) {
+          return existing;
+        }
+      }
+
+      throw err;
+    } finally {
+      if (isTransactionActive && session) {
+        await session.endSession();
+      }
+    }
   }
 
   /**
-   * Xác nhận bù trừ công nợ sau khi NCC đồng ý credit / nhận hàng trả
+   * Xác nhận bù trừ công nợ sau khi NCC đồng ý credit / nhận hàng trả (Atomic & Conditional update)
    */
   async confirmCreditAdjustment(
     returnId: string,
@@ -267,39 +389,112 @@ export class PurchaseReturnsService {
       throw new BadRequestException('ID phiếu trả hàng không hợp lệ');
     }
 
-    const purchaseReturn = await this.returnModel
+    const pr = await this.returnModel
       .findOne({ _id: returnId, isDeleted: false })
       .exec();
 
-    if (!purchaseReturn) {
+    if (!pr) {
       throw new NotFoundException('Không tìm thấy phiếu trả hàng');
     }
 
-    if (
-      purchaseReturn.creditAdjustmentStatus === CreditAdjustmentStatus.APPLIED
-    ) {
+    if (pr.creditAdjustmentStatus === CreditAdjustmentStatus.APPLIED) {
       throw new BadRequestException(
         'Phiếu trả hàng này đã được bù trừ công nợ trước đó',
       );
     }
 
-    const adjustmentAmount = dto.adjustmentAmount || purchaseReturn.totalAmount;
+    let session: ClientSession | null = null;
+    let isTransactionActive = false;
 
-    if (this.financeService && adjustmentAmount > 0) {
-      await this.financeService.applyPurchaseReturnCredit(
-        purchaseReturn.goodsReceipt,
-        adjustmentAmount,
-        purchaseReturn.returnCode,
-        dto.note,
+    if (this.connection && typeof this.connection.startSession === 'function') {
+      try {
+        session = await this.connection.startSession();
+        session.startTransaction();
+        isTransactionActive = true;
+      } catch {
+        session = null;
+        isTransactionActive = false;
+      }
+    }
+
+    try {
+      // Conditional transition: Chỉ 1 request chuyển thành công từ PENDING -> APPLIED
+      const updateQuery = this.returnModel.findOneAndUpdate(
+        {
+          _id: pr._id,
+          creditAdjustmentStatus: CreditAdjustmentStatus.PENDING,
+          isDeleted: false,
+        },
+        {
+          $set: {
+            creditAdjustmentStatus: CreditAdjustmentStatus.APPLIED,
+          },
+        },
+        { new: true },
       );
-    }
+      if (session && typeof updateQuery?.session === 'function') {
+        updateQuery.session(session);
+      }
+      const updatedPr =
+        typeof updateQuery?.exec === 'function'
+          ? await updateQuery.exec()
+          : await updateQuery;
 
-    purchaseReturn.creditAdjustmentStatus = CreditAdjustmentStatus.APPLIED;
-    if (dto.note) {
-      purchaseReturn.note = `${purchaseReturn.note || ''} | ${dto.note}`.trim();
-    }
+      if (!updatedPr) {
+        throw new BadRequestException(
+          'Phiếu trả hàng này đã được bù trừ công nợ hoặc đang được xử lý bởi giao dịch khác',
+        );
+      }
 
-    return await purchaseReturn.save();
+      const adjustmentAmount = dto.adjustmentAmount || pr.totalAmount;
+
+      if (this.financeService && adjustmentAmount > 0) {
+        const creditResult = session
+          ? await this.financeService.applyPurchaseReturnCredit(
+              pr.goodsReceipt,
+              adjustmentAmount,
+              pr.returnCode,
+              dto.note,
+              session,
+            )
+          : await this.financeService.applyPurchaseReturnCredit(
+              pr.goodsReceipt,
+              adjustmentAmount,
+              pr.returnCode,
+              dto.note,
+            );
+
+        if (creditResult) {
+          updatedPr.adjustedDebtAmount = creditResult.adjustedDebtAmount;
+          updatedPr.refundDueAmount = creditResult.refundDueAmount;
+        }
+      }
+
+      if (dto.note) {
+        updatedPr.note = `${updatedPr.note || ''} | ${dto.note}`.trim();
+      }
+
+      if (session) {
+        await updatedPr.save({ session });
+      } else {
+        await updatedPr.save();
+      }
+
+      if (isTransactionActive && session) {
+        await session.commitTransaction();
+      }
+
+      return updatedPr;
+    } catch (err) {
+      if (isTransactionActive && session) {
+        await session.abortTransaction();
+      }
+      throw err;
+    } finally {
+      if (isTransactionActive && session) {
+        await session.endSession();
+      }
+    }
   }
 
   /**

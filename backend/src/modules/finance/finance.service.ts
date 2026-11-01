@@ -817,22 +817,43 @@ export class FinanceService {
   }
 
   /**
-   * PUR-04: Bù trừ công nợ khi trả hàng nhà cung cấp (Purchase Return Credit Adjustment)
+   * PUR-04 & PUR-RET-01: Bù trừ công nợ khi trả hàng nhà cung cấp (Purchase Return Credit Adjustment)
+   * Trừ remainingAmount và totalAmount của khoản công nợ phát sinh từ Goods Receipt
+   * Nếu giá trị trả lớn hơn nợ còn lại, tính toán phần chênh lệch refundDueAmount để theo dõi NCC hoàn tiền
    */
   async applyPurchaseReturnCredit(
     goodsReceiptId: Types.ObjectId | string,
     returnAmount: number,
     returnCode: string,
     note?: string,
-  ): Promise<SupplierPayableDocument | null> {
+    session?: ClientSession,
+  ): Promise<{
+    payable: SupplierPayableDocument | null;
+    adjustedDebtAmount: number;
+    refundDueAmount: number;
+  } | null> {
     if (returnAmount <= 0) return null;
 
-    const payable = await this.payableModel.findOne({
+    const findQuery = this.payableModel.findOne({
       goodsReceipt: new Types.ObjectId(goodsReceiptId.toString()),
       isDeleted: false,
     });
+    if (session && typeof findQuery?.session === 'function') {
+      findQuery.session(session);
+    }
+    const payable =
+      typeof findQuery?.exec === 'function'
+        ? await findQuery.exec()
+        : await findQuery;
 
-    if (!payable) return null;
+    if (!payable) {
+      // Trường hợp không có khoản công nợ (hoặc đã tất toán trước đó), toàn bộ số tiền trả thành khoản chờ NCC hoàn
+      return {
+        payable: null,
+        adjustedDebtAmount: 0,
+        refundDueAmount: returnAmount,
+      };
+    }
 
     // Giảm số dư công nợ còn lại (remainingAmount) và điều chỉnh totalAmount
     const actualCredit = Math.min(returnAmount, payable.remainingAmount);
@@ -852,10 +873,23 @@ export class FinanceService {
       payable.status = SupplierPayableStatus.PAID;
     }
 
-    payable.note =
-      `${payable.note || ''} | Bù trừ ${actualCredit.toLocaleString('vi-VN')} đ từ phiếu trả hàng ${returnCode} ${note || ''}`.trim();
+    const refundDueAmount = returnAmount - actualCredit;
 
-    return await payable.save();
+    payable.note =
+      `${payable.note || ''} | Bù trừ ${actualCredit.toLocaleString('vi-VN')} đ từ phiếu trả hàng ${returnCode}${refundDueAmount > 0 ? ` (Chờ NCC hoàn trả ${refundDueAmount.toLocaleString('vi-VN')} đ)` : ''} ${note || ''}`.trim();
+
+    let savedPayable: SupplierPayableDocument;
+    if (session) {
+      savedPayable = await payable.save({ session });
+    } else {
+      savedPayable = await payable.save();
+    }
+
+    return {
+      payable: savedPayable,
+      adjustedDebtAmount: actualCredit,
+      refundDueAmount,
+    };
   }
 
   /**
