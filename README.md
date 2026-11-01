@@ -9,8 +9,8 @@
 
   [![CI Pipeline](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/ci.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/ci.yml)
   [![CD Deploy](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/deploy.yml/badge.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/workflows/deploy.yml)
-  [![Test Suite](https://img.shields.io/badge/Tests-681%20Passed%20(100%25)-brightgreen.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore)
-  [![Security Audit](https://img.shields.io/badge/Audit-P0%2FP1%20Hardened-blue.svg)](docs/PROJECT_OVERVIEW.md)
+  [![Test Suite](https://img.shields.io/badge/Tests-873%20Passed%20(100%25)-brightgreen.svg)](https://github.com/hoangtruong01/Truong_Thanh_Bookstore)
+  [![Security Audit](https://img.shields.io/badge/Audit-P0%2FP1%2FP2%20Hardened-blue.svg)](docs/PROJECT_OVERVIEW.md)
 
 </div>
 
@@ -143,10 +143,10 @@ flutter run
 ```bash
 cd backend
 
-# Chạy toàn bộ 53 test suites / 551 unit, integration & concurrency tests
+# Chạy toàn bộ 66 test suites / 776 unit, integration & concurrency tests PASS (100%)
 npm test
 
-# Kiểm tra chất lượng mã nguồn bằng ESLint (Ratchet budget limit <= 1280 warnings)
+# Kiểm tra chất lượng mã nguồn bằng ESLint (Ratchet budget limit <= 2200 warnings, 0 errors)
 npm run lint
 
 # Kiểm tra build bundle NestJS
@@ -157,7 +157,7 @@ npm run build
 ```bash
 cd frontend
 
-# Chạy toàn bộ 14 test suites / 83 unit & composable tests
+# Chạy toàn bộ 17 test suites / 97 unit & composable tests PASS (100%)
 npm run test:unit
 
 # Kiểm tra kiểu TypeScript (0 errors)

@@ -160,27 +160,37 @@ Truong_Thanh_Bookstore/
 └── docker-compose.tools.yml    # Mongo Express (Chỉ dùng khi debug cục bộ)
 ```
 
-### 3.2. Bản đồ 17 Module Nghiệp vụ Backend
+### 3.2. Bản đồ Các Module Nghiệp vụ Backend (Modular Monolith)
 
 | STT | Module | Trách nhiệm chính (Responsibilities) |
 | :---: | :--- | :--- |
 | 1 | **auth** | Đăng ký, đăng nhập, quên/đặt lại mật khẩu (OTP SHA-256), phát hành/quay vòng JWT (Token Rotation), Token Blacklist Redis, thu hồi phiên theo `tokenVersion`. |
 | 2 | **users** | Hồ sơ cá nhân, đổi mật khẩu, quản lý Sổ địa chỉ (`addresses`), danh sách yêu thích (`wishlist`), quản lý điểm tích lũy và hoàn điểm thưởng. |
-| 3 | **products** | CRUD sản phẩm, tìm kiếm không dấu (diacritic regex), lọc đa tiêu chí, quản lý biến thể/SKU, xuất/nhập file Excel 14 cột với `exceljs`. |
+| 3 | **products** | CRUD sản phẩm, tìm kiếm không dấu (diacritic regex), lọc đa tiêu chí, quản lý biến thể/SKU, đơn vị quy đổi, mã vạch barcode, giá bán sỉ/lẻ. |
 | 4 | **categories** | Cây danh mục đa cấp (Cha - Con), tạo slug tự động, kiểm tra ràng buộc không cho xóa danh mục còn sản phẩm. |
 | 5 | **cart** | Quản lý giỏ hàng phía server, kiểm tra tồn kho thời gian thực, tính tạm tính (subtotal), áp dụng ngưỡng miễn phí vận chuyển. |
 | 6 | **orders** | Tạo đơn hàng nguyên tử (Guest & Auth), kiểm tra trùng lặp (`idempotencyKey`), tính giá server-side, trừ kho nguyên tử, xuất hóa đơn PDF (`pdfkit`), chuyển đổi trạng thái đơn hàng. |
 | 7 | **payments** | Lớp xử lý cổng thanh toán: COD, Chuyển khoản VietQR, VNPay 2.1.0 (HMAC-SHA512), MoMo (HMAC-SHA256), khóa chặn mock ở production. |
-| 8 | **inventory** | Quản lý tồn kho & sổ cái giao dịch với 5 loại (`IMPORT`, `SALE`, `RETURN`, `ADJUSTMENT`, `DAMAGE`), cảnh báo sản phẩm sắp hết hàng (`stockAlert`). |
-| 9 | **promotions** | Hệ thống mã giảm giá (Voucher % hoặc cố định), kiểm tra trần giảm giá, đơn tối thiểu, số lượt dùng tối đa, chống dùng lặp. |
-| 10 | **reviews** | Đánh giá sao & bình luận sản phẩm, kiểm tra đã mua hàng (`isVerifiedPurchase`), kiểm duyệt hiển thị (`isVisible`), phản hồi của Admin (`adminReply`). |
-| 11 | **notifications** | WebSocket Gateway (Socket.IO `/notifications`) đẩy thông báo tức thì (đơn mới, thay đổi trạng thái, cảnh báo kho), lưu trữ thông báo vào DB, đồng bộ FCM. |
-| 12 | **reports** | Báo cáo doanh thu thuần (loại trừ đơn hủy/trả), tỷ lệ tăng trưởng kỳ trước, cơ cấu doanh thu theo danh mục, giá trị đơn trung bình (AOV). |
-| 13 | **customers** | Quản trị danh sách khách hàng, thống kê tổng chi tiêu, tổng số đơn mua dành cho Admin CMS. |
-| 14 | **banners** | Quản lý banner tiếp thị đa vị trí (slider, sidebar, bottom row) & Quảng cáo mở website (Entry Popup Ad / Interstitial Modal) với tần suất hiển thị (Every visit, Session, Daily), lập lịch (startAt, endAt), tự động lưu trữ Cloudinary và quy tắc kích hoạt duy nhất (Single Active Popup). |
-| 15 | **landing-pages**| Quản lý trang đích Flash Sale động, tích hợp trọn vẹn vào `OrdersService.create()` với sản phẩm thật trong DB. |
-| 16 | **email** | Gửi email giao dịch qua SMTP Nodemailer: Gửi mã OTP xác thực và gửi email xác nhận đặt hàng thành công. |
-| 17 | **outbox** | Transactional Outbox Pattern: Lưu sự kiện thông báo cùng Transaction nghiệp vụ, Worker Cron 10s quét & dispatch (Socket.IO, Email, Google Sheets), retry exponential backoff 5 lần, cleanup tự động 7 ngày. |
+| 8 | **shipping** | Quản lý phương thức và địa chỉ giao hàng, tích hợp đơn vị vận chuyển GHN sandbox, khóa đổi thủ công khi đã có vận đơn. |
+| 9 | **inventory** | Quản lý tồn kho & sổ cái giao dịch với 5 loại (`IMPORT`, `SALE`, `RETURN`, `ADJUSTMENT`, `DAMAGE`), cảnh báo sản phẩm sắp hết hàng (`stockAlert`). |
+| 10 | **promotions** | Hệ thống mã giảm giá (Voucher % hoặc cố định), kiểm tra trần giảm giá, đơn tối thiểu, số lượt dùng tối đa, chống dùng lặp. |
+| 11 | **reviews** | Đánh giá sao & bình luận sản phẩm, kiểm tra đã mua hàng (`isVerifiedPurchase`), kiểm duyệt hiển thị (`isVisible`), phản hồi của Admin (`adminReply`). |
+| 12 | **notifications** | WebSocket Gateway (Socket.IO `/notifications`) đẩy thông báo tức thì (đơn mới, thay đổi trạng thái, cảnh báo kho), lưu trữ thông báo vào DB, đồng bộ FCM. |
+| 13 | **reports** | Báo cáo doanh thu thuần (loại trừ đơn hủy/trả), tỷ lệ tăng trưởng kỳ trước, cơ cấu doanh thu theo danh mục, giá trị đơn trung bình (AOV), đối soát chênh lệch. |
+| 14 | **customers** | Quản trị danh sách khách hàng, thống kê tổng chi tiêu, phân hạng thành viên (Loyalty Tier), hồ sơ công nợ & hạn mức tín dụng khách sỉ. |
+| 15 | **banners** | Quản lý banner tiếp thị đa vị trí (slider, sidebar, bottom row) & Quảng cáo mở website (Entry Popup Ad / Interstitial Modal) với tần suất hiển thị, lập lịch và kích hoạt duy nhất. |
+| 16 | **landing-pages**| Quản lý trang đích Flash Sale động, tích hợp trọn vẹn vào `OrdersService.create()` với sản phẩm thật trong DB. |
+| 17 | **email** | Gửi email giao dịch qua SMTP Nodemailer: Gửi mã OTP xác thực và gửi email xác nhận đặt hàng thành công. |
+| 18 | **outbox** | Transactional Outbox Pattern: Lưu sự kiện thông báo cùng Transaction nghiệp vụ, Worker Cron quét & dispatch, retry exponential backoff 5 lần. |
+| 19 | **suppliers** | Quản lý hồ sơ nhà cung cấp, thông tin liên hệ, mã số thuế, công nợ phải trả, lịch sử đặt và nhận hàng. |
+| 20 | **purchase-orders** | Quản lý đơn đặt mua hàng từ nhà cung cấp (PO), phê duyệt trạng thái, theo dõi tiến độ giao hàng. |
+| 21 | **goods-receipts** | Phiếu nhận hàng (GRN), kiểm tra số lượng và tình trạng hàng (GOOD/DAMAGED), tự động hạch toán tăng tồn kho và phát sinh công nợ phải trả (AP). |
+| 22 | **purchase-returns** | Phiếu trả hàng nhà cung cấp (PR), trừ tồn kho xuất trả, tự động bù trừ công nợ phải trả (AP debt relief) hoặc hoàn tiền về sổ quỹ, chống nhân đôi hoàn trả. |
+| 23 | **stock-audits** | Kiểm kê kho định kỳ, ghi nhận chênh lệch kiểm kê (thừa/thiếu), tự động cân bằng tồn kho qua bút toán điều chỉnh (`ADJUSTMENT`). |
+| 24 | **pricing** | Quản lý chính sách giá đa kênh (Bán lẻ Storefront, Bán sỉ B2B, POS quầy), thực thi sàn lãi gộp tối thiểu (Target Margin / Markup Floor), ma trận giá sỉ theo số lượng. |
+| 25 | **finance** | Quản lý sổ quỹ đa tài khoản (Tiền mặt, Ngân hàng), ghi nhận phiếu thu/chi nguyên tử, hoàn đảo phiếu an toàn, công nợ phải trả NCC (AP), công nợ phải thu khách sỉ (AR), báo cáo tuổi nợ 5 kỳ và xuất Excel streaming. |
+| 26 | **pos** | Phân hệ bán lẻ tại quầy POS: tính giá server-side, quy đổi đơn vị (hộp -> cây), bán tiền mặt / chuyển khoản ngân hàng / bán chịu / chia tách thanh toán (Split Payment), chống overselling, đối soát ca đóng mở két tiền. |
+| 27 | **data-exchange** | Trung tâm nhập/xuất Excel dùng chung Shared Validation Pipeline (Preview & Execute đồng nhất), Audit Import Batch, phòng chống Formula Injection, kiểm tra an toàn tệp và phân quyền RBAC theo từng loại entity. |
 
 ---
 
@@ -567,6 +577,142 @@ Hệ thống chạy Cron Job định kỳ 15 phút để tự động hủy đơ
 
 ---
 
+### 7.9. Kiến trúc các Luồng Nghiệp vụ Quản Trị & ERP (Enterprise Operations Architecture Flows)
+
+#### 7.9.1. Luồng Nhập Hàng & Công Nợ Nhà Cung Cấp (Goods Receipt & AP Flow)
+```
+[Nhà cung cấp giao hàng]
+           │
+           ▼
+[Tạo Phiếu Nhận Hàng (Goods Receipt - GRN)]
+  ├── Kiểm đếm số lượng & phân loại: GOOD / DAMAGED
+  ├── Cập nhật giá vốn nhập hàng (Average Unit Cost)
+  └── Trạng thái: DRAFT ➔ CONFIRMED
+           │
+           ▼ (Atomic Transaction)
+  ├── Sổ cái kho: Tăng tồn kho thực tế (`IMPORT`)
+  └── Sổ nợ phải trả: Tự động phát sinh `SupplierPayable` (AP)
+           │
+           ▼
+[Thanh toán nợ NCC (Pay Supplier)]
+  ├── Chọn sổ quỹ nguồn: Tiền mặt hoặc Tài khoản ngân hàng
+  ├── Kiểm tra số dư tài khoản chi >= Số tiền chi
+  ├── Tạo phiếu chi `CashEntry` (Direction: `OUT`, Category: `SUPPLIER_PAYMENT`)
+  ├── Giảm số dư sổ quỹ tương ứng
+  └── Khấu trừ `remainingAmount` của khoản nợ; hoàn tất: `PAID`
+```
+
+#### 7.9.2. Luồng Trả Hàng Nhà Cung Cấp (Purchase Return & AP Offset Flow)
+```
+[Phát hiện hàng lỗi / không đạt yêu cầu]
+           │
+           ▼
+[Tạo Phiếu Trả Hàng (Purchase Return - PR)]
+  ├── Liên kết phiếu nhập gốc (`goodsReceipt`) & Nhà cung cấp
+  ├── Chọn số lượng trả (<= số lượng đã nhận của từng sản phẩm)
+  └── Trạng thái: DRAFT ➔ APPROVED
+           │
+           ▼ (Atomic Transaction)
+  ├── Sổ cái kho: Trừ tồn kho xuất trả (`RETURN`)
+  └── Bù trừ tài chính theo lựa chọn:
+        ├── Phương án 1: Cấn trừ công nợ phải trả (AP Debt Relief)
+        │     └── Giảm trực tiếp `remainingAmount` trên `SupplierPayable` liên kết
+        └── Phương án 2: Nhà cung cấp hoàn tiền mặt / chuyển khoản
+              └── Tạo phiếu thu `CashEntry` (Direction: `IN`, Category: `PURCHASE_RETURN_REFUND`)
+```
+
+#### 7.9.3. Luồng POS & Phân Bổ Tiền Mặt / Chuyển Khoản / Bán Chịu (POS Omni Flow)
+```
+[Thu ngân tạo đơn hàng tại quầy POS]
+  ├── Tính giá và chiết khấu tại máy chủ (Server-side Enforcement)
+  ├── Quy đổi đơn vị tính (Hộp / Thùng / Quyển / Cây) theo cấu hình CSDL
+  └── Lựa chọn phương thức thanh toán:
+        ├── 1. Tiền mặt (CASH):
+        │     └── Tạo CashEntry IN ghi tăng quỹ tiền mặt tại quầy (`CASH_DRAWER`)
+        ├── 2. Chuyển khoản (TRANSFER / VIETQR):
+        │     └── Tạo CashEntry IN ghi tăng tài khoản ngân hàng (`BANK_ACCOUNT`)
+        ├── 3. Bán chịu công nợ (CREDIT):
+        │     ├── Bắt buộc có thông tin Khách hàng (`customerId`)
+        │     ├── Kiểm tra hạn mức tín dụng & ngày quá hạn (`checkCreditEligibility`)
+        │     ├── Giữ hạn mức nguyên tử (`reserveCreditExposureAtomic`)
+        │     ├── Ghi nhận công nợ phải thu (`CustomerReceivable`)
+        │     └── KHÔNG tạo CashEntry tiền mặt (tránh ảo khống số dư két tiền)
+        └── 4. Chia tách thanh toán (Split Payment):
+              └── Tách thành các movement tương ứng cho từng quỹ (VD: 200k tiền mặt + 300k ngân hàng)
+  └── Đóng ca làm việc (Session Close):
+        ├── Expected Cash = Tiền đầu ca + Doanh số tiền mặt - Hoàn tiền mặt
+        └── Đối soát Tiền thực kiểm kê (Actual Cash) so với Expected Cash để phát hiện chênh lệch két.
+```
+
+#### 7.9.4. Luồng Quản Lý Tín Dụng Khách Sỉ & Báo Cáo Tuổi Nợ (Wholesale Credit & Aging Flow)
+```
+[Khách Hàng Mua Sỉ B2B]
+  ├── Hồ sơ hạn mức tín dụng (`CustomerCreditProfile`):
+  │     ├── Hạn mức tối đa (`creditLimit`)
+  │     ├── Thời hạn thanh toán chuẩn (`paymentTermDays`)
+  │     ├── Dư nợ hiện tại (`currentExposure`)
+  │     └── Trạng thái: `ACTIVE` / `SUSPENDED` / `REVOKED`
+  ├── Đơn hàng bán sỉ hoặc POS Bán Chịu:
+  │     └── Reserve Exposure với biểu thức MongoDB atomic:
+  │           `$expr: { $lte: [{ $add: ['$currentExposure', amount] }, '$creditLimit'] }`
+  ├── Thu tiền công nợ sỉ:
+  │     ├── Tạo CashEntry IN (Category: `WHOLESALE_COLLECTION`)
+  │     ├── Giảm nợ trên `CustomerReceivable`
+  │     └── Giải phóng hạn mức nguyên tử (`releaseCreditExposureAtomic`)
+  └── Báo cáo Phân tích Tuổi Nợ (Aging Report):
+        ├── 5 Nhóm tuổi nợ: CURRENT, 1-30 ngày, 31-60 ngày, 61-90 ngày, Trên 90 ngày
+        └── Xuất file Excel chi tiết hóa đơn quá hạn phục vụ đốc thúc thu hồi công nợ.
+```
+
+#### 7.9.5. Luồng Sổ Quỹ Thu Chi & Xuất Dữ Liệu Streaming (Cashbook & Export Flow)
+```
+[Quản Lý Sổ Quỹ (Cashbook)]
+  ├── Tài khoản quỹ: Quỹ tiền mặt, Tài khoản ngân hàng, Quỹ chi tiêu nhỏ
+  ├── Nghiệp vụ Thu / Chi ghi sổ tức thì (Immutable Ledger)
+  ├── Hoàn đảo phiếu an toàn (Reversal):
+  │     ├── Không xóa phiếu gốc; chuyển trạng thái thành `REVERSED`
+  │     ├── Tạo phiếu đảo đối ứng bù trừ số dư
+  │     └── Chống đảo lặp 2 lần bằng khóa cập nhật điều kiện nguyên tử
+  └── Xuất Excel Sổ Quỹ (CASH-01):
+        ├── Dùng chung Shared Filter Query Builder giữa xem danh sách và xuất file
+        ├── Hỗ trợ đầy đủ bộ lọc: Khoảng ngày, Sổ quỹ, Chiều Thu/Chi, Danh mục, Từ khóa tìm kiếm
+        ├── Xuất dữ liệu hoàn chỉnh không giới hạn âm thầm (không cắt cụt ở 5000 records)
+        └── Bổ sung thẻ thống kê (Tổng thu, Tổng chi, Chênh lệch ròng) và siêu dữ liệu báo cáo.
+```
+
+#### 7.9.6. Luồng Nhập/Xuất Dữ Liệu Excel An Toàn (Data Exchange Pipeline)
+```
+[Tải file Excel lên hệ thống]
+           │
+           ▼
+[1. Kiểm tra an toàn tệp (SEC-01 & SEC-02)]
+  ├── Dung lượng tối đa: 10MB
+  ├── Kiểm tra Magic Bytes ZIP/XLSX: `50 4B 03 04` (chống đổi đuôi file độc hại)
+  ├── Chống tấn công Formula Injection (CWE-1236): Khử các ký tự `=`, `+`, `-`, `@`, `|`
+  ├── Giới hạn tệp: Tối đa 10 sheets, tối đa 5000 dòng
+  └── Phân quyền RBAC theo Entity Type (Sản phẩm, Nhà cung cấp, Tồn kho đầu kỳ)
+           │
+           ▼
+[2. Shared Validation Pipeline (XLS-01)]
+  ├── Parse Workbook ➔ Normalize Row ➔ Validate Row
+  ├── Đồng nhất 100% logic xác thực giữa Preview và Execute
+  ├── Phát hiện SKU trùng trong tệp và dữ liệu thiếu
+  └── Kiểm tra File Hash (SHA-256): Cảnh báo nếu tệp đã từng được import trước đó
+           │
+           ▼
+[3. Thực thi Import & Ghi Sổ Batch (ImportBatch Audit)]
+  ├── `skipErrors = false`: Nếu có bất kỳ dòng lỗi nào, hủy toàn bộ đợt import
+  ├── `skipErrors = true`: Chỉ thực thi các dòng hợp lệ; dòng lỗi đưa vào báo cáo lỗi
+  ├── Xử lý trùng SKU linh hoạt: UPDATE / SKIP / REJECT
+  └── Xuất báo cáo danh sách dòng lỗi dạng Excel (Error Report) cho người dùng.
+```
+
+#### 7.9.7. Yêu cầu Môi trường Cơ Sở Dữ Liệu (MongoDB Replica Set & ACID Transactions)
+- **Môi trường Production & Staging:** Bắt buộc cấu hình cụm **MongoDB Replica Set** (tối thiểu 1 Primary + 1 Secondary hoặc replicaSet standalone `rs0`). Mọi nghiệp vụ liên quan đến đồng thời Tạo đơn hàng + Trừ kho + Thanh toán + Ghi sổ quỹ + Công nợ phải được thực hiện trong `ClientSession` transaction để đảm bảo tính toàn vẹn dữ liệu (All-or-Nothing).
+- **Môi trường Development & Test:** Hỗ trợ kiểm thử cô lập với mock session và transaction rollback verification.
+
+---
+
 ## 8. 📡 Chuẩn Giao tiếp API & Thời gian thực (API Envelope & WebSocket)
 
 ### 8.1. Cấu trúc Phản hồi API Đồng nhất
@@ -706,22 +852,22 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | 🛠️ **Tech Debt** (2 task) | Tách OrdersService (Facade Pattern), Tối ưu Index Auto-cancel |
 | 🧪 **QA** (4 task) | Auth Security Suite, Payment Idempotent Suite, Race Condition Test, UX Regression Test |
 
-### 11.2. Kết Quả Kiểm Thử Hiện Tại
+### 11.2. Kết Quả Kiểm Thử Hiện Tại (Cập nhật sau hoàn thành Playbook Sprint B1)
 
 | Phân hệ | Lệnh | Kết quả |
 | :--- | :--- | :---: |
-| Backend Unit & Integration Tests | `cd backend && npm test` | **64/64 suites, 709/709 tests PASS (100%)** |
+| Backend Unit & Integration Tests | `cd backend && npm test` | **66/66 suites, 776/776 tests PASS (100%)** |
 | Comprehensive BA SRS Flows (Sprint 6) | `cd backend && npm test -- uat-e2e-flows.spec.ts` | **14/14 tests covering UAT-E2E-01 -> UAT-E2E-13 PASS (100%)** |
-| Customer Receivables & Cashbook (FIN-01..04) | `cd backend && npm test -- finance.service.spec.ts` | **34/34 financial tests PASS (100%)** |
-| Purchase Returns & Suppliers (PUR-04, SUP-01) | `cd backend && npm test -- purchase-returns.service.spec.ts suppliers.service.spec.ts` | **24/24 purchasing & returns tests PASS (100%)** |
-| Data Exchange & Excel Center (DOC-01..03) | `cd backend && npm test -- data-exchange.service.spec.ts` | **4/4 import/export & formula sanitization tests PASS (100%)** |
-| Backend Operations, Finance & Pricing (Sprint 5) | `cd backend && npm test -- pricing finance reports` | **55/55 tests PASS (100%)** |
+| Customer Credit & Cashbook (FIN-01, FIN-02, AR-01, CASH-01) | `cd backend && npm test -- finance.service.spec.ts customer-credit.service.spec.ts` | **57/57 financial & credit tests PASS (100%)** |
+| Purchase Returns & Suppliers (PUR-RET-01, SUP-01) | `cd backend && npm test -- purchase-returns.service.spec.ts suppliers.service.spec.ts` | **31/31 purchasing, AP offset & return tests PASS (100%)** |
+| Data Exchange & Excel Pipeline (XLS-01, SEC-01, SEC-02) | `cd backend && npm test -- src/modules/data-exchange` | **20/20 import/export & RBAC tests PASS (100%)** |
+| Backend Operations, Finance & Pricing (PRC-01) | `cd backend && npm test -- pricing finance reports` | **64/64 tests PASS (100%)** |
 | Backend Purchasing & Audits (Sprint 4) | `cd backend && npm test -- suppliers purchase-orders goods-receipts stock-audits` | **42/42 ERP tests PASS (100%)** |
-| Backend POS & Concurrency Suite | `cd backend && npm test -- pos.service.spec.ts pos.omnichannel-concurrency.spec.ts` | **10/10 POS & Omnichannel race condition tests PASS** |
+| Backend POS & Cashbook Movement Suite (POS-CASH-01) | `cd backend && npm test -- pos.service.spec.ts pos.omnichannel-concurrency.spec.ts` | **52/52 POS, split payments & cash reconciliation tests PASS** |
 | Backend Health & Release SHA (TT-014) | `cd backend && npm test -- app.controller.spec.ts` | **3/3 health readiness & release SHA tests PASS** |
 | Backend Security Suite | `cd backend && npm test -- security-p0-audit.spec.ts` | **16/16 security regression tests PASS** |
 | Backend Commerce Suite | `cd backend && npm test -- orders.commerce-regression.spec.ts` | **14/14 commerce invariant tests PASS** |
-| Backend Linting | `cd backend && npm run lint` | **0 errors** (2.029 warnings, --max-warnings 2100) |
+| Backend Linting | `cd backend && npm run lint` | **0 errors** (2.160 warnings, --max-warnings 2200) |
 | Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
 | Frontend Unit Tests | `cd frontend && npm run test:unit` | **17/17 suites, 97/97 tests PASS (100%)** |
 | Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |
@@ -731,6 +877,7 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | Frontend Multi-Device E2E (TT-024) | `cd frontend && npx playwright test` | **Desktop, Mobile (Pixel 7), Tablet (iPad Pro 11) & Barcode Scanner** |
 | Mobile Tests | `cd mobile && flutter test` | **47/47 tests PASS (100%)** |
 | Mobile Analyze | `cd mobile && flutter analyze` | **0 issues** |
+| **Tổng Cộng Toàn Dự Án** | **Toàn bộ Test Suite** | **873/873 tests PASS (100% tỷ lệ thành công)** |
 
 ### 11.3. Cổng Nghiệm Thu CTO — Đã Đạt 4/4
 

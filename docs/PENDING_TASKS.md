@@ -9,6 +9,19 @@
 
 | Mã | Tên Task | Phân Hệ | Priority | Trạng Thái | Độ Khó |
 | :---: | :--- | :---: | :---: | :---: | :---: |
+| **BASE-00** | Khảo sát hiện trạng, Root cause & Baseline Tests | Backend / QA | P0 | ✅ Đã hoàn thành | Vừa |
+| **FIN-01** | Atomic Thu/Chi & Idempotency Công nợ NCC/Khách sỉ | Backend / Finance | P1 | ✅ Đã hoàn thành | Vừa |
+| **FIN-02** | Hoàn đảo phiếu an toàn & Chống duplicate reversal | Backend / Finance | P1 | ✅ Đã hoàn thành | Vừa |
+| **PUR-RET-01** | Hoàn thiện luồng Trả hàng NCC & Cấn trừ nợ/Hoàn tiền | Fullstack / ERP | P1 | ✅ Đã hoàn thành | Vừa |
+| **PRC-01** | Thực thi Chính sách giá & Sàn Margin Floor Server-side | Backend / Pricing | P1 | ✅ Đã hoàn thành | Vừa |
+| **AR-01** | Quản lý Công nợ Khách sỉ, Tín dụng & Báo cáo Tuổi nợ | Fullstack / B2B | P1 | ✅ Đã hoàn thành | Khó |
+| **POS-CASH-01** | Đồng bộ POS với Sổ quỹ, Split Payment & Đối soát ca | Fullstack / POS | P1 | ✅ Đã hoàn thành | Khó |
+| **XLS-01** | Shared Validation Pipeline Import Excel & Audit Batch | Fullstack / Data | P2 | ✅ Đã hoàn thành | Vừa |
+| **SEC-01** | Bảo vệ Endpoint Upload Excel (Magic Bytes, Size, Traversal) | Backend / Sec | P2 | ✅ Đã hoàn thành | Dễ |
+| **SEC-02** | Phân quyền RBAC Import/Export theo từng Entity Type | Backend / Auth | P2 | ✅ Đã hoàn thành | Dễ |
+| **CASH-01** | Export Sổ quỹ Chuẩn hóa Bộ lọc & Bổ sung Thống kê | Fullstack / Finance | P2 | ✅ Đã hoàn thành | Dễ |
+| **DOC-01** | Đồng bộ Toàn diện Tài liệu Dự án với Source Code | Docs / Arch | P2 | ✅ Đã hoàn thành | Dễ |
+| **ACC-01** | Khảo sát & Đặc tả Kế toán/Thuế (Chưa tự ý code hạch toán) | BA / Planning | P1 | 🔵 Đang khảo sát | Khó |
 | **BE-01** | Payment Callback Verification & Replay Protection | Backend / Sec | P0 | ✅ Đã hoàn thành | Vừa |
 | **BE-02** | Payment & Order State Protection (Late callback reconciliation) | Backend / Biz | P0 | ✅ Đã hoàn thành | Vừa |
 | **BE-03** | Guest Checkout Determinism & Idempotency Conflict Check | Backend / Core | P0 | ✅ Đã hoàn thành | Vừa |
