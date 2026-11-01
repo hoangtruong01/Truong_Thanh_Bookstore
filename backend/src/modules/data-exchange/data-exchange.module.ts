@@ -6,6 +6,7 @@ import {
   CategorySchema,
 } from '../categories/schemas/category.schema';
 import { Supplier, SupplierSchema } from '../suppliers/schemas/supplier.schema';
+import { ImportBatch, ImportBatchSchema } from './schemas/import-batch.schema';
 import { DataExchangeService } from './data-exchange.service';
 import { DataExchangeController } from './data-exchange.controller';
 import { InventoryModule } from '../inventory/inventory.module';
@@ -19,6 +20,7 @@ import { CategoriesModule } from '../categories/categories.module';
       { name: Product.name, schema: ProductSchema },
       { name: Category.name, schema: CategorySchema },
       { name: Supplier.name, schema: SupplierSchema },
+      { name: ImportBatch.name, schema: ImportBatchSchema },
     ]),
     InventoryModule,
     ProductsModule,

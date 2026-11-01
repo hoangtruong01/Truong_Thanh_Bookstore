@@ -55,6 +55,7 @@ import {
 import { Product } from './products/schemas/product.schema';
 import { Category } from './categories/schemas/category.schema';
 import { Supplier } from './suppliers/schemas/supplier.schema';
+import { ImportBatch } from './data-exchange/schemas/import-batch.schema';
 import { Inventory } from './inventory/schemas/inventory.schema';
 import { InventoryTransactionType } from '../common/enums';
 
@@ -75,6 +76,7 @@ describe('Comprehensive BA SRS Business Flows (UAT-E2E-01 -> UAT-E2E-13)', () =>
   let mockProductModel: any;
   let mockCategoryModel: any;
   let mockSupplierModel: any;
+  let mockImportBatchModel: any;
   let mockInventoryService: any;
 
   beforeEach(async () => {
@@ -178,6 +180,15 @@ describe('Comprehensive BA SRS Business Flows (UAT-E2E-01 -> UAT-E2E-13)', () =>
     }));
     mockSupplierModel.findOne = jest.fn();
 
+    mockImportBatchModel = {
+      findOne: jest.fn().mockResolvedValue(null),
+      create: jest
+        .fn()
+        .mockImplementation((dto) =>
+          Promise.resolve({ _id: new Types.ObjectId(), ...dto }),
+        ),
+    };
+
     mockInventoryService = {
       importStock: jest.fn().mockResolvedValue({}),
       adjustStock: jest.fn().mockResolvedValue({}),
@@ -228,6 +239,10 @@ describe('Comprehensive BA SRS Business Flows (UAT-E2E-01 -> UAT-E2E-13)', () =>
         {
           provide: getModelToken(Supplier.name),
           useValue: mockSupplierModel,
+        },
+        {
+          provide: getModelToken(ImportBatch.name),
+          useValue: mockImportBatchModel,
         },
         {
           provide: InventoryService,
