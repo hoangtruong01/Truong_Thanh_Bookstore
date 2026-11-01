@@ -11,29 +11,61 @@
   </div>
 
   <!-- FE-01: Auth Hydration Splash / Loading State -->
-  <div
-    v-if="!authStore.isHydrated"
-    class="fixed inset-0 z-[9998] bg-white flex flex-col items-center justify-center p-6 space-y-6"
-  >
-    <div class="flex items-center gap-3">
-      <div class="w-12 h-12 rounded-2xl bg-red-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-red-500/30 animate-pulse">
-        TT
-      </div>
-      <div>
-        <h1 class="text-xl font-black text-slate-900 tracking-tight">TRƯỜNG THÀNH</h1>
-        <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Bookstore & Stationery</p>
-      </div>
-    </div>
-    <div class="flex items-center gap-3 text-slate-500 text-xs font-semibold">
-      <svg class="animate-spin h-4 w-4 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
-      <span>Đang kiểm tra phiên làm việc...</span>
-    </div>
-  </div>
+  <Transition name="splash-fade">
+    <div
+      v-if="!authStore.isHydrated"
+      class="fixed inset-0 z-[9998] bg-gradient-to-br from-slate-50 via-white to-red-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center p-6 select-none overflow-hidden"
+    >
+      <!-- Ambient Background Glows -->
+      <div class="absolute -top-32 -left-32 w-80 h-80 bg-red-500/10 dark:bg-red-500/15 rounded-full blur-3xl pointer-events-none animate-pulse-soft"></div>
+      <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-amber-500/10 dark:bg-rose-500/10 rounded-full blur-3xl pointer-events-none animate-pulse-soft"></div>
 
-  <ErrorBoundary v-else>
+      <!-- Main Splash Card -->
+      <div class="relative z-10 flex flex-col items-center text-center max-w-sm px-6 py-8">
+        <!-- Logo Emblem with Glow Ring -->
+        <div class="relative mb-5 group">
+          <div class="absolute -inset-2 bg-gradient-to-r from-red-600 to-amber-500 rounded-3xl blur-lg opacity-30 group-hover:opacity-50 transition duration-700 animate-pulse-soft"></div>
+          <div class="relative w-20 h-20 rounded-2xl bg-white dark:bg-slate-900 p-2 shadow-xl border border-slate-200/70 dark:border-slate-800 flex items-center justify-center overflow-hidden">
+            <img
+              src="@/assets/logo.webp"
+              alt="Trường Thành Bookstore"
+              class="w-full h-full object-contain transform transition duration-500 hover:scale-105"
+            />
+          </div>
+        </div>
+
+        <!-- Brand Titles -->
+        <div class="space-y-1 mb-6">
+          <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
+            <span>TRƯỜNG THÀNH</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-red-600 inline-block animate-ping"></span>
+          </h1>
+          <p class="text-xs uppercase tracking-[0.22em] text-red-600 dark:text-red-400 font-extrabold">
+            Bookstore & Stationery
+          </p>
+          <p class="text-xs text-slate-400 dark:text-slate-500 font-medium">
+            Đồng hành cùng tri thức & sáng tạo
+          </p>
+        </div>
+
+        <!-- Modern Indeterminate Shimmer Progress Bar -->
+        <div class="w-48 h-1.5 bg-slate-200/80 dark:bg-slate-800 rounded-full overflow-hidden mb-4 relative shadow-inner">
+          <div class="absolute inset-y-0 w-2/5 bg-gradient-to-r from-transparent via-red-600 to-transparent rounded-full animate-shimmer-slide"></div>
+        </div>
+
+        <!-- Status Message with Micro-indicator -->
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-slate-600 dark:text-slate-300 text-xs font-semibold shadow-xs">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+          </span>
+          <span>Đang kiểm tra phiên làm việc...</span>
+        </div>
+      </div>
+    </div>
+  </Transition>
+
+  <ErrorBoundary v-if="authStore.isHydrated">
     <router-view />
   </ErrorBoundary>
 </template>
@@ -114,3 +146,29 @@ onUnmounted(() => {
   disconnectSocket()
 })
 </script>
+
+<style scoped>
+@keyframes shimmer-slide {
+  0% {
+    left: -40%;
+  }
+  100% {
+    left: 140%;
+  }
+}
+
+.animate-shimmer-slide {
+  animation: shimmer-slide 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.splash-fade-enter-active,
+.splash-fade-leave-active {
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.splash-fade-enter-from,
+.splash-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
+}
+</style>
