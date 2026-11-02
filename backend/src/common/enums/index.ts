@@ -82,6 +82,29 @@ export enum StockTransferStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export enum DocumentType {
+  PURCHASE_ORDER = 'PURCHASE_ORDER',
+  GOODS_RECEIPT = 'GOODS_RECEIPT',
+  SUPPLIER_RETURN = 'SUPPLIER_RETURN',
+  CASH_RECEIPT = 'CASH_RECEIPT',
+  CASH_PAYMENT = 'CASH_PAYMENT',
+  STOCK_TRANSFER = 'STOCK_TRANSFER',
+  INVENTORY_ADJUSTMENT = 'INVENTORY_ADJUSTMENT',
+  SALES_INVOICE = 'SALES_INVOICE',
+  SUPPLIER_INVOICE = 'SUPPLIER_INVOICE',
+  BANK_STATEMENT = 'BANK_STATEMENT',
+  STOCK_AUDIT = 'STOCK_AUDIT',
+  CONTRACT_QUOTATION = 'CONTRACT_QUOTATION',
+  OTHER = 'OTHER',
+}
+
+export enum DocumentStatus {
+  DRAFT = 'DRAFT',
+  POSTED = 'POSTED',
+  REVERSED = 'REVERSED',
+  CANCELLED = 'CANCELLED',
+}
+
 export enum DiscountType {
   PERCENT = 'PERCENT',
   FIXED = 'FIXED',
@@ -104,6 +127,29 @@ export enum LoyaltyTier {
   SILVER = 'SILVER',
   GOLD = 'GOLD',
   DIAMOND = 'DIAMOND',
+}
+
+export enum CustomerType {
+  RETAIL = 'RETAIL',
+  WHOLESALE = 'WHOLESALE',
+  SCHOOL = 'SCHOOL',
+  OFFICE = 'OFFICE',
+  RESELLER = 'RESELLER',
+  CORPORATE = 'CORPORATE',
+}
+
+export enum CustomerCRMTier {
+  BRONZE = 'BRONZE',
+  SILVER = 'SILVER',
+  GOLD = 'GOLD',
+  PLATINUM = 'PLATINUM',
+  VIP = 'VIP',
+}
+
+export enum CarePriority {
+  HIGH = 'HIGH',
+  MEDIUM = 'MEDIUM',
+  LOW = 'LOW',
 }
 
 export enum StaffPermission {

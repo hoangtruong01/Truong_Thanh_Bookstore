@@ -185,6 +185,10 @@ async function bootstrap() {
         'Point of Sale registers, cash drawer, and shift reconciliation',
       )
       .addTag('data-exchange', 'Secure Excel import and export pipelines')
+      .addTag(
+        'documents',
+        'Document Center, digital invoices, and attachment archiving',
+      )
       .addTag('reviews', 'Product reviews and ratings')
       .addTag('promotions', 'Promotion and voucher management')
       .addTag('banners', 'Homepage banners and promotional hero slides')
