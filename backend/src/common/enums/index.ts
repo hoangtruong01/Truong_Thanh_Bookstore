@@ -62,6 +62,24 @@ export enum InventoryTransactionType {
   ADJUSTMENT = 'ADJUSTMENT',
   DAMAGE = 'DAMAGE',
   OPENING_BALANCE = 'OPENING_BALANCE',
+  TRANSFER_IN = 'TRANSFER_IN',
+  TRANSFER_OUT = 'TRANSFER_OUT',
+}
+
+export enum WarehouseType {
+  MAIN = 'MAIN',
+  STORE = 'STORE',
+  ONLINE = 'ONLINE',
+  DAMAGED = 'DAMAGED',
+  QUARANTINE = 'QUARANTINE',
+}
+
+export enum StockTransferStatus {
+  DRAFT = 'DRAFT',
+  APPROVED = 'APPROVED',
+  IN_TRANSIT = 'IN_TRANSIT',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
 }
 
 export enum DiscountType {

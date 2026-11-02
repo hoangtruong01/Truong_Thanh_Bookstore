@@ -169,6 +169,10 @@ async function bootstrap() {
       .addTag('payments', 'Payment processing and gateways')
       .addTag('inventory', 'Inventory management')
       .addTag('stock-audits', 'Inventory stock audits and variance adjustments')
+      .addTag(
+        'warehouses',
+        'Multi-warehouse management, stock transfers, and quarantine isolation',
+      )
       .addTag('suppliers', 'Supplier management and vendor relationships')
       .addTag('purchasing', 'Purchase orders, receipts, and returns')
       .addTag(

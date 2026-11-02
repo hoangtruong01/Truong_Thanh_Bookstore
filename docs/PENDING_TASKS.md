@@ -22,6 +22,7 @@
 | **CASH-01** | Export Sổ quỹ Chuẩn hóa Bộ lọc & Bổ sung Thống kê | Fullstack / Finance | P2 | ✅ Đã hoàn thành | Dễ |
 | **DOC-01** | Đồng bộ Toàn diện Tài liệu Dự án với Source Code | Docs / Arch | P2 | ✅ Đã hoàn thành | Dễ |
 | **ACC-01** | Khảo sát & Đặc tả Kế toán/Thuế (Chưa tự ý code hạch toán) | BA / Planning | P1 | 🔵 Đang khảo sát | Khó |
+| **INV-02** | Quản lý Nhiều Kho, Chuyển Kho & Cô Lập Hàng Lỗi | Fullstack / ERP | P1 | ✅ Đã hoàn thành | Khó |
 | **BE-01** | Payment Callback Verification & Replay Protection | Backend / Sec | P0 | ✅ Đã hoàn thành | Vừa |
 | **BE-02** | Payment & Order State Protection (Late callback reconciliation) | Backend / Biz | P0 | ✅ Đã hoàn thành | Vừa |
 | **BE-03** | Guest Checkout Determinism & Idempotency Conflict Check | Backend / Core | P0 | ✅ Đã hoàn thành | Vừa |

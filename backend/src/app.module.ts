@@ -39,6 +39,7 @@ import { StockAuditsModule } from './modules/stock-audits/stock-audits.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { DataExchangeModule } from './modules/data-exchange/data-exchange.module';
+import { WarehousesModule } from './modules/warehouses/warehouses.module';
 
 @Module({
   imports: [
@@ -113,6 +114,7 @@ import { DataExchangeModule } from './modules/data-exchange/data-exchange.module
     PricingModule,
     FinanceModule,
     DataExchangeModule,
+    WarehousesModule,
   ],
   controllers: [AppController],
   providers: [
