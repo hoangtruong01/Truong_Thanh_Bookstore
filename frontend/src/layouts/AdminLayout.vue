@@ -495,38 +495,6 @@ const topNavItems = computed<NavItem[]>(() => {
   return rawItems.filter(item => !item.permission || userPermissions.includes(item.permission))
 })
 
-// Collapsible group state
-const openGroups = ref<Record<string, boolean>>({
-  sales: true,
-  catalog: true,
-  inventory: true,
-  finance: true,
-  marketing: true,
-})
-
-function toggleGroup(key: string) {
-  openGroups.value[key] = !openGroups.value[key]
-}
-
-function isGroupOpen(key: string): boolean {
-  return openGroups.value[key] ?? true
-}
-
-function autoExpandActiveGroup() {
-  for (const group of navGroups.value) {
-    const hasActiveItem = group.items.some(
-      item => route.name === item.name || route.path.startsWith(item.to)
-    )
-    if (hasActiveItem) {
-      openGroups.value[group.key] = true
-    }
-  }
-}
-
-watch(() => route.path, () => {
-  autoExpandActiveGroup()
-}, { immediate: true })
-
 const navGroups = computed<NavGroup[]>(() => {
   const isEn = locale.value === 'en'
 
@@ -599,6 +567,39 @@ const navGroups = computed<NavGroup[]>(() => {
     }))
     .filter((group) => group.items.length > 0)
 })
+
+// Collapsible group state
+const openGroups = ref<Record<string, boolean>>({
+  sales: true,
+  catalog: true,
+  inventory: true,
+  finance: true,
+  marketing: true,
+})
+
+function toggleGroup(key: string) {
+  openGroups.value[key] = !openGroups.value[key]
+}
+
+function isGroupOpen(key: string): boolean {
+  return openGroups.value[key] ?? true
+}
+
+function autoExpandActiveGroup() {
+  if (!navGroups.value) return
+  for (const group of navGroups.value) {
+    const hasActiveItem = group.items.some(
+      item => route.name === item.name || route.path.startsWith(item.to)
+    )
+    if (hasActiveItem) {
+      openGroups.value[group.key] = true
+    }
+  }
+}
+
+watch(() => route.path, () => {
+  autoExpandActiveGroup()
+}, { immediate: true })
 
 function handleLogout() {
   authStore.logout()
