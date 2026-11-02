@@ -9,65 +9,100 @@
       :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full']"
     >
       <!-- Sidebar Header / Logo -->
-      <div class="h-20 flex-shrink-0 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 gap-2.5 bg-white dark:bg-slate-900">
-        <!-- Emblem -->
-        <img src="@/assets/logo.jpg" class="w-8.5 h-8.5 rounded-full object-cover border border-slate-200 dark:border-slate-700" alt="Trường Thành Logo" />
-        <div class="flex flex-col leading-none">
-          <span class="text-sm font-black text-[#dc2626] tracking-tight uppercase">TRƯỜNG THÀNH</span>
-          <span class="text-[8px] font-bold text-slate-400 tracking-wider uppercase">ADMIN PANEL</span>
+      <div class="h-18 flex-shrink-0 flex items-center px-4.5 border-b border-slate-200/80 dark:border-slate-800 gap-3 bg-white dark:bg-slate-900">
+        <!-- Logo Emblem -->
+        <div class="relative flex-shrink-0">
+          <img src="@/assets/logo.jpg" class="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-2xs" alt="Trường Thành Logo" />
+          <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" title="Online"></span>
+        </div>
+        <div class="flex flex-col min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs font-black text-slate-900 dark:text-white tracking-tight uppercase truncate">TRƯỜNG THÀNH</span>
+            <span class="px-1 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400 border border-red-200/60 dark:border-red-900/40">ERP</span>
+          </div>
+          <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 truncate">Quản trị & Điều hành</span>
         </div>
       </div>
 
       <!-- Navigation links (Collapsible Accordion Style with Independent Scroll) -->
-      <nav class="flex-1 min-h-0 p-3 space-y-1.5 overflow-y-auto overscroll-contain custom-scrollbar">
-        <!-- Top Standalone Quick Links (e.g. Dashboard) -->
-        <div class="space-y-0.5 pb-2 mb-1.5 border-b border-slate-100 dark:border-slate-800">
+      <nav class="flex-1 min-h-0 px-3 py-3 space-y-2.5 overflow-y-auto overscroll-contain custom-scrollbar">
+        <!-- Top Standalone Quick Links (Dashboard) -->
+        <div class="space-y-1">
           <router-link
             v-for="item in topNavItems"
             :key="item.name"
             :to="item.to"
-            class="flex items-center gap-3 px-3.5 py-2.2 rounded-xl text-xs font-semibold transition-all group"
+            class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 group relative"
             :class="[
-              $route.name === item.name || route.path.startsWith(item.to)
-                ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-2xs'
-                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+              $route.name === item.name || route.path === item.to
+                ? 'bg-red-50/90 dark:bg-red-950/50 text-red-700 dark:text-red-300 font-bold shadow-xs border border-red-200/70 dark:border-red-900/50'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
             ]"
           >
-            <span class="text-base flex-shrink-0 leading-none">{{ item.icon }}</span>
+            <!-- Left Accent indicator when active -->
+            <span
+              v-if="$route.name === item.name || route.path === item.to"
+              class="absolute left-0 top-2 bottom-2 w-1 bg-red-600 dark:bg-red-500 rounded-r-full"
+            ></span>
+
+            <!-- Uniform Icon Container (Exact 26x26px tile for perfect vertical alignment) -->
+            <div
+              class="w-6.5 h-6.5 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              :class="[
+                $route.name === item.name || route.path === item.to
+                  ? 'bg-red-100/80 dark:bg-red-900/50 text-red-600 dark:text-red-400'
+                  : 'bg-slate-100/70 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 group-hover:bg-slate-200/70 dark:group-hover:bg-slate-700/80 group-hover:text-slate-700 dark:group-hover:text-slate-200'
+              ]"
+            >
+              <div class="w-3.5 h-3.5">
+                <AdminNavIcon :name="item.icon" />
+              </div>
+            </div>
+
             <span class="truncate">{{ item.label }}</span>
           </router-link>
         </div>
+
+        <!-- Section Divider -->
+        <div class="border-t border-slate-200/70 dark:border-slate-800/80 my-1"></div>
 
         <!-- Collapsible Groups -->
         <div
           v-for="group in navGroups"
           :key="group.key"
-          class="space-y-0.5"
+          class="space-y-1"
         >
-          <!-- Group Header Button -->
+          <!-- Group Header Button (Refined, Subtle, Balanced) -->
           <button
             type="button"
-            class="w-full flex items-center justify-between px-3.5 py-2 text-xs font-extrabold uppercase tracking-wider text-[#991b1b] dark:text-rose-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors cursor-pointer select-none"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-800/40 rounded-lg transition-colors cursor-pointer select-none group/hdr"
             @click="toggleGroup(group.key)"
           >
-            <div class="flex items-center gap-2.5 truncate">
-              <span class="text-sm flex-shrink-0 leading-none">{{ group.icon }}</span>
+            <div class="flex items-center gap-2 truncate">
+              <!-- Small Category Vector Icon -->
+              <div class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover/hdr:text-slate-600 dark:group-hover/hdr:text-slate-300 transition-colors">
+                <AdminNavIcon :name="group.icon" />
+              </div>
               <span class="truncate">{{ group.label }}</span>
             </div>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="2.5"
-              stroke="currentColor"
-              class="w-3.5 h-3.5 text-slate-400 dark:text-slate-400 transition-transform duration-200 flex-shrink-0"
-              :class="[isGroupOpen(group.key) ? 'rotate-180' : '']"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-            </svg>
+
+            <!-- Sleek Rotating Chevron -->
+            <div class="w-4 h-4 rounded-md flex items-center justify-center text-slate-400 group-hover/hdr:text-slate-600 dark:text-slate-500 transition-colors">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2.2"
+                stroke="currentColor"
+                class="w-3 h-3 transition-transform duration-200"
+                :class="[isGroupOpen(group.key) ? 'rotate-180' : '']"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+              </svg>
+            </div>
           </button>
 
-          <!-- Group Submenu -->
+          <!-- Group Submenu with Left Guide Line -->
           <transition
             enter-active-class="transition-all duration-200 ease-out overflow-hidden"
             leave-active-class="transition-all duration-150 ease-in overflow-hidden"
@@ -76,20 +111,42 @@
             leave-from-class="max-h-96 opacity-100"
             leave-to-class="max-h-0 opacity-0"
           >
-            <div v-show="isGroupOpen(group.key)" class="space-y-0.5 pl-2">
+            <div
+              v-show="isGroupOpen(group.key)"
+              class="relative ml-3.5 pl-2.5 my-1 space-y-0.5 border-l border-slate-200/80 dark:border-slate-800"
+            >
               <router-link
                 v-for="item in group.items"
                 :key="item.name"
                 :to="item.to"
-                class="flex items-center gap-3 px-3.5 py-2.2 rounded-xl text-xs font-semibold transition-all group"
+                class="flex items-center gap-2.5 px-2.5 py-1.8 rounded-xl text-xs transition-all duration-150 group relative"
                 :class="[
                   $route.name === item.name || route.path.startsWith(item.to)
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-2xs'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-red-50/90 dark:bg-red-950/50 text-red-700 dark:text-red-300 font-bold shadow-xs border border-red-200/70 dark:border-red-900/50'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white font-medium'
                 ]"
               >
-                <span class="text-base flex-shrink-0 leading-none">{{ item.icon }}</span>
-                <span class="truncate">{{ item.label }}</span>
+                <!-- Left Accent indicator when active -->
+                <span
+                  v-if="$route.name === item.name || route.path.startsWith(item.to)"
+                  class="absolute -left-2.5 top-1.5 bottom-1.5 w-0.75 bg-red-600 dark:bg-red-500 rounded-r-full"
+                ></span>
+
+                <!-- Fixed 26x26px Icon container for straight vertical column -->
+                <div
+                  class="w-6.5 h-6.5 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                  :class="[
+                    $route.name === item.name || route.path.startsWith(item.to)
+                      ? 'bg-red-100/80 dark:bg-red-900/50 text-red-600 dark:text-red-400'
+                      : 'bg-transparent text-slate-400 dark:text-slate-500 group-hover:bg-slate-200/60 dark:group-hover:bg-slate-700/80 group-hover:text-slate-700 dark:group-hover:text-slate-200'
+                  ]"
+                >
+                  <div class="w-3.5 h-3.5">
+                    <AdminNavIcon :name="item.icon" />
+                  </div>
+                </div>
+
+                <span class="truncate leading-normal">{{ item.label }}</span>
               </router-link>
             </div>
           </transition>
@@ -100,19 +157,19 @@
       <div class="flex-shrink-0 p-3 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col gap-1.5">
         <router-link
           to="/"
-          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700 transition-all shadow-2xs"
+          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/80 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/80 transition-all shadow-2xs"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 text-slate-400">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-4 h-4 text-slate-400 group-hover:text-slate-600">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.25A2.25 2.25 0 0 1 0 18.75V10.5m13.5 10.5h6.75A2.25 2.25 0 0 0 22.5 18.75V10.5M12 3l10.5 7.5M12 3 1.5 10.5" />
           </svg>
           <span>Về trang bán hàng</span>
         </router-link>
 
         <button
-          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-bold text-rose-600 dark:text-rose-400 border border-rose-100/90 dark:border-rose-900/40 transition-all cursor-pointer"
+          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-100/90 dark:border-rose-900/40 transition-all cursor-pointer"
           @click="handleLogout"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-4 h-4">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
           </svg>
           <span>Đăng xuất</span>
@@ -280,6 +337,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { reportService } from '@/services/report.service'
 import ProfileModal from '@/components/ProfileModal.vue'
+import AdminNavIcon from '@/components/AdminNavIcon.vue'
 import { useI18n } from 'vue-i18n'
 
 const authStore = useAuthStore()
@@ -481,11 +539,11 @@ interface NavGroup {
   items: NavItem[]
 }
 
-// Top Standalone Quick Links (like E-Form, Bãi đỗ xe in reference)
+// Top Standalone Quick Links (Dashboard)
 const topNavItems = computed<NavItem[]>(() => {
   const isEn = locale.value === 'en'
   const rawItems: NavItem[] = [
-    { name: 'AdminDashboard', label: isEn ? 'Dashboard' : 'Dashboard', to: '/admin/dashboard', icon: '📈' },
+    { name: 'AdminDashboard', label: isEn ? 'Dashboard' : 'Bàn làm việc (Dashboard)', to: '/admin/dashboard', icon: 'dashboard' },
   ]
   const user = authStore.user
   if (!user) return []
@@ -501,53 +559,53 @@ const navGroups = computed<NavGroup[]>(() => {
   const rawGroups: NavGroup[] = [
     {
       key: 'sales',
-      label: isEn ? 'Sales & Orders' : 'BÁN HÀNG & ĐƠN HÀNG',
-      icon: '🛒',
+      label: isEn ? 'Sales & Orders' : 'Bán hàng & Đơn hàng',
+      icon: 'sales',
       items: [
-        { name: 'AdminPOS', label: isEn ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: '🖥️', permission: 'POS_ACCESS' },
-        { name: 'AdminOrders', label: isEn ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: '🧾', permission: 'MANAGE_ORDERS' },
-        { name: 'AdminCustomers', label: isEn ? 'Customers' : 'Khách hàng', to: '/admin/customers', icon: '👥', permission: 'MANAGE_CUSTOMERS' },
+        { name: 'AdminPOS', label: isEn ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: 'pos', permission: 'POS_ACCESS' },
+        { name: 'AdminOrders', label: isEn ? 'Orders' : 'Quản lý đơn hàng', to: '/admin/orders', icon: 'orders', permission: 'MANAGE_ORDERS' },
+        { name: 'AdminCustomers', label: isEn ? 'Customers' : 'Khách hàng & Hạng sỉ', to: '/admin/customers', icon: 'customers', permission: 'MANAGE_CUSTOMERS' },
       ],
     },
     {
       key: 'catalog',
-      label: isEn ? 'Products & Pricing' : 'SẢN PHẨM & GIÁ BÁN',
-      icon: '📚',
+      label: isEn ? 'Products & Pricing' : 'Sản phẩm & Giá bán',
+      icon: 'catalog',
       items: [
-        { name: 'AdminProducts', label: isEn ? 'Products' : 'Sản phẩm', to: '/admin/products', icon: '📖', permission: 'MANAGE_PRODUCTS' },
-        { name: 'AdminCombos', label: isEn ? 'Combos' : 'Combo sản phẩm', to: '/admin/combos', icon: '🎁', permission: 'MANAGE_PRODUCTS' },
-        { name: 'AdminPricing', label: isEn ? 'Pricing & Margin' : 'Chính sách giá & Lãi', to: '/admin/pricing', icon: '💲', permission: 'MANAGE_PRICING' },
-        { name: 'AdminReviews', label: isEn ? 'Reviews' : 'Đánh giá', to: '/admin/reviews', icon: '⭐', permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminProducts', label: isEn ? 'Products' : 'Danh mục sản phẩm', to: '/admin/products', icon: 'products', permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminCombos', label: isEn ? 'Combos' : 'Gói quà & Combo', to: '/admin/combos', icon: 'combos', permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminPricing', label: isEn ? 'Pricing & Margin' : 'Chính sách giá & Lợi nhuận', to: '/admin/pricing', icon: 'pricing', permission: 'MANAGE_PRICING' },
+        { name: 'AdminReviews', label: isEn ? 'Reviews' : 'Đánh giá từ khách', to: '/admin/reviews', icon: 'reviews', permission: 'MANAGE_PRODUCTS' },
       ],
     },
     {
       key: 'inventory',
-      label: isEn ? 'Inventory & Procurement' : 'KHO & THU MUA',
-      icon: '🏢',
+      label: isEn ? 'Inventory & Procurement' : 'Kho & Thu mua hàng',
+      icon: 'inventory',
       items: [
-        { name: 'AdminInventory', label: isEn ? 'Inventory' : 'Kho hàng', to: '/admin/inventory', icon: '📦', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminPurchases', label: isEn ? 'Purchases & PO' : 'Mua hàng & PO', to: '/admin/purchases', icon: '🚚', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: '📋', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminSuppliers', label: isEn ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: '🏭', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminInventory', label: isEn ? 'Inventory' : 'Quản lý kho hàng', to: '/admin/inventory', icon: 'inventory', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminPurchases', label: isEn ? 'Purchases & PO' : 'Mua hàng & Đặt NCC', to: '/admin/purchases', icon: 'purchases', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: 'stockAudits', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminSuppliers', label: isEn ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: 'suppliers', permission: 'MANAGE_INVENTORY' },
       ],
     },
     {
       key: 'finance',
-      label: isEn ? 'Finance & Reports' : 'TÀI CHÍNH & BÁO CÁO',
-      icon: '💰',
+      label: isEn ? 'Finance & Reports' : 'Tài chính & Báo cáo',
+      icon: 'finance',
       items: [
-        { name: 'AdminReports', label: isEn ? 'Reports' : 'Báo cáo', to: '/admin/reports', icon: '📊', permission: 'VIEW_REPORTS' },
-        { name: 'AdminCashbook', label: isEn ? 'Cashbook & Finance' : 'Sổ quỹ & Thu chi', to: '/admin/cashbook', icon: '💼', permission: 'MANAGE_FINANCE' },
+        { name: 'AdminReports', label: isEn ? 'Reports' : 'Báo cáo doanh thu & Lãi', to: '/admin/reports', icon: 'reports', permission: 'VIEW_REPORTS' },
+        { name: 'AdminCashbook', label: isEn ? 'Cashbook & Finance' : 'Sổ quỹ & Dòng tiền', to: '/admin/cashbook', icon: 'cashbook', permission: 'MANAGE_FINANCE' },
       ],
     },
     {
       key: 'marketing',
-      label: isEn ? 'Marketing & Growth' : 'TRUYỀN THÔNG & TIẾP THỊ',
-      icon: '📣',
+      label: isEn ? 'Marketing & Growth' : 'Truyền thông & Tiếp thị',
+      icon: 'marketing',
       items: [
-        { name: 'AdminPromotions', label: isEn ? 'Promotions' : 'Khuyến mãi', to: '/admin/promotions', icon: '🏷️', permission: 'MANAGE_PROMOTIONS' },
-        { name: 'AdminBanners', label: isEn ? 'Banners' : 'Banners', to: '/admin/banners', icon: '🖼️', permission: 'MANAGE_BANNERS' },
-        { name: 'AdminLandingPages', label: isEn ? 'Quick Pages' : 'Tạo Page Nhanh', to: '/admin/landing-pages', icon: '⚡', permission: 'MANAGE_LANDING_PAGES' },
+        { name: 'AdminPromotions', label: isEn ? 'Promotions' : 'Khuyến mãi & Voucher', to: '/admin/promotions', icon: 'promotions', permission: 'MANAGE_PROMOTIONS' },
+        { name: 'AdminBanners', label: isEn ? 'Banners' : 'Banner trang chủ', to: '/admin/banners', icon: 'banners', permission: 'MANAGE_BANNERS' },
+        { name: 'AdminLandingPages', label: isEn ? 'Quick Pages' : 'Trang đích (Landing Page)', to: '/admin/landing-pages', icon: 'landingPages', permission: 'MANAGE_LANDING_PAGES' },
       ],
     },
   ]
