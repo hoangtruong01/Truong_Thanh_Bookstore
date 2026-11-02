@@ -107,3 +107,4 @@ export const CustomerCRMProfileSchema =
 CustomerCRMProfileSchema.index({ customerType: 1, tier: 1 });
 CustomerCRMProfileSchema.index({ carePriority: 1 });
 CustomerCRMProfileSchema.index({ spent365d: -1 });
+

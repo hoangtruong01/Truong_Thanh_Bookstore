@@ -114,3 +114,4 @@ ERPDocumentSchema.index({ documentNumber: 1 }, { unique: true });
 ERPDocumentSchema.index({ documentType: 1, status: 1 });
 ERPDocumentSchema.index({ postingDate: -1 });
 ERPDocumentSchema.index({ linkedDocumentNumber: 1 });
+
