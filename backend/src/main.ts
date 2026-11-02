@@ -168,8 +168,24 @@ async function bootstrap() {
       .addTag('orders', 'Order management')
       .addTag('payments', 'Payment processing and gateways')
       .addTag('inventory', 'Inventory management')
+      .addTag('stock-audits', 'Inventory stock audits and variance adjustments')
+      .addTag('suppliers', 'Supplier management and vendor relationships')
+      .addTag('purchasing', 'Purchase orders, receipts, and returns')
+      .addTag(
+        'pricing',
+        'Pricing policies, wholesale tiers, and margin protection',
+      )
+      .addTag('finance', 'Cashbook, debt ledger, and financial movements')
+      .addTag(
+        'pos',
+        'Point of Sale registers, cash drawer, and shift reconciliation',
+      )
+      .addTag('data-exchange', 'Secure Excel import and export pipelines')
       .addTag('reviews', 'Product reviews and ratings')
       .addTag('promotions', 'Promotion and voucher management')
+      .addTag('banners', 'Homepage banners and promotional hero slides')
+      .addTag('combos', 'Product combo deals and bundles')
+      .addTag('landing-pages', 'Marketing landing pages builder')
       .addTag('notifications', 'Notification management')
       .addTag('reports', 'Reports & analytics')
       .build();
