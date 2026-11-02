@@ -852,14 +852,15 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | 🛠️ **Tech Debt** (2 task) | Tách OrdersService (Facade Pattern), Tối ưu Index Auto-cancel |
 | 🧪 **QA** (4 task) | Auth Security Suite, Payment Idempotent Suite, Race Condition Test, UX Regression Test |
 
-### 11.2. Kết Quả Kiểm Thử Hiện Tại (Cập nhật sau hoàn thành Playbook Sprint B1 & B2: INV-02, DOC-02, CRM-01)
+### 11.2. Kết Quả Kiểm Thử Hiện Tại (Cập nhật sau hoàn thành Playbook Sprint B1 & B2: INV-02, DOC-02, CRM-01, PUR-02)
 
 | Phân hệ | Lệnh | Kết quả |
 | :--- | :--- | :---: |
-| Backend Unit & Integration Tests | `cd backend && npm test` | **68/68 suites, 806/806 tests PASS (100%)** |
+| Backend Unit & Integration Tests | `cd backend && npm test` | **69/69 suites, 819/819 tests PASS (100%)** |
 | Multi-Warehouse & Stock Transfers (INV-02) | `cd backend && npm test -- warehouses.service.spec.ts` | **14/14 multi-warehouse & transfer tests PASS (100%)** |
 | Document Center & Archiving (DOC-02) | `cd backend && npm test -- documents.service.spec.ts` | **11/11 electronic document tests PASS (100%)** |
 | Customer CRM & Tiers (CRM-01) | `cd backend && npm test -- customers.service.spec.ts` | **9/9 customer tiers & priority care tests PASS (100%)** |
+| Supplier Quotations & Recommendations (PUR-02) | `cd backend && npm test -- supplier-quotations.service.spec.ts` | **13/13 supplier comparison & optimization tests PASS (100%)** |
 | Comprehensive BA SRS Flows (Sprint 6) | `cd backend && npm test -- uat-e2e-flows.spec.ts` | **14/14 tests covering UAT-E2E-01 -> UAT-E2E-13 PASS (100%)** |
 | Customer Credit & Cashbook (FIN-01, FIN-02, AR-01, CASH-01) | `cd backend && npm test -- finance.service.spec.ts customer-credit.service.spec.ts` | **57/57 financial & credit tests PASS (100%)** |
 | Purchase Returns & Suppliers (PUR-RET-01, SUP-01) | `cd backend && npm test -- purchase-returns.service.spec.ts suppliers.service.spec.ts` | **31/31 purchasing, AP offset & return tests PASS (100%)** |
@@ -870,7 +871,7 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | Backend Health & Release SHA (TT-014) | `cd backend && npm test -- app.controller.spec.ts` | **3/3 health readiness & release SHA tests PASS** |
 | Backend Security Suite | `cd backend && npm test -- security-p0-audit.spec.ts` | **16/16 security regression tests PASS** |
 | Backend Commerce Suite | `cd backend && npm test -- orders.commerce-regression.spec.ts` | **14/14 commerce invariant tests PASS** |
-| Backend Linting | `cd backend && npm run lint` | **0 errors** (2.286 warnings, --max-warnings 2350) |
+| Backend Linting | `cd backend && npm run lint` | **0 errors** (2.483 warnings, --max-warnings 2550) |
 | Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
 | Frontend Unit Tests | `cd frontend && npm run test:unit` | **17/17 suites, 97/97 tests PASS (100%)** |
 | Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |
@@ -880,7 +881,7 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | Frontend Multi-Device E2E (TT-024) | `cd frontend && npx playwright test` | **9/9 tests PASS (100%)** (Desktop, Mobile, Tablet & Barcode Scanner) |
 | Mobile Tests | `cd mobile && flutter test` | **47/47 tests PASS (100%)** |
 | Mobile Analyze | `cd mobile && flutter analyze` | **0 issues** |
-| **Tổng Cộng Toàn Dự Án** | **Toàn bộ Test Suite** | **959/959 tests PASS (100% tỷ lệ thành công)** |
+| **Tổng Cộng Toàn Dự Án** | **Toàn bộ Test Suite** | **972/972 tests PASS (100% tỷ lệ thành công)** |
 
 ### 11.3. Cổng Nghiệm Thu CTO — Đã Đạt 4/4
 

@@ -25,7 +25,7 @@
 | **INV-02** | Quản lý Nhiều Kho, Chuyển Kho & Cô Lập Hàng Lỗi | Fullstack / ERP | P1 | ✅ Đã hoàn thành | Khó |
 | **DOC-02** | Document Center & Quản lý Chứng từ Điện tử | Backend / ERP | P1 | ✅ Đã hoàn thành | Vừa |
 | **CRM-01** | Quản lý Khách Sỉ/Lẻ, Hạng Khách & Ưu tiên Chăm sóc | Fullstack / CRM | P1 | ✅ Đã hoàn thành | Vừa |
-| **PUR-02** | Báo giá NCC, Lịch sử Giá & Đề xuất Nguồn hàng Tối ưu | Backend / Purchasing | P1 | 🔵 Đang triển khai | Khó |
+| **PUR-02** | Báo giá NCC, Lịch sử Giá & Đề xuất Nguồn hàng Tối ưu | Backend / Purchasing | P1 | ✅ Đã hoàn thành | Khó |
 | **BE-01** | Payment Callback Verification & Replay Protection | Backend / Sec | P0 | ✅ Đã hoàn thành | Vừa |
 | **BE-02** | Payment & Order State Protection (Late callback reconciliation) | Backend / Biz | P0 | ✅ Đã hoàn thành | Vừa |
 | **BE-03** | Guest Checkout Determinism & Idempotency Conflict Check | Backend / Core | P0 | ✅ Đã hoàn thành | Vừa |

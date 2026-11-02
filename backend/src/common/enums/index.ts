@@ -105,6 +105,14 @@ export enum DocumentStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export enum QuotationStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  EXPIRED = 'EXPIRED',
+}
+
 export enum DiscountType {
   PERCENT = 'PERCENT',
   FIXED = 'FIXED',

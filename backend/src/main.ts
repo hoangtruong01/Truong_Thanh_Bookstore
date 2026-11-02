@@ -174,7 +174,10 @@ async function bootstrap() {
         'Multi-warehouse management, stock transfers, and quarantine isolation',
       )
       .addTag('suppliers', 'Supplier management and vendor relationships')
-      .addTag('purchasing', 'Purchase orders, receipts, and returns')
+      .addTag(
+        'purchasing',
+        'Purchase orders, receipts, returns, and supplier quotations (PUR-02)',
+      )
       .addTag(
         'pricing',
         'Pricing policies, wholesale tiers, and margin protection',
