@@ -34,24 +34,25 @@
             :to="item.to"
             class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 group relative"
             :class="[
-              $route.name === item.name || route.path === item.to
-                ? 'bg-red-50/90 dark:bg-red-950/50 text-red-700 dark:text-red-300 font-bold shadow-xs border border-red-200/70 dark:border-red-900/50'
+              isItemActive(item)
+                ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-xs border border-slate-200/90 dark:border-slate-700/80'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
             ]"
           >
             <!-- Left Accent indicator when active -->
             <span
-              v-if="$route.name === item.name || route.path === item.to"
-              class="absolute left-0 top-2 bottom-2 w-1 bg-red-600 dark:bg-red-500 rounded-r-full"
+              v-if="isItemActive(item)"
+              class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
+              :class="colorThemes[item.color]?.accentBar || 'bg-indigo-600'"
             ></span>
 
-            <!-- Uniform Icon Container (Exact 26x26px tile for perfect vertical alignment) -->
+            <!-- Uniform Icon Container with Vibrant Color -->
             <div
-              class="w-6.5 h-6.5 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              class="w-6.5 h-6.5 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-150 group-hover:scale-105"
               :class="[
-                $route.name === item.name || route.path === item.to
-                  ? 'bg-red-100/80 dark:bg-red-900/50 text-red-600 dark:text-red-400'
-                  : 'bg-slate-100/70 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 group-hover:bg-slate-200/70 dark:group-hover:bg-slate-700/80 group-hover:text-slate-700 dark:group-hover:text-slate-200'
+                isItemActive(item)
+                  ? colorThemes[item.color]?.activeBadge
+                  : colorThemes[item.color]?.inactiveBadge
               ]"
             >
               <div class="w-3.5 h-3.5">
@@ -72,16 +73,21 @@
           :key="group.key"
           class="space-y-1"
         >
-          <!-- Group Header Button (Refined, Subtle, Balanced) -->
+          <!-- Group Header Button (Refined, Subtle, Balanced with Color Badge) -->
           <button
             type="button"
-            class="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-800/40 rounded-lg transition-colors cursor-pointer select-none group/hdr"
+            class="w-full flex items-center justify-between px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/60 dark:hover:bg-slate-800/40 rounded-lg transition-colors cursor-pointer select-none group/hdr"
             @click="toggleGroup(group.key)"
           >
             <div class="flex items-center gap-2 truncate">
-              <!-- Small Category Vector Icon -->
-              <div class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover/hdr:text-slate-600 dark:group-hover/hdr:text-slate-300 transition-colors">
-                <AdminNavIcon :name="group.icon" />
+              <!-- Small Category Vector Icon Badge -->
+              <div
+                class="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-transform group-hover/hdr:scale-105"
+                :class="colorThemes[group.color]?.headerBadge || 'bg-slate-100 text-slate-500 border border-slate-200/60'"
+              >
+                <div class="w-3 h-3">
+                  <AdminNavIcon :name="group.icon" />
+                </div>
               </div>
               <span class="truncate">{{ group.label }}</span>
             </div>
@@ -121,24 +127,25 @@
                 :to="item.to"
                 class="flex items-center gap-2.5 px-2.5 py-1.8 rounded-xl text-xs transition-all duration-150 group relative"
                 :class="[
-                  $route.name === item.name || route.path.startsWith(item.to)
-                    ? 'bg-red-50/90 dark:bg-red-950/50 text-red-700 dark:text-red-300 font-bold shadow-xs border border-red-200/70 dark:border-red-900/50'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white font-medium'
+                  isItemActive(item)
+                    ? 'bg-slate-100/90 dark:bg-slate-800/80 text-slate-900 dark:text-white font-bold shadow-xs border border-slate-200/80 dark:border-slate-700/70'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/60 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white font-medium'
                 ]"
               >
                 <!-- Left Accent indicator when active -->
                 <span
-                  v-if="$route.name === item.name || route.path.startsWith(item.to)"
-                  class="absolute -left-2.5 top-1.5 bottom-1.5 w-0.75 bg-red-600 dark:bg-red-500 rounded-r-full"
+                  v-if="isItemActive(item)"
+                  class="absolute -left-2.5 top-1.5 bottom-1.5 w-0.75 rounded-r-full"
+                  :class="colorThemes[item.color]?.accentBar || 'bg-red-600'"
                 ></span>
 
-                <!-- Fixed 26x26px Icon container for straight vertical column -->
+                <!-- Fixed 26x26px Icon container with dedicated colorful theme -->
                 <div
-                  class="w-6.5 h-6.5 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                  class="w-6.5 h-6.5 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-150 group-hover:scale-105"
                   :class="[
-                    $route.name === item.name || route.path.startsWith(item.to)
-                      ? 'bg-red-100/80 dark:bg-red-900/50 text-red-600 dark:text-red-400'
-                      : 'bg-transparent text-slate-400 dark:text-slate-500 group-hover:bg-slate-200/60 dark:group-hover:bg-slate-700/80 group-hover:text-slate-700 dark:group-hover:text-slate-200'
+                    isItemActive(item)
+                      ? colorThemes[item.color]?.activeBadge
+                      : colorThemes[item.color]?.inactiveBadge
                   ]"
                 >
                   <div class="w-3.5 h-3.5">
@@ -157,21 +164,25 @@
       <div class="flex-shrink-0 p-3 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col gap-1.5">
         <router-link
           to="/"
-          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/80 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/80 transition-all shadow-2xs"
+          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/80 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/80 transition-all shadow-2xs group"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-4 h-4 text-slate-400 group-hover:text-slate-600">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.25A2.25 2.25 0 0 1 0 18.75V10.5m13.5 10.5h6.75A2.25 2.25 0 0 0 22.5 18.75V10.5M12 3l10.5 7.5M12 3 1.5 10.5" />
-          </svg>
+          <div class="w-5 h-5 rounded-md flex items-center justify-center bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/40">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-3.5 h-3.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.25A2.25 2.25 0 0 1 0 18.75V10.5m13.5 10.5h6.75A2.25 2.25 0 0 0 22.5 18.75V10.5M12 3l10.5 7.5M12 3 1.5 10.5" />
+            </svg>
+          </div>
           <span>Về trang bán hàng</span>
         </router-link>
 
         <button
-          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-100/90 dark:border-rose-900/40 transition-all cursor-pointer"
+          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-100/90 dark:border-rose-900/40 transition-all cursor-pointer group"
           @click="handleLogout"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
-          </svg>
+          <div class="w-5 h-5 rounded-md flex items-center justify-center bg-rose-100/80 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-3.5 h-3.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+            </svg>
+          </div>
           <span>Đăng xuất</span>
         </button>
       </div>
@@ -529,6 +540,7 @@ interface NavItem {
   label: string
   to: string
   icon: string
+  color: string
   permission?: string
 }
 
@@ -536,14 +548,131 @@ interface NavGroup {
   key: string
   label: string
   icon: string
+  color: string
   items: NavItem[]
+}
+
+interface ColorTheme {
+  inactiveBadge: string
+  activeBadge: string
+  headerBadge: string
+  headerIcon: string
+  accentBar: string
+}
+
+const colorThemes: Record<string, ColorTheme> = {
+  indigo: {
+    inactiveBadge: 'bg-indigo-50 text-indigo-600 border border-indigo-200/70 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-800/50',
+    activeBadge: 'bg-indigo-600 text-white shadow-xs dark:bg-indigo-500 dark:text-white',
+    headerBadge: 'bg-indigo-50 text-indigo-600 border border-indigo-200/70 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-800/50',
+    headerIcon: 'text-indigo-600 dark:text-indigo-400',
+    accentBar: 'bg-indigo-600 dark:bg-indigo-500',
+  },
+  blue: {
+    inactiveBadge: 'bg-blue-50 text-blue-600 border border-blue-200/70 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800/50',
+    activeBadge: 'bg-blue-600 text-white shadow-xs dark:bg-blue-500 dark:text-white',
+    headerBadge: 'bg-blue-50 text-blue-600 border border-blue-200/70 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800/50',
+    headerIcon: 'text-blue-600 dark:text-blue-400',
+    accentBar: 'bg-blue-600 dark:bg-blue-500',
+  },
+  amber: {
+    inactiveBadge: 'bg-amber-50 text-amber-600 border border-amber-200/70 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/50',
+    activeBadge: 'bg-amber-500 text-white shadow-xs dark:bg-amber-500 dark:text-white',
+    headerBadge: 'bg-amber-50 text-amber-600 border border-amber-200/70 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/50',
+    headerIcon: 'text-amber-600 dark:text-amber-400',
+    accentBar: 'bg-amber-500 dark:bg-amber-400',
+  },
+  purple: {
+    inactiveBadge: 'bg-purple-50 text-purple-600 border border-purple-200/70 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-800/50',
+    activeBadge: 'bg-purple-600 text-white shadow-xs dark:bg-purple-500 dark:text-white',
+    headerBadge: 'bg-purple-50 text-purple-600 border border-purple-200/70 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-800/50',
+    headerIcon: 'text-purple-600 dark:text-purple-400',
+    accentBar: 'bg-purple-600 dark:bg-purple-500',
+  },
+  sky: {
+    inactiveBadge: 'bg-sky-50 text-sky-600 border border-sky-200/70 dark:bg-sky-950/50 dark:text-sky-400 dark:border-sky-800/50',
+    activeBadge: 'bg-sky-600 text-white shadow-xs dark:bg-sky-500 dark:text-white',
+    headerBadge: 'bg-sky-50 text-sky-600 border border-sky-200/70 dark:bg-sky-950/50 dark:text-sky-400 dark:border-sky-800/50',
+    headerIcon: 'text-sky-600 dark:text-sky-400',
+    accentBar: 'bg-sky-600 dark:bg-sky-500',
+  },
+  pink: {
+    inactiveBadge: 'bg-pink-50 text-pink-600 border border-pink-200/70 dark:bg-pink-950/50 dark:text-pink-400 dark:border-pink-800/50',
+    activeBadge: 'bg-pink-600 text-white shadow-xs dark:bg-pink-500 dark:text-white',
+    headerBadge: 'bg-pink-50 text-pink-600 border border-pink-200/70 dark:bg-pink-950/50 dark:text-pink-400 dark:border-pink-800/50',
+    headerIcon: 'text-pink-600 dark:text-pink-400',
+    accentBar: 'bg-pink-600 dark:bg-pink-500',
+  },
+  teal: {
+    inactiveBadge: 'bg-teal-50 text-teal-600 border border-teal-200/70 dark:bg-teal-950/50 dark:text-teal-400 dark:border-teal-800/50',
+    activeBadge: 'bg-teal-600 text-white shadow-xs dark:bg-teal-500 dark:text-white',
+    headerBadge: 'bg-teal-50 text-teal-600 border border-teal-200/70 dark:bg-teal-950/50 dark:text-teal-400 dark:border-teal-800/50',
+    headerIcon: 'text-teal-600 dark:text-teal-400',
+    accentBar: 'bg-teal-600 dark:bg-teal-500',
+  },
+  orange: {
+    inactiveBadge: 'bg-orange-50 text-orange-600 border border-orange-200/70 dark:bg-orange-950/50 dark:text-orange-400 dark:border-orange-800/50',
+    activeBadge: 'bg-orange-600 text-white shadow-xs dark:bg-orange-500 dark:text-white',
+    headerBadge: 'bg-orange-50 text-orange-600 border border-orange-200/70 dark:bg-orange-950/50 dark:text-orange-400 dark:border-orange-800/50',
+    headerIcon: 'text-orange-600 dark:text-orange-400',
+    accentBar: 'bg-orange-600 dark:bg-orange-500',
+  },
+  cyan: {
+    inactiveBadge: 'bg-cyan-50 text-cyan-600 border border-cyan-200/70 dark:bg-cyan-950/50 dark:text-cyan-400 dark:border-cyan-800/50',
+    activeBadge: 'bg-cyan-600 text-white shadow-xs dark:bg-cyan-500 dark:text-white',
+    headerBadge: 'bg-cyan-50 text-cyan-600 border border-cyan-200/70 dark:bg-cyan-950/50 dark:text-cyan-400 dark:border-cyan-800/50',
+    headerIcon: 'text-cyan-600 dark:text-cyan-400',
+    accentBar: 'bg-cyan-600 dark:bg-cyan-500',
+  },
+  emerald: {
+    inactiveBadge: 'bg-emerald-50 text-emerald-600 border border-emerald-200/70 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/50',
+    activeBadge: 'bg-emerald-600 text-white shadow-xs dark:bg-emerald-500 dark:text-white',
+    headerBadge: 'bg-emerald-50 text-emerald-600 border border-emerald-200/70 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/50',
+    headerIcon: 'text-emerald-600 dark:text-emerald-400',
+    accentBar: 'bg-emerald-600 dark:bg-emerald-500',
+  },
+  violet: {
+    inactiveBadge: 'bg-violet-50 text-violet-600 border border-violet-200/70 dark:bg-violet-950/50 dark:text-violet-400 dark:border-violet-800/50',
+    activeBadge: 'bg-violet-600 text-white shadow-xs dark:bg-violet-500 dark:text-white',
+    headerBadge: 'bg-violet-50 text-violet-600 border border-violet-200/70 dark:bg-violet-950/50 dark:text-violet-400 dark:border-violet-800/50',
+    headerIcon: 'text-violet-600 dark:text-violet-400',
+    accentBar: 'bg-violet-600 dark:bg-violet-500',
+  },
+  red: {
+    inactiveBadge: 'bg-red-50 text-red-600 border border-red-200/70 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800/50',
+    activeBadge: 'bg-red-600 text-white shadow-xs dark:bg-red-500 dark:text-white',
+    headerBadge: 'bg-red-50 text-red-600 border border-red-200/70 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800/50',
+    headerIcon: 'text-red-600 dark:text-red-400',
+    accentBar: 'bg-red-600 dark:bg-red-500',
+  },
+  rose: {
+    inactiveBadge: 'bg-rose-50 text-rose-600 border border-rose-200/70 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/50',
+    activeBadge: 'bg-rose-600 text-white shadow-xs dark:bg-rose-500 dark:text-white',
+    headerBadge: 'bg-rose-50 text-rose-600 border border-rose-200/70 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/50',
+    headerIcon: 'text-rose-600 dark:text-rose-400',
+    accentBar: 'bg-rose-600 dark:bg-rose-500',
+  },
+  fuchsia: {
+    inactiveBadge: 'bg-fuchsia-50 text-fuchsia-600 border border-fuchsia-200/70 dark:bg-fuchsia-950/50 dark:text-fuchsia-400 dark:border-fuchsia-800/50',
+    activeBadge: 'bg-fuchsia-600 text-white shadow-xs dark:bg-fuchsia-500 dark:text-white',
+    headerBadge: 'bg-fuchsia-50 text-fuchsia-600 border border-fuchsia-200/70 dark:bg-fuchsia-950/50 dark:text-fuchsia-400 dark:border-fuchsia-800/50',
+    headerIcon: 'text-fuchsia-600 dark:text-fuchsia-400',
+    accentBar: 'bg-fuchsia-600 dark:bg-fuchsia-500',
+  },
+}
+
+function isItemActive(item: NavItem): boolean {
+  if (item.name === 'AdminDashboard') {
+    return route.name === item.name || route.path === item.to
+  }
+  return route.name === item.name || route.path.startsWith(item.to)
 }
 
 // Top Standalone Quick Links (Dashboard)
 const topNavItems = computed<NavItem[]>(() => {
   const isEn = locale.value === 'en'
   const rawItems: NavItem[] = [
-    { name: 'AdminDashboard', label: isEn ? 'Dashboard' : 'Bàn làm việc (Dashboard)', to: '/admin/dashboard', icon: 'dashboard' },
+    { name: 'AdminDashboard', label: isEn ? 'Dashboard' : 'Bàn làm việc (Dashboard)', to: '/admin/dashboard', icon: 'dashboard', color: 'indigo' },
   ]
   const user = authStore.user
   if (!user) return []
@@ -561,51 +690,56 @@ const navGroups = computed<NavGroup[]>(() => {
       key: 'sales',
       label: isEn ? 'Sales & Orders' : 'Bán hàng & Đơn hàng',
       icon: 'sales',
+      color: 'blue',
       items: [
-        { name: 'AdminPOS', label: isEn ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: 'pos', permission: 'POS_ACCESS' },
-        { name: 'AdminOrders', label: isEn ? 'Orders' : 'Quản lý đơn hàng', to: '/admin/orders', icon: 'orders', permission: 'MANAGE_ORDERS' },
-        { name: 'AdminCustomers', label: isEn ? 'Customers' : 'Khách hàng & Hạng sỉ', to: '/admin/customers', icon: 'customers', permission: 'MANAGE_CUSTOMERS' },
+        { name: 'AdminPOS', label: isEn ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: 'pos', color: 'amber', permission: 'POS_ACCESS' },
+        { name: 'AdminOrders', label: isEn ? 'Orders' : 'Quản lý đơn hàng', to: '/admin/orders', icon: 'orders', color: 'blue', permission: 'MANAGE_ORDERS' },
+        { name: 'AdminCustomers', label: isEn ? 'Customers' : 'Khách hàng & Hạng sỉ', to: '/admin/customers', icon: 'customers', color: 'purple', permission: 'MANAGE_CUSTOMERS' },
       ],
     },
     {
       key: 'catalog',
       label: isEn ? 'Products & Pricing' : 'Sản phẩm & Giá bán',
       icon: 'catalog',
+      color: 'sky',
       items: [
-        { name: 'AdminProducts', label: isEn ? 'Products' : 'Danh mục sản phẩm', to: '/admin/products', icon: 'products', permission: 'MANAGE_PRODUCTS' },
-        { name: 'AdminCombos', label: isEn ? 'Combos' : 'Gói quà & Combo', to: '/admin/combos', icon: 'combos', permission: 'MANAGE_PRODUCTS' },
-        { name: 'AdminPricing', label: isEn ? 'Pricing & Margin' : 'Chính sách giá & Lợi nhuận', to: '/admin/pricing', icon: 'pricing', permission: 'MANAGE_PRICING' },
-        { name: 'AdminReviews', label: isEn ? 'Reviews' : 'Đánh giá từ khách', to: '/admin/reviews', icon: 'reviews', permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminProducts', label: isEn ? 'Products' : 'Danh mục sản phẩm', to: '/admin/products', icon: 'products', color: 'sky', permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminCombos', label: isEn ? 'Combos' : 'Gói quà & Combo', to: '/admin/combos', icon: 'combos', color: 'pink', permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminPricing', label: isEn ? 'Pricing & Margin' : 'Chính sách giá & Lợi nhuận', to: '/admin/pricing', icon: 'pricing', color: 'teal', permission: 'MANAGE_PRICING' },
+        { name: 'AdminReviews', label: isEn ? 'Reviews' : 'Đánh giá từ khách', to: '/admin/reviews', icon: 'reviews', color: 'amber', permission: 'MANAGE_PRODUCTS' },
       ],
     },
     {
       key: 'inventory',
       label: isEn ? 'Inventory & Procurement' : 'Kho & Thu mua hàng',
       icon: 'inventory',
+      color: 'orange',
       items: [
-        { name: 'AdminInventory', label: isEn ? 'Inventory' : 'Quản lý kho hàng', to: '/admin/inventory', icon: 'inventory', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminPurchases', label: isEn ? 'Purchases & PO' : 'Mua hàng & Đặt NCC', to: '/admin/purchases', icon: 'purchases', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: 'stockAudits', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminSuppliers', label: isEn ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: 'suppliers', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminInventory', label: isEn ? 'Inventory' : 'Quản lý kho hàng', to: '/admin/inventory', icon: 'inventory', color: 'orange', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminPurchases', label: isEn ? 'Purchases & PO' : 'Mua hàng & Đặt NCC', to: '/admin/purchases', icon: 'purchases', color: 'cyan', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: 'stockAudits', color: 'emerald', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminSuppliers', label: isEn ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: 'suppliers', color: 'indigo', permission: 'MANAGE_INVENTORY' },
       ],
     },
     {
       key: 'finance',
       label: isEn ? 'Finance & Reports' : 'Tài chính & Báo cáo',
       icon: 'finance',
+      color: 'emerald',
       items: [
-        { name: 'AdminReports', label: isEn ? 'Reports' : 'Báo cáo doanh thu & Lãi', to: '/admin/reports', icon: 'reports', permission: 'VIEW_REPORTS' },
-        { name: 'AdminCashbook', label: isEn ? 'Cashbook & Finance' : 'Sổ quỹ & Dòng tiền', to: '/admin/cashbook', icon: 'cashbook', permission: 'MANAGE_FINANCE' },
+        { name: 'AdminReports', label: isEn ? 'Reports' : 'Báo cáo doanh thu & Lãi', to: '/admin/reports', icon: 'reports', color: 'emerald', permission: 'VIEW_REPORTS' },
+        { name: 'AdminCashbook', label: isEn ? 'Cashbook & Finance' : 'Sổ quỹ & Dòng tiền', to: '/admin/cashbook', icon: 'cashbook', color: 'violet', permission: 'MANAGE_FINANCE' },
       ],
     },
     {
       key: 'marketing',
       label: isEn ? 'Marketing & Growth' : 'Truyền thông & Tiếp thị',
       icon: 'marketing',
+      color: 'rose',
       items: [
-        { name: 'AdminPromotions', label: isEn ? 'Promotions' : 'Khuyến mãi & Voucher', to: '/admin/promotions', icon: 'promotions', permission: 'MANAGE_PROMOTIONS' },
-        { name: 'AdminBanners', label: isEn ? 'Banners' : 'Banner trang chủ', to: '/admin/banners', icon: 'banners', permission: 'MANAGE_BANNERS' },
-        { name: 'AdminLandingPages', label: isEn ? 'Quick Pages' : 'Trang đích (Landing Page)', to: '/admin/landing-pages', icon: 'landingPages', permission: 'MANAGE_LANDING_PAGES' },
+        { name: 'AdminPromotions', label: isEn ? 'Promotions' : 'Khuyến mãi & Voucher', to: '/admin/promotions', icon: 'promotions', color: 'red', permission: 'MANAGE_PROMOTIONS' },
+        { name: 'AdminBanners', label: isEn ? 'Banners' : 'Banner trang chủ', to: '/admin/banners', icon: 'banners', color: 'fuchsia', permission: 'MANAGE_BANNERS' },
+        { name: 'AdminLandingPages', label: isEn ? 'Quick Pages' : 'Trang đích (Landing Page)', to: '/admin/landing-pages', icon: 'landingPages', color: 'amber', permission: 'MANAGE_LANDING_PAGES' },
       ],
     },
   ]
