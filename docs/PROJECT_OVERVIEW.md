@@ -873,17 +873,19 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | Backend Health & Release SHA (TT-014) | `cd backend && npm test -- app.controller.spec.ts` | **3/3 health readiness & release SHA tests PASS** |
 | Backend Security Suite | `cd backend && npm test -- security-p0-audit.spec.ts` | **16/16 security regression tests PASS** |
 | Backend Commerce Suite | `cd backend && npm test -- orders.commerce-regression.spec.ts` | **14/14 commerce invariant tests PASS** |
-| Backend Linting | `cd backend && npm run lint` | **0 errors** (2.556 warnings, --max-warnings 2560) |
+| Backend Unit & Integration Tests | `cd backend && npm test` | **75/75 suites, 885/885 tests PASS (100%)** |
+| Backend Linting | `cd backend && npm run lint` | **0 errors** (2.573 warnings, --max-warnings 2650) |
 | Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
-| Frontend Unit Tests | `cd frontend && npm run test:unit` | **18/18 suites, 101/101 tests PASS (100%)** |
+| Frontend Unit Tests | `cd frontend && npm run test:unit` | **21/21 suites, 108/108 tests PASS (100%)** |
 | Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |
 | Frontend Linting | `cd frontend && npm run lint` | **0 errors, 0 warnings (Sạch 100%)** |
 | Frontend Build | `cd frontend && npm run build` | **Biên dịch thành công** |
 | Concurrency & Load Benchmark | `node --test scripts/load/load.test.js` | **8/8 benchmark tests PASS** |
 | Frontend Multi-Device E2E (TT-024) | `cd frontend && npx playwright test` | **9/9 tests PASS (100%)** (Desktop, Mobile, Tablet & Barcode Scanner) |
+| Smoke Tests | `node --test scripts/smoke-test.test.mjs` | **5/5 tests PASS (100%)** |
 | Mobile Tests | `cd mobile && flutter test` | **47/47 tests PASS (100%)** |
 | Mobile Analyze | `cd mobile && flutter analyze` | **0 issues** |
-| **Tổng Cộng Toàn Dự Án** | **Toàn bộ Test Suite** | **996/996 tests PASS (100% tỷ lệ thành công)** |
+| **Tổng Cộng Toàn Dự Án** | **Toàn bộ Test Suite** | **1.062/1.062 tests PASS (100% tỷ lệ thành công)** |
 
 ### 11.3. Cổng Nghiệm Thu CTO — Đã Đạt 4/4
 

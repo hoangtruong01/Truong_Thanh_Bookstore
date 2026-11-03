@@ -114,15 +114,31 @@
           </p>
 
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Phân Hạng Khách Hàng</label>
+            <label class="block font-bold text-slate-700 mb-1">Phân Hạng CRM (Thẻ Khách Hàng)</label>
             <select
               v-model="creditForm.tier"
               class="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 font-semibold"
             >
-              <option value="RETAIL">Khách Bán Lẻ (RETAIL)</option>
-              <option value="WHOLESALE_SILVER">Đại Lý Bạc (WHOLESALE_SILVER)</option>
-              <option value="WHOLESALE_GOLD">Đại Lý Vàng (WHOLESALE_GOLD)</option>
-              <option value="WHOLESALE_DIAMOND">Đại Lý Kim Cương (WHOLESALE_DIAMOND)</option>
+              <option value="BRONZE">Hạng Đồng (BRONZE)</option>
+              <option value="SILVER">Hạng Bạc (SILVER)</option>
+              <option value="GOLD">Hạng Vàng (GOLD)</option>
+              <option value="PLATINUM">Hạng Bạch Kim (PLATINUM)</option>
+              <option value="VIP">Khách Hàng VIP (VIP)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Nhóm Khách Hàng</label>
+            <select
+              v-model="creditForm.customerType"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 font-semibold"
+            >
+              <option value="RETAIL">Khách Lẻ (RETAIL)</option>
+              <option value="WHOLESALE">Khách Sỉ (WHOLESALE)</option>
+              <option value="SCHOOL">Trường Học (SCHOOL)</option>
+              <option value="OFFICE">Văn Phòng / Công Sở (OFFICE)</option>
+              <option value="RESELLER">Đại Lý Bán Lại (RESELLER)</option>
+              <option value="CORPORATE">Khách Doanh Nghiệp (CORPORATE)</option>
             </select>
           </div>
 
@@ -143,7 +159,7 @@
             <input
               v-model.number="creditForm.paymentTermDays"
               type="number"
-              min="0"
+              min="1"
               placeholder="Ví dụ: 30 ngày"
               class="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
             />
@@ -159,6 +175,17 @@
               <option value="SUSPENDED">Tạm Khóa Công Nợ (SUSPENDED)</option>
               <option value="BLOCKED">Chặn Bán Nợ Hoàn Toàn (BLOCKED)</option>
             </select>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Lý Do Điều Chỉnh <span class="text-rose-500">*</span></label>
+            <input
+              v-model="creditForm.reason"
+              type="text"
+              required
+              placeholder="VD: Nâng hạn mức công nợ theo hợp đồng mới..."
+              class="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+            />
           </div>
         </div>
 
@@ -186,6 +213,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import { customerService } from '@/services/customer.service'
+import { financeService } from '@/services/finance.service'
 import { formatCurrency } from '@/utils/helpers'
 import FilterBar from '@/components/FilterBar.vue'
 import DataTable, { type TableColumn } from '@/components/DataTable.vue'
@@ -201,11 +229,13 @@ const customerQuery = ref('')
 const showCreditModal = ref(false)
 const selectedCustomer = ref<any>(null)
 const savingCredit = ref(false)
-const creditForm = ref<any>({
-  tier: 'RETAIL',
+const creditForm = ref({
+  tier: 'BRONZE',
+  customerType: 'RETAIL',
   creditLimit: 0,
   paymentTermDays: 30,
   creditStatus: 'ACTIVE',
+  reason: '',
 })
 
 const columns: TableColumn[] = [
@@ -234,34 +264,61 @@ async function fetchCustomers() {
 
 function formatTier(tier?: string): string {
   switch (tier) {
+    case 'BRONZE':
+      return 'Hạng Đồng'
+    case 'SILVER':
     case 'WHOLESALE_SILVER':
-      return 'Sỉ Bạc'
+      return 'Hạng Bạc'
+    case 'GOLD':
     case 'WHOLESALE_GOLD':
-      return 'Sỉ Vàng'
+      return 'Hạng Vàng'
+    case 'PLATINUM':
+      return 'Bạch Kim'
+    case 'VIP':
     case 'WHOLESALE_DIAMOND':
-      return 'Sỉ Kim Cương'
+      return 'Khách VIP'
     case 'RETAIL':
     default:
-      return 'Bán Lẻ'
+      return 'Thành Viên'
   }
 }
 
 function openCreditModal(customer: any) {
   selectedCustomer.value = customer
   creditForm.value = {
-    tier: customer.wholesaleTier || 'RETAIL',
-    creditLimit: customer.creditLimit || 0,
-    paymentTermDays: customer.paymentTermDays || 30,
-    creditStatus: customer.creditStatus || 'ACTIVE',
+    tier: customer.crmTier || customer.tier || 'BRONZE',
+    customerType: customer.customerType || 'RETAIL',
+    creditLimit: customer.creditLimit || customer.creditProfile?.creditLimit || 0,
+    paymentTermDays: customer.paymentTermDays || customer.creditProfile?.paymentTermDays || 30,
+    creditStatus: customer.creditStatus || customer.creditProfile?.creditStatus || 'ACTIVE',
+    reason: 'Cập nhật thiết lập tín dụng & phân loại',
   }
   showCreditModal.value = true
 }
 
 async function submitCreditProfile() {
   if (!selectedCustomer.value?._id) return
+  if (!creditForm.value.reason?.trim()) {
+    toast.error('Vui lòng nhập lý do điều chỉnh!')
+    return
+  }
   savingCredit.value = true
   try {
-    await customerService.updateCRMProfile(selectedCustomer.value._id, creditForm.value)
+    // 1. Update CRM Profile (Tier & Group) via customerService (CRM-P1-04)
+    await customerService.updateCRMProfile(selectedCustomer.value._id, {
+      tier: creditForm.value.tier,
+      customerType: creditForm.value.customerType,
+      reason: creditForm.value.reason,
+    })
+
+    // 2. Update Finance Credit Profile via financeService (CRM-P1-04)
+    await financeService.updateCreditProfile(selectedCustomer.value._id, {
+      creditLimit: Number(creditForm.value.creditLimit) || 0,
+      paymentTermDays: Number(creditForm.value.paymentTermDays) || 30,
+      creditStatus: creditForm.value.creditStatus || 'ACTIVE',
+      reason: creditForm.value.reason,
+    })
+
     toast.success('Đã cập nhật hạn mức tín dụng và phân hạng khách hàng!')
     showCreditModal.value = false
     await fetchCustomers()

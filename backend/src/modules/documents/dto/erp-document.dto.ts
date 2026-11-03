@@ -6,6 +6,8 @@ import {
   IsNumber,
   IsMongoId,
   Min,
+  Matches,
+  MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DocumentType, DocumentStatus } from '../../../common/enums';
@@ -66,14 +68,19 @@ export class AddAttachmentDto {
   @ApiProperty({ description: 'Tên file', example: 'hoa-don-vat-001.pdf' })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(255)
   fileName: string;
 
   @ApiProperty({
-    description: 'URL file đã upload',
-    example: 'https://storage.../hoa-don.pdf',
+    description: 'URL file đã upload (chỉ chấp nhận HTTPS)',
+    example: 'https://storage.truongthanh.vn/hoa-don.pdf',
   })
   @IsString()
   @IsNotEmpty()
+  @Matches(/^https:\/\/[^\s$.?#].[^\s]*$/i, {
+    message:
+      'fileUrl bắt buộc phải là giao thức HTTPS hợp lệ (chặn javascript:, data:, http:)',
+  })
   fileUrl: string;
 
   @ApiProperty({
@@ -82,6 +89,13 @@ export class AddAttachmentDto {
   })
   @IsString()
   @IsNotEmpty()
+  @Matches(
+    /^(application\/pdf|image\/(png|jpeg|jpg|webp)|application\/(vnd\.ms-excel|vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet)|text\/(csv|xml)|application\/xml)$/i,
+    {
+      message:
+        'mimeType không nằm trong danh sách định dạng được phép lưu trữ an toàn',
+    },
+  )
   mimeType: string;
 
   @ApiProperty({ description: 'Kích thước file (bytes)', minimum: 1 })

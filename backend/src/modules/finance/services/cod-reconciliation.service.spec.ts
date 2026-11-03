@@ -1,4 +1,5 @@
-import { ConflictException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument */
+import { ConflictException, BadRequestException } from '@nestjs/common';
 import {
   OrderStatus,
   PaymentMethod,
@@ -6,6 +7,14 @@ import {
   CodReconciliationStatus,
 } from '../../../common/enums';
 import { CodReconciliationService } from './cod-reconciliation.service';
+import {
+  CashAccountType,
+  CashAccountStatus,
+} from '../schemas/cash-account.schema';
+import {
+  CashEntryDirection,
+  CashEntryCategory,
+} from '../schemas/cash-entry.schema';
 
 describe('FIN-COD-01: Carrier COD & Logistics Reconciliation Service', () => {
   let service: CodReconciliationService;
@@ -58,17 +67,25 @@ describe('FIN-COD-01: Carrier COD & Logistics Reconciliation Service', () => {
   const sampleBankId = '666666666666666666666666';
   const sampleUserId = '777777777777777777777777';
 
+  const createMockBankAccount = (overrides?: any) => ({
+    _id: sampleBankId,
+    name: 'Tài khoản Ngân hàng VCB',
+    type: CashAccountType.BANK_ACCOUNT,
+    status: CashAccountStatus.ACTIVE,
+    currentBalance: 10_000_000,
+    save: jest.fn().mockImplementation(function (this: any) {
+      return Promise.resolve(this);
+    }),
+    ...overrides,
+  });
+
   describe('FIN-COD-T01: Full Match Reconciliation', () => {
     it('successfully reconciles delivered COD orders, creates CashEntry IN, and updates bank balance', async () => {
       mockBatchModel.findOne.mockReturnValue({
         exec: jest.fn().mockResolvedValue(null), // statementId not used yet
       });
 
-      const bankAccount: any = {
-        _id: sampleBankId,
-        currentBalance: 10_000_000,
-        save: jest.fn().mockResolvedValue(this),
-      };
+      const bankAccount = createMockBankAccount();
       mockCashAccountModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(bankAccount),
         session: jest.fn().mockReturnValue({
@@ -151,11 +168,7 @@ describe('FIN-COD-01: Carrier COD & Logistics Reconciliation Service', () => {
         exec: jest.fn().mockResolvedValue(null),
       });
 
-      const bankAccount: any = {
-        _id: sampleBankId,
-        currentBalance: 0,
-        save: jest.fn(),
-      };
+      const bankAccount = createMockBankAccount({ currentBalance: 0 });
       mockCashAccountModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(bankAccount),
         session: jest
@@ -195,11 +208,7 @@ describe('FIN-COD-01: Carrier COD & Logistics Reconciliation Service', () => {
         exec: jest.fn().mockResolvedValue(null),
       });
 
-      const bankAccount: any = {
-        _id: sampleBankId,
-        currentBalance: 0,
-        save: jest.fn(),
-      };
+      const bankAccount = createMockBankAccount({ currentBalance: 0 });
       mockCashAccountModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(bankAccount),
         session: jest
@@ -247,11 +256,7 @@ describe('FIN-COD-01: Carrier COD & Logistics Reconciliation Service', () => {
         exec: jest.fn().mockResolvedValue(null),
       });
 
-      const bankAccount: any = {
-        _id: sampleBankId,
-        currentBalance: 1_000_000,
-        save: jest.fn(),
-      };
+      const bankAccount = createMockBankAccount({ currentBalance: 1_000_000 });
       mockCashAccountModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(bankAccount),
         session: jest
@@ -330,7 +335,7 @@ describe('FIN-COD-01: Carrier COD & Logistics Reconciliation Service', () => {
         exec: jest.fn().mockResolvedValue(null),
       });
 
-      const bankAccount: any = { _id: sampleBankId, currentBalance: 0 };
+      const bankAccount = createMockBankAccount({ currentBalance: 0 });
       mockCashAccountModel.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(bankAccount),
       });
@@ -363,6 +368,142 @@ describe('FIN-COD-01: Carrier COD & Logistics Reconciliation Service', () => {
 
       expect(mockSession.abortTransaction).toHaveBeenCalled();
       expect(mockSession.endSession).toHaveBeenCalled();
+    });
+  });
+
+  describe('FIN-COD-P1-05: Bank Account Validation & Negative Net Payout Handling', () => {
+    it('rejects when cash account is not BANK_ACCOUNT with BadRequestException', async () => {
+      mockBatchModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const cashDrawerAccount = createMockBankAccount({
+        type: CashAccountType.CASH_DRAWER,
+        name: 'Két tiền quầy thu ngân',
+      });
+
+      mockCashAccountModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(cashDrawerAccount),
+      });
+
+      await expect(
+        service.processStatement(
+          {
+            statementId: 'STMT-NON-BANK',
+            bankAccountId: sampleBankId,
+            items: [
+              {
+                trackingCode: 'GHN_NON_BANK',
+                codAmount: 100_000,
+                shippingFee: 10_000,
+              },
+            ],
+          },
+          sampleUserId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects when bank account status is not ACTIVE with BadRequestException', async () => {
+      mockBatchModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const inactiveBankAccount = createMockBankAccount({
+        status: CashAccountStatus.INACTIVE,
+        name: 'VCB Tạm ngưng',
+      });
+
+      mockCashAccountModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(inactiveBankAccount),
+      });
+
+      await expect(
+        service.processStatement(
+          {
+            statementId: 'STMT-INACTIVE-BANK',
+            bankAccountId: sampleBankId,
+            items: [
+              {
+                trackingCode: 'GHN_INACTIVE',
+                codAmount: 100_000,
+                shippingFee: 10_000,
+              },
+            ],
+          },
+          sampleUserId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('handles negative net payout (shipping > COD) by creating CashEntry OUT and deducting bank balance', async () => {
+      mockBatchModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const bankAccount = createMockBankAccount({
+        currentBalance: 5_000_000,
+      });
+
+      mockCashAccountModel.findById.mockImplementation(() => ({
+        exec: jest.fn().mockResolvedValue(bankAccount),
+        session: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(bankAccount),
+        }),
+      }));
+
+      // Order with codAmount 50,000 but shippingFee 80,000 (netPayout = -30,000)
+      const order: any = {
+        _id: 'ord_negative_cod',
+        trackingCode: 'GHN_NET_NEG',
+        paymentMethod: PaymentMethod.COD,
+        orderStatus: OrderStatus.DELIVERED,
+        total: 50_000,
+        timeline: [],
+        save: jest.fn().mockResolvedValue(this),
+      };
+
+      mockOrderModel.findOne.mockReturnValue({
+        session: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(order),
+        }),
+      });
+
+      let createdCashEntryData: any = null;
+      mockCashEntryModel.mockImplementationOnce((data: any) => {
+        createdCashEntryData = data;
+        return {
+          ...data,
+          _id: 'cash_entry_neg_01',
+          save: jest.fn().mockResolvedValue(data),
+        };
+      });
+
+      const result = await service.processStatement(
+        {
+          statementId: 'STMT-NEG-PAYOUT',
+          bankAccountId: sampleBankId,
+          carrier: 'GHTK',
+          items: [
+            {
+              trackingCode: 'GHN_NET_NEG',
+              codAmount: 50_000,
+              shippingFee: 80_000,
+            },
+          ],
+        },
+        sampleUserId,
+      );
+
+      expect(result.netPayout).toBe(-30_000);
+      expect(bankAccount.currentBalance).toBe(4_970_000); // 5,000,000 - 30,000
+      expect(createdCashEntryData).toBeDefined();
+      expect(createdCashEntryData.direction).toBe(CashEntryDirection.OUT);
+      expect(createdCashEntryData.category).toBe(
+        CashEntryCategory.OTHER_EXPENSE,
+      );
+      expect(createdCashEntryData.amount).toBe(30_000);
+      expect(mockSession.commitTransaction).toHaveBeenCalled();
     });
   });
 });

@@ -37,7 +37,7 @@
 
       <div>
         <select
-          v-model="filters.docType"
+          v-model="filters.documentType"
           class="px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
           @change="fetchDocuments"
         >
@@ -86,6 +86,7 @@
           <thead>
             <tr class="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold">
               <th class="py-3 px-4">Mã Chứng Từ</th>
+              <th class="py-3 px-4">Tiêu Đề</th>
               <th class="py-3 px-4">Loại Chứng Từ</th>
               <th class="py-3 px-4">Đối Tác</th>
               <th class="py-3 px-4 text-right">Giá Trị</th>
@@ -102,16 +103,19 @@
               class="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors"
             >
               <td class="py-3 px-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                {{ doc.docCode }}
+                {{ doc.documentNumber || doc._id.substring(0, 8) }}
+              </td>
+              <td class="py-3 px-4 font-medium text-slate-900 dark:text-white">
+                {{ doc.title }}
               </td>
               <td class="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">
-                {{ formatDocType(doc.docType) }}
+                {{ formatDocType(doc.documentType) }}
               </td>
               <td class="py-3 px-4 text-slate-600 dark:text-slate-400">
-                {{ doc.partnerName || '-' }}
+                {{ doc.entityName || '-' }}
               </td>
               <td class="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
-                {{ doc.totalAmount ? formatCurrency(doc.totalAmount) : '-' }}
+                {{ doc.amount ? formatCurrency(doc.amount) : '-' }}
               </td>
               <td class="py-3 px-4 text-center">
                 <button
@@ -165,18 +169,23 @@
     >
       <div class="space-y-4">
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Mã Chứng Từ (Để trống để tự sinh)</label>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+            Tiêu Đề Chứng Từ <span class="text-rose-500">*</span>
+          </label>
           <input
-            v-model="createForm.docCode"
+            v-model="createForm.title"
             type="text"
-            placeholder="VD: DOC-202611-0001"
-            class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white uppercase font-mono"
+            required
+            placeholder="VD: Hóa đơn GTGT mua sách NXB Trẻ"
+            class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
           />
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Loại Chứng Từ</label>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+            Loại Chứng Từ <span class="text-rose-500">*</span>
+          </label>
           <select
-            v-model="createForm.docType"
+            v-model="createForm.documentType"
             required
             class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
           >
@@ -193,7 +202,7 @@
         <div>
           <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tên Đối Tác / Khách Hàng / NCC</label>
           <input
-            v-model="createForm.partnerName"
+            v-model="createForm.entityName"
             type="text"
             placeholder="VD: NXB Kim Đồng, Công ty CP Sách..."
             class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
@@ -202,11 +211,20 @@
         <div>
           <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tổng Giá Trị (VNĐ)</label>
           <input
-            v-model.number="createForm.totalAmount"
+            v-model.number="createForm.amount"
             type="number"
             min="0"
             placeholder="0"
             class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Mã Chứng Từ Gốc Liên Kết (Nếu có)</label>
+          <input
+            v-model="createForm.linkedDocumentNumber"
+            type="text"
+            placeholder="VD: PO-202611-0005"
+            class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white uppercase font-mono"
           />
         </div>
       </div>
@@ -221,7 +239,7 @@
         <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <h3 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
             <span>📎</span>
-            <span>Tệp Đính Kèm: {{ selectedDoc?.docCode }}</span>
+            <span>Tệp Đính Kèm: {{ selectedDoc?.documentNumber || selectedDoc?.title }}</span>
           </h3>
           <button
             class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold cursor-pointer"
@@ -247,6 +265,7 @@
             <a
               :href="att.fileUrl"
               target="_blank"
+              rel="noopener noreferrer"
               class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-bold rounded-lg text-[11px] transition-colors"
             >
               Mở file
@@ -256,8 +275,8 @@
 
         <!-- Add link attachment -->
         <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-          <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Thêm file / liên kết:</span>
-          <div class="flex gap-2">
+          <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Thêm file / liên kết an toàn (HTTPS only):</span>
+          <div class="flex flex-col sm:flex-row gap-2">
             <input
               v-model="newAttachment.fileName"
               type="text"
@@ -266,8 +285,8 @@
             />
             <input
               v-model="newAttachment.fileUrl"
-              type="text"
-              placeholder="Đường dẫn file URL"
+              type="url"
+              placeholder="https://storage.../file.pdf"
               class="flex-1 px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
             />
             <button
@@ -294,7 +313,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import documentService, { type ERPDocument } from '@/services/document.service'
+import documentService, {
+  type ERPDocument,
+  type CreateERPDocumentPayload,
+  type AddAttachmentPayload,
+  type DocumentType,
+  type DocumentStatus,
+} from '@/services/document.service'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import FormModal from '@/components/FormModal.vue'
@@ -307,29 +332,32 @@ const documents = ref<ERPDocument[]>([])
 
 const filters = reactive({
   search: '',
-  docType: '',
-  status: '',
+  documentType: '' as DocumentType | '',
+  status: '' as DocumentStatus | '',
 })
 
 const showCreateModal = ref(false)
 const showAttachmentsModal = ref(false)
 const selectedDoc = ref<ERPDocument | null>(null)
 
-const createForm = ref({
-  docCode: '',
-  docType: 'PURCHASE_ORDER' as ERPDocument['docType'],
-  partnerName: '',
-  totalAmount: 0,
+const createForm = ref<CreateERPDocumentPayload>({
+  title: '',
+  documentType: 'PURCHASE_ORDER',
+  entityName: '',
+  amount: 0,
+  linkedDocumentNumber: '',
 })
 
-const newAttachment = ref({
+const newAttachment = ref<AddAttachmentPayload>({
   fileName: '',
   fileUrl: '',
+  fileSize: 1024,
+  mimeType: 'application/pdf',
 })
 
-let debounceTimer: any = null
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
 function debouncedFetch() {
-  clearTimeout(debounceTimer)
+  if (debounceTimer) clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => {
     fetchDocuments()
   }, 350)
@@ -338,9 +366,9 @@ function debouncedFetch() {
 async function fetchDocuments() {
   loading.value = true
   try {
-    const params: any = { limit: 50 }
+    const params: Record<string, unknown> = { limit: 50 }
     if (filters.search) params.search = filters.search
-    if (filters.docType) params.docType = filters.docType
+    if (filters.documentType) params.documentType = filters.documentType
     if (filters.status) params.status = filters.status
 
     const res = await documentService.getAll(params)
@@ -354,15 +382,20 @@ async function fetchDocuments() {
 
 function openCreateModal() {
   createForm.value = {
-    docCode: '',
-    docType: 'PURCHASE_ORDER',
-    partnerName: '',
-    totalAmount: 0,
+    title: '',
+    documentType: 'PURCHASE_ORDER',
+    entityName: '',
+    amount: 0,
+    linkedDocumentNumber: '',
   }
   showCreateModal.value = true
 }
 
 async function submitCreateDocument() {
+  if (!createForm.value.title.trim()) {
+    toast.error('Vui lòng nhập tiêu đề chứng từ!')
+    return
+  }
   try {
     await documentService.create(createForm.value)
     toast.success('Khởi tạo chứng từ điện tử mới thành công!')
@@ -374,10 +407,11 @@ async function submitCreateDocument() {
 }
 
 async function postDocument(doc: ERPDocument) {
-  if (!confirm(`Xác nhận ghi sổ chứng từ ${doc.docCode}? Sau khi ghi sổ, chứng từ sẽ bị đóng băng.`)) return
+  const code = doc.documentNumber || doc.title
+  if (!confirm(`Xác nhận ghi sổ chứng từ ${code}? Sau khi ghi sổ, chứng từ sẽ bị đóng băng.`)) return
   try {
     await documentService.post(doc._id)
-    toast.success(`Chứng từ ${doc.docCode} đã được ghi sổ chính thức (POSTED)`)
+    toast.success(`Chứng từ ${code} đã được ghi sổ chính thức (POSTED)`)
     await fetchDocuments()
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Lỗi ghi sổ chứng từ')
@@ -385,11 +419,12 @@ async function postDocument(doc: ERPDocument) {
 }
 
 async function reverseDocument(doc: ERPDocument) {
-  const reason = prompt(`Nhập lý do hoàn đảo chứng từ ${doc.docCode}:`)
+  const code = doc.documentNumber || doc.title
+  const reason = prompt(`Nhập lý do hoàn đảo chứng từ ${code}:`)
   if (!reason) return
   try {
     await documentService.reverse(doc._id, reason)
-    toast.info(`Chứng từ ${doc.docCode} đã được hoàn đảo an toàn (REVERSED)`)
+    toast.info(`Chứng từ ${code} đã được hoàn đảo an toàn (REVERSED)`)
     await fetchDocuments()
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Lỗi hoàn đảo chứng từ')
@@ -398,7 +433,7 @@ async function reverseDocument(doc: ERPDocument) {
 
 function openAttachmentsModal(doc: ERPDocument) {
   selectedDoc.value = doc
-  newAttachment.value = { fileName: '', fileUrl: '' }
+  newAttachment.value = { fileName: '', fileUrl: '', fileSize: 1024, mimeType: 'application/pdf' }
   showAttachmentsModal.value = true
 }
 
@@ -408,11 +443,20 @@ async function addAttachmentToDoc() {
     toast.error('Vui lòng điền tên file và link URL!')
     return
   }
+  if (!newAttachment.value.fileUrl.startsWith('https://')) {
+    toast.error('Đường dẫn file đính kèm bắt buộc phải dùng giao thức HTTPS an toàn (https://)!')
+    return
+  }
   try {
-    const updated = await documentService.addAttachment(selectedDoc.value._id, newAttachment.value)
+    const updated = await documentService.addAttachment(selectedDoc.value._id, {
+      fileName: newAttachment.value.fileName.trim(),
+      fileUrl: newAttachment.value.fileUrl.trim(),
+      fileSize: newAttachment.value.fileSize || 1024,
+      mimeType: newAttachment.value.mimeType || 'application/pdf',
+    })
     selectedDoc.value = updated
     toast.success('Đã đính kèm tệp thành công!')
-    newAttachment.value = { fileName: '', fileUrl: '' }
+    newAttachment.value = { fileName: '', fileUrl: '', fileSize: 1024, mimeType: 'application/pdf' }
     await fetchDocuments()
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Lỗi đính kèm file')

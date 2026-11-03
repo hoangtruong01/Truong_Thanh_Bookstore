@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
@@ -16,6 +17,8 @@ import { Order, OrderDocument } from '../../orders/schemas/order.schema';
 import {
   CashAccount,
   CashAccountDocument,
+  CashAccountType,
+  CashAccountStatus,
 } from '../schemas/cash-account.schema';
 import {
   CashEntry,
@@ -63,6 +66,16 @@ export class CodReconciliationService {
     if (!bankAccount) {
       throw new NotFoundException(
         `Không tìm thấy sổ quỹ ngân hàng với ID: ${dto.bankAccountId}`,
+      );
+    }
+    if (bankAccount.type !== CashAccountType.BANK_ACCOUNT) {
+      throw new BadRequestException(
+        `Sổ quỹ "${bankAccount.name}" không phải là tài khoản ngân hàng (BANK_ACCOUNT). Đối soát COD chỉ ghi nhận vào tài khoản ngân hàng.`,
+      );
+    }
+    if (bankAccount.status !== CashAccountStatus.ACTIVE) {
+      throw new BadRequestException(
+        `Tài khoản ngân hàng "${bankAccount.name}" đang ở trạng thái không hoạt động (${bankAccount.status}).`,
       );
     }
 
@@ -175,6 +188,33 @@ export class CodReconciliationService {
             amount: netPayout,
             partnerName: dto.carrier || 'GHN',
             note: `Thu tiền ròng đối soát COD bảng kê ${dto.statementId} (Thu COD: ${totalCod.toLocaleString('vi-VN')}đ - Cước phí: ${totalShipping.toLocaleString('vi-VN')}đ)`,
+            status: CashEntryStatus.POSTED,
+            postedAt: new Date(),
+            createdBy: new Types.ObjectId(userId),
+          });
+          await cashEntry.save({ session });
+          cashEntryId = cashEntry._id;
+        }
+      } else if (netPayout < 0) {
+        // FIN-P1-05: Handle negative net payout (shipping fees exceed collected COD)
+        const expenseAmount = Math.abs(netPayout);
+        const cashAccountInSession = await this.cashAccountModel
+          .findById(bankAccount._id)
+          .session(session)
+          .exec();
+
+        if (cashAccountInSession) {
+          cashAccountInSession.currentBalance -= expenseAmount;
+          await cashAccountInSession.save({ session });
+
+          const cashEntry = new this.cashEntryModel({
+            entryCode: `PC-COD-${Date.now()}`,
+            account: cashAccountInSession._id,
+            direction: CashEntryDirection.OUT,
+            category: CashEntryCategory.OTHER_EXPENSE,
+            amount: expenseAmount,
+            partnerName: dto.carrier || 'GHN',
+            note: `Chi cước vận chuyển đối soát COD vượt thu bảng kê ${dto.statementId} (Thu COD: ${totalCod.toLocaleString('vi-VN')}đ - Cước phí: ${totalShipping.toLocaleString('vi-VN')}đ)`,
             status: CashEntryStatus.POSTED,
             postedAt: new Date(),
             createdBy: new Types.ObjectId(userId),

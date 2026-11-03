@@ -122,8 +122,8 @@
             <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 grid grid-cols-2 gap-2 text-center">
               <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-2.5">
                 <span class="text-[10px] text-slate-400 font-bold uppercase block">Bán Được</span>
-                <span class="text-xs font-black" :class="wh.isSellable ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
-                  {{ wh.isSellable ? '✓ Khả dụng' : '✗ Cách ly' }}
+                <span class="text-xs font-black" :class="(wh.type !== 'QUARANTINE' && wh.type !== 'DAMAGED') ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                  {{ (wh.type !== 'QUARANTINE' && wh.type !== 'DAMAGED') ? '✓ Khả dụng' : '✗ Cách ly' }}
                 </span>
               </div>
               <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-2.5">
@@ -177,13 +177,13 @@
                 class="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors"
               >
                 <td class="py-3 px-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                  {{ tf.transferCode }}
+                  {{ tf.code || tf.transferCode }}
                 </td>
                 <td class="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">
-                  {{ tf.sourceWarehouse?.name || 'Kho nguồn' }}
+                  {{ tf.fromWarehouse?.name || tf.sourceWarehouse?.name || 'Kho nguồn' }}
                 </td>
                 <td class="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">
-                  {{ tf.destinationWarehouse?.name || 'Kho đích' }}
+                  {{ tf.toWarehouse?.name || tf.destinationWarehouse?.name || 'Kho đích' }}
                 </td>
                 <td class="py-3 px-4 text-center font-bold">
                   {{ tf.items?.length || 0 }} SKU
@@ -286,21 +286,10 @@
             class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
           ></textarea>
         </div>
-        <div class="flex items-center gap-2">
-          <input
-            id="isSellable"
-            v-model="warehouseForm.isSellable"
-            type="checkbox"
-            class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-          />
-          <label for="isSellable" class="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-            Cho phép bán (Tồn kho tại kho này được tính vào hàng có sẵn trên Web/POS)
-          </label>
-        </div>
       </div>
     </FormModal>
 
-    <!-- MODAL 2: Lập Phiếu Chuyển Kho -->
+    <!-- MODAL 2: Lập Phiếu Chuyển Kho (WH-P1-03 Canonical Contract) -->
     <FormModal
       v-model="showCreateTransferModal"
       title="Lập Phiếu Chuyển Kho Hàng"
@@ -309,9 +298,9 @@
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Kho Xuất (Nguồn)</label>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Kho Xuất (Nguồn) <span class="text-rose-500">*</span></label>
             <select
-              v-model="transferForm.sourceWarehouseId"
+              v-model="transferForm.fromWarehouse"
               required
               class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
             >
@@ -322,9 +311,9 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Kho Nhập (Đích)</label>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Kho Nhập (Đích) <span class="text-rose-500">*</span></label>
             <select
-              v-model="transferForm.destinationWarehouseId"
+              v-model="transferForm.toWarehouse"
               required
               class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
             >
@@ -336,12 +325,48 @@
           </div>
         </div>
 
+        <!-- Product selection item -->
+        <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+          <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Sản Phẩm Điều Chuyển <span class="text-rose-500">*</span></span>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-2">
+              <label class="block text-[11px] font-medium text-slate-500 mb-1">Mã ID Sản Phẩm (MongoDB ID)</label>
+              <input
+                v-model="transferForm.productId"
+                type="text"
+                required
+                placeholder="VD: 60c72b2f9b1d8b001c8e4d21"
+                class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-slate-500 mb-1">Số Lượng</label>
+              <input
+                v-model.number="transferForm.requestedQty"
+                type="number"
+                min="1"
+                required
+                class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold"
+              />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-slate-500 mb-1">Ghi Chú Mặt Hàng</label>
+            <input
+              v-model="transferForm.itemNote"
+              type="text"
+              placeholder="VD: Chuyển bổ sung theo nhu cầu chi nhánh..."
+              class="w-full px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+            />
+          </div>
+        </div>
+
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Ghi Chú Điều Chuyển</label>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Ghi Chú Chung Phiếu Chuyển</label>
           <input
             v-model="transferForm.note"
             type="text"
-            placeholder="Lý do điều chuyển, mã lệnh nội bộ..."
+            placeholder="Lý do điều chuyển, mã lệnh điều vận..."
             class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
           />
         </div>
@@ -424,7 +449,7 @@ const warehouses = ref<Warehouse[]>([])
 const transfers = ref<StockTransfer[]>([])
 
 const quarantineWarehouses = computed(() => {
-  return warehouses.value.filter(w => w.type === 'QUARANTINE' || w.type === 'DAMAGED' || !w.isSellable)
+  return warehouses.value.filter(w => w.type === 'QUARANTINE' || w.type === 'DAMAGED')
 })
 
 const displayedWarehouses = computed(() => {
@@ -448,21 +473,19 @@ const warehouseForm = ref({
   name: '',
   type: 'MAIN' as Warehouse['type'],
   address: '',
-  isSellable: true,
 })
 
 const transferForm = ref({
-  sourceWarehouseId: '',
-  destinationWarehouseId: '',
+  fromWarehouse: '',
+  toWarehouse: '',
   note: '',
+  productId: '',
+  requestedQty: 1,
+  itemNote: '',
 })
 
 function handleWarehouseTypeChange() {
-  if (warehouseForm.value.type === 'QUARANTINE' || warehouseForm.value.type === 'DAMAGED') {
-    warehouseForm.value.isSellable = false
-  } else {
-    warehouseForm.value.isSellable = true
-  }
+  // Warehouse type determines sellable status automatically on backend
 }
 
 async function fetchWarehouses() {
@@ -495,23 +518,30 @@ function openCreateWarehouseModal() {
     name: '',
     type: 'MAIN',
     address: '',
-    isSellable: true,
   }
   showCreateWarehouseModal.value = true
 }
 
 function openCreateTransferModal() {
   transferForm.value = {
-    sourceWarehouseId: '',
-    destinationWarehouseId: '',
+    fromWarehouse: '',
+    toWarehouse: '',
     note: '',
+    productId: '',
+    requestedQty: 1,
+    itemNote: '',
   }
   showCreateTransferModal.value = true
 }
 
 async function submitCreateWarehouse() {
   try {
-    await warehouseService.create(warehouseForm.value)
+    await warehouseService.create({
+      code: warehouseForm.value.code.trim().toUpperCase(),
+      name: warehouseForm.value.name.trim(),
+      type: warehouseForm.value.type,
+      address: warehouseForm.value.address.trim(),
+    })
     toast.success('Khởi tạo kho hàng mới thành công!')
     showCreateWarehouseModal.value = false
     await fetchWarehouses()
@@ -521,16 +551,35 @@ async function submitCreateWarehouse() {
 }
 
 async function submitCreateTransfer() {
-  if (transferForm.value.sourceWarehouseId === transferForm.value.destinationWarehouseId) {
+  if (transferForm.value.fromWarehouse === transferForm.value.toWarehouse) {
     toast.error('Kho xuất và kho nhập không được trùng nhau!')
     return
   }
+  if (!transferForm.value.fromWarehouse || !transferForm.value.toWarehouse) {
+    toast.error('Vui lòng chọn cả kho xuất và kho nhập!')
+    return
+  }
+  if (!transferForm.value.productId.trim()) {
+    toast.error('Vui lòng nhập ID sản phẩm cần chuyển!')
+    return
+  }
+  if (Number(transferForm.value.requestedQty) <= 0) {
+    toast.error('Số lượng chuyển kho phải lớn hơn 0!')
+    return
+  }
+
   try {
     await warehouseService.createTransfer({
-      sourceWarehouseId: transferForm.value.sourceWarehouseId,
-      destinationWarehouseId: transferForm.value.destinationWarehouseId,
-      note: transferForm.value.note,
-      items: [],
+      fromWarehouse: transferForm.value.fromWarehouse,
+      toWarehouse: transferForm.value.toWarehouse,
+      note: transferForm.value.note || undefined,
+      items: [
+        {
+          product: transferForm.value.productId.trim(),
+          requestedQty: Number(transferForm.value.requestedQty),
+          note: transferForm.value.itemNote || undefined,
+        },
+      ],
     })
     toast.success('Lập phiếu chuyển kho thành công!')
     showCreateTransferModal.value = false
@@ -555,9 +604,10 @@ async function viewWarehouseStock(wh: Warehouse) {
 }
 
 async function approveTransfer(tf: StockTransfer) {
+  const code = tf.code || tf.transferCode || tf._id
   try {
     await warehouseService.approveTransfer(tf._id)
-    toast.success(`Đã duyệt phiếu chuyển ${tf.transferCode}`)
+    toast.success(`Đã duyệt phiếu chuyển ${code}`)
     await fetchTransfers()
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Lỗi duyệt phiếu')
@@ -565,9 +615,10 @@ async function approveTransfer(tf: StockTransfer) {
 }
 
 async function shipTransfer(tf: StockTransfer) {
+  const code = tf.code || tf.transferCode || tf._id
   try {
     await warehouseService.shipTransfer(tf._id)
-    toast.success(`Đã xuất kho cho phiếu ${tf.transferCode}`)
+    toast.success(`Đã xuất kho cho phiếu ${code}`)
     await fetchTransfers()
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Lỗi xuất kho')
@@ -575,9 +626,22 @@ async function shipTransfer(tf: StockTransfer) {
 }
 
 async function receiveTransfer(tf: StockTransfer) {
+  const code = tf.code || tf.transferCode || tf._id
+  if (!confirm(`Xác nhận nhập kho thực tế cho phiếu ${code}?`)) return
   try {
-    await warehouseService.receiveTransfer(tf._id)
-    toast.success(`Đã xác nhận nhập kho thành công cho phiếu ${tf.transferCode}`)
+    const receivePayload = {
+      items: (tf.items || []).map((it: any) => ({
+        product:
+          typeof it.product === 'object' && it.product?._id
+            ? it.product._id
+            : String(it.product),
+        receivedQty: Number(it.requestedQty || it.quantity || 1),
+        note: it.note,
+      })),
+      note: 'Xác nhận nhập kho hàng đủ theo phiếu',
+    }
+    await warehouseService.receiveTransfer(tf._id, receivePayload)
+    toast.success(`Đã xác nhận nhập kho thành công cho phiếu ${code}`)
     await fetchTransfers()
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Lỗi nhận hàng')

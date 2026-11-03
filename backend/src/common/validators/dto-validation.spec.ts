@@ -25,6 +25,7 @@ import { CreatePromotionDto } from '../../modules/promotions/dto/promotion.dto';
 import { CreateReviewDto } from '../../modules/reviews/dto/review.dto';
 import { CreatePaymentDto } from '../../modules/payments/dto/payment.dto';
 import { InventoryTransactionDto } from '../../modules/inventory/dto/inventory.dto';
+import { AddAttachmentDto } from '../../modules/documents/dto/erp-document.dto';
 import { DiscountType, PaymentMethod } from '../enums';
 
 describe('Custom Validators & DTO Validation Suite', () => {
@@ -257,6 +258,61 @@ describe('Custom Validators & DTO Validation Suite', () => {
         quantity: 10,
       });
       expect((await validate(valid)).length).toBe(0);
+    });
+  });
+
+  describe('AddAttachmentDto Validation (LINK-P1-09 & DOC-P1-02)', () => {
+    it('should accept valid HTTPS URL with allowed mimeType', async () => {
+      const valid = plainToInstance(AddAttachmentDto, {
+        fileName: 'chung-tu-vat.pdf',
+        fileUrl: 'https://storage.truongthanh.vn/documents/chung-tu.pdf',
+        mimeType: 'application/pdf',
+        fileSize: 1024,
+      });
+      const errors = await validate(valid);
+      expect(errors.length).toBe(0);
+    });
+
+    it('should reject insecure schemes (javascript:, data:, http:)', async () => {
+      const dangerousUrls = [
+        'javascript:alert(1)',
+        'data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==',
+        'http://insecure-cdn.com/test.pdf',
+        'ftp://storage.truongthanh.vn/file.pdf',
+      ];
+
+      for (const fileUrl of dangerousUrls) {
+        const dto = plainToInstance(AddAttachmentDto, {
+          fileName: 'test.pdf',
+          fileUrl,
+          mimeType: 'application/pdf',
+          fileSize: 1024,
+        });
+        const errors = await validate(dto);
+        expect(errors.length).toBeGreaterThan(0);
+        expect(
+          errors.some((err) => err.constraints?.matches !== undefined),
+        ).toBe(true);
+      }
+    });
+
+    it('should reject unsupported or dangerous mime types', async () => {
+      const invalidMimes = [
+        'application/x-msdownload',
+        'application/javascript',
+        'text/html',
+      ];
+
+      for (const mimeType of invalidMimes) {
+        const dto = plainToInstance(AddAttachmentDto, {
+          fileName: 'script.exe',
+          fileUrl: 'https://storage.truongthanh.vn/script.exe',
+          mimeType,
+          fileSize: 1024,
+        });
+        const errors = await validate(dto);
+        expect(errors.length).toBeGreaterThan(0);
+      }
     });
   });
 });
