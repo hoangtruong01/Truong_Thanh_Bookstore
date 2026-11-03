@@ -299,6 +299,16 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
         }),
       ).toThrow(/redis:\/\/ or rediss:\/\//);
     });
+
+    it('ENV-P1-07: should enforce strict production rules when cloud hosted (RENDER or VERCEL) even if NODE_ENV is development', () => {
+      expect(() =>
+        validateEnv({
+          ...validBaseConfig,
+          RENDER: 'true',
+          JWT_SECRET: 'short-insecure-key',
+        }),
+      ).toThrow(/CẢNH BÁO BẢO MẬT NGHIÊM TRỌNG/);
+    });
   });
 
   describe('Payment Configuration', () => {

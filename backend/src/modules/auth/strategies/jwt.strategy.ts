@@ -116,8 +116,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
     }
 
+    const userIdStr = user._id.toString();
     return {
       _id: user._id,
+      id: userIdStr,
+      userId: userIdStr,
       email: user.email,
       role: user.role,
       fullName: user.fullName,

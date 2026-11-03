@@ -12,7 +12,7 @@ export class User {
   @Prop({ required: true, unique: true, lowercase: true })
   email: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, select: false })
   password: string;
 
   @Prop()
@@ -27,16 +27,16 @@ export class User {
   @Prop({ default: true })
   status: boolean;
 
-  @Prop()
+  @Prop({ select: false })
   resetOtp?: string;
 
-  @Prop()
+  @Prop({ select: false })
   resetOtpExpiry?: Date;
 
-  @Prop({ default: 0 })
+  @Prop({ default: 0, select: false })
   resetOtpAttempts?: number;
 
-  @Prop()
+  @Prop({ select: false })
   refreshTokenHash?: string;
 
   @Prop({ default: 0 })

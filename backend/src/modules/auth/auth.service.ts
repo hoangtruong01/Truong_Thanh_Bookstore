@@ -8,7 +8,13 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { createHash, randomInt, randomUUID, timingSafeEqual } from 'crypto';
+import {
+  createHash,
+  createHmac,
+  randomInt,
+  randomUUID,
+  timingSafeEqual,
+} from 'crypto';
 import { UsersService } from '../users/users.service';
 import {
   RegisterDto,
@@ -59,16 +65,36 @@ export class AuthService {
     }
   }
 
+  private getOtpPepper(): string {
+    return (
+      this.configService.get<string>('OTP_PEPPER') ||
+      this.configService.get<string>('JWT_RESET_SECRET') ||
+      'truong-thanh-otp-pepper-secret-2026'
+    );
+  }
+
   private hashOtp(otp: string): string {
-    return createHash('sha256').update(otp).digest('hex');
+    const pepper = this.getOtpPepper();
+    return createHmac('sha256', pepper).update(otp).digest('hex');
   }
 
   private isOtpHashValid(storedHash: string, otp: string): boolean {
     try {
       const expected = Buffer.from(storedHash, 'hex');
       const actual = Buffer.from(this.hashOtp(otp), 'hex');
+      if (
+        expected.length === actual.length &&
+        timingSafeEqual(expected, actual)
+      ) {
+        return true;
+      }
+      // Backward compatibility fallback with legacy SHA-256 in constant time
+      const legacy = Buffer.from(
+        createHash('sha256').update(otp).digest('hex'),
+        'hex',
+      );
       return (
-        expected.length === actual.length && timingSafeEqual(expected, actual)
+        expected.length === legacy.length && timingSafeEqual(expected, legacy)
       );
     } catch {
       return false;

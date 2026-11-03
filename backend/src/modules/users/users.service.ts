@@ -38,13 +38,27 @@ export class UsersService {
     private securityAuditService?: SecurityAuditService,
   ) {}
 
+  sanitizeUser<T = any>(user: T): T {
+    if (!user) return user;
+    const obj =
+      typeof (user as any).toObject === 'function'
+        ? (user as any).toObject()
+        : { ...(user as any) };
+    delete obj.password;
+    delete obj.refreshTokenHash;
+    delete obj.resetOtp;
+    delete obj.resetOtpExpiry;
+    delete obj.resetOtpAttempts;
+    return obj as T;
+  }
+
   async findById(id: string): Promise<UserDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('ID người dùng không đúng định dạng');
     }
     const user = await this.userModel.findById(id).select('-password').exec();
     if (!user) throw new NotFoundException('User not found');
-    return user;
+    return this.sanitizeUser(user);
   }
 
   async findByIdWithPassword(id: string): Promise<UserDocument | null> {
@@ -58,14 +72,14 @@ export class UsersService {
   async findByEmail(email: string): Promise<UserDocument | null> {
     return this.userModel
       .findOne({ email: email.toLowerCase().trim() })
-      .select('+password')
+      .select('+password +resetOtp +resetOtpExpiry +resetOtpAttempts')
       .exec();
   }
 
   async findByEmailWithPassword(email: string): Promise<UserDocument | null> {
     return this.userModel
       .findOne({ email: email.toLowerCase().trim() })
-      .select('+password')
+      .select('+password +resetOtp +resetOtpExpiry +resetOtpAttempts')
       .exec();
   }
 
@@ -80,10 +94,9 @@ export class UsersService {
     }
     const user = await this.userModel
       .findByIdAndUpdate(id, data, { returnDocument: 'after' })
-      .select('-password')
       .exec();
     if (!user) throw new NotFoundException('User not found');
-    return user;
+    return this.sanitizeUser(user);
   }
 
   // ── RBAC User Management Methods ──
@@ -117,7 +130,9 @@ export class UsersService {
     const [data, total] = await Promise.all([
       this.userModel
         .find(filter)
-        .select('-password -refreshTokenHash -resetOtp')
+        .select(
+          '-password -refreshTokenHash -resetOtp -resetOtpExpiry -resetOtpAttempts',
+        )
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -125,7 +140,8 @@ export class UsersService {
       this.userModel.countDocuments(filter).exec(),
     ]);
 
-    return paginate(data, total, page, limit);
+    const sanitizedData = data.map((u) => this.sanitizeUser(u));
+    return paginate(sanitizedData, total, page, limit);
   }
 
   async createStaffOrAdmin(
@@ -164,13 +180,7 @@ export class UsersService {
     });
 
     const saved = await user.save();
-    const result = (saved.toObject
-      ? saved.toObject()
-      : saved) as unknown as Record<string, unknown>;
-    delete result.password;
-    delete result.refreshTokenHash;
-    delete result.resetOtp;
-    return result as unknown as UserDocument;
+    return this.sanitizeUser(saved);
   }
 
   async updateRole(
@@ -260,11 +270,7 @@ export class UsersService {
       targetUserId,
       newRole,
     });
-    const result = (updated.toObject
-      ? updated.toObject()
-      : updated) as unknown as Record<string, unknown>;
-    delete result.password;
-    return result as unknown as UserDocument;
+    return this.sanitizeUser(updated);
   }
 
   async updatePermissions(
@@ -296,11 +302,7 @@ export class UsersService {
 
     targetUser.permissions = permissions;
     const updated = await targetUser.save();
-    const result = (updated.toObject
-      ? updated.toObject()
-      : updated) as unknown as Record<string, unknown>;
-    delete result.password;
-    return result as unknown as UserDocument;
+    return this.sanitizeUser(updated);
   }
 
   async updateStatus(
@@ -363,11 +365,7 @@ export class UsersService {
       targetUserId,
       status,
     });
-    const result = (updated.toObject
-      ? updated.toObject()
-      : updated) as unknown as Record<string, unknown>;
-    delete result.password;
-    return result as unknown as UserDocument;
+    return this.sanitizeUser(updated);
   }
 
   async deleteUser(

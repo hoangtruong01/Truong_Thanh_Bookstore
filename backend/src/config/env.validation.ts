@@ -387,8 +387,20 @@ export function validateEnv(
     );
   }
 
-  // Strict Production Security Auditing
-  if (validatedConfig.NODE_ENV === Environment.PRODUCTION) {
+  // Strict Production & Cloud Environment Security Auditing (ENV-P1-07)
+  const isCloudHosted = Boolean(
+    normalizedConfig.RENDER ||
+    process.env.RENDER ||
+    normalizedConfig.RENDER_SERVICE_ID ||
+    process.env.RENDER_SERVICE_ID ||
+    normalizedConfig.VERCEL ||
+    process.env.VERCEL,
+  );
+  const isStrictProduction =
+    validatedConfig.NODE_ENV === Environment.PRODUCTION ||
+    (isCloudHosted && validatedConfig.NODE_ENV !== Environment.TEST);
+
+  if (isStrictProduction) {
     const secret = validatedConfig.JWT_SECRET;
     const isWeakSecret = INSECURE_DEFAULT_SECRETS.some(
       (insecure) => secret.toLowerCase() === insecure.toLowerCase(),
