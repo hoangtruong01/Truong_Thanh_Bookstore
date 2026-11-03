@@ -26,6 +26,8 @@
 | **DOC-02** | Document Center & Quản lý Chứng từ Điện tử | Backend / ERP | P1 | ✅ Đã hoàn thành | Vừa |
 | **CRM-01** | Quản lý Khách Sỉ/Lẻ, Hạng Khách & Ưu tiên Chăm sóc | Fullstack / CRM | P1 | ✅ Đã hoàn thành | Vừa |
 | **PUR-02** | Báo giá NCC, Lịch sử Giá & Đề xuất Nguồn hàng Tối ưu | Backend / Purchasing | P1 | ✅ Đã hoàn thành | Khó |
+| **SALES-RET-01** | Khách Hàng Trả Hàng, Đổi Hàng & Hoàn Tiền/Công Nợ | Fullstack / Commerce | P1 | 🟡 Đã đặc tả Playbook | Khó |
+| **FIN-COD-01** | Đối Soát Thu Hộ COD & Cước Vận Chuyển Logistics | Fullstack / Finance | P1 | 🟡 Đã đặc tả Playbook | Vừa |
 | **BE-01** | Payment Callback Verification & Replay Protection | Backend / Sec | P0 | ✅ Đã hoàn thành | Vừa |
 | **BE-02** | Payment & Order State Protection (Late callback reconciliation) | Backend / Biz | P0 | ✅ Đã hoàn thành | Vừa |
 | **BE-03** | Guest Checkout Determinism & Idempotency Conflict Check | Backend / Core | P0 | ✅ Đã hoàn thành | Vừa |
