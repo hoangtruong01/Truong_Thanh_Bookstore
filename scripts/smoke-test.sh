@@ -33,9 +33,12 @@ while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
     
     # Verify JSON response contains expected UP / HEALTHY statuses
     RELEASE_MATCHED=true
-    if [ -n "$EXPECTED_RELEASE" ] && ! echo "$HTTP_BODY" | grep -q "\"release\":\"${EXPECTED_RELEASE}\""; then
-      RELEASE_MATCHED=false
-      echo "  ⏳ Deployment is active but release SHA does not match expected ${EXPECTED_RELEASE}. Deployment may still be in progress."
+    if [ -n "$EXPECTED_RELEASE" ]; then
+      SHORT_EXPECTED="${EXPECTED_RELEASE:0:7}"
+      if ! echo "$HTTP_BODY" | grep -q "\"release\":\"${EXPECTED_RELEASE}\"" && ! echo "$HTTP_BODY" | grep -q "\"release\":\"${SHORT_EXPECTED}"; then
+        RELEASE_MATCHED=false
+        echo "  ⏳ Deployment is active but release SHA does not match expected ${EXPECTED_RELEASE}. Deployment may still be in progress."
+      fi
     fi
 
     IS_UP=false

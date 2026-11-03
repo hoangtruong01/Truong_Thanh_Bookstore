@@ -77,3 +77,26 @@ test('smoke-test: evaluateHealth fails when database is degraded', () => {
   assert.equal(evalResult.isPassed, false);
   assert.equal(evalResult.isDbHealthy, false);
 });
+
+test('smoke-test: evaluateHealth matches 7-char short SHA with 40-char full SHA (OPS-P0-03)', () => {
+  const fullSha = '121e99f5d3aeddba99b73dda17423cf3ea8a112f';
+  const shortSha = '121e99f';
+
+  // Case 1: Backend reports short, expected is full
+  const evalResult1 = evaluateHealth(
+    200,
+    { data: { status: 'UP', database: { status: 'HEALTHY' }, release: shortSha } },
+    fullSha,
+  );
+  assert.equal(evalResult1.isPassed, true);
+  assert.equal(evalResult1.releaseMatches, true);
+
+  // Case 2: Backend reports full, expected is short
+  const evalResult2 = evaluateHealth(
+    200,
+    { data: { status: 'UP', database: { status: 'HEALTHY' }, release: fullSha } },
+    shortSha,
+  );
+  assert.equal(evalResult2.isPassed, true);
+  assert.equal(evalResult2.releaseMatches, true);
+});

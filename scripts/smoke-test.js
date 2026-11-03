@@ -31,7 +31,13 @@ function evaluateHealth(statusCode, rawBody, expectedRel = '') {
   const isUp = payload?.status === 'UP';
   const isDbHealthy = payload?.database?.status === 'HEALTHY';
   const currentRelease = payload?.release || '';
-  const releaseMatches = !expectedRel || currentRelease === expectedRel;
+  const releaseMatches =
+    !expectedRel ||
+    currentRelease === expectedRel ||
+    (expectedRel.length >= 7 &&
+      currentRelease.length >= 7 &&
+      (currentRelease.startsWith(expectedRel.slice(0, 7)) ||
+        expectedRel.startsWith(currentRelease.slice(0, 7))));
 
   return {
     isPassed: statusCode === 200 && isUp && isDbHealthy && releaseMatches,
