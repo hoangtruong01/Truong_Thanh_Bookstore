@@ -53,4 +53,16 @@ describe('BUG-020: ProductCard list price strike-through', () => {
     expect(wrapper.findAll('.line-through')).toHaveLength(0)
     expect(wrapper.text()).toContain('35.000')
   })
+
+  it('TASK-013: displays "Chưa có đánh giá" when rating is 0 or missing', () => {
+    const wrapper = mountCard({ ...baseProduct, rating: 0 })
+    expect(wrapper.text()).toContain('Chưa có đánh giá')
+    expect(wrapper.text()).not.toContain('4.8')
+  })
+
+  it('TASK-013: displays genuine rating when rating > 0', () => {
+    const wrapper = mountCard({ ...baseProduct, rating: 4.5 })
+    expect(wrapper.text()).toContain('4.5')
+    expect(wrapper.text()).not.toContain('Chưa có đánh giá')
+  })
 })

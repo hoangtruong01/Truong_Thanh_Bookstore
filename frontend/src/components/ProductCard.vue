@@ -112,8 +112,11 @@
       </div>
       
       <div class="flex items-center justify-between text-[10px] text-slate-400">
-        <div class="flex items-center gap-0.5 text-yellow-600 font-bold">
-          ★ {{ Number(product.rating || 4.8).toFixed(1) }}
+        <div v-if="product.rating && product.rating > 0" class="flex items-center gap-0.5 text-yellow-600 font-bold">
+          ★ {{ Number(product.rating).toFixed(1) }}
+        </div>
+        <div v-else class="text-slate-400 font-medium">
+          Chưa có đánh giá
         </div>
         <div>
           Đã bán {{ formatNumber(product.sold || 0) }}

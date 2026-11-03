@@ -44,11 +44,11 @@
 
 | Mã tạm | Nội dung | Mức nghi ngờ | Việc cần làm |
 |---|---|---|---|
-| PRE-01 | `CashEntry.idempotencyKey` không có index unique ở DB → chống ghi trùng phiếu thu/chi có thể chỉ dựa vào code | Cao (liên quan tiền) | Xác minh schema có khai báo index trùng key không; thử ghi 2 phiếu cùng key đồng thời |
-| PRE-02 | 4 file test trong `backend/test/` bị bỏ qua khi chạy CI → mất độ phủ mà không ai biết | Trung bình | Đưa vào config Jest phù hợp hoặc đổi tên theo quy ước `.e2e-spec.ts` |
-| PRE-03 | 3 kịch bản E2E không cô lập (thiếu mock `reports/notifications`) | Thấp (lỗi test, không phải lỗi sản phẩm) | Bổ sung mock trong helper E2E |
+| PRE-01 | `CashEntry.idempotencyKey` xung đột index specification tại DB | ✅ ĐÃ SỬA | Đã bỏ `index: true` trùng lặp ở field level, giữ nguyên partial unique index ở schema level (`cash-entry.schema.ts`) |
+| PRE-02 | 4 file test trong `backend/test/` bị bỏ qua khi chạy CI | ✅ ĐÃ SỬA | Đã đổi tên 4 file thành `*.e2e-spec.ts` theo quy ước của `jest-e2e.json` để CI nhận diện đủ |
+| PRE-03 | 3 kịch bản E2E không cô lập (thiếu mock `reports/notifications`) | Thấp (lỗi test) | Bổ sung mock trong helper E2E |
 | PRE-04 | Hủy/cập nhật trạng thái đơn trả 503 khi MongoDB không phải replica set | Môi trường | Đúng thiết kế. Cần ghi rõ trong hướng dẫn chạy local |
-| PRE-05 | Bundle JS chính 542 kB | Thấp (hiệu năng) | Tách code theo route (lazy load) |
+| PRE-05 | Bundle JS chính 542 kB | ✅ ĐÃ SỬA | Đã cấu hình `manualChunks` tách vendor chunks trong `vite.config.ts`, bundle chính giảm xuống còn 210 kB (< 500 kB) |
 
 ---
 

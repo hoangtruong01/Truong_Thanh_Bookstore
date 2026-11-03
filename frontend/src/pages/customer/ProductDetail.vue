@@ -156,7 +156,7 @@
               </button>
             </div>
             <div class="flex items-center gap-4 text-sm mt-2">
-              <div class="flex items-center gap-1 bg-yellow-50 px-2.5 py-1 rounded-lg">
+              <div v-if="reviews.length > 0" class="flex items-center gap-1 bg-yellow-50 px-2.5 py-1 rounded-lg">
                 <span class="font-bold text-yellow-700">{{ averageRating }}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-yellow-500">
                   <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
@@ -174,7 +174,7 @@
           <!-- Price Block -->
           <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex items-center justify-between">
             <div class="space-y-1">
-              <template v-if="product.discountPrice > 0">
+              <template v-if="product.discountPrice > 0 && product.discountPrice < product.price">
                 <div class="flex items-baseline gap-3 flex-wrap">
                   <span class="text-3xl font-black text-[#dc2626]">{{ formatCurrency(product.discountPrice) }}</span>
                   <span class="text-slate-400 line-through text-sm font-medium">{{ formatCurrency(product.price) }}</span>
@@ -194,7 +194,7 @@
           </div>
 
           <!-- Combo Bundle List -->
-          <div v-if="categoryDetail && categoryDetail.products && categoryDetail.products.length > 0 && categoryDetail.comboPrice" class="border-2 border-[#dc2626]/20 rounded-2xl p-5 bg-[#dc2626]/5 space-y-4">
+          <div v-if="categoryDetail && categoryDetail.products && categoryDetail.products.length > 0 && categoryDetail.products.length <= 10 && categoryDetail.comboPrice" class="border-2 border-[#dc2626]/20 rounded-2xl p-5 bg-[#dc2626]/5 space-y-4">
             <h3 class="text-sm font-black text-slate-800 tracking-wide flex items-center gap-1.5">
               <span class="text-[#dc2626]">🎁</span> Các sản phẩm đi kèm trong Combo:
             </h3>
@@ -212,7 +212,7 @@
                 </div>
                 <div class="text-right">
                   <div class="text-xs font-black text-slate-900">{{ formatCurrency(item.discountPrice || item.price) }}</div>
-                  <div v-if="item.discountPrice" class="text-[9px] text-slate-400 line-through">{{ formatCurrency(item.price) }}</div>
+                  <div v-if="item.discountPrice && item.discountPrice < item.price" class="text-[9px] text-slate-400 line-through">{{ formatCurrency(item.price) }}</div>
                 </div>
               </div>
             </div>
@@ -1416,7 +1416,7 @@ async function loadReviews() {
 }
 
 const averageRating = computed(() => {
-  if (reviews.value.length === 0) return 5
+  if (reviews.value.length === 0) return 0
   const sum = reviews.value.reduce((acc, r) => acc + r.rating, 0)
   return Math.round((sum / reviews.value.length) * 10) / 10
 })

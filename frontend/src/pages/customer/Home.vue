@@ -582,7 +582,7 @@
                         {{ formatCurrency(prod.discountPrice || prod.price) }}
                       </span>
                       <span
-                        v-if="prod.discountPrice"
+                        v-if="prod.discountPrice && prod.discountPrice < prod.price"
                         class="text-xs text-slate-400 line-through"
                       >
                         {{ formatCurrency(prod.price) }}

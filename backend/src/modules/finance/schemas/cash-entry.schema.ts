@@ -99,7 +99,7 @@ export class CashEntry {
   @Prop({ type: Types.ObjectId, ref: 'CashEntry' })
   reversedBy?: Types.ObjectId;
 
-  @Prop({ type: String, trim: true, index: true })
+  @Prop({ type: String, trim: true })
   idempotencyKey?: string;
 
   @Prop({ type: String, trim: true })

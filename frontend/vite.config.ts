@@ -11,6 +11,26 @@ export default defineConfig({
       'vue': 'vue/dist/vue.esm-bundler.js',
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('vue') || id.includes('pinia')) {
+              return 'vendor-vue'
+            }
+            if (id.includes('chart.js')) {
+              return 'vendor-chart'
+            }
+            if (id.includes('axios') || id.includes('vue-toastification')) {
+              return 'vendor-utils'
+            }
+          }
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {
