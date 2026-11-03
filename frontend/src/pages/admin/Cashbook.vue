@@ -42,6 +42,17 @@
           </svg>
           Lập Phiếu Thu / Chi
         </button>
+
+        <button
+          v-if="activeTab === 'cod'"
+          class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm transition-colors shadow-sm cursor-pointer"
+          @click="openCreateCodModal"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Lập Bảng Kê Đối Soát COD
+        </button>
       </div>
     </div>
 
@@ -101,6 +112,20 @@
           Công Nợ Khách Sỉ (AR)
           <span class="ml-1 px-2 py-0.5 text-xs rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
             {{ receivablesTotal }}
+          </span>
+        </button>
+
+        <button
+          :class="activeTab === 'cod' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-bold' : 'border-transparent text-gray-500 hover:text-gray-700 font-medium'"
+          class="py-3 px-1 border-b-2 text-sm transition-colors flex items-center gap-2"
+          @click="activeTab = 'cod'"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+          Đối Soát COD Logistics
+          <span class="ml-1 px-2 py-0.5 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+            {{ pendingCodOrders.length }}
           </span>
         </button>
       </nav>
@@ -437,6 +462,242 @@
       </div>
     </div>
 
+    <!-- TAB 5: COD LOGISTICS RECONCILIATION (FIN-COD-01) -->
+    <div v-if="activeTab === 'cod'" class="space-y-6">
+      <!-- COD Summary KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">COD Đang Chờ Đối Soát</p>
+          <p class="text-xl font-extrabold text-amber-600 mt-1">{{ formatCurrency(totalPendingCodAmount) }}</p>
+          <p class="text-[11px] text-gray-400 mt-0.5">{{ pendingCodOrders.length }} đơn đã giao thành công</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Số Lô Bảng Kê Đã Khớp</p>
+          <p class="text-xl font-extrabold text-blue-600 mt-1">{{ codBatches.length }}</p>
+          <p class="text-[11px] text-gray-400 mt-0.5">Lô đối soát lưu trữ</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tổng Thực Nhận (Net Payout)</p>
+          <p class="text-xl font-extrabold text-emerald-600 mt-1">{{ formatCurrency(totalReconciledNetPayout) }}</p>
+          <p class="text-[11px] text-gray-400 mt-0.5">Tiền đã về sổ quỹ ngân hàng</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Lệch Soát Cần Lưu Ý</p>
+          <p class="text-xl font-extrabold text-rose-600 mt-1">{{ totalDiscrepanciesCount }}</p>
+          <p class="text-[11px] text-gray-400 mt-0.5">Đơn lệch tiền hoặc đơn hoàn</p>
+        </div>
+      </div>
+
+      <!-- SECTION A: DANH SÁCH ĐƠN HÀNG COD CHỜ ĐỐI SOÁT -->
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+        <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/50 dark:bg-gray-800/50">
+          <div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <span>📦</span> Đơn Hàng COD Đang Chờ Đối Soát
+            </h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Đơn hàng giao COD thành công (DELIVERED) chưa được đối soát và cấn trừ cước phí
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              v-if="selectedPendingOrders.length > 0"
+              class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+              @click="populateCodModalFromSelected"
+            >
+              <span>+</span> Lập bảng kê từ {{ selectedPendingOrders.length }} đơn đã chọn
+            </button>
+            <button
+              class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-medium cursor-pointer"
+              @click="fetchPendingCodOrders"
+            >
+              Làm mới
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 uppercase text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
+              <tr>
+                <th class="py-3 px-4 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    :checked="isAllPendingSelected"
+                    class="rounded text-indigo-600 focus:ring-indigo-500"
+                    @change="toggleSelectAllPending"
+                  />
+                </th>
+                <th class="py-3 px-4">Mã Đơn Hàng</th>
+                <th class="py-3 px-4">Mã Vận Đơn</th>
+                <th class="py-3 px-4">Khách Hàng</th>
+                <th class="py-3 px-4 text-right">Tiền Thu Hộ (COD)</th>
+                <th class="py-3 px-4 text-center">Trạng Thái Vận Chuyển</th>
+                <th class="py-3 px-4 text-center">Ngày Giao Hàng</th>
+                <th class="py-3 px-4 text-center">Trạng Thái COD</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+              <tr v-if="loadingCod" class="text-center py-8">
+                <td colspan="8" class="py-8 text-gray-400">Đang tải danh sách đơn COD...</td>
+              </tr>
+              <tr v-else-if="pendingCodOrders.length === 0" class="text-center py-8">
+                <td colspan="8" class="py-8 text-gray-400">
+                  🎉 Tuyệt vời! Hiện không có đơn hàng COD nào tồn đọng chờ đối soát.
+                </td>
+              </tr>
+              <tr
+                v-for="order in pendingCodOrders"
+                v-else
+                :key="order._id"
+                class="hover:bg-gray-50/70 dark:hover:bg-gray-700/50 transition-colors"
+              >
+                <td class="py-3 px-4 text-center">
+                  <input
+                    v-model="selectedPendingOrders"
+                    type="checkbox"
+                    :value="order._id"
+                    class="rounded text-indigo-600 focus:ring-indigo-500"
+                  />
+                </td>
+                <td class="py-3 px-4 font-mono font-bold text-gray-900 dark:text-white">
+                  #{{ order.orderCode }}
+                </td>
+                <td class="py-3 px-4">
+                  <span v-if="order.trackingCode" class="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    {{ order.trackingCode }}
+                  </span>
+                  <span v-else class="text-xs text-gray-400 italic">Chưa có mã</span>
+                </td>
+                <td class="py-3 px-4">
+                  <p class="font-medium text-gray-900 dark:text-white">{{ order.customerName || 'Khách vãng lai' }}</p>
+                  <p class="text-xs text-gray-400">{{ order.phone || '-' }}</p>
+                </td>
+                <td class="py-3 px-4 text-right font-extrabold text-amber-600 dark:text-amber-400">
+                  {{ formatCurrency(order.total) }}
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    {{ order.shippingStatus || 'Đã giao' }}
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-center text-xs text-gray-500">
+                  {{ formatDate(order.deliveredAt || '') }}
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span
+                    :class="order.codStatus === 'DISCREPANCY' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200'"
+                    class="px-2 py-0.5 rounded-full text-xs font-semibold border"
+                  >
+                    {{ order.codStatus === 'DISCREPANCY' ? 'Lệch soát' : 'Chờ đối soát' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION B: LỊCH SỬ CÁC PHIÊN ĐỐI SOÁT COD (BATCHES) -->
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+        <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
+          <div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <span>📑</span> Lịch Sử Bảng Kê Đối Soát Hãng Vận Chuyển
+            </h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Danh sách các lô đối soát đã thực hiện ghi nhận vào sổ quỹ và ngân hàng
+            </p>
+          </div>
+          <button
+            class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-medium cursor-pointer"
+            @click="fetchCodBatches"
+          >
+            Làm mới
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 uppercase text-[11px] font-bold border-b border-gray-100 dark:border-gray-700">
+              <tr>
+                <th class="py-3 px-4">Mã Bảng Kê (Statement ID)</th>
+                <th class="py-3 px-4">Nhà Vận Chuyển</th>
+                <th class="py-3 px-4 text-center">Số Đơn Khớp</th>
+                <th class="py-3 px-4 text-right">Tổng Tiền COD</th>
+                <th class="py-3 px-4 text-right">Tổng Cước Cấn Trừ</th>
+                <th class="py-3 px-4 text-right">Thực Nhận (Net Payout)</th>
+                <th class="py-3 px-4">Tài Khoản Thụ Hưởng</th>
+                <th class="py-3 px-4 text-center">Lệch Soát</th>
+                <th class="py-3 px-4 text-center">Ngày Đối Soát</th>
+                <th class="py-3 px-4 text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+              <tr v-if="loadingBatches" class="text-center py-8">
+                <td colspan="10" class="py-8 text-gray-400">Đang tải lịch sử bảng kê đối soát...</td>
+              </tr>
+              <tr v-else-if="codBatches.length === 0" class="text-center py-8">
+                <td colspan="10" class="py-8 text-gray-400">Chưa có bảng kê đối soát COD nào được lập</td>
+              </tr>
+              <tr
+                v-for="batch in codBatches"
+                v-else
+                :key="batch._id"
+                class="hover:bg-gray-50/70 dark:hover:bg-gray-700/50 transition-colors"
+              >
+                <td class="py-3 px-4 font-mono font-bold text-indigo-700 dark:text-indigo-400">
+                  {{ batch.statementId }}
+                </td>
+                <td class="py-3 px-4 font-bold text-gray-800 dark:text-gray-200">
+                  {{ batch.carrier || 'GHN' }}
+                </td>
+                <td class="py-3 px-4 text-center font-bold text-emerald-600">
+                  {{ batch.matchedOrdersCount }} đơn
+                </td>
+                <td class="py-3 px-4 text-right font-medium">
+                  {{ formatCurrency(batch.totalCod) }}
+                </td>
+                <td class="py-3 px-4 text-right font-medium text-rose-600">
+                  -{{ formatCurrency(batch.totalShipping) }}
+                </td>
+                <td class="py-3 px-4 text-right font-black text-emerald-700 dark:text-emerald-400">
+                  {{ formatCurrency(batch.netPayout) }}
+                </td>
+                <td class="py-3 px-4 text-xs font-medium text-gray-600 dark:text-gray-300">
+                  {{ batch.bankAccount?.name || batch.bankAccount?.code || '-' }}
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span
+                    v-if="batch.discrepanciesCount > 0"
+                    class="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200"
+                  >
+                    {{ batch.discrepanciesCount }} đơn
+                  </span>
+                  <span v-else class="text-xs text-emerald-600 font-bold">Khớp 100%</span>
+                </td>
+                <td class="py-3 px-4 text-center text-xs text-gray-500">
+                  {{ formatDate(batch.createdAt) }}
+                </td>
+                <td class="py-3 px-4 text-right">
+                  <button
+                    class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-gray-700 dark:text-gray-200 font-medium rounded-lg text-xs transition-colors cursor-pointer"
+                    @click="viewBatchDetails(batch)"
+                  >
+                    Chi tiết
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- MODAL 1: CREATE CASH ENTRY -->
     <div v-if="showCreateEntryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-gray-100 dark:border-gray-700">
@@ -719,22 +980,301 @@
         </form>
       </div>
     </div>
+
+    <!-- MODAL 5: CREATE COD RECONCILIATION STATEMENT -->
+    <div v-if="showCreateCodModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div class="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <!-- Modal Header -->
+        <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
+          <div>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <span>🚚</span> Lập Bảng Kê Đối Soát COD Logistics
+            </h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Khớp mã vận đơn, cấn trừ cước vận chuyển và ghi nhận Net Payout vào tài khoản ngân hàng
+            </p>
+          </div>
+          <button
+            class="w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-500 cursor-pointer"
+            @click="showCreateCodModal = false"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Form Body -->
+        <form class="flex flex-col flex-1 overflow-hidden" @submit.prevent="submitCodReconciliation">
+          <div class="p-6 overflow-y-auto space-y-5 flex-1">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Mã Bảng Kê Hãng Vận Chuyển *
+                </label>
+                <input
+                  v-model="codStatementForm.statementId"
+                  type="text"
+                  required
+                  placeholder="VD: STMT-GHN-20261103"
+                  class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl font-mono uppercase"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Nhà Vận Chuyển *
+                </label>
+                <select
+                  v-model="codStatementForm.carrier"
+                  class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl"
+                >
+                  <option value="GHN">Giao Hàng Nhanh (GHN)</option>
+                  <option value="GHTK">Giao Hàng Tiết Kiệm (GHTK)</option>
+                  <option value="VIETTEL_POST">Viettel Post</option>
+                  <option value="OTHER">Đối tác khác</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Sổ Quỹ / Tài Khoản Ngân Hàng Nhận Tiền *
+                </label>
+                <select
+                  v-model="codStatementForm.bankAccountId"
+                  required
+                  class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl font-medium"
+                >
+                  <option value="" disabled>-- Chọn tài khoản ngân hàng --</option>
+                  <option
+                    v-for="acc in accounts"
+                    :key="acc._id"
+                    :value="acc._id"
+                  >
+                    {{ acc.code }} - {{ acc.name }} ({{ formatCurrency(acc.currentBalance) }})
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Ghi chú đối soát</label>
+              <input
+                v-model="codStatementForm.note"
+                type="text"
+                placeholder="VD: Đối soát kỳ thanh toán đợt 1 tháng 11/2026"
+                class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl"
+              />
+            </div>
+
+            <!-- Items Table in Statement -->
+            <div class="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
+              <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  Chi Tiết Danh Sách Vận Đơn ({{ codStatementForm.items.length }})
+                </span>
+                <button
+                  type="button"
+                  class="px-2.5 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 text-indigo-600 font-bold rounded-lg text-xs cursor-pointer"
+                  @click="addCodItemRow"
+                >
+                  + Thêm dòng vận đơn
+                </button>
+              </div>
+
+              <div class="max-h-60 overflow-y-auto">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold sticky top-0">
+                    <tr>
+                      <th class="py-2 px-3">#</th>
+                      <th class="py-2 px-3">Mã Vận Đơn (Tracking Code) *</th>
+                      <th class="py-2 px-3 text-right">Tiền Thu Hộ (VND) *</th>
+                      <th class="py-2 px-3 text-right">Cước Phí VC (VND) *</th>
+                      <th class="py-2 px-3 text-right">Cước Hoàn (VND)</th>
+                      <th class="py-2 px-3 text-center w-12">Xóa</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tr v-for="(item, idx) in codStatementForm.items" :key="idx" class="hover:bg-gray-50/50">
+                      <td class="py-2 px-3 text-gray-400 font-mono">{{ idx + 1 }}</td>
+                      <td class="py-2 px-3">
+                        <input
+                          v-model="item.trackingCode"
+                          type="text"
+                          required
+                          placeholder="Mã tracking"
+                          class="w-full px-2 py-1 text-xs bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg font-mono font-bold"
+                        />
+                      </td>
+                      <td class="py-2 px-3 text-right">
+                        <input
+                          v-model.number="item.codAmount"
+                          type="number"
+                          min="0"
+                          required
+                          class="w-28 px-2 py-1 text-xs text-right bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg font-bold text-amber-600"
+                        />
+                      </td>
+                      <td class="py-2 px-3 text-right">
+                        <input
+                          v-model.number="item.shippingFee"
+                          type="number"
+                          min="0"
+                          required
+                          class="w-24 px-2 py-1 text-xs text-right bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-rose-600"
+                        />
+                      </td>
+                      <td class="py-2 px-3 text-right">
+                        <input
+                          v-model.number="item.returnFee"
+                          type="number"
+                          min="0"
+                          class="w-24 px-2 py-1 text-xs text-right bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600"
+                        />
+                      </td>
+                      <td class="py-2 px-3 text-center">
+                        <button
+                          type="button"
+                          class="text-red-500 hover:text-red-700 font-bold text-sm cursor-pointer"
+                          @click="removeCodItemRow(idx)"
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Calculated Summary Bar -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl">
+              <div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Tổng Tiền Thu Hộ (COD):</span>
+                <p class="text-base font-extrabold text-amber-600">{{ formatCurrency(computedTotalCod) }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Tổng Cước Cấn Trừ:</span>
+                <p class="text-base font-extrabold text-rose-600">-{{ formatCurrency(computedTotalShipping) }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Thực Nhận Chuyển Khoản (Net Payout):</span>
+                <p class="text-lg font-black text-indigo-700 dark:text-indigo-400">{{ formatCurrency(computedNetPayout) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="p-4 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 dark:text-gray-300 rounded-xl cursor-pointer"
+              @click="showCreateCodModal = false"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              :disabled="submitting || codStatementForm.items.length === 0"
+              class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl disabled:opacity-50 cursor-pointer shadow-sm"
+            >
+              {{ submitting ? 'Đang xử lý đối soát...' : 'Xác nhận đối soát & Ghi sổ quỹ' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL 6: VIEW COD BATCH DETAILS -->
+    <div v-if="selectedBatchDetails" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-gray-100 dark:border-gray-700 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+          <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <span>📋</span> Chi Tiết Bảng Kê Đối Soát
+          </h3>
+          <button
+            class="w-7 h-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-gray-400 cursor-pointer"
+            @click="selectedBatchDetails = null"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="text-xs space-y-2 text-gray-700 dark:text-gray-300">
+          <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+            <span class="text-gray-400">Mã Bảng Kê:</span>
+            <span class="font-mono font-bold text-indigo-600">{{ selectedBatchDetails.statementId }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+            <span class="text-gray-400">Đối Tác:</span>
+            <span class="font-bold">{{ selectedBatchDetails.carrier }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+            <span class="text-gray-400">Tài Khoản Thụ Hưởng:</span>
+            <span class="font-bold">{{ selectedBatchDetails.bankAccount?.name || '-' }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+            <span class="text-gray-400">Số Đơn Khớp:</span>
+            <span class="font-bold text-emerald-600">{{ selectedBatchDetails.matchedOrdersCount }} đơn</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+            <span class="text-gray-400">Tổng Tiền COD Thu Hộ:</span>
+            <span class="font-bold text-amber-600">{{ formatCurrency(selectedBatchDetails.totalCod) }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+            <span class="text-gray-400">Cước Vận Chuyển:</span>
+            <span class="font-bold text-rose-600">-{{ formatCurrency(selectedBatchDetails.totalShipping) }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+            <span class="text-gray-400 font-bold">Thực Nhận (Net Payout):</span>
+            <span class="font-extrabold text-sm text-emerald-600">{{ formatCurrency(selectedBatchDetails.netPayout) }}</span>
+          </div>
+          <div v-if="selectedBatchDetails.note" class="py-1">
+            <span class="text-gray-400">Ghi chú:</span>
+            <p class="mt-0.5 italic text-gray-600 dark:text-gray-300">{{ selectedBatchDetails.note }}</p>
+          </div>
+        </div>
+
+        <div v-if="selectedBatchDetails.discrepancies && selectedBatchDetails.discrepancies.length > 0" class="pt-2 border-t border-gray-100 dark:border-gray-700 space-y-2">
+          <p class="text-xs font-bold text-rose-600">Danh Sách Lệch Soát ({{ selectedBatchDetails.discrepancies.length }}):</p>
+          <div class="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+            <div
+              v-for="(disc, dIdx) in selectedBatchDetails.discrepancies"
+              :key="dIdx"
+              class="p-2 bg-rose-50 dark:bg-rose-950/30 rounded-lg text-[11px] border border-rose-200/60"
+            >
+              <p class="font-mono font-bold text-rose-800 dark:text-rose-300">{{ disc.trackingCode }}</p>
+              <p class="text-rose-600 dark:text-rose-400">{{ disc.reason }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-gray-100 dark:border-gray-700 text-right">
+          <button
+            class="px-4 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-xl cursor-pointer"
+            @click="selectedBatchDetails = null"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useToast } from 'vue-toastification';
 import {
   financeService,
   type CashAccount,
   type CashEntry,
   type SupplierPayable,
+  type CodReconciliationBatch,
+  type PendingCodOrder,
 } from '@/services/finance.service';
 
 const toast = useToast();
 
-const activeTab = ref<'accounts' | 'entries' | 'payables' | 'receivables'>('entries');
+const activeTab = ref<'accounts' | 'entries' | 'payables' | 'receivables' | 'cod'>('entries');
 const submitting = ref(false);
 
 // Accounts
@@ -789,6 +1329,63 @@ const collectFormData = ref({
   accountId: '',
   amount: 0,
   note: '',
+});
+
+// COD Logistics (FIN-COD-01)
+const pendingCodOrders = ref<PendingCodOrder[]>([]);
+const codBatches = ref<CodReconciliationBatch[]>([]);
+const loadingCod = ref(false);
+const loadingBatches = ref(false);
+const selectedPendingOrders = ref<string[]>([]);
+const showCreateCodModal = ref(false);
+const selectedBatchDetails = ref<CodReconciliationBatch | null>(null);
+
+const codStatementForm = ref<{
+  statementId: string;
+  carrier: string;
+  bankAccountId: string;
+  note: string;
+  items: Array<{ trackingCode: string; codAmount: number; shippingFee: number; returnFee: number }>;
+}>({
+  statementId: '',
+  carrier: 'GHN',
+  bankAccountId: '',
+  note: '',
+  items: [],
+});
+
+const totalPendingCodAmount = computed(() => {
+  return pendingCodOrders.value.reduce((sum, o) => sum + (o.total || 0), 0);
+});
+
+const totalReconciledNetPayout = computed(() => {
+  return codBatches.value.reduce((sum, b) => sum + (b.netPayout || 0), 0);
+});
+
+const totalDiscrepanciesCount = computed(() => {
+  return codBatches.value.reduce((sum, b) => sum + (b.discrepanciesCount || 0), 0);
+});
+
+const isAllPendingSelected = computed(() => {
+  return (
+    pendingCodOrders.value.length > 0 &&
+    selectedPendingOrders.value.length === pendingCodOrders.value.length
+  );
+});
+
+const computedTotalCod = computed(() => {
+  return codStatementForm.value.items.reduce((sum, it) => sum + (Number(it.codAmount) || 0), 0);
+});
+
+const computedTotalShipping = computed(() => {
+  return codStatementForm.value.items.reduce(
+    (sum, it) => sum + (Number(it.shippingFee) || 0) + (Number(it.returnFee) || 0),
+    0,
+  );
+});
+
+const computedNetPayout = computed(() => {
+  return computedTotalCod.value - computedTotalShipping.value;
 });
 
 function formatCurrency(val: number): string {
@@ -1049,10 +1646,128 @@ async function submitCollectCustomerPayment() {
   }
 }
 
+function toggleSelectAllPending() {
+  if (isAllPendingSelected.value) {
+    selectedPendingOrders.value = [];
+  } else {
+    selectedPendingOrders.value = pendingCodOrders.value.map((o) => o._id);
+  }
+}
+
+function openCreateCodModal() {
+  showCreateCodModal.value = true;
+  if (!codStatementForm.value.bankAccountId && accounts.value.length > 0) {
+    const bankAcc = accounts.value.find((a) => a.type === 'BANK_ACCOUNT') || accounts.value[0];
+    codStatementForm.value.bankAccountId = bankAcc._id;
+  }
+  if (!codStatementForm.value.statementId) {
+    codStatementForm.value.statementId = `STMT-GHN-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-01`;
+  }
+}
+
+function populateCodModalFromSelected() {
+  const selectedObjs = pendingCodOrders.value.filter((o) =>
+    selectedPendingOrders.value.includes(o._id),
+  );
+  if (selectedObjs.length === 0) return;
+
+  codStatementForm.value.items = selectedObjs.map((o) => ({
+    trackingCode: o.trackingCode || o.orderCode,
+    codAmount: o.total || 0,
+    shippingFee: 22000,
+    returnFee: 0,
+  }));
+  openCreateCodModal();
+}
+
+function addCodItemRow() {
+  codStatementForm.value.items.push({
+    trackingCode: '',
+    codAmount: 0,
+    shippingFee: 22000,
+    returnFee: 0,
+  });
+}
+
+function removeCodItemRow(index: number) {
+  codStatementForm.value.items.splice(index, 1);
+}
+
+async function fetchPendingCodOrders() {
+  loadingCod.value = true;
+  try {
+    pendingCodOrders.value = await financeService.getPendingCodOrders();
+  } catch (_err) {
+    // Non-blocking
+  } finally {
+    loadingCod.value = false;
+  }
+}
+
+async function fetchCodBatches() {
+  loadingBatches.value = true;
+  try {
+    codBatches.value = await financeService.getCodBatches();
+  } catch (_err) {
+    // Non-blocking
+  } finally {
+    loadingBatches.value = false;
+  }
+}
+
+async function submitCodReconciliation() {
+  if (codStatementForm.value.items.length === 0) {
+    toast.error('Bảng kê phải có ít nhất 1 vận đơn');
+    return;
+  }
+  submitting.value = true;
+  try {
+    const res = await financeService.reconcileCodStatement({
+      statementId: codStatementForm.value.statementId.trim(),
+      carrier: codStatementForm.value.carrier,
+      bankAccountId: codStatementForm.value.bankAccountId,
+      note: codStatementForm.value.note ? codStatementForm.value.note.trim() : undefined,
+      items: codStatementForm.value.items.map((it) => ({
+        trackingCode: it.trackingCode.trim(),
+        codAmount: Number(it.codAmount) || 0,
+        shippingFee: Number(it.shippingFee) || 0,
+        returnFee: it.returnFee ? Number(it.returnFee) : undefined,
+      })),
+    });
+
+    toast.success(
+      `Đối soát thành công ${res.matchedOrdersCount || 0} đơn! Net Payout: ${formatCurrency(res.netPayout || 0)}`,
+    );
+    showCreateCodModal.value = false;
+    selectedPendingOrders.value = [];
+    codStatementForm.value = {
+      statementId: '',
+      carrier: 'GHN',
+      bankAccountId: accounts.value[0]?._id || '',
+      note: '',
+      items: [],
+    };
+    fetchAccounts();
+    fetchPendingCodOrders();
+    fetchCodBatches();
+    fetchEntries();
+  } catch (err: any) {
+    toast.error(err?.response?.data?.message || 'Lỗi khi xử lý bảng kê đối soát COD');
+  } finally {
+    submitting.value = false;
+  }
+}
+
+function viewBatchDetails(batch: CodReconciliationBatch) {
+  selectedBatchDetails.value = batch;
+}
+
 onMounted(() => {
   fetchAccounts();
   fetchEntries();
   fetchPayables();
   fetchReceivables();
+  fetchPendingCodOrders();
+  fetchCodBatches();
 });
 </script>

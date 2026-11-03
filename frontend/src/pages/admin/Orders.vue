@@ -201,7 +201,7 @@
                 type="button"
                 :disabled="updatingStatus"
                 class="bg-slate-200 hover:bg-rose-100 hover:text-rose-700 text-slate-700 font-bold px-3 py-2 rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer"
-                @click="handleRejectReturn"
+                @click="openRejectReturnModal"
               >
                 Từ chối
               </button>
@@ -257,6 +257,57 @@
         </div>
       </div>
     </div>
+
+    <!-- Reject Return Modal -->
+    <div v-if="showRejectReturnModal && selectedOrder" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+      <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <h3 class="text-base font-extrabold text-slate-900">
+            Từ Chối Yêu Cầu Trả Hàng
+          </h3>
+          <button
+            type="button"
+            class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 cursor-pointer"
+            @click="showRejectReturnModal = false"
+          >
+            ✕
+          </button>
+        </div>
+
+        <p class="text-xs text-slate-600">
+          Từ chối yêu cầu trả hàng cho đơn <strong class="font-mono text-slate-900">#{{ selectedOrder.orderCode }}</strong>. Vui lòng nêu rõ lý do để thông báo cho khách hàng:
+        </p>
+
+        <form class="space-y-4" @submit.prevent="submitRejectReturn">
+          <div>
+            <textarea
+              v-model="rejectReturnReason"
+              rows="3"
+              required
+              placeholder="VD: Sách đã qua sử dụng, có vết ghi chú bút mực hoặc không đủ điều kiện theo chính sách đổi trả..."
+              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+            ></textarea>
+          </div>
+
+          <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              @click="showRejectReturnModal = false"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              :disabled="updatingStatus || !rejectReturnReason.trim()"
+              class="px-4 py-2 text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {{ updatingStatus ? 'Đang xử lý...' : 'Xác nhận từ chối' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -279,6 +330,8 @@ const selectedOrder = ref<Order | null>(null)
 const newStatus = ref('')
 const updatingStatus = ref(false)
 const orderQuery = ref('')
+const showRejectReturnModal = ref(false)
+const rejectReturnReason = ref('')
 
 const currentTab = ref('ALL')
 
@@ -382,14 +435,18 @@ async function handleApproveReturn() {
   }
 }
 
-async function handleRejectReturn() {
-  if (updatingStatus.value || !selectedOrder.value) return
-  const reason = window.prompt('Nhập lý do từ chối yêu cầu trả hàng:')
-  if (!reason || !reason.trim()) return
+function openRejectReturnModal() {
+  rejectReturnReason.value = ''
+  showRejectReturnModal.value = true
+}
+
+async function submitRejectReturn() {
+  if (updatingStatus.value || !selectedOrder.value || !rejectReturnReason.value.trim()) return
   updatingStatus.value = true
   try {
-    await orderService.rejectReturn(selectedOrder.value._id, reason.trim())
+    await orderService.rejectReturn(selectedOrder.value._id, rejectReturnReason.value.trim())
     toast.success('Đã từ chối yêu cầu trả hàng')
+    showRejectReturnModal.value = false
     fetchOrders()
   } catch (err: any) {
     toast.error(err.message || 'Từ chối trả hàng thất bại')

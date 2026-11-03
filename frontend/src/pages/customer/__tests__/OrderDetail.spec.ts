@@ -137,5 +137,67 @@ describe('OrderDetail.vue (BUG-001 Dynamic Bank Transfer & VietQR)', () => {
     expect(wrapper.text()).toContain('0982938316')
     expect(wrapper.find('img[alt="VietQR Chuyển Khoản"]').exists()).toBe(false)
   })
+
+  it('opens return modal on DELIVERED orders and submits return request successfully', async () => {
+    const mockDeliveredOrder = {
+      _id: 'test_order_delivered_01',
+      orderCode: 'TT261031RET',
+      orderStatus: 'DELIVERED',
+      paymentStatus: 'PAID',
+      paymentMethod: 'COD',
+      items: [
+        {
+          product: { _id: 'prod_1', name: 'Truyện tranh', images: [] },
+          name: 'Truyện tranh',
+          price: 50000,
+          quantity: 2,
+        },
+      ],
+      subtotal: 100000,
+      shippingFee: 20000,
+      discount: 0,
+      total: 120000,
+      shippingAddress: '456 Lê Lợi',
+      phone: '0912345678',
+      deliveredAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+      createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+    }
+
+    vi.mocked(orderService.getById).mockResolvedValue({ data: mockDeliveredOrder } as any)
+    vi.mocked(orderService.requestReturn).mockResolvedValue({ data: { success: true } } as any)
+
+    const wrapper = mount(OrderDetail, {
+      global: {
+        stubs: ['router-link', 'SkeletonLoader'],
+      },
+    })
+
+    await flushPromises()
+
+    // Find "Yêu cầu trả hàng" button
+    const returnBtn = wrapper.findAll('button').find((b) => b.text().includes('Yêu cầu trả hàng'))
+    expect(returnBtn).toBeDefined()
+    await returnBtn?.trigger('click')
+
+    // Modal should now be open
+    expect(wrapper.text()).toContain('Yêu Cầu Đổi / Trả Hàng')
+    expect(wrapper.text()).toContain('Chính sách trả hàng:')
+
+    // Fill in description
+    const textarea = wrapper.find('textarea')
+    expect(textarea.exists()).toBe(true)
+    await textarea.setValue('Bìa truyện bị rách và bung keo gáy')
+
+    // Submit form
+    const form = wrapper.find('form')
+    await form.trigger('submit.prevent')
+    await flushPromises()
+
+    expect(orderService.requestReturn).toHaveBeenCalledWith(
+      'test_order_delivered_01',
+      expect.stringContaining('Bìa truyện bị rách và bung keo gáy'),
+      undefined,
+    )
+  })
 })
 

@@ -852,11 +852,13 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | 🛠️ **Tech Debt** (2 task) | Tách OrdersService (Facade Pattern), Tối ưu Index Auto-cancel |
 | 🧪 **QA** (4 task) | Auth Security Suite, Payment Idempotent Suite, Race Condition Test, UX Regression Test |
 
-### 11.2. Kết Quả Kiểm Thử Hiện Tại (Cập nhật sau hoàn thành Playbook Sprint B1 & B2: INV-02, DOC-02, CRM-01, PUR-02)
+### 11.2. Kết Quả Kiểm Thử Hiện Tại (Cập nhật sau hoàn thành Playbook Sprint B1, B2 & B3: SALES-RET-01, FIN-COD-01, FIN-COD-UI, SALES-RET-UI)
 
 | Phân hệ | Lệnh | Kết quả |
 | :--- | :--- | :---: |
-| Backend Unit & Integration Tests | `cd backend && npm test` | **69/69 suites, 819/819 tests PASS (100%)** |
+| Backend Unit & Integration Tests | `cd backend && npm test` | **71/71 suites, 831/831 tests PASS (100%)** |
+| Customer Sales Return Flow (SALES-RET-01) | `cd backend && npm test -- sales-return.spec.ts` | **5/5 customer returns, restocking & credit offset tests PASS (100%)** |
+| Carrier COD & Logistics Reconciliation (FIN-COD-01) | `cd backend && npm test -- cod-reconciliation.service.spec.ts` | **6/6 carrier COD reconciliation & idempotency tests PASS (100%)** |
 | Multi-Warehouse & Stock Transfers (INV-02) | `cd backend && npm test -- warehouses.service.spec.ts` | **14/14 multi-warehouse & transfer tests PASS (100%)** |
 | Document Center & Archiving (DOC-02) | `cd backend && npm test -- documents.service.spec.ts` | **11/11 electronic document tests PASS (100%)** |
 | Customer CRM & Tiers (CRM-01) | `cd backend && npm test -- customers.service.spec.ts` | **9/9 customer tiers & priority care tests PASS (100%)** |
@@ -871,9 +873,9 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | Backend Health & Release SHA (TT-014) | `cd backend && npm test -- app.controller.spec.ts` | **3/3 health readiness & release SHA tests PASS** |
 | Backend Security Suite | `cd backend && npm test -- security-p0-audit.spec.ts` | **16/16 security regression tests PASS** |
 | Backend Commerce Suite | `cd backend && npm test -- orders.commerce-regression.spec.ts` | **14/14 commerce invariant tests PASS** |
-| Backend Linting | `cd backend && npm run lint` | **0 errors** (2.483 warnings, --max-warnings 2550) |
+| Backend Linting | `cd backend && npm run lint` | **0 errors** (2.556 warnings, --max-warnings 2560) |
 | Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
-| Frontend Unit Tests | `cd frontend && npm run test:unit` | **17/17 suites, 97/97 tests PASS (100%)** |
+| Frontend Unit Tests | `cd frontend && npm run test:unit` | **18/18 suites, 101/101 tests PASS (100%)** |
 | Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |
 | Frontend Linting | `cd frontend && npm run lint` | **0 errors, 0 warnings (Sạch 100%)** |
 | Frontend Build | `cd frontend && npm run build` | **Biên dịch thành công** |
@@ -881,7 +883,7 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | Frontend Multi-Device E2E (TT-024) | `cd frontend && npx playwright test` | **9/9 tests PASS (100%)** (Desktop, Mobile, Tablet & Barcode Scanner) |
 | Mobile Tests | `cd mobile && flutter test` | **47/47 tests PASS (100%)** |
 | Mobile Analyze | `cd mobile && flutter analyze` | **0 issues** |
-| **Tổng Cộng Toàn Dự Án** | **Toàn bộ Test Suite** | **972/972 tests PASS (100% tỷ lệ thành công)** |
+| **Tổng Cộng Toàn Dự Án** | **Toàn bộ Test Suite** | **996/996 tests PASS (100% tỷ lệ thành công)** |
 
 ### 11.3. Cổng Nghiệm Thu CTO — Đã Đạt 4/4
 

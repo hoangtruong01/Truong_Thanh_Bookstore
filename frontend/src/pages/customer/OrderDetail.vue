@@ -47,12 +47,11 @@
           <button 
             v-if="order.orderStatus === 'DELIVERED'"
             type="button"
-            :disabled="isRequestingReturn"
-            class="border border-amber-300 text-amber-700 hover:bg-amber-50 font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            @click="handleRequestReturn"
+            class="border border-amber-300 text-amber-700 hover:bg-amber-50 font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+            @click="openReturnModal"
           >
             <span>🔄</span>
-            <span>{{ isRequestingReturn ? 'Đang gửi...' : 'Yêu cầu trả hàng' }}</span>
+            <span>Yêu cầu trả hàng</span>
           </button>
           <button 
             type="button"
@@ -265,6 +264,94 @@
         </div>
       </div>
     </div>
+
+    <!-- Return Request Modal -->
+    <div v-if="showReturnModal && order" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+      <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <span>🔄</span> Yêu Cầu Đổi / Trả Hàng
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">Đơn hàng #{{ order.orderCode }}</p>
+          </div>
+          <button
+            type="button"
+            class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 cursor-pointer"
+            @click="showReturnModal = false"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="p-3 bg-amber-50 border border-amber-200/80 rounded-2xl text-[11.5px] text-amber-800 space-y-1">
+          <p class="font-bold flex items-center gap-1">
+            <span>ℹ️</span> Chính sách trả hàng:
+          </p>
+          <p>Áp dụng đổi/trả trong vòng 7 ngày kể từ khi nhận hàng cho sản phẩm còn nguyên trạng hoặc bị lỗi in ấn, nhòe mực, rách từ nhà sản xuất/vận chuyển.</p>
+        </div>
+
+        <div v-if="isOverSevenDays" class="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-[11.5px] text-rose-800 space-y-1.5">
+          <p class="font-bold">⚠️ Đơn hàng đã giao quá 7 ngày</p>
+          <p>Để tiếp tục yêu cầu trả hàng quá hạn, quý khách vui lòng nhập Mã phê duyệt đặc cách (Override Token) do ban quản lý nhà sách cung cấp.</p>
+        </div>
+
+        <form class="space-y-3.5" @submit.prevent="submitReturnRequest">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Lý do chính *</label>
+            <select
+              v-model="returnCategory"
+              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="Sản phẩm bị rách, ố vàng, lỗi in ấn do nhà sản xuất">Sản phẩm bị rách, ố vàng, lỗi in ấn do nhà sản xuất</option>
+              <option value="Giao sai tựa sách hoặc thiếu sản phẩm so với đơn">Giao sai tựa sách hoặc thiếu sản phẩm so với đơn</option>
+              <option value="Sản phẩm bị móp méo, hỏng hóc trong quá trình vận chuyển">Sản phẩm bị móp méo, hỏng hóc trong quá trình vận chuyển</option>
+              <option value="Khác">Lý do khác</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Mô tả chi tiết tình trạng *</label>
+            <textarea
+              v-model="returnDetailReason"
+              rows="3"
+              required
+              placeholder="VD: Sách tập 2 bị rách 3 trang ở giữa và nhòe mực không đọc được..."
+              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            ></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">
+              Mã Phê Duyệt Đặc Cách (Nếu trả quá hạn 7 ngày)
+            </label>
+            <input
+              v-model="returnOverrideToken"
+              type="text"
+              placeholder="VD: MGR-OVR-882199"
+              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-800 uppercase focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+
+          <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              @click="showReturnModal = false"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              :disabled="isRequestingReturn || !returnDetailReason.trim()"
+              class="px-4 py-2 text-xs font-extrabold bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {{ isRequestingReturn ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu trả hàng' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -391,15 +478,36 @@ import SkeletonLoader from '@/components/SkeletonLoader.vue'
 const isDownloadingInvoice = ref(false)
 const isCancelling = ref(false)
 const isRequestingReturn = ref(false)
+const showReturnModal = ref(false)
+const returnCategory = ref('Sản phẩm bị rách, ố vàng, lỗi in ấn do nhà sản xuất')
+const returnDetailReason = ref('')
+const returnOverrideToken = ref('')
 
-async function handleRequestReturn() {
-  if (isRequestingReturn.value || !order.value) return
-  const reason = window.prompt('Vui lòng nhập lý do bạn muốn trả hàng (sản phẩm lỗi, giao sai...):')
-  if (!reason || !reason.trim()) return
+const isOverSevenDays = computed(() => {
+  if (!order.value?.deliveredAt) return false
+  const deliveryDate = new Date(order.value.deliveredAt).getTime()
+  const diffDays = (Date.now() - deliveryDate) / (1000 * 60 * 60 * 24)
+  return diffDays > 7
+})
+
+function openReturnModal() {
+  returnDetailReason.value = ''
+  returnOverrideToken.value = ''
+  showReturnModal.value = true
+}
+
+async function submitReturnRequest() {
+  if (isRequestingReturn.value || !order.value || !returnDetailReason.value.trim()) return
   isRequestingReturn.value = true
+  const fullReason = `${returnCategory.value}: ${returnDetailReason.value.trim()}`
   try {
-    await orderService.requestReturn(order.value._id, reason.trim())
+    await orderService.requestReturn(
+      order.value._id,
+      fullReason,
+      returnOverrideToken.value.trim() || undefined,
+    )
     toast.success('Đã gửi yêu cầu trả hàng thành công! Cửa hàng sẽ sớm xem xét.')
+    showReturnModal.value = false
     order.value.orderStatus = 'RETURN_REQUESTED' as any
   } catch (err: any) {
     toast.error(err.response?.data?.message || err.message || 'Gửi yêu cầu trả hàng thất bại')

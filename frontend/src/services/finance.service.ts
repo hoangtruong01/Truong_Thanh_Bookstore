@@ -52,6 +52,52 @@ export interface SupplierPayable {
   createdAt: string;
 }
 
+export interface CodReconciliationItem {
+  trackingCode: string;
+  codAmount: number;
+  shippingFee: number;
+  returnFee?: number;
+}
+
+export interface ReconcileCodStatementDto {
+  statementId: string;
+  carrier?: string;
+  bankAccountId: string;
+  note?: string;
+  items: CodReconciliationItem[];
+}
+
+export interface CodReconciliationBatch {
+  _id: string;
+  statementId: string;
+  carrier: string;
+  bankAccount: { _id: string; code: string; name: string };
+  totalCod: number;
+  totalShipping: number;
+  netPayout: number;
+  matchedOrdersCount: number;
+  discrepanciesCount: number;
+  discrepancies: Array<{ trackingCode: string; reason: string }>;
+  cashEntry?: string;
+  note?: string;
+  reconciledBy?: { _id: string; fullName: string; email: string };
+  createdAt: string;
+}
+
+export interface PendingCodOrder {
+  _id: string;
+  orderCode: string;
+  customerName?: string;
+  phone?: string;
+  shippingAddress?: string;
+  total: number;
+  trackingCode?: string;
+  shippingStatus?: string;
+  deliveredAt?: string;
+  codStatus?: string;
+  codDiscrepancyReason?: string;
+}
+
 export const financeService = {
   // Accounts
   getAccounts(): Promise<CashAccount[]> {
@@ -132,6 +178,19 @@ export const financeService = {
 
   updateCreditProfile(customerId: string, data: any): Promise<any> {
     return api.put(`/finance/credit-profiles/${customerId}`, data).then((res) => res.data?.data ?? res.data);
+  },
+
+  // COD & Logistics Reconciliation (FIN-COD-01)
+  reconcileCodStatement(data: ReconcileCodStatementDto): Promise<any> {
+    return api.post('/finance/cod-reconciliation', data).then((res) => res.data?.data ?? res.data);
+  },
+
+  getCodBatches(): Promise<CodReconciliationBatch[]> {
+    return api.get('/finance/cod-reconciliation/batches').then((res) => res.data?.data ?? res.data);
+  },
+
+  getPendingCodOrders(): Promise<PendingCodOrder[]> {
+    return api.get('/finance/cod-reconciliation/pending').then((res) => res.data?.data ?? res.data);
   },
 };
 

@@ -13,9 +13,9 @@
 
 ## 🚦 BẢNG HIỆN TRẠNG THỰC THI & CHỨNG THỰC CHẤT LƯỢNG (EXECUTION STATUS)
 
-> 🟢 **TỔNG KẾT HỆ THỐNG:** Toàn bộ **Phase 1 (Core Financial & Invariants)**, **Phase 2 (Data Exchange & Security)** và **Phase 3 (ERP Feature Extensions)** đã được triển khai, kiểm thử tự động và merge chính thức vào mã nguồn nhánh `main`.  
-> - **Backend Test Suite:** `69 suites passed`, **`819 / 819 unit & regression tests passed (100%)`**, `0 errors`.  
-> - **Frontend Test Suite:** `17 test files passed`, **`97 / 97 unit tests passed (100%)`**, Typecheck `0 errors`, Build `SUCCESS`.
+> 🟢 **TỔNG KẾT HỆ THỐNG:** Toàn bộ **Phase 1 (Core Financial & Invariants)**, **Phase 2 (Data Exchange & Security)**, **Phase 3 (ERP Feature Extensions)** và **Phase 4 (Customer Sales Returns & Carrier COD Reconciliation)** đã được triển khai, kiểm thử tự động và merge chính thức vào mã nguồn nhánh `main`.  
+> - **Backend Test Suite:** `71 suites passed`, **`831 / 831 unit & regression tests passed (100%)`**, `0 errors`.  
+> - **Frontend Test Suite:** `18 test files passed`, **`101 / 101 unit tests passed (100%)`**, Typecheck `0 errors`, Lint `0 errors, 0 warnings`, Build `SUCCESS`.
 
 | Giai đoạn | Mã Task | Tên phân hệ / Nghiệp vụ | Trạng thái thực tế | Bằng chứng Commit & Kiểm thử |
 | :--- | :---: | :--- | :---: | :--- |
@@ -36,8 +36,8 @@
 | **Phase 3 (ERP)**| `DOC-02` | Document Center & Quản lý Chứng từ Điện tử | ✅ **VERIFIED** | Commit `8058004`: Document archiving, metadata indexing, audit log |
 | **Phase 3 (ERP)**| `CRM-01` | Phân hạng Khách Sỉ/Lẻ, Hạn mức & Chăm sóc | ✅ **VERIFIED** | Commit `8058004`: Customer tiering, wholesale priority scoring |
 | **Phase 3 (ERP)**| `PUR-02` | Báo giá NCC & Đề xuất Nguồn hàng Tối ưu | ✅ **VERIFIED** | Commit `d82df2e`: Supplier quotations, price history, procurement engine |
-| **Phase 4 (Mới)**| `SALES-RET-01`| Khách Hàng Trả Hàng, Đổi Hàng & Hoàn Tiền / Giảm Nợ | 🟡 **IN SPEC** | Đặc tả hoàn tất tại Phần C; code baseline đã có Order Return & POS Refund |
-| **Phase 4 (Mới)**| `FIN-COD-01`| Đối Soát Thu Hộ COD & Cước Vận Chuyển Logistics | 🟡 **IN SPEC** | Đặc tả hoàn tất tại Phần C; code baseline đã có GHN integration |
+| **Phase 4 (Mới)**| `SALES-RET-01`| Khách Hàng Trả Hàng, Đổi Hàng & Hoàn Tiền / Giảm Nợ | ✅ **VERIFIED** | Commit `2bc840b` + Return Request Modal Storefront & Admin rejection dialog |
+| **Phase 4 (Mới)**| `FIN-COD-01`| Đối Soát Thu Hộ COD & Cước Vận Chuyển Logistics | ✅ **VERIFIED** | Commit `2bc840b` + Cashbook.vue Tab 5 COD Reconciliation & Statement batches |
 
 ---
 

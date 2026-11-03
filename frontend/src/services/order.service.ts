@@ -20,8 +20,8 @@ export const orderService = {
     }),
   updateStatus: (id: string, orderStatus: string, note?: string) =>
     api.patch(`/orders/${id}/status`, { orderStatus, ...(note ? { note } : {}) }),
-  requestReturn: (id: string, reason: string) =>
-    api.post(`/orders/${id}/return-request`, { reason }),
+  requestReturn: (id: string, reason: string, overrideToken?: string) =>
+    api.post(`/orders/${id}/return-request`, { reason, ...(overrideToken ? { overrideToken } : {}) }),
   approveReturn: (id: string, note?: string) =>
     api.post(`/orders/${id}/return-approve`, { note }),
   confirmReturnReceived: (id: string, note?: string) =>
