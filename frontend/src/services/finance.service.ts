@@ -109,6 +109,30 @@ export const financeService = {
   ): Promise<{ payable: SupplierPayable; cashEntry: CashEntry }> {
     return api.post(`/finance/payables/${payableId}/pay`, data).then((res) => res.data?.data ?? res.data);
   },
+
+  // Receivables (Customer Credit AR)
+  getReceivables(params?: any): Promise<{ data: any[]; total: number }> {
+    return api.get('/finance/receivables', { params }).then((res) => res.data?.data ?? res.data);
+  },
+
+  collectCustomerPayment(
+    receivableId: string,
+    data: { accountId: string; amount: number; note?: string; idempotencyKey?: string },
+  ): Promise<{ receivable: any; cashEntry: CashEntry }> {
+    return api.post(`/finance/receivables/${receivableId}/collect`, data).then((res) => res.data?.data ?? res.data);
+  },
+
+  getAgingReport(params?: any): Promise<any> {
+    return api.get('/finance/reports/aging', { params }).then((res) => res.data?.data ?? res.data);
+  },
+
+  getCreditProfiles(params?: any): Promise<{ data: any[]; total: number }> {
+    return api.get('/finance/credit-profiles', { params }).then((res) => res.data?.data ?? res.data);
+  },
+
+  updateCreditProfile(customerId: string, data: any): Promise<any> {
+    return api.put(`/finance/credit-profiles/${customerId}`, data).then((res) => res.data?.data ?? res.data);
+  },
 };
 
 export default financeService;

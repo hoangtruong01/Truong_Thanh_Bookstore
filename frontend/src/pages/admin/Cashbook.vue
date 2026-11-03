@@ -89,6 +89,20 @@
             {{ payablesTotal }}
           </span>
         </button>
+
+        <button
+          :class="activeTab === 'receivables' ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold' : 'border-transparent text-gray-500 hover:text-gray-700 font-medium'"
+          class="py-3 px-1 border-b-2 text-sm transition-colors flex items-center gap-2"
+          @click="activeTab = 'receivables'"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Công Nợ Khách Sỉ (AR)
+          <span class="ml-1 px-2 py-0.5 text-xs rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+            {{ receivablesTotal }}
+          </span>
+        </button>
       </nav>
     </div>
 
@@ -330,6 +344,99 @@
       </div>
     </div>
 
+    <!-- TAB 4: CUSTOMER RECEIVABLES (AR-01) -->
+    <div v-if="activeTab === 'receivables'" class="space-y-6">
+      <!-- Aging Report KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tổng Phải Thu Khách Sỉ</p>
+          <p class="text-xl font-extrabold text-blue-600 mt-1">{{ formatCurrency(agingData?.totalOutstanding || 0) }}</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Trong Hạn (Current)</p>
+          <p class="text-xl font-extrabold text-emerald-600 mt-1">{{ formatCurrency(agingData?.current || 0) }}</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Quá Hạn 1 - 30 Ngày</p>
+          <p class="text-xl font-extrabold text-amber-600 mt-1">{{ formatCurrency(agingData?.days1_30 || 0) }}</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Quá Hạn > 30 Ngày (Cảnh Báo)</p>
+          <p class="text-xl font-extrabold text-rose-600 mt-1">{{ formatCurrency((agingData?.days31_60 || 0) + (agingData?.days60Plus || 0)) }}</p>
+        </div>
+      </div>
+
+      <!-- Receivables Table -->
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+          <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Danh Sách Phiếu Phải Thu Khách Sỉ</h3>
+          <button class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg cursor-pointer" @click="fetchReceivables">
+            Làm mới
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs text-gray-500 uppercase">
+              <tr>
+                <th class="py-3 px-4">Khách hàng</th>
+                <th class="py-3 px-4">Đơn hàng liên quan</th>
+                <th class="py-3 px-4 text-right">Tổng phải thu</th>
+                <th class="py-3 px-4 text-right">Đã thu</th>
+                <th class="py-3 px-4 text-right">Còn nợ</th>
+                <th class="py-3 px-4 text-center">Hạn trả</th>
+                <th class="py-3 px-4 text-center">Trạng thái</th>
+                <th class="py-3 px-4 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <tr v-if="loadingReceivables" class="text-center">
+                <td colspan="8" class="py-8 text-gray-400">Đang tải danh sách công nợ khách sỉ...</td>
+              </tr>
+              <tr v-else-if="receivables.length === 0" class="text-center">
+                <td colspan="8" class="py-8 text-gray-400">Không có công nợ khách sỉ nào cần thu.</td>
+              </tr>
+              <tr v-for="r in receivables" :key="r._id" class="hover:bg-gray-50/50">
+                <td class="py-3 px-4 font-semibold text-gray-900 dark:text-white">
+                  {{ r.customer?.fullName || r.customer?.name || 'Khách buôn' }}
+                  <span v-if="r.customer?.phone" class="block text-xs font-normal text-gray-400">{{ r.customer.phone }}</span>
+                </td>
+                <td class="py-3 px-4 font-mono text-xs text-blue-600">
+                  {{ r.order?.orderCode || r.orderCode || r.invoiceCode || '-' }}
+                </td>
+                <td class="py-3 px-4 text-right font-medium">
+                  {{ formatCurrency(r.totalAmount) }}
+                </td>
+                <td class="py-3 px-4 text-right text-emerald-600 font-medium">
+                  {{ formatCurrency(r.paidAmount || 0) }}
+                </td>
+                <td class="py-3 px-4 text-right font-extrabold text-rose-600">
+                  {{ formatCurrency(r.remainingAmount) }}
+                </td>
+                <td class="py-3 px-4 text-center text-xs">
+                  {{ formatDate(r.dueDate) }}
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span :class="payableBadgeClass(r.status)" class="px-2 py-0.5 rounded-full text-xs font-semibold">
+                    {{ payableLabel(r.status) }}
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                  <button
+                    v-if="r.status !== 'PAID'"
+                    class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs transition-colors cursor-pointer"
+                    @click="openCollectModal(r)"
+                  >
+                    Thu tiền
+                  </button>
+                  <span v-else class="text-xs text-emerald-600 font-bold">Đã thu đủ</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- MODAL 1: CREATE CASH ENTRY -->
     <div v-if="showCreateEntryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-gray-100 dark:border-gray-700">
@@ -542,6 +649,76 @@
         </form>
       </div>
     </div>
+
+    <!-- MODAL 4: COLLECT CUSTOMER PAYMENT (THU TIỀN CÔNG NỢ KHÁCH SỈ) -->
+    <div v-if="collectingReceivable" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl border border-gray-100 dark:border-gray-700">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Thu Tiền Công Nợ Khách Sỉ</h3>
+        <p class="text-xs text-gray-500 mb-4">
+          Khách hàng: <strong class="text-blue-600">{{ collectingReceivable.customer?.fullName || collectingReceivable.customer?.name }}</strong>
+        </p>
+
+        <form class="space-y-4" @submit.prevent="submitCollectCustomerPayment">
+          <div class="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-200 dark:border-emerald-700 text-xs text-emerald-800 dark:text-emerald-300 flex justify-between">
+            <span>Còn nợ phải thu:</span>
+            <strong class="text-sm font-bold text-rose-600">{{ formatCurrency(collectingReceivable.remainingAmount) }}</strong>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Sổ quỹ nhận tiền *</label>
+            <select
+              v-model="collectFormData.accountId"
+              required
+              class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl"
+            >
+              <option value="" disabled>Chọn sổ quỹ</option>
+              <option v-for="acc in accounts" :key="acc._id" :value="acc._id">
+                {{ acc.name }} (Số dư hiện tại: {{ formatCurrency(acc.currentBalance) }})
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Số tiền thực thu (VND) *</label>
+            <input
+              v-model.number="collectFormData.amount"
+              type="number"
+              min="1000"
+              :max="collectingReceivable.remainingAmount"
+              required
+              class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl font-bold text-emerald-600"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Ghi chú thu tiền</label>
+            <input
+              v-model="collectFormData.note"
+              type="text"
+              placeholder="VD: Thu tiền công nợ đơn hàng chuyển khoản"
+              class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl"
+            />
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+            <button
+              type="button"
+              class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl cursor-pointer"
+              @click="collectingReceivable = null"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              :disabled="submitting"
+              class="px-5 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl disabled:opacity-50 cursor-pointer"
+            >
+              {{ submitting ? 'Đang ghi nhận...' : 'Xác nhận thu tiền' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -557,7 +734,7 @@ import {
 
 const toast = useToast();
 
-const activeTab = ref<'accounts' | 'entries' | 'payables'>('entries');
+const activeTab = ref<'accounts' | 'entries' | 'payables' | 'receivables'>('entries');
 const submitting = ref(false);
 
 // Accounts
@@ -597,6 +774,18 @@ const payablesTotal = ref(0);
 const loadingPayables = ref(false);
 const payingPayable = ref<SupplierPayable | null>(null);
 const payFormData = ref({
+  accountId: '',
+  amount: 0,
+  note: '',
+});
+
+// Receivables (AR)
+const receivables = ref<any[]>([]);
+const receivablesTotal = ref(0);
+const loadingReceivables = ref(false);
+const agingData = ref<any>(null);
+const collectingReceivable = ref<any>(null);
+const collectFormData = ref({
   accountId: '',
   amount: 0,
   note: '',
@@ -812,9 +1001,58 @@ async function exportExcel() {
   }
 }
 
+async function fetchReceivables() {
+  loadingReceivables.value = true;
+  try {
+    const [recRes, agingRes] = await Promise.all([
+      financeService.getReceivables(),
+      financeService.getAgingReport(),
+    ]);
+    receivables.value = recRes.data || [];
+    receivablesTotal.value = recRes.total || 0;
+    agingData.value = agingRes || null;
+  } catch (_err: any) {
+    // Non-blocking
+  } finally {
+    loadingReceivables.value = false;
+  }
+}
+
+function openCollectModal(r: any) {
+  collectingReceivable.value = r;
+  collectFormData.value = {
+    accountId: accounts.value[0]?._id || '',
+    amount: r.remainingAmount,
+    note: '',
+  };
+}
+
+async function submitCollectCustomerPayment() {
+  if (!collectingReceivable.value) return;
+  submitting.value = true;
+  try {
+    await financeService.collectCustomerPayment(collectingReceivable.value._id, {
+      accountId: collectFormData.value.accountId,
+      amount: collectFormData.value.amount,
+      note: collectFormData.value.note,
+      idempotencyKey: `collect_${collectingReceivable.value._id}_${Date.now()}`,
+    });
+    toast.success('Thu tiền công nợ khách sỉ thành công');
+    collectingReceivable.value = null;
+    fetchAccounts();
+    fetchReceivables();
+    fetchEntries();
+  } catch (err: any) {
+    toast.error(err?.response?.data?.message || 'Lỗi khi thu tiền công nợ');
+  } finally {
+    submitting.value = false;
+  }
+}
+
 onMounted(() => {
   fetchAccounts();
   fetchEntries();
   fetchPayables();
+  fetchReceivables();
 });
 </script>

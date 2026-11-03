@@ -716,7 +716,9 @@ const navGroups = computed<NavGroup[]>(() => {
       color: 'orange',
       items: [
         { name: 'AdminInventory', label: isEn ? 'Inventory' : 'Quản lý kho hàng', to: '/admin/inventory', icon: 'inventory', color: 'orange', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminWarehouses', label: isEn ? 'Warehouses & Transfer' : 'Kho & Điều chuyển', to: '/admin/warehouses', icon: 'inventory', color: 'amber', permission: 'MANAGE_INVENTORY' },
         { name: 'AdminPurchases', label: isEn ? 'Purchases & PO' : 'Mua hàng & Đặt NCC', to: '/admin/purchases', icon: 'purchases', color: 'cyan', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminQuotations', label: isEn ? 'Quotations & RFQ' : 'Báo giá NCC & So sánh', to: '/admin/quotations', icon: 'purchases', color: 'sky', permission: 'MANAGE_INVENTORY' },
         { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: 'stockAudits', color: 'emerald', permission: 'MANAGE_INVENTORY' },
         { name: 'AdminSuppliers', label: isEn ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: 'suppliers', color: 'indigo', permission: 'MANAGE_INVENTORY' },
       ],
@@ -729,6 +731,7 @@ const navGroups = computed<NavGroup[]>(() => {
       items: [
         { name: 'AdminReports', label: isEn ? 'Reports' : 'Báo cáo doanh thu & Lãi', to: '/admin/reports', icon: 'reports', color: 'emerald', permission: 'VIEW_REPORTS' },
         { name: 'AdminCashbook', label: isEn ? 'Cashbook & Finance' : 'Sổ quỹ & Dòng tiền', to: '/admin/cashbook', icon: 'cashbook', color: 'violet', permission: 'MANAGE_FINANCE' },
+        { name: 'AdminDocuments', label: isEn ? 'Document Center' : 'Chứng từ kế toán (ERP)', to: '/admin/documents', icon: 'reports', color: 'blue', permission: 'MANAGE_FINANCE' },
       ],
     },
     {

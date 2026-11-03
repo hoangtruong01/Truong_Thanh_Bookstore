@@ -42,6 +42,9 @@ const AdminCombos = () => import('@/pages/admin/Combos.vue');
 const AdminLandingPages = () => import('@/pages/admin/LandingPages.vue');
 const AdminBanners = () => import('@/pages/admin/Banners.vue');
 const AdminReviews = () => import('@/pages/admin/Reviews.vue');
+const AdminWarehouses = () => import('@/pages/admin/Warehouses.vue');
+const AdminDocuments = () => import('@/pages/admin/Documents.vue');
+const AdminQuotations = () => import('@/pages/admin/SupplierQuotations.vue');
 
 // 404 Page (UX-04)
 const NotFound = () => import('@/pages/NotFound.vue');
@@ -88,11 +91,14 @@ const routes = [
       { path: 'orders', name: 'AdminOrders', component: AdminOrders, meta: { permission: 'MANAGE_ORDERS' } },
       { path: 'pos', name: 'AdminPOS', component: AdminPOS, meta: { permission: 'POS_ACCESS' } },
       { path: 'inventory', name: 'AdminInventory', component: AdminInventory, meta: { permission: 'MANAGE_INVENTORY' } },
+      { path: 'warehouses', name: 'AdminWarehouses', component: AdminWarehouses, meta: { permission: 'MANAGE_INVENTORY' } },
       { path: 'suppliers', name: 'AdminSuppliers', component: AdminSuppliers, meta: { permission: 'MANAGE_INVENTORY' } },
       { path: 'purchases', name: 'AdminPurchases', component: AdminPurchases, meta: { permission: 'MANAGE_INVENTORY' } },
+      { path: 'quotations', name: 'AdminQuotations', component: AdminQuotations, meta: { permission: 'MANAGE_INVENTORY' } },
       { path: 'stock-audits', name: 'AdminStockAudits', component: AdminStockAudits, meta: { permission: 'MANAGE_INVENTORY' } },
       { path: 'pricing', name: 'AdminPricing', component: AdminPricing, meta: { permission: 'MANAGE_PRICING' } },
       { path: 'cashbook', name: 'AdminCashbook', component: AdminCashbook, meta: { permission: 'MANAGE_FINANCE' } },
+      { path: 'documents', name: 'AdminDocuments', component: AdminDocuments, meta: { permission: 'MANAGE_FINANCE' } },
       { path: 'combos', name: 'AdminCombos', component: AdminCombos, meta: { permission: 'MANAGE_PRODUCTS' } },
       { path: 'reviews', name: 'AdminReviews', component: AdminReviews, meta: { permission: 'MANAGE_PRODUCTS' } },
       { path: 'customers', name: 'AdminCustomers', component: AdminCustomers, meta: { permission: 'MANAGE_CUSTOMERS' } },
