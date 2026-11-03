@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile/widgets/shimmer_loading.dart';
-import 'package:mobile/widgets/empty_state_widget.dart';
-import 'package:mobile/widgets/error_retry_widget.dart';
+import 'package:mobile/core/widgets/shimmer_loading.dart';
+import 'package:mobile/core/widgets/empty_state_widget.dart';
+import 'package:mobile/core/widgets/error_retry_widget.dart';
 
 void main() {
   testWidgets('EmptyStateWidget renders title, message and button with callback', (tester) async {

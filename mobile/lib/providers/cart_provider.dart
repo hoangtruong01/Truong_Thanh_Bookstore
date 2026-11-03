@@ -1,12 +1,24 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants/api_constants.dart';
+import '../core/network/api_client.dart';
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
 import '../models/promotion_model.dart';
 
 class CartProvider with ChangeNotifier {
+  CartProvider({ApiClient? apiClient, http.Client? client})
+      : _api = apiClient ?? ApiClient(httpClient: client),
+        _ownsApi = apiClient == null;
+  final ApiClient _api;
+  final bool _ownsApi;
+
+  @override
+  void dispose() {
+    if (_ownsApi) _api.close();
+    super.dispose();
+  }
+
   final List<CartItemModel> _items = [];
   PromotionModel? _appliedPromotion;
   List<PromotionModel> _activePromotions = [];
@@ -93,6 +105,14 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Removes the items that were just ordered (selected ones) and keeps the rest.
+  void removeOrderedItems() {
+    _items.removeWhere((i) => i.selected);
+    _appliedPromotion = null;
+    _promoError = null;
+    notifyListeners();
+  }
+
   void clearCart() {
     _items.clear();
     _appliedPromotion = null;
@@ -102,10 +122,9 @@ class CartProvider with ChangeNotifier {
 
   Future<void> fetchActivePromotions() async {
     try {
-      final response = await http.get(Uri.parse(ApiConstants.activePromotions));
+      final response = await _api.get(ApiConstants.activePromotions);
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        final List dataList = body['data'] ?? [];
+        final dataList = response.listData();
         _activePromotions = dataList.map((item) => PromotionModel.fromJson(item)).toList();
         notifyListeners();
       }

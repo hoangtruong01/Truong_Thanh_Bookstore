@@ -46,8 +46,8 @@
               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mã đơn hàng</p>
               <p class="text-sm font-mono font-bold text-slate-900">{{ order.orderCode }}</p>
             </div>
-            <span :class="['px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wide', getStatusBadgeStyle(order.orderStatus)]">
-              {{ getStatusLabel(order.orderStatus) }}
+            <span :class="['px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wide', getStatusToneClasses(order.orderStatus, 'order').badge]">
+              {{ getOrderStatusLabel(order.orderStatus) }}
             </span>
           </div>
 
@@ -83,10 +83,10 @@
             <p>
               <strong>Thanh toán:</strong>
               <span class="font-bold text-slate-700 ml-1">
-                {{ getStatusLabel(order.paymentMethod) }}
+                {{ getPaymentMethodLabel(order.paymentMethod) }}
               </span>
-              <span :class="['ml-2 text-[10px] font-black', order.paymentStatus === 'PAID' ? 'text-green-600' : 'text-amber-600']">
-                ({{ order.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán' }})
+              <span :class="['ml-2 text-[10px] font-black', getStatusToneClasses(order.paymentStatus || 'UNPAID', 'payment').text]">
+                ({{ getPaymentStatusLabel(order.paymentStatus) }})
               </span>
             </p>
           </div>
@@ -132,7 +132,14 @@ import { useAuthStore } from '@/stores/auth'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { orderService } from '@/services/order.service'
-import { formatCurrency, getStatusLabel, formatDate } from '@/utils/helpers'
+import {
+  formatCurrency,
+  formatDate,
+  getOrderStatusLabel,
+  getPaymentMethodLabel,
+  getPaymentStatusLabel,
+  getStatusToneClasses,
+} from '@/utils/helpers'
 import type { Order } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 
@@ -173,28 +180,6 @@ async function cancelOrder(id: string) {
     toast.error(err.message || 'Hủy đơn hàng thất bại')
   } finally {
     cancellingOrderId.value = null
-  }
-}
-
-function getStatusBadgeStyle(status: string) {
-  switch (status) {
-    case 'PENDING':
-      return 'bg-amber-100 text-amber-800 border border-amber-200'
-    case 'CONFIRMED':
-      return 'bg-red-100 text-red-800 border border-red-200'
-    case 'PROCESSING':
-      return 'bg-orange-100 text-orange-800 border border-orange-200'
-    case 'SHIPPING':
-      return 'bg-blue-100 text-blue-800 border border-blue-200'
-    case 'DELIVERED':
-    case 'COMPLETED':
-      return 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-    case 'RETURNED':
-      return 'bg-purple-100 text-purple-800 border border-purple-200'
-    case 'CANCELLED':
-      return 'bg-slate-100 text-slate-800 border border-slate-200'
-    default:
-      return 'bg-slate-100 text-slate-600'
   }
 }
 

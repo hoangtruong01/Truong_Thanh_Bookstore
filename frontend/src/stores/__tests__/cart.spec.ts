@@ -41,11 +41,11 @@ describe('Cart Store', () => {
 
     await store.syncWithServer(true)
 
-    expect(cartService.syncCart).toHaveBeenCalledWith([{ productId: '123', quantity: 1 }])
+    expect(cartService.syncCart).toHaveBeenCalledWith([{ productId: '123', quantity: 1 }], 'replace')
     expect(store.items[0].quantity).toBe(2)
   })
 
-  it('calculates selected-item totals and shipping', () => {
+  it('keeps selected items and counts correctly', () => {
     const store = useCartStore()
     const product1 = { _id: '1', name: 'Book 1', price: 100, discountPrice: 80, stock: 5, images: [] } as any
     const product2 = { _id: '2', name: 'Book 2', price: 200, stock: 5, images: [] } as any
@@ -54,7 +54,6 @@ describe('Cart Store', () => {
     store.addToCart(product2, 1)
 
     expect(store.itemsCount).toBe(3)
-    expect(store.subtotal).toBe(360)
-    expect(store.total).toBe(30360)
+    expect(store.selectedItems).toHaveLength(2)
   })
 })

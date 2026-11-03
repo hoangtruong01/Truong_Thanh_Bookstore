@@ -249,6 +249,180 @@ describe('ReportsService', () => {
       expect(row.count).toBe(2);
     });
 
+    describe('BUG-012: getRevenue lọc theo kênh WEB / MOBILE', () => {
+      const webRow = {
+        _id: '2026-09-05',
+        subtotal: 700000,
+        discount: 0,
+        total: 700000,
+        cogs: 300000,
+        count: 2,
+      };
+      const mobileRow = {
+        _id: '2026-09-05',
+        subtotal: 400000,
+        discount: 50000,
+        total: 350000,
+        cogs: 100000,
+        count: 1,
+      };
+
+      let mockOrderModel: any;
+      let mockPOSOrderModel: any;
+      let channelService: ReportsService;
+
+      const getMatchStage = (callIndex = 0) =>
+        mockOrderModel.aggregate.mock.calls[callIndex][0][0].$match;
+
+      beforeEach(() => {
+        // Trả dữ liệu khác nhau theo orderSource trong $match
+        mockOrderModel = {
+          aggregate: jest.fn().mockImplementation((pipeline: any[]) => {
+            const source = pipeline[0].$match.orderSource;
+            return Promise.resolve(
+              source === 'MOBILE' ? [mobileRow] : [webRow],
+            );
+          }),
+        };
+        mockPOSOrderModel = {
+          find: jest.fn().mockReturnValue({
+            lean: jest.fn().mockReturnValue({
+              exec: jest.fn().mockResolvedValue([]),
+            }),
+          }),
+        };
+        channelService = new ReportsService(
+          mockOrdersService,
+          mockProductsService,
+          mockInventoryService,
+          mockCustomersService,
+          mockPOSOrderModel,
+          mockOrderModel,
+        );
+      });
+
+      it('WEB lọc orderSource WEB (gồm đơn cũ null), không gọi ordersService và không truy vấn POS', async () => {
+        const result = await channelService.getRevenue(
+          '2026-09-05',
+          '2026-09-05',
+          'WEB',
+        );
+
+        expect(mockOrdersService.getRevenueByDateRange).not.toHaveBeenCalled();
+        expect(mockPOSOrderModel.find).not.toHaveBeenCalled();
+        expect(mockOrderModel.aggregate).toHaveBeenCalledTimes(1);
+
+        const match = getMatchStage();
+        expect(match.orderSource).toEqual({ $in: ['WEB', null] });
+        expect(match.orderSource.$in).toContain(null);
+        expect(match.orderStatus).toEqual({
+          $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED],
+        });
+        const range = {
+          $gte: new Date('2026-09-04T17:00:00.000Z'),
+          $lte: new Date('2026-09-05T16:59:59.999Z'),
+        };
+        expect(match.$and).toEqual([
+          {
+            $or: [
+              { revenueRecognizedAt: range },
+              { revenueRecognizedAt: { $exists: false }, createdAt: range },
+            ],
+          },
+        ]);
+
+        expect(result).toEqual([
+          {
+            _id: '2026-09-05',
+            subtotal: 700000,
+            discount: 0,
+            refund: 0,
+            total: 700000,
+            cogs: 300000,
+            grossProfit: 400000,
+            count: 2,
+          },
+        ]);
+      });
+
+      it('MOBILE lọc orderSource MOBILE, không gọi ordersService và không truy vấn POS', async () => {
+        await channelService.getRevenue('2026-09-05', '2026-09-05', 'MOBILE');
+
+        expect(mockOrdersService.getRevenueByDateRange).not.toHaveBeenCalled();
+        expect(mockPOSOrderModel.find).not.toHaveBeenCalled();
+        expect(getMatchStage().orderSource).toBe('MOBILE');
+      });
+
+      it('WEB và MOBILE trả số liệu khác nhau (trước đây trùng nhau)', async () => {
+        const web = await channelService.getRevenue(
+          '2026-09-05',
+          '2026-09-05',
+          'WEB',
+        );
+        const mobile = await channelService.getRevenue(
+          '2026-09-05',
+          '2026-09-05',
+          'MOBILE',
+        );
+
+        expect(web[0].total).toBe(700000);
+        expect(mobile[0].total).toBe(350000);
+        expect(mobile[0].discount).toBe(50000);
+        expect(web).not.toEqual(mobile);
+      });
+
+      it('ALL vẫn gọi ordersService.getRevenueByDateRange và gộp POS như cũ', async () => {
+        mockOrdersService.getRevenueByDateRange.mockResolvedValueOnce([
+          { _id: '2026-09-05', subtotal: 1000000, total: 1000000, count: 1 },
+        ]);
+        mockPOSOrderModel.find.mockReturnValue({
+          lean: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue([
+              {
+                createdAt: new Date('2026-09-05T03:00:00.000Z'),
+                subtotal: 500000,
+                totalDiscountAmount: 0,
+                finalAmount: 500000,
+                totalRefundedAmount: 0,
+                items: [],
+              },
+            ]),
+          }),
+        });
+
+        const result = await channelService.getRevenue(
+          '2026-09-05',
+          '2026-09-05',
+          'ALL',
+        );
+
+        expect(mockOrdersService.getRevenueByDateRange).toHaveBeenCalledWith(
+          new Date('2026-09-04T17:00:00.000Z'),
+          new Date('2026-09-05T16:59:59.999Z'),
+        );
+        expect(mockOrderModel.aggregate).not.toHaveBeenCalled();
+        expect(mockPOSOrderModel.find).toHaveBeenCalled();
+        expect(result[0].total).toBe(1500000);
+        expect(result[0].count).toBe(2);
+      });
+
+      it('không có channel vẫn dùng luồng ALL', async () => {
+        await channelService.getRevenue('2026-09-05', '2026-09-05');
+        expect(mockOrdersService.getRevenueByDateRange).toHaveBeenCalled();
+        expect(mockOrderModel.aggregate).not.toHaveBeenCalled();
+      });
+
+      it('trả mảng rỗng khi không có orderModel', async () => {
+        const result = await service.getRevenue(
+          '2026-09-05',
+          '2026-09-05',
+          'WEB',
+        );
+        expect(result).toEqual([]);
+        expect(mockOrdersService.getRevenueByDateRange).not.toHaveBeenCalled();
+      });
+    });
+
     it('NEW-016: category revenue aggregates both Online and POS categories', async () => {
       const mockPOSOrderModel: any = {
         find: jest.fn().mockReturnValue({

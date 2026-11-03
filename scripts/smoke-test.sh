@@ -32,11 +32,23 @@ while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
     echo "  Status Code: 200 OK"
     
     # Verify JSON response contains expected UP / HEALTHY statuses
+    # EXPECTED_RELEASE may be a comma-separated list of acceptable SHAs (TASK-004:
+    # the pushed commit, or the last commit that changed backend/ when Render skips
+    # frontend-only commits). Any match passes.
     RELEASE_MATCHED=true
     if [ -n "$EXPECTED_RELEASE" ]; then
-      SHORT_EXPECTED="${EXPECTED_RELEASE:0:7}"
-      if ! echo "$HTTP_BODY" | grep -q "\"release\":\"${EXPECTED_RELEASE}\"" && ! echo "$HTTP_BODY" | grep -q "\"release\":\"${SHORT_EXPECTED}"; then
-        RELEASE_MATCHED=false
+      RELEASE_MATCHED=false
+      IFS=',' read -ra RELEASE_CANDIDATES <<< "$EXPECTED_RELEASE"
+      for CANDIDATE in "${RELEASE_CANDIDATES[@]}"; do
+        CANDIDATE="${CANDIDATE// /}"
+        [ -z "$CANDIDATE" ] && continue
+        SHORT_EXPECTED="${CANDIDATE:0:7}"
+        if echo "$HTTP_BODY" | grep -q "\"release\":\"${CANDIDATE}\"" || echo "$HTTP_BODY" | grep -q "\"release\":\"${SHORT_EXPECTED}"; then
+          RELEASE_MATCHED=true
+          break
+        fi
+      done
+      if [ "$RELEASE_MATCHED" = false ]; then
         echo "  ⏳ Deployment is active but release SHA does not match expected ${EXPECTED_RELEASE}. Deployment may still be in progress."
       fi
     fi

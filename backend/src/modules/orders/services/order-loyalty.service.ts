@@ -2,6 +2,11 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ClientSession } from 'mongoose';
 import { UsersService } from '../../users/users.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import {
+  LOYALTY_MIN_REDEEM_POINTS,
+  LOYALTY_POINT_VALUE,
+  computeMaxLoyaltyDiscount,
+} from '../checkout-policy';
 
 @Injectable()
 export class OrderLoyaltyService {
@@ -31,14 +36,14 @@ export class OrderLoyaltyService {
       );
     }
 
-    if (pointsUsed < 1000) {
+    if (pointsUsed < LOYALTY_MIN_REDEEM_POINTS) {
       throw new BadRequestException(
         'Mức tiêu điểm tối thiểu là 1.000 điểm (tương đương 100.000 VNĐ)',
       );
     }
 
-    const maxAllowedLoyaltyDiscount = Math.floor(subtotal * 0.2);
-    const loyaltyDiscount = pointsUsed * 100;
+    const maxAllowedLoyaltyDiscount = computeMaxLoyaltyDiscount(subtotal);
+    const loyaltyDiscount = pointsUsed * LOYALTY_POINT_VALUE;
 
     if (loyaltyDiscount > maxAllowedLoyaltyDiscount) {
       throw new BadRequestException(

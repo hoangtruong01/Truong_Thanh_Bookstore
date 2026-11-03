@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../../models/product_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../screens/product/product_detail_screen.dart';
@@ -96,11 +97,17 @@ class ProductGridCard extends StatelessWidget {
                   top: 6,
                   right: 6,
                   child: GestureDetector(
-                    onTap: () {
-                      wishlistProvider.toggleFavorite(product);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                    onTap: () async {
+                      final token = Provider.of<AuthProvider>(context, listen: false).token;
+                      final messenger = ScaffoldMessenger.of(context);
+                      final ok = await wishlistProvider.toggleFavorite(product, token);
+                      // Tap ignored while the previous request is in flight: not a failure.
+                      if (ok == null) return;
+                      messenger.showSnackBar(
                         SnackBar(
-                          content: Text(isFav ? 'Đã xóa khỏi Yêu thích' : 'Đã thêm vào Yêu thích ❤️'),
+                          content: Text(!ok
+                              ? 'Không thể cập nhật Yêu thích, vui lòng thử lại'
+                              : isFav ? 'Đã xóa khỏi Yêu thích' : 'Đã thêm vào Yêu thích ❤️'),
                           duration: const Duration(seconds: 1),
                           behavior: SnackBarBehavior.floating,
                         ),

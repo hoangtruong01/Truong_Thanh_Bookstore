@@ -37,10 +37,9 @@ export class LoggingInterceptor implements NestInterceptor {
 
     const method = request.method;
     const url = request.originalUrl || request.url;
-    const rawIp =
-      request.headers['x-forwarded-for'] ||
-      request.socket.remoteAddress ||
-      'UNKNOWN_IP';
+    // req.ip honours the 'trust proxy' setting; raw X-Forwarded-For is
+    // client-controlled and must not be logged as the client IP (BUG-011).
+    const rawIp = request.ip || request.socket?.remoteAddress || 'UNKNOWN_IP';
     const clientIp = Array.isArray(rawIp) ? rawIp.join(', ') : String(rawIp);
 
     return next.handle().pipe(

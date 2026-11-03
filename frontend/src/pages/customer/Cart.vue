@@ -111,10 +111,10 @@
               <!-- Price info -->
               <div class="flex items-baseline gap-2">
                 <span class="text-sm font-extrabold text-[#dc2626]">
-                  {{ formatCurrency(getEffectivePrice(item.product.price, item.product.discountPrice)) }}
+                  {{ formatCurrency(getUnitPrice(item).price) }}
                 </span>
-                <span v-if="item.product.discountPrice != null && item.product.discountPrice > 0 && item.product.discountPrice < item.product.price" class="text-xs text-slate-400 line-through">
-                  {{ formatCurrency(item.product.price) }}
+                <span v-if="getUnitPrice(item).originalPrice > getUnitPrice(item).price" class="text-xs text-slate-400 line-through">
+                  {{ formatCurrency(getUnitPrice(item).originalPrice) }}
                 </span>
               </div>
 
@@ -149,7 +149,9 @@
               <span class="text-xl">🚚</span>
               <span class="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Miễn phí vận chuyển</span>
             </div>
-            <span class="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Đơn từ 299K</span>
+            <span v-if="cartStore.freeShippingThreshold" class="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+              Đơn từ {{ formatCurrency(cartStore.freeShippingThreshold) }}
+            </span>
           </div>
           <div class="space-y-2">
             <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
@@ -165,8 +167,11 @@
               <template v-else-if="cartStore.subtotal > 0">
                 Mua thêm <span class="text-red-600 font-extrabold">{{ formatCurrency(cartStore.amountNeededForFreeShipping) }}</span> để freeship.
               </template>
+              <template v-else-if="cartStore.freeShippingThreshold">
+                Đơn hàng từ {{ formatCurrency(cartStore.freeShippingThreshold) }} sẽ được miễn phí vận chuyển toàn quốc.
+              </template>
               <template v-else>
-                Đơn hàng từ 299.000đ sẽ được miễn phí vận chuyển toàn quốc.
+                Chọn sản phẩm để xem ưu đãi miễn phí vận chuyển.
               </template>
             </p>
           </div>
@@ -180,7 +185,7 @@
               <p class="font-bold">Đã áp dụng: {{ cartStore.appliedPromotion.code }}</p>
               <p>Giảm {{ formatCurrency(cartStore.discountAmount) }}</p>
             </div>
-            <button class="text-xs font-bold text-red-600 hover:underline cursor-pointer" @click="cartStore.removeCoupon">Gỡ</button>
+            <button class="text-xs font-bold text-red-600 hover:underline cursor-pointer" @click="cartStore.removeCoupon()">Gỡ</button>
           </div>
           <form v-else class="flex gap-2" @submit.prevent="handleApplyCoupon">
             <input
@@ -242,7 +247,15 @@
         <!-- Summary Info -->
         <div class="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-xs">
           <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3">Tóm tắt đơn hàng</h3>
-          <div class="space-y-3 text-sm font-medium">
+          <!-- Server pricing (checkout-preview) is the only source of these numbers -->
+          <div v-if="cartStore.pricingError" class="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-medium" data-testid="cart-pricing-error">
+            {{ cartStore.pricingError }}
+          </div>
+          <SkeletonLoader v-if="isSummaryLoading" type="lines" :count="4" data-testid="cart-pricing-skeleton" />
+          <p v-else-if="!isAnyItemSelected" class="text-xs text-slate-500 font-medium">
+            Chọn sản phẩm để xem tổng tiền.
+          </p>
+          <div v-else-if="cartStore.pricing" class="space-y-3 text-sm font-medium" data-testid="cart-pricing-summary">
             <div class="flex justify-between text-slate-500">
               <span>Tạm tính</span>
               <span class="text-slate-800 font-bold">{{ formatCurrency(cartStore.subtotal) }}</span>
@@ -259,16 +272,16 @@
             </div>
             <div class="border-t border-slate-100 pt-3 flex justify-between text-slate-800">
               <span class="text-base font-extrabold">Tổng tiền</span>
-              <span class="text-lg font-black text-[#dc2626]">{{ formatCurrency(cartStore.total) }}</span>
+              <span class="text-lg font-black text-[#dc2626]" data-testid="cart-total">{{ formatCurrency(cartStore.total) }}</span>
             </div>
           </div>
 
           <button
             :class="[
               'w-full font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-md cursor-pointer',
-              isAnyItemSelected && !isValidatingCheckout ? 'bg-[#dc2626] hover:bg-[#b91c1c] text-white shadow-red-500/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+              canProceed ? 'bg-[#dc2626] hover:bg-[#b91c1c] text-white shadow-red-500/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
             ]"
-            :disabled="!isAnyItemSelected || isValidatingCheckout"
+            :disabled="!canProceed"
             @click="proceedToCheckout"
           >
             <svg v-if="isValidatingCheckout" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -284,14 +297,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { formatCurrency, getEffectivePrice } from '@/utils/helpers'
 import { promotionService } from '@/services/promotion.service'
-import type { Promotion } from '@/types'
+import type { CartItem, Promotion } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -315,6 +328,26 @@ const { isSubmitting: isValidatingCheckout, runProtected: runProceedToCheckout }
 
 const isAnyItemSelected = computed(() => cartStore.items.some(item => item.selected !== false))
 const isAllSelected = computed(() => cartStore.items.every(item => item.selected !== false))
+const isSummaryLoading = computed(() => isAnyItemSelected.value && cartStore.pricingLoading)
+const canProceed = computed(() => isAnyItemSelected.value && !isValidatingCheckout.value && !cartStore.pricingLoading)
+
+// Unit price per line: the server preview price once loaded, the cached snapshot before that.
+function getUnitPrice(item: CartItem) {
+  const line = cartStore.getPreviewItem(item.product._id)
+  if (line) {
+    return { price: line.price, originalPrice: line.originalPrice ?? line.price }
+  }
+  return {
+    price: getEffectivePrice(item.product.price, item.product.discountPrice),
+    originalPrice: item.product.price,
+  }
+}
+
+// Re-price whenever the selected lines or their quantities change (debounced in the store).
+const selectionKey = computed(() => cartStore.selectedItems.map(i => `${i.product._id}:${i.quantity}`).join(','))
+watch(selectionKey, () => {
+  cartStore.refreshPricing()
+})
 
 function toggleSelectAll() {
   cartStore.toggleAllSelection(!isAllSelected.value)
@@ -339,9 +372,13 @@ async function proceedToCheckout() {
       toast.warning('Vui lòng chọn ít nhất một sản phẩm để thanh toán')
       return
     }
-    await cartStore.validateCartBeforeCheckout(authStore.isAuthenticated)
-    if (cartStore.warnings.length > 0) {
-      toast.warning('Một số sản phẩm trong giỏ hàng đã thay đổi tồn kho hoặc giá. Vui lòng kiểm tra lại!')
+    const result = await cartStore.validateCartBeforeCheckout()
+    if (result.error) {
+      toast.error(result.error)
+      return
+    }
+    if (!result.isValidForCheckout) {
+      toast.warning(result.warnings[0] || 'Một số sản phẩm trong giỏ hàng đã thay đổi tồn kho hoặc giá. Vui lòng kiểm tra lại!')
       return
     }
     router.push('/checkout')
@@ -382,12 +419,17 @@ async function applySuggestedCoupon(code: string) {
 onMounted(async () => {
   try {
     await cartStore.syncWithServer(authStore.isAuthenticated)
+  } finally {
+    loadingCart.value = false
+  }
+  // An empty context drops checkout-only inputs (loyalty points, phone): the cart prices goods + voucher.
+  void cartStore.refreshPricing({}, { immediate: true })
+  void cartStore.loadPricingPolicy()
+  try {
     const res = await promotionService.getActive()
     activePromotions.value = res.data || []
   } catch (err) {
     console.error('Failed to load active promotions:', err)
-  } finally {
-    loadingCart.value = false
   }
 })
 </script>

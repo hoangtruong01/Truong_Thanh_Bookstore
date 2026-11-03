@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   ConflictException,
   Logger,
+  OnModuleInit,
   Optional,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -11,6 +12,7 @@ import * as bcrypt from 'bcrypt';
 import {
   createHash,
   createHmac,
+  randomBytes,
   randomInt,
   randomUUID,
   timingSafeEqual,
@@ -35,8 +37,9 @@ const INVALID_PASSWORD_RESET_MESSAGE =
   'Mã xác thực hoặc thông tin đặt lại mật khẩu không hợp lệ';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
+  private ephemeralOtpPepper?: string;
 
   constructor(
     private usersService: UsersService,
@@ -65,12 +68,48 @@ export class AuthService {
     }
   }
 
-  private getOtpPepper(): string {
+  /**
+   * SECURITY: fail closed in production — the OTP pepper must come from config
+   * (OTP_PEPPER, or JWT_RESET_SECRET as fallback); there is no hardcoded default.
+   */
+  onModuleInit(): void {
+    if (this.isProduction() && !this.getConfiguredOtpPepper()) {
+      throw new Error(
+        'OTP_PEPPER (or JWT_RESET_SECRET) is required in production to hash OTP codes',
+      );
+    }
+  }
+
+  private isProduction(): boolean {
+    const nodeEnv =
+      this.configService.get<string>('NODE_ENV') ?? process.env.NODE_ENV;
+    return nodeEnv === 'production';
+  }
+
+  private getConfiguredOtpPepper(): string | undefined {
     return (
       this.configService.get<string>('OTP_PEPPER') ||
       this.configService.get<string>('JWT_RESET_SECRET') ||
-      'truong-thanh-otp-pepper-secret-2026'
+      undefined
     );
+  }
+
+  private getOtpPepper(): string {
+    const configured = this.getConfiguredOtpPepper();
+    if (configured) return configured;
+    if (this.isProduction()) {
+      throw new Error('OTP pepper is not configured');
+    }
+    // Non-production without any secret: use a per-process random pepper
+    // (OTPs then stay valid only for this process lifetime) instead of a
+    // hardcoded value shipped in source control.
+    if (!this.ephemeralOtpPepper) {
+      this.ephemeralOtpPepper = randomBytes(32).toString('hex');
+      this.logger.warn(
+        'OTP_PEPPER/JWT_RESET_SECRET not configured; using an ephemeral OTP pepper (non-production only).',
+      );
+    }
+    return this.ephemeralOtpPepper;
   }
 
   private hashOtp(otp: string): string {
@@ -504,6 +543,8 @@ export class AuthService {
       this.logger.error(`Failed to send OTP email to ${email}:`, err);
     });
 
+    // SECURITY: never include the plain OTP in the response (any NODE_ENV,
+    // even when email delivery fails) — it is delivered only via email.
     return {
       success: true,
       message: 'Mã OTP đã được gửi đến email của bạn',

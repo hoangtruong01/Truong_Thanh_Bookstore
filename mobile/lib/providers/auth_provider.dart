@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/constants/api_constants.dart';
+import '../core/network/api_client.dart';
 import '../models/user_model.dart';
 import '../services/fcm_notification_service.dart';
 
 class AuthProvider with ChangeNotifier {
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  final ApiClient _api;
   UserModel? _user;
   String? _token;
   String? _refreshToken;
@@ -22,7 +23,14 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _token != null && _token!.isNotEmpty;
   bool get isLoading => _isLoading;
 
-  AuthProvider() {
+  AuthProvider({ApiClient? apiClient}) : _api = apiClient ?? ApiClient() {
+    // Authenticated calls through this client refresh once on 401 and retry.
+    _api.bindSession(
+      tokenProvider: () => token,
+      refresher: _exchangeRefreshToken,
+      onSessionExpired: () => unawaited(_clearLocalSession()),
+    );
+    FcmNotificationService.instance.setApiClient(_api);
     FcmNotificationService.instance.setAuthTokenProvider(() => _token);
     sessionReady = _restoreSessionSafely();
   }
@@ -80,18 +88,13 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.post(
-        Uri.parse(ApiConstants.login),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-client-platform': 'mobile',
-        },
-        body: jsonEncode({'email': email, 'password': password}),
+      final response = await _api.post(
+        ApiConstants.login,
+        body: {'email': email, 'password': password},
       );
 
-      final body = jsonDecode(response.body);
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = body['data'];
+      if (response.isSuccess) {
+        final data = response.mapData;
         _token = data['accessToken'];
         _refreshToken = data['refreshToken'];
         _user = UserModel.fromJson(data['user']);
@@ -103,7 +106,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        throw Exception(body['message'] ?? 'Đăng nhập thất bại');
+        throw Exception(response.message ?? 'Đăng nhập thất bại');
       }
     } catch (e) {
       _isLoading = false;
@@ -118,23 +121,18 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.post(
-        Uri.parse(ApiConstants.register),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-client-platform': 'mobile',
-        },
-        body: jsonEncode({
+      final response = await _api.post(
+        ApiConstants.register,
+        body: {
           'fullName': fullName,
           'email': email,
           'password': password,
           if (phone != null && phone.isNotEmpty) 'phone': phone,
-        }),
+        },
       );
 
-      final body = jsonDecode(response.body);
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = body['data'];
+      if (response.isSuccess) {
+        final data = response.mapData;
         _token = data['accessToken'];
         _refreshToken = data['refreshToken'];
         _user = UserModel.fromJson(data['user']);
@@ -146,7 +144,7 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        throw Exception(body['message'] ?? 'Đăng ký thất bại');
+        throw Exception(response.message ?? 'Đăng ký thất bại');
       }
     } catch (e) {
       _isLoading = false;
@@ -155,23 +153,27 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Rotates the token pair, sharing any refresh already in flight from
+  /// ApiClient's automatic 401 handling. Only a server rejection ends the session.
   Future<bool> refreshAuthToken() async {
-    if (_refreshToken == null || _refreshToken!.isEmpty) return false;
+    return await _api.refreshSession() == TokenRefreshResult.refreshed;
+  }
+
+  /// Refresh exchange used by ApiClient; it never clears the session itself
+  /// (ApiClient calls onSessionExpired once when the result is rejected).
+  Future<TokenRefreshResult> _exchangeRefreshToken() async {
+    if (_refreshToken == null || _refreshToken!.isEmpty) return TokenRefreshResult.rejected;
 
     try {
-      final response = await http.post(
-        Uri.parse(ApiConstants.refreshToken),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-client-platform': 'mobile',
-          if (_token != null) 'Authorization': 'Bearer $_token',
-        },
-        body: jsonEncode({'refreshToken': _refreshToken}),
+      final response = await _api.post(
+        ApiConstants.refreshToken,
+        token: _token,
+        body: {'refreshToken': _refreshToken},
+        refreshOnUnauthorized: false,
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final body = jsonDecode(response.body);
-        final data = body['data'];
+      if (response.isSuccess) {
+        final data = response.mapData;
         _token = data['accessToken'];
         _refreshToken = data['refreshToken'];
         if (data['user'] != null) {
@@ -181,18 +183,17 @@ class AuthProvider with ChangeNotifier {
         await _persistSession();
 
         notifyListeners();
-        return true;
+        return TokenRefreshResult.refreshed;
       } else if (response.statusCode == 401 || response.statusCode == 403) {
         // MOB-01: Only clear session when server explicitly rejects refresh token (invalid/expired/revoked)
-        await logout();
-        return false;
+        return TokenRefreshResult.rejected;
       } else {
         // MOB-01: Server errors (500, 502, 503) or rate limits - do NOT logout user
-        return false;
+        return TokenRefreshResult.unavailable;
       }
     } catch (_) {
       // MOB-01: Offline, network timeout, SocketException - do NOT logout user
-      return false;
+      return TokenRefreshResult.unavailable;
     }
   }
 
@@ -201,24 +202,21 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.put(
-        Uri.parse(ApiConstants.changePassword),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_token',
-        },
-        body: jsonEncode({
+      final response = await _api.put(
+        ApiConstants.changePassword,
+        token: _token,
+        authenticated: true,
+        body: {
           'currentPassword': currentPassword,
           'newPassword': newPassword,
-        }),
+        },
       );
 
-      final body = jsonDecode(response.body);
       _isLoading = false;
       notifyListeners();
 
       if (response.statusCode != 200) {
-        throw Exception(body['message'] ?? 'Đổi mật khẩu thất bại');
+        throw Exception(response.message ?? 'Đổi mật khẩu thất bại');
       }
     } catch (e) {
       _isLoading = false;
@@ -233,19 +231,23 @@ class AuthProvider with ChangeNotifier {
     if (_token != null && _token!.isNotEmpty) {
       try {
         await FcmNotificationService.instance.unregister(_token!);
-        await http.post(
-          Uri.parse(ApiConstants.logout),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $_token',
-          },
-          body: jsonEncode({
+        // Re-read _token: a 401 during unregister may have rotated it.
+        await _api.post(
+          ApiConstants.logout,
+          token: _token,
+          authenticated: true,
+          body: {
             if (_refreshToken != null) 'refreshToken': _refreshToken,
-          }),
+          },
         );
       } catch (_) {}
     }
+    await _clearLocalSession();
+  }
 
+  /// Drops the session on this device only, without calling the server.
+  /// Used by logout and when the server rejects the refresh token.
+  Future<void> _clearLocalSession() async {
     _user = null;
     _token = null;
     _refreshToken = null;
@@ -261,17 +263,16 @@ class AuthProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> forgotPassword(String email) async {
     try {
-      final response = await http.post(
-        Uri.parse(ApiConstants.forgotPassword),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
+      final response = await _api.post(
+        ApiConstants.forgotPassword,
+        body: {'email': email},
       );
 
-      final body = jsonDecode(response.body);
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return body['data'] ?? body;
+      if (response.isSuccess) {
+        final data = response.data ?? response.body;
+        return data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
       } else {
-        throw Exception(body['message'] ?? 'Yêu cầu OTP thất bại');
+        throw Exception(response.message ?? 'Yêu cầu OTP thất bại');
       }
     } catch (e) {
       rethrow;
@@ -280,21 +281,19 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> resetPassword(String email, String otp, String newPassword) async {
     try {
-      final response = await http.post(
-        Uri.parse(ApiConstants.resetPassword),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await _api.post(
+        ApiConstants.resetPassword,
+        body: {
           'email': email,
           'otp': otp,
           'newPassword': newPassword,
-        }),
+        },
       );
 
-      final body = jsonDecode(response.body);
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (response.isSuccess) {
         return true;
       } else {
-        throw Exception(body['message'] ?? 'Đặt lại mật khẩu thất bại');
+        throw Exception(response.message ?? 'Đặt lại mật khẩu thất bại');
       }
     } catch (e) {
       rethrow;

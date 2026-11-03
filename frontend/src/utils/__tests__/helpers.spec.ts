@@ -53,7 +53,8 @@ describe('helpers.ts', () => {
 
     it('should format numbers and labels properly', () => {
       expect(formatNumber(125000)).toBe('125.000')
-      expect(getStatusLabel('DELIVERED')).toBe('Đã giao hàng')
+      // Canonical label shared with StatusBadge (see statusMeta.spec.ts)
+      expect(getStatusLabel('DELIVERED')).toBe('Đã giao thành công')
       expect(getStatusLabel('CANCELLED')).toBe('Đã hủy')
       expect(formatCurrency(50000)).toContain('50.000')
     })

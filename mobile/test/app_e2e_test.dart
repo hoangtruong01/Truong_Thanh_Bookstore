@@ -6,7 +6,7 @@ import 'package:mobile/models/product_model.dart';
 import 'package:mobile/models/promotion_model.dart';
 import 'package:mobile/providers/cart_provider.dart';
 import 'package:mobile/providers/auth_provider.dart';
-import 'package:mobile/widgets/glass_bottom_navigation.dart';
+import 'package:mobile/core/widgets/glass_bottom_navigation.dart';
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));

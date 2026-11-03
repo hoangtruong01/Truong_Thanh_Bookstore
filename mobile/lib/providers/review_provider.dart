@@ -1,12 +1,15 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants/api_constants.dart';
+import '../core/network/api_client.dart';
 import '../models/review_model.dart';
 
 class ReviewProvider with ChangeNotifier {
-  ReviewProvider({http.Client? client}) : _client = client;
-  final http.Client? _client;
+  ReviewProvider({ApiClient? apiClient, http.Client? client})
+      : _api = apiClient ?? ApiClient(httpClient: client),
+        _ownsApi = apiClient == null;
+  final ApiClient _api;
+  final bool _ownsApi;
   bool _disposed = false;
 
   @override
@@ -17,6 +20,7 @@ class ReviewProvider with ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    if (_ownsApi) _api.close();
     super.dispose();
   }
   List<ReviewModel> _reviews = [];
@@ -41,17 +45,10 @@ class ReviewProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await (_client?.get ?? http.get)(
-        Uri.parse(ApiConstants.getReviews(productId)),
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 15));
+      final res = await _api.get(ApiConstants.getReviews(productId));
 
       if (res.statusCode == 200) {
-        final body = json.decode(res.body);
-        final dynamic data = body['data'] ?? body;
-        if (data is List) {
-          _reviews = data.map((item) => ReviewModel.fromJson(item)).toList();
-        }
+        _reviews = res.listData().map((item) => ReviewModel.fromJson(item)).toList();
       } else {
         _errorMessage = 'Không thể tải đánh giá. Vui lòng thử lại.';
       }
@@ -67,15 +64,10 @@ class ReviewProvider with ChangeNotifier {
 
   Future<void> fetchRatingBreakdown(String productId) async {
     try {
-      final res = await (_client?.get ?? http.get)(
-        Uri.parse(ApiConstants.getRatingBreakdown(productId)),
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 15));
+      final res = await _api.get(ApiConstants.getRatingBreakdown(productId));
 
       if (res.statusCode == 200) {
-        final body = json.decode(res.body);
-        final data = body['data'] ?? body;
-        _breakdown = RatingBreakdownModel.fromJson(data);
+        _breakdown = RatingBreakdownModel.fromJson(res.mapData);
         notifyListeners();
       }
     } catch (e) {
@@ -94,17 +86,10 @@ class ReviewProvider with ChangeNotifier {
     }
 
     try {
-      final res = await (_client?.get ?? http.get)(
-        Uri.parse(ApiConstants.canReview(productId)),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 15));
+      final res = await _api.get(ApiConstants.canReview(productId), token: token);
 
       if (res.statusCode == 200) {
-        final body = json.decode(res.body);
-        final data = body['data'] ?? body;
+        final data = res.mapData;
         _canUserReview = data['canReview'] == true && data['hasReviewed'] != true;
         _canReviewReason = data['hasReviewed'] == true
             ? 'Bạn đã đánh giá sản phẩm này'
@@ -131,28 +116,23 @@ class ReviewProvider with ChangeNotifier {
     }
 
     try {
-      final res = await (_client?.post ?? http.post)(
-        Uri.parse(ApiConstants.getReviews(productId)),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode({
+      final res = await _api.post(
+        ApiConstants.getReviews(productId),
+        token: token,
+        body: {
           'rating': rating,
           'content': content,
-        }),
-      ).timeout(const Duration(seconds: 15));
+        },
+      );
 
-      if (res.statusCode == 200 || res.statusCode == 201) {
+      if (res.isSuccess) {
         await fetchReviews(productId);
         _canUserReview = false;
         _canReviewReason = 'Bạn đã đánh giá sản phẩm này';
         notifyListeners();
         return true;
       } else {
-        final body = json.decode(res.body);
-        final message = body['message'];
-        _errorMessage = message is List ? message.join('; ') : message?.toString() ?? 'Không thể gửi đánh giá';
+        _errorMessage = res.message ?? 'Không thể gửi đánh giá';
         notifyListeners();
         return false;
       }

@@ -33,6 +33,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt.guard';
 import { StaffPermission, UserRole } from '../../common/enums';
+import { getPricingPolicy } from './checkout-policy';
 
 interface AuthenticatedRequest {
   user: {
@@ -57,6 +58,17 @@ export class OrdersController {
   checkoutPreview(@Body() dto: CheckoutPreviewDto, @Request() req: any) {
     const userId = req.user?._id;
     return this.ordersService.checkoutPreview(dto, userId);
+  }
+
+  // Public: chỉ trả hằng số chính sách giá (không có dữ liệu người dùng).
+  // Phải khai báo trước @Get(':id') để ':id' không bắt mất route này.
+  @Get('pricing-policy')
+  @ApiOperation({
+    summary:
+      'Public pricing policy: free-shipping threshold, shipping fee, loyalty redeem rules',
+  })
+  getPricingPolicy() {
+    return getPricingPolicy();
   }
 
   @Post()

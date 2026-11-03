@@ -314,7 +314,13 @@
 
                     <!-- Stock Status Badges -->
                     <span
-                      v-if="getItemStock(item.product._id) !== null && getItemStock(item.product._id)! <= 0"
+                      v-if="getUnavailableReason(item.product._id) === 'UNAVAILABLE'"
+                      class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-red-100 text-red-700"
+                    >
+                      Ngừng kinh doanh
+                    </span>
+                    <span
+                      v-else-if="getItemStock(item.product._id) !== null && getItemStock(item.product._id)! <= 0"
                       class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-red-100 text-red-700"
                     >
                       Hết hàng
@@ -333,9 +339,12 @@
                     </span>
                   </div>
                 </div>
-                <span class="text-xs font-bold text-slate-800 whitespace-nowrap">
-                  {{ formatCurrency(((item.product.discountPrice != null && item.product.discountPrice > 0) ? item.product.discountPrice : item.product.price) * item.quantity) }}
+                <!-- Line total from the server preview (never price x quantity on the client) -->
+                <span v-if="cartStore.getPreviewItem(item.product._id)" class="text-xs font-bold text-slate-800 whitespace-nowrap" data-testid="checkout-line-subtotal">
+                  {{ formatCurrency(cartStore.getPreviewItem(item.product._id)!.subtotal) }}
                 </span>
+                <span v-else-if="getUnavailableReason(item.product._id)" class="text-xs font-bold text-slate-400 whitespace-nowrap">—</span>
+                <span v-else class="h-3.5 w-14 bg-slate-100 rounded animate-pulse inline-block" aria-label="Đang tải giá"></span>
               </div>
 
               <!-- Quick Auto-Adjust button for insufficient stock -->
@@ -354,7 +363,13 @@
               </div>
 
               <p
-                v-if="getItemStock(item.product._id) !== null && getItemStock(item.product._id)! <= 0"
+                v-if="getUnavailableReason(item.product._id) === 'UNAVAILABLE'"
+                class="text-[10px] text-red-600 font-medium"
+              >
+                Sản phẩm này hiện không còn kinh doanh. Vui lòng bỏ chọn trong giỏ hàng.
+              </p>
+              <p
+                v-else-if="getItemStock(item.product._id) !== null && getItemStock(item.product._id)! <= 0"
                 class="text-[10px] text-red-600 font-medium"
               >
                 Sản phẩm này tạm thời hết hàng. Vui lòng bỏ chọn trong giỏ hàng.
@@ -363,27 +378,27 @@
           </div>
 
           <!-- Free Shipping Progress Bar (FE-06 Transparency) -->
-          <div class="border-t border-slate-100 pt-4 space-y-2">
+          <div v-if="cartStore.pricing" class="border-t border-slate-100 pt-4 space-y-2">
             <div class="flex justify-between items-center text-xs">
               <span class="font-bold text-slate-700">Ưu đãi Freeship toàn quốc:</span>
-              <span v-if="isEligibleForFreeShipping" class="font-extrabold text-green-600">Đã đạt Freeship! 🎉</span>
-              <span v-else class="font-bold text-slate-500">Đơn từ {{ formatCurrency(activeFreeShippingThreshold) }}</span>
+              <span v-if="cartStore.isFreeShipping" class="font-extrabold text-green-600">Đã đạt Freeship! 🎉</span>
+              <span v-else-if="cartStore.freeShippingThreshold" class="font-bold text-slate-500">Đơn từ {{ formatCurrency(cartStore.freeShippingThreshold) }}</span>
             </div>
 
-            <!-- Progress Bar Line -->
+            <!-- Progress Bar Line (percentage computed by the server) -->
             <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
               <div
                 class="h-full rounded-full transition-all duration-300"
-                :class="isEligibleForFreeShipping ? 'bg-green-500' : 'bg-gradient-to-r from-red-500 to-amber-500'"
-                :style="{ width: `${freeShippingProgressPercent}%` }"
+                :class="cartStore.isFreeShipping ? 'bg-green-500' : 'bg-gradient-to-r from-red-500 to-amber-500'"
+                :style="{ width: `${cartStore.freeShippingProgress}%` }"
               ></div>
             </div>
 
-            <p v-if="isEligibleForFreeShipping" class="text-[10.5px] text-green-700 font-medium">
-              Đơn hàng đủ điều kiện miễn phí vận chuyển tiết kiệm 30.000đ.
+            <p v-if="cartStore.isFreeShipping" class="text-[10.5px] text-green-700 font-medium">
+              Đơn hàng đủ điều kiện miễn phí vận chuyển<template v-if="cartStore.standardShippingFee"> tiết kiệm {{ formatCurrency(cartStore.standardShippingFee) }}</template>.
             </p>
             <p v-else class="text-[10.5px] text-slate-500 font-medium">
-              Mua thêm <strong class="text-[#dc2626]">{{ formatCurrency(amountNeededForFreeShipping) }}</strong> để được miễn phí vận chuyển!
+              Mua thêm <strong class="text-[#dc2626]">{{ formatCurrency(cartStore.amountNeededForFreeShipping) }}</strong> để được miễn phí vận chuyển!
             </p>
           </div>
 
@@ -393,10 +408,10 @@
             
             <div v-if="cartStore.appliedPromotion" class="bg-green-50 border border-green-200 rounded-xl p-3 flex justify-between items-center">
               <div class="text-xs text-green-800 font-medium">
-                <p class="font-bold">Đã áp dụng: {{ (cartStore.appliedPromotion as any)?.code }}</p>
+                <p class="font-bold">Đã áp dụng: {{ cartStore.appliedPromotion.code }}</p>
                 <p>Giảm {{ formatCurrency(cartStore.discountAmount) }}</p>
               </div>
-              <button class="text-xs font-bold text-red-600 hover:underline" @click="cartStore.removeCoupon">Gỡ</button>
+              <button class="text-xs font-bold text-red-600 hover:underline" @click="cartStore.removeCoupon()">Gỡ</button>
             </div>
             
             <div v-else class="flex gap-2">
@@ -476,19 +491,24 @@
           </div>
 
           <!-- Loyalty Points Redemption Block -->
-          <div v-if="authStore.isAuthenticated && userLoyaltyPoints > 0" class="border-t border-slate-100 pt-4 space-y-3">
+          <!-- Balance, limits and errors come from preview.loyalty (server), not from the cached profile -->
+          <div v-if="authStore.isAuthenticated && loyalty && loyalty.availablePoints > 0" class="border-t border-slate-100 pt-4 space-y-3" data-testid="checkout-loyalty">
             <div class="flex justify-between items-center">
               <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-amber-500"></span>
                 <span>Điểm thưởng tích lũy</span>
               </h4>
               <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                Có: {{ userLoyaltyPoints.toLocaleString() }} điểm
+                Có: {{ loyalty.availablePoints.toLocaleString() }} điểm
               </span>
             </div>
 
-            <div v-if="userLoyaltyPoints < 1000" class="text-[11px] text-slate-400 font-medium">
-              Bạn cần tối thiểu 1.000 điểm để quy đổi (hiện có {{ userLoyaltyPoints.toLocaleString() }} điểm).
+            <div v-if="loyalty.availablePoints < loyalty.minRedeemPoints" class="text-[11px] text-slate-400 font-medium">
+              Bạn cần tối thiểu {{ loyalty.minRedeemPoints.toLocaleString() }} điểm để quy đổi (hiện có {{ loyalty.availablePoints.toLocaleString() }} điểm).
+            </div>
+
+            <div v-else-if="!loyalty.canRedeem" class="text-[11px] text-slate-400 font-medium">
+              Đơn hàng từ {{ formatCurrency(loyalty.minSubtotalToRedeem) }} mới có thể dùng điểm (tối đa {{ loyalty.maxRedeemPercent }}% giá trị đơn).
             </div>
 
             <div v-else class="space-y-2">
@@ -497,9 +517,9 @@
                   v-model.number="loyaltyPointsInput"
                   type="number"
                   min="0"
-                  :max="maxAllowedPoints"
+                  :max="loyalty.maxRedeemablePoints"
                   step="100"
-                  placeholder="Nhập số điểm muốn tiêu (tối thiểu 1.000)..."
+                  :placeholder="`Nhập số điểm muốn tiêu (tối thiểu ${loyalty.minRedeemPoints.toLocaleString()})...`"
                   class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-semibold"
                 />
                 <button
@@ -511,7 +531,7 @@
                 </button>
               </div>
               <p class="text-[10px] text-slate-500">
-                1 điểm = 100 VNĐ. Tối đa 20% giá trị đơn (tối đa {{ maxAllowedPoints.toLocaleString() }} điểm = {{ formatCurrency(maxAllowedPoints * 100) }}).
+                1 điểm = {{ loyalty.pointValue.toLocaleString() }} VNĐ. Tối đa {{ loyalty.maxRedeemPercent }}% giá trị đơn (tối đa {{ loyalty.maxRedeemablePoints.toLocaleString() }} điểm = {{ formatCurrency(loyalty.maxRedeemablePoints * loyalty.pointValue) }}).
               </p>
               <p v-if="loyaltyError" class="text-[10px] text-red-500 font-medium">{{ loyaltyError }}</p>
             </div>
@@ -520,60 +540,73 @@
           <!-- Bảng Minh Bạch Chi Phí Đơn Hàng (FE-06 Transparency Table) -->
           <div class="border-t border-slate-100 pt-4 space-y-2.5 text-xs font-medium">
             <!-- Server warning messages if prices or stock adjusted -->
-            <div v-if="serverPricing?.warnings?.length" class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 space-y-1">
+            <div v-if="cartStore.warnings.length" class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 space-y-1">
               <div class="font-bold flex items-center gap-1">
                 <span>⚠️</span>
                 <span>Thông báo cập nhật từ hệ thống:</span>
               </div>
-              <p v-for="(warn, idx) in serverPricing.warnings" :key="idx" class="text-[11px] leading-relaxed">
+              <p v-for="(warn, idx) in cartStore.warnings" :key="idx" class="text-[11px] leading-relaxed">
                 • {{ warn }}
               </p>
             </div>
 
-            <div class="flex justify-between text-slate-600">
-              <span>Tiền hàng tạm tính</span>
-              <span class="text-slate-800 font-bold">{{ formatCurrency(displayedSubtotal) }}</span>
+            <!-- Preview failed: the last good numbers stay visible, but ordering is blocked -->
+            <div v-if="cartStore.pricingError" class="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-medium flex items-center justify-between gap-2" data-testid="checkout-pricing-error">
+              <span>{{ cartStore.pricingError }}</span>
+              <button type="button" class="font-bold hover:underline cursor-pointer whitespace-nowrap" @click="retryPricing">Thử lại</button>
             </div>
 
-            <div class="flex justify-between text-slate-600 items-center">
-              <span>Phí vận chuyển</span>
-              <div class="text-right">
-                <span v-if="displayedShippingFee === 0" class="font-bold text-green-600 flex items-center gap-1">
-                  <span class="line-through text-slate-400 font-normal">30.000 đ</span>
-                  <span>Miễn phí</span>
-                </span>
-                <span v-else class="text-slate-800 font-bold">
-                  {{ formatCurrency(displayedShippingFee) }}
-                </span>
+            <SkeletonLoader v-if="!cartStore.pricing && cartStore.pricingLoading" type="lines" :count="4" data-testid="checkout-pricing-skeleton" />
+
+            <template v-else-if="cartStore.pricing">
+              <div class="flex justify-between text-slate-600">
+                <span>Tiền hàng</span>
+                <span class="text-slate-800 font-bold" data-testid="checkout-subtotal">{{ formatCurrency(cartStore.subtotal) }}</span>
               </div>
-            </div>
 
-            <div v-if="displayedDiscount > 0" class="flex justify-between text-red-600">
-              <span class="flex items-center gap-1">
-                <span>Voucher giảm giá</span>
-                <span class="font-mono font-bold bg-red-50 px-1 py-0.2 rounded border border-red-200 text-[10px]">{{ (cartStore.appliedPromotion as any)?.code }}</span>
-              </span>
-              <span class="font-bold">-{{ formatCurrency(displayedDiscount) }}</span>
-            </div>
-
-            <div v-if="displayedLoyaltyDiscount > 0" class="flex justify-between text-amber-600">
-              <span>Điểm thưởng ({{ loyaltyPointsToSpend.toLocaleString() }} điểm)</span>
-              <span class="font-bold">-{{ formatCurrency(displayedLoyaltyDiscount) }}</span>
-            </div>
-
-            <div class="border-t border-slate-200 pt-3 flex justify-between items-baseline text-slate-900">
-              <div>
-                <span class="text-sm font-black block">Tổng thanh toán cuối cùng</span>
-                <span class="text-[10px] text-slate-400 font-normal">Đã bao gồm VAT, không phí ẩn</span>
+              <div class="flex justify-between text-slate-600 items-center">
+                <span>Phí vận chuyển</span>
+                <div class="text-right">
+                  <span v-if="cartStore.shippingFee === 0" class="font-bold text-green-600 flex items-center gap-1">
+                    <span v-if="cartStore.standardShippingFee" class="line-through text-slate-400 font-normal">{{ formatCurrency(cartStore.standardShippingFee) }}</span>
+                    <span>Miễn phí</span>
+                  </span>
+                  <span v-else class="text-slate-800 font-bold" data-testid="checkout-shipping-fee">
+                    {{ formatCurrency(cartStore.shippingFee) }}
+                  </span>
+                </div>
               </div>
-              <span class="text-xl font-black text-[#dc2626]">{{ formatCurrency(displayedTotal) }}</span>
-            </div>
+
+              <div v-if="cartStore.discountAmount > 0" class="flex justify-between text-red-600">
+                <span class="flex items-center gap-1">
+                  <span>Voucher giảm giá</span>
+                  <span class="font-mono font-bold bg-red-50 px-1 py-0.2 rounded border border-red-200 text-[10px]">{{ cartStore.appliedPromotion?.code }}</span>
+                </span>
+                <span class="font-bold">-{{ formatCurrency(cartStore.discountAmount) }}</span>
+              </div>
+
+              <div v-if="cartStore.loyaltyDiscount > 0" class="flex justify-between text-amber-600">
+                <span>Điểm thưởng<template v-if="loyalty?.appliedPoints"> ({{ loyalty.appliedPoints.toLocaleString() }} điểm)</template></span>
+                <span class="font-bold">-{{ formatCurrency(cartStore.loyaltyDiscount) }}</span>
+              </div>
+
+              <div class="border-t border-slate-200 pt-3 flex justify-between items-baseline text-slate-900">
+                <div>
+                  <span class="text-sm font-black block">Tổng thanh toán cuối cùng</span>
+                  <span class="text-[10px] text-slate-400 font-normal">
+                    {{ cartStore.pricingLoading ? 'Đang cập nhật giá...' : 'Đã bao gồm VAT, không phí ẩn' }}
+                  </span>
+                </div>
+                <span class="text-xl font-black text-[#dc2626]" :class="{ 'opacity-50': cartStore.pricingLoading }" data-testid="checkout-total">{{ formatCurrency(cartStore.total) }}</span>
+              </div>
+            </template>
           </div>
 
           <!-- Button Đặt Hàng kèm Submit-Lock Guard (FE-05 + FE-06) -->
           <button
             type="button"
-            :disabled="submitting || isPlacingOrder || checkoutItems.length === 0 || hasStockIssues || (!!shippingInfo.phone && !isPhoneValid)"
+            :disabled="submitting || isPlacingOrder || checkoutItems.length === 0 || hasStockIssues || !isPricingReady || (!!shippingInfo.phone && !isPhoneValid)"
+            data-testid="checkout-submit"
             class="w-full bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-lg shadow-red-500/20 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
             @click="placeOrder"
           >
@@ -583,6 +616,8 @@
             </svg>
             <span v-if="hasStockIssues">Vui lòng xử lý tồn kho</span>
             <span v-else-if="submitting || isPlacingOrder">Đang xử lý đặt hàng...</span>
+            <span v-else-if="cartStore.pricingError">Không thể cập nhật giá</span>
+            <span v-else-if="checkoutItems.length > 0 && !isPricingReady">Đang cập nhật giá...</span>
             <span v-else>Xác nhận đặt hàng</span>
           </button>
         </div>
@@ -594,12 +629,12 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useToast } from 'vue-toastification'
-import { useCartStore } from '@/stores/cart'
+import { useCartStore, type PricingContext } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { orderService } from '@/services/order.service'
 import { paymentService, type BankTransferConfig } from '@/services/payment.service'
 import { addressService } from '@/services/address.service'
-import { formatCurrency, getEffectivePrice } from '@/utils/helpers'
+import { formatCurrency } from '@/utils/helpers'
 import { promotionService } from '@/services/promotion.service'
 import type { Promotion, Address } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
@@ -632,30 +667,22 @@ const submittedPaymentMethod = ref<'COD' | 'BANK_TRANSFER' | 'VNPAY' | 'MOMO'>('
 
 const enabledPaymentMethods = ref<string[]>(['COD'])
 const bankTransferConfig = ref<BankTransferConfig | null>(null)
-const serverPricing = ref<{
-  subtotal: number
-  shippingFee: number
-  freeShippingThreshold?: number
-  isEligibleForFreeShipping?: boolean
-  amountNeededForFreeShipping?: number
-  discount: number
-  loyaltyDiscount: number
-  total: number
-  warnings: string[]
-} | null>(null)
-
-// FE-06: Realtime inventory status verification map
-const liveStockMap = ref<Record<string, number>>({})
+// FE-06: Realtime inventory status from the server preview (lines it priced + lines it dropped)
+function getUnavailableReason(productId: string): 'UNAVAILABLE' | 'OUT_OF_STOCK' | null {
+  return cartStore.unavailableItems.find(item => item.product === productId)?.reason ?? null
+}
 
 function getItemStock(productId: string): number | null {
-  if (liveStockMap.value[productId] !== undefined) {
-    return liveStockMap.value[productId]
-  }
+  const line = cartStore.getPreviewItem(productId)
+  if (line) return typeof line.stock === 'number' ? line.stock : null
+  const unavailable = cartStore.unavailableItems.find(item => item.product === productId)
+  if (unavailable) return unavailable.reason === 'OUT_OF_STOCK' ? (unavailable.stock ?? 0) : 0
   return null
 }
 
 const hasStockIssues = computed(() => {
   return checkoutItems.value.some((item) => {
+    if (getUnavailableReason(item.product._id)) return true
     const stock = getItemStock(item.product._id)
     if (stock === null) return false
     return stock <= 0 || stock < item.quantity
@@ -672,134 +699,41 @@ function adjustItemQty(productId: string, maxAvailable: number) {
   }
 }
 
-async function verifyInventoryPreview() {
-  if (checkoutItems.value.length === 0) {
-    serverPricing.value = null
-    return
-  }
-  try {
-    const previewPayload = {
-      items: checkoutItems.value.map(item => ({
-        product: item.product._id,
-        name: item.product.name,
-        price: getEffectivePrice(item.product.price, item.product.discountPrice),
-        quantity: item.quantity,
-        image: item.product.images?.[0] || '',
-      })),
-      shippingAddress: shippingInfo.address || 'Hà Nội',
-      phone: shippingInfo.phone || '0900000000',
-      paymentMethod: paymentMethod.value,
-      promotionCode: cartStore.appliedPromotion?.code || undefined,
-      customerEmail: shippingInfo.email || undefined,
-      loyaltyPointsUsed: loyaltyPointsToSpend.value > 0 ? loyaltyPointsToSpend.value : undefined,
-    }
-
-    const res = await orderService.checkoutPreview(previewPayload)
-    const data = (res.data as any)?.data || res.data
-    if (data) {
-      if (data.items && Array.isArray(data.items)) {
-        const newMap: Record<string, number> = {}
-        for (const item of data.items) {
-          newMap[item.product] = typeof item.stock === 'number' ? item.stock : 999
-        }
-        liveStockMap.value = newMap
-      }
-
-      serverPricing.value = {
-        subtotal: typeof data.subtotal === 'number' ? data.subtotal : cartStore.subtotal,
-        shippingFee: typeof data.shippingFee === 'number' ? data.shippingFee : (isEligibleForFreeShipping.value ? 0 : 30000),
-        freeShippingThreshold: typeof data.freeShippingThreshold === 'number' ? data.freeShippingThreshold : FREE_SHIPPING_THRESHOLD,
-        isEligibleForFreeShipping: typeof data.isEligibleForFreeShipping === 'boolean' ? data.isEligibleForFreeShipping : (cartStore.subtotal >= FREE_SHIPPING_THRESHOLD),
-        amountNeededForFreeShipping: typeof (data.amountNeededForFreeShipping ?? data.remainingForFreeShipping) === 'number' ? (data.amountNeededForFreeShipping ?? data.remainingForFreeShipping) : Math.max(0, FREE_SHIPPING_THRESHOLD - cartStore.subtotal),
-        discount: typeof (data.discount ?? data.promotionDiscount) === 'number' ? (data.discount ?? data.promotionDiscount) : cartStore.discountAmount,
-        loyaltyDiscount: typeof data.loyaltyDiscount === 'number' ? data.loyaltyDiscount : loyaltyDiscountAmount.value,
-        total: typeof data.total === 'number' ? data.total : finalTotal.value,
-        warnings: Array.isArray(data.warnings) ? data.warnings : [],
-      }
-    }
-  } catch (_err) {
-    // silently allow fallback without crashing
-  }
-}
-
-watch(
-  [
-    () => checkoutItems.value.map(i => `${i.product._id}:${i.quantity}`).join(','),
-    () => paymentMethod.value,
-    () => loyaltyPointsToSpend.value,
-    () => shippingInfo.address,
-    () => shippingInfo.phone,
-    () => shippingInfo.email,
-  ],
-  () => {
-    verifyInventoryPreview()
-  },
-  { immediate: true }
-)
-
-// FE-06: Free Shipping Threshold and Progress Bar
-const FREE_SHIPPING_THRESHOLD = 299000
-const activeFreeShippingThreshold = computed(() => serverPricing.value?.freeShippingThreshold || FREE_SHIPPING_THRESHOLD)
-const isEligibleForFreeShipping = computed(() => {
-  if (serverPricing.value?.isEligibleForFreeShipping !== undefined) {
-    return serverPricing.value.isEligibleForFreeShipping
-  }
-  return cartStore.subtotal >= activeFreeShippingThreshold.value
-})
-const amountNeededForFreeShipping = computed(() => {
-  if (typeof serverPricing.value?.amountNeededForFreeShipping === 'number') {
-    return serverPricing.value.amountNeededForFreeShipping
-  }
-  return Math.max(0, activeFreeShippingThreshold.value - cartStore.subtotal)
-})
-const freeShippingProgressPercent = computed(() => {
-  if (isEligibleForFreeShipping.value) return 100
-  return Math.min(100, Math.max(5, Math.round((cartStore.subtotal / activeFreeShippingThreshold.value) * 100)))
-})
-
-// PRODUCT-01: Loyalty Point Spending
+// PRODUCT-01: Loyalty Point Spending. Balance, minimum, cap and errors all come from
+// preview.loyalty; the client only checks that the input is a positive integer.
+const loyalty = computed(() => cartStore.loyalty)
 const loyaltyPointsInput = ref<number | null>(null)
-const userLoyaltyPoints = computed(() => Number(authStore.user?.loyaltyPoints) || 0)
-const maxAllowedPoints = computed(() => {
-  const maxBySubtotal = Math.floor((cartStore.subtotal * 0.2) / 100)
-  return Math.min(userLoyaltyPoints.value, maxBySubtotal)
+
+const loyaltyInputInvalid = computed(() => {
+  const raw = loyaltyPointsInput.value
+  if (raw === null || (raw as unknown) === '') return false
+  const val = Number(raw)
+  return !Number.isSafeInteger(val) || val < 0
 })
 
-const loyaltyPointsToSpend = computed(() => {
-  const val = Number(loyaltyPointsInput.value) || 0
-  if (!Number.isSafeInteger(val) || val < 1000 || val > maxAllowedPoints.value) return 0
-  return val
+// Points sent to the preview/order. Nothing is sent while the server says redeeming is impossible.
+const loyaltyPointsRequested = computed(() => {
+  if (!authStore.isAuthenticated || loyaltyInputInvalid.value) return 0
+  if (loyalty.value && !loyalty.value.canRedeem) return 0
+  return Number(loyaltyPointsInput.value) || 0
 })
-
-const loyaltyDiscountAmount = computed(() => loyaltyPointsToSpend.value * 100)
 
 const loyaltyError = computed(() => {
-  const val = Number(loyaltyPointsInput.value) || 0
-  if (!val) return ''
-  if (!Number.isSafeInteger(val)) return 'Số điểm phải là số nguyên'
-  if (val < 1000) return 'Tối thiểu 1.000 điểm để áp dụng giảm giá'
-  if (val > userLoyaltyPoints.value) return 'Vượt quá số điểm hiện có của bạn'
-  if (val > maxAllowedPoints.value) return `Vượt quá giới hạn 20% giá trị đơn hàng (${maxAllowedPoints.value.toLocaleString()} điểm)`
-  return ''
+  if (loyaltyInputInvalid.value) return 'Số điểm phải là số nguyên dương'
+  if (!loyaltyPointsRequested.value) return ''
+  return loyalty.value?.error || ''
 })
 
 function applyMaxPoints() {
-  if (maxAllowedPoints.value >= 1000) {
-    loyaltyPointsInput.value = maxAllowedPoints.value
+  if (loyalty.value?.canRedeem && loyalty.value.maxRedeemablePoints > 0) {
+    loyaltyPointsInput.value = loyalty.value.maxRedeemablePoints
   } else {
-    toast.info('Đơn hàng hiện tại hoặc số dư điểm chưa đủ mức tối thiểu 1.000 điểm')
+    toast.info('Đơn hàng hiện tại hoặc số dư điểm chưa đủ điều kiện quy đổi')
   }
 }
 
-const finalTotal = computed(() => {
-  return Math.max(0, cartStore.total - loyaltyDiscountAmount.value)
-})
-
-const displayedSubtotal = computed(() => serverPricing.value?.subtotal ?? cartStore.subtotal)
-const displayedShippingFee = computed(() => serverPricing.value?.shippingFee ?? (isEligibleForFreeShipping.value ? 0 : cartStore.shippingFee))
-const displayedDiscount = computed(() => serverPricing.value?.discount ?? cartStore.discountAmount)
-const displayedLoyaltyDiscount = computed(() => serverPricing.value?.loyaltyDiscount ?? loyaltyDiscountAmount.value)
-const displayedTotal = computed(() => serverPricing.value?.total ?? finalTotal.value)
+// Ordering requires a fresh, successful server preview of exactly what is on screen.
+const isPricingReady = computed(() => !!cartStore.pricing && !cartStore.pricingLoading && !cartStore.pricingError)
 
 const shippingInfo = reactive({
   fullName: '',
@@ -939,11 +873,11 @@ async function handleApplyCoupon() {
   if (isApplyingCoupon.value || !couponCode.value.trim()) return
   isApplyingCoupon.value = true
   try {
+    // The store re-prices the order with the code; the discount shown is the server's.
     const success = await cartStore.applyCoupon(couponCode.value.trim().toUpperCase())
     if (success) {
       toast.success('Áp dụng mã giảm giá thành công!')
       couponCode.value = ''
-      await verifyInventoryPreview()
     } else {
       toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
     }
@@ -959,7 +893,6 @@ async function applySuggestedCoupon(code: string) {
     const success = await cartStore.applyCoupon(code)
     if (success) {
       toast.success('Áp dụng mã giảm giá thành công!')
-      await verifyInventoryPreview()
     } else {
       toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
     }
@@ -967,6 +900,52 @@ async function applySuggestedCoupon(code: string) {
     isApplyingCoupon.value = false
   }
 }
+
+const EMAIL_LOOKS_COMPLETE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
+// Inputs for checkout-preview. No placeholders: phone/email are sent only once they are complete
+// (the guest voucher per-customer limit keys on them), and a half-typed phone never causes a 400.
+const previewPhone = computed(() => (shippingInfo.phone && isPhoneValid.value ? shippingInfo.phone : ''))
+const previewEmail = computed(() => {
+  const email = shippingInfo.email.trim()
+  return EMAIL_LOOKS_COMPLETE.test(email) ? email : ''
+})
+
+function buildPricingContext(): PricingContext {
+  return {
+    loyaltyPointsUsed: loyaltyPointsRequested.value > 0 ? loyaltyPointsRequested.value : undefined,
+    phone: previewPhone.value || undefined,
+    customerEmail: previewEmail.value || undefined,
+    shippingAddress: shippingInfo.address.trim() || undefined,
+    paymentMethod: paymentMethod.value,
+  }
+}
+
+function retryPricing() {
+  cartStore.refreshPricing(buildPricingContext(), { immediate: true })
+}
+
+// Declared after every ref/computed it reads (paymentMethod, loyaltyPointsRequested, shippingInfo, ...):
+// with immediate: true the getters and buildPricingContext run during setup, so an earlier
+// position hits the temporal dead zone and throws a ReferenceError.
+// The first run prices the page at once; later changes are debounced by the store (400 ms),
+// so typing an address does not fire one request per keystroke (and trip the 429 throttle).
+let initialPreviewRequested = false
+watch(
+  [
+    () => checkoutItems.value.map(i => `${i.product._id}:${i.quantity}`).join(','),
+    () => paymentMethod.value,
+    () => loyaltyPointsRequested.value,
+    () => shippingInfo.address,
+    () => previewPhone.value,
+    () => previewEmail.value,
+  ],
+  () => {
+    cartStore.refreshPricing(buildPricingContext(), { immediate: !initialPreviewRequested })
+    initialPreviewRequested = true
+  },
+  { immediate: true }
+)
 
 onMounted(async () => {
   await fetchEnabledPaymentMethods()
@@ -984,8 +963,6 @@ onMounted(async () => {
   } catch {
     // optional
   }
-
-  await verifyInventoryPreview()
 })
 
 async function placeOrder() {
@@ -1008,12 +985,10 @@ async function placeOrder() {
   orderFailReason.value = ''
 
   try {
+    // Only product + quantity: the backend prices every line from the database.
     const items = checkoutItems.value.map(item => ({
       product: item.product._id,
-      name: item.product.name,
-      price: getEffectivePrice(item.product.price, item.product.discountPrice),
       quantity: item.quantity,
-      image: item.product.images?.[0] || '',
     }))
 
     const orderData: any = {
@@ -1023,30 +998,26 @@ async function placeOrder() {
       note: shippingInfo.note || undefined,
       paymentMethod: paymentMethod.value,
       promotionCode: cartStore.appliedPromotion?.code || undefined,
-      loyaltyPointsUsed: loyaltyPointsToSpend.value > 0 ? loyaltyPointsToSpend.value : undefined,
+      loyaltyPointsUsed: loyaltyPointsRequested.value > 0 ? loyaltyPointsRequested.value : undefined,
       customerName: shippingInfo.fullName,
       customerEmail: shippingInfo.email,
       idempotencyKey: checkoutIdempotencyKey.value,
     }
 
-    // Pre-checkout safe validation
-    const previewPayload = {
-      items,
-      shippingAddress: shippingInfo.address,
-      phone: shippingInfo.phone,
-      paymentMethod: paymentMethod.value,
-      promotionCode: cartStore.appliedPromotion?.code || undefined,
-      customerEmail: shippingInfo.email || undefined,
-      loyaltyPointsUsed: loyaltyPointsToSpend.value > 0 ? loyaltyPointsToSpend.value : undefined,
+    // Pre-checkout safe validation: re-price right now and stop if anything changed or is invalid
+    const totalShown = cartStore.total
+    const previewData = await cartStore.refreshPricing(buildPricingContext(), { immediate: true })
+    if (!previewData) {
+      toast.error(cartStore.pricingError || 'Không thể cập nhật giá. Vui lòng thử lại.')
+      return
     }
-    const previewRes = await orderService.checkoutPreview(previewPayload)
-    const previewData = (previewRes.data as any)?.data || previewRes.data
-    if (previewData && previewData.warnings && previewData.warnings.length > 0) {
-      if (!previewData.isValidForCheckout) {
-        toast.warning(previewData.warnings.join(' | '))
-        submitting.value = false
-        return
-      }
+    if (!previewData.isValidForCheckout) {
+      toast.warning(previewData.warnings?.length ? previewData.warnings.join(' | ') : 'Đơn hàng chưa hợp lệ, vui lòng kiểm tra lại.')
+      return
+    }
+    if (previewData.total !== totalShown) {
+      toast.info('Tổng thanh toán vừa được cập nhật. Vui lòng kiểm tra lại trước khi đặt hàng.')
+      return
     }
 
     let response: any
@@ -1060,7 +1031,7 @@ async function placeOrder() {
     orderCode.value = orderResponseData.orderCode
     const orderId = orderResponseData._id
     createdOrderId.value = orderId
-    lastSubmittedTotal.value = orderResponseData.total ?? previewData?.total ?? displayedTotal.value
+    lastSubmittedTotal.value = orderResponseData.total ?? previewData.total
     submittedPaymentMethod.value = paymentMethod.value
 
     const guestToken = orderResponseData.guestAccessToken

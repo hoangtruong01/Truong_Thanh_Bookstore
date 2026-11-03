@@ -32,13 +32,26 @@ describe('RBAC Guards Spec', () => {
       guard = new RolesGuard(reflector);
     });
 
-    it('should allow access if no roles are required', () => {
+    it('should deny non-admin access if no roles are declared (deny-by-default)', () => {
       jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
-      const context = createMockExecutionContext({
-        role: UserRole.CUSTOMER,
-        status: true,
-      });
-      expect(guard.canActivate(context)).toBe(true);
+      for (const role of [UserRole.CUSTOMER, UserRole.STAFF]) {
+        const context = createMockExecutionContext({ role, status: true });
+        expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+      }
+    });
+
+    it('should still allow ADMIN and SUPER_ADMIN if no roles are declared', () => {
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+      for (const role of [UserRole.ADMIN, UserRole.SUPER_ADMIN]) {
+        const context = createMockExecutionContext({ role, status: true });
+        expect(guard.canActivate(context)).toBe(true);
+      }
+    });
+
+    it('should require authentication even if no roles are declared', () => {
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+      const context = createMockExecutionContext(undefined);
+      expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
     });
 
     it('should throw UnauthorizedException if user is not authenticated', () => {
@@ -166,13 +179,29 @@ describe('RBAC Guards Spec', () => {
       guard = new PermissionsGuard(reflector);
     });
 
-    it('should allow access if no permissions are required', () => {
+    it('should deny non-admin access if no permissions are declared (deny-by-default)', () => {
       jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
-      const context = createMockExecutionContext({
-        role: UserRole.STAFF,
-        status: true,
-      });
-      expect(guard.canActivate(context)).toBe(true);
+      for (const user of [
+        { role: UserRole.STAFF, status: true, permissions: ['MANAGE_FINANCE'] },
+        { role: UserRole.CUSTOMER, status: true },
+      ]) {
+        const context = createMockExecutionContext(user);
+        expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+      }
+    });
+
+    it('should still allow ADMIN and SUPER_ADMIN if no permissions are declared', () => {
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([]);
+      for (const role of [UserRole.ADMIN, UserRole.SUPER_ADMIN]) {
+        const context = createMockExecutionContext({ role, status: true });
+        expect(guard.canActivate(context)).toBe(true);
+      }
+    });
+
+    it('should require authentication even if no permissions are declared', () => {
+      jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+      const context = createMockExecutionContext(undefined);
+      expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
     });
 
     it('should throw UnauthorizedException if user is not authenticated', () => {

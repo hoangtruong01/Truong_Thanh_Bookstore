@@ -102,7 +102,8 @@
       <div class="flex items-baseline gap-1.5 flex-wrap">
         <template v-if="product.discountPrice > 0">
           <span class="text-sm font-bold text-red-600">{{ formatCurrency(product.discountPrice) }}</span>
-          <span class="text-[10px] text-slate-400 line-through">{{ formatCurrency(product.price) }}</span>
+          <!-- BUG-020: only strike the list price when it is really higher than the selling price -->
+          <span v-if="product.discountPrice < product.price" class="text-[10px] text-slate-400 line-through">{{ formatCurrency(product.price) }}</span>
         </template>
         <template v-else>
           <span class="text-sm font-bold text-red-600">{{ formatCurrency(product.price) }}</span>
@@ -111,8 +112,11 @@
       </div>
       
       <div class="flex items-center justify-between text-[10px] text-slate-400">
-        <div class="flex items-center gap-0.5 text-yellow-600 font-bold">
-          ★ {{ Number(product.rating || 4.8).toFixed(1) }}
+        <div v-if="product.rating && product.rating > 0" class="flex items-center gap-0.5 text-yellow-600 font-bold">
+          ★ {{ Number(product.rating).toFixed(1) }}
+        </div>
+        <div v-else class="text-slate-400 font-medium">
+          Chưa có đánh giá
         </div>
         <div>
           Đã bán {{ formatNumber(product.sold || 0) }}

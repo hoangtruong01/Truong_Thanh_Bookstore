@@ -18,6 +18,25 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole, StaffPermission } from '../../../common/enums';
 import { IsPhoneNumberVN } from '../../../common/validators/custom-validators';
 
+/**
+ * FEAT-001: ValidationPipe bật enableImplicitConversion, nên class-transformer
+ * gọi Boolean(value) TRƯỚC @Transform ("false" -> true). Vì vậy phải đọc giá trị
+ * gốc từ obj[key]. Giá trị không hợp lệ được giữ nguyên để @IsBoolean từ chối.
+ */
+const toStrictBoolean = ({
+  obj,
+  key,
+}: {
+  obj: Record<string, unknown>;
+  key: string;
+}): unknown => {
+  const raw = obj?.[key];
+  if (raw === true || raw === 'true' || raw === 1 || raw === '1') return true;
+  if (raw === false || raw === 'false' || raw === 0 || raw === '0')
+    return false;
+  return raw;
+};
+
 export class CreateStaffUserDto {
   @ApiProperty({ example: 'Nguyễn Văn Nhân Viên' })
   @IsString({ message: 'Họ tên phải là chuỗi ký tự' })
@@ -39,6 +58,8 @@ export class CreateStaffUserDto {
   @IsString({ message: 'Mật khẩu phải là chuỗi ký tự' })
   @IsNotEmpty({ message: 'Mật khẩu không được để trống' })
   @MinLength(8, { message: 'Mật khẩu phải có độ dài tối thiểu 8 ký tự' })
+  // bcrypt bỏ qua phần vượt quá 72 byte
+  @MaxLength(72, { message: 'Mật khẩu không được vượt quá 72 ký tự' })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
     message: 'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
   })
@@ -94,6 +115,7 @@ export class UpdateUserPermissionsDto {
 
 export class UpdateUserStatusDto {
   @ApiProperty({ example: true })
+  @Transform(toStrictBoolean)
   @IsBoolean({ message: 'Trạng thái phải là boolean (true/false)' })
   status: boolean;
 }
@@ -121,13 +143,7 @@ export class UserQueryDto {
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()
-  @Transform(({ value }) => {
-    if (value === 'true' || value === true || value === 1 || value === '1')
-      return true;
-    if (value === 'false' || value === false || value === 0 || value === '0')
-      return false;
-    return undefined;
-  })
+  @Transform(toStrictBoolean)
   @IsBoolean({ message: 'Trạng thái lọc phải là boolean' })
   status?: boolean;
 

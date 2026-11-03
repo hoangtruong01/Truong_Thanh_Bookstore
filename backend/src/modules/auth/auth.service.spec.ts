@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  UnauthorizedException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -446,6 +450,72 @@ describe('AuthService (auth.service.spec.ts)', () => {
       );
       expect(result.success).toBe(true);
       expect(result.message).toContain('Mã OTP đã được gửi');
+    });
+
+    describe('OTP exposure (regression: plain OTP must never be in the response)', () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+
+      afterEach(() => {
+        jest.restoreAllMocks();
+        if (originalNodeEnv === undefined) {
+          delete process.env.NODE_ENV;
+        } else {
+          process.env.NODE_ENV = originalNodeEnv;
+        }
+      });
+
+      const scenarios: Array<{
+        nodeEnv: string | undefined;
+        emailFails: boolean;
+      }> = [
+        { nodeEnv: 'production', emailFails: false },
+        { nodeEnv: 'production', emailFails: true },
+        { nodeEnv: 'development', emailFails: false },
+        { nodeEnv: 'development', emailFails: true },
+        { nodeEnv: 'test', emailFails: true },
+        { nodeEnv: undefined, emailFails: true },
+      ];
+
+      it.each(scenarios)(
+        'NODE_ENV=$nodeEnv, emailFails=$emailFails: response never contains the plain OTP',
+        async ({ nodeEnv, emailFails }) => {
+          if (nodeEnv === undefined) {
+            delete process.env.NODE_ENV;
+          } else {
+            process.env.NODE_ENV = nodeEnv;
+          }
+          configService.get.mockImplementation((key: string) => {
+            if (key === 'NODE_ENV') return nodeEnv;
+            return jwtSecrets[key];
+          });
+          if (emailFails) {
+            jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+            emailService.sendOtpEmail.mockRejectedValue(
+              new Error('SMTP not configured'),
+            );
+          }
+
+          const user = { ...mockUser, save: jest.fn().mockResolvedValue(true) };
+          usersService.findByEmail.mockResolvedValue(user);
+
+          const result = await authService.forgotPassword(mockUser.email);
+          await new Promise((resolve) => setImmediate(resolve));
+
+          const [, rawOtp] = emailService.sendOtpEmail.mock.calls[0] as [
+            string,
+            string,
+          ];
+          expect(rawOtp).toMatch(/^\d{6}$/);
+          expect(result).toEqual({
+            success: true,
+            message: 'Mã OTP đã được gửi đến email của bạn',
+          });
+          expect(result).not.toHaveProperty('otp');
+          expect(JSON.stringify(result)).not.toContain(rawOtp);
+          // Only the hash is persisted, never the plain OTP
+          expect(user.resetOtp).not.toBe(rawOtp);
+        },
+      );
     });
 
     it('verifyOtp should not reveal if email does not exist (anti-enumeration)', async () => {

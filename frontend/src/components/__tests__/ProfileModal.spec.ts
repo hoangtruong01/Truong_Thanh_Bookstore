@@ -50,6 +50,24 @@ describe('ProfileModal.vue (BUG-005 & IMP-001 Profile & Change Password)', () =>
     expect((wrapper.find('input[type="email"]').element as HTMLInputElement).value).toBe('test@truongthanh.vn')
   })
 
+  it.each([
+    ['SUPER_ADMIN', 'Super Admin'],
+    ['ADMIN', 'Quản trị viên'],
+    ['STAFF', 'Nhân viên'],
+    ['CUSTOMER', 'Khách hàng'],
+  ])('BUG-027: shows the correct role label for %s', async (role, label) => {
+    const authStore = useAuthStore()
+    authStore.user = { ...(authStore.user as any), role }
+
+    const wrapper = mount(ProfileModal, {
+      props: { isOpen: true },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain(label)
+    if (role === 'ADMIN') expect(wrapper.text()).not.toContain('Super Admin')
+  })
+
   it('switches to Change Password tab and validates password format', async () => {
     const wrapper = mount(ProfileModal, {
       props: { isOpen: true },

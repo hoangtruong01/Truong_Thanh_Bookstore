@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
-import '../widgets/glass_bottom_navigation.dart';
+import '../core/widgets/glass_bottom_navigation.dart';
 import 'home/home_screen.dart';
 import 'product/product_list_screen.dart';
 import 'cart/cart_screen.dart';
@@ -28,28 +28,33 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ProfileScreen(),
   ];
 
-  // 5 Tab items tối giản chỉ gồm Icon theo đúng Option A & Style Ảnh 2, 3
+  // 5 Tab items: Icon + nhãn ngắn (thứ tự khớp với _screens ở trên)
   final List<GlassNavItemData> _navItems = const [
     GlassNavItemData(
       icon: Icons.home_outlined,
       activeIcon: Icons.home_rounded,
+      label: 'Trang chủ',
     ),
     GlassNavItemData(
       icon: Icons.grid_view_outlined,
       activeIcon: Icons.grid_view_rounded,
+      label: 'Sản phẩm',
     ),
     GlassNavItemData(
       icon: Icons.shopping_bag_outlined,
       activeIcon: Icons.shopping_bag_rounded,
+      label: 'Giỏ hàng',
       hasBadge: true,
     ),
     GlassNavItemData(
       icon: Icons.receipt_long_outlined,
       activeIcon: Icons.receipt_long_rounded,
+      label: 'Đơn hàng',
     ),
     GlassNavItemData(
       icon: Icons.person_outline_rounded,
       activeIcon: Icons.person_rounded,
+      label: 'Tài khoản',
     ),
   ];
 

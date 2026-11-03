@@ -373,7 +373,9 @@ const adminInitials = computed(() => {
 })
 const adminRole = computed(() => {
   const role = authStore.user?.role
-  if (role === 'ADMIN') return 'Super Admin'
+  // BUG-027: labels were swapped (ADMIN showed "Super Admin", SUPER_ADMIN showed "Admin")
+  if (role === 'SUPER_ADMIN') return 'Super Admin'
+  if (role === 'ADMIN') return 'Quản trị viên'
   if (role === 'STAFF') return 'Nhân viên'
   return 'Admin'
 })

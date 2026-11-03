@@ -32,57 +32,243 @@ export function getEffectivePrice(price: number, discountPrice?: number | null):
   return (discountPrice != null && discountPrice > 0) ? discountPrice : price
 }
 
-export function getStatusColor(status: string): string {
-  const colors: Record<string, string> = {
-    PENDING: 'bg-yellow-100 text-yellow-800',
-    CONFIRMED: 'bg-blue-100 text-blue-800',
-    PROCESSING: 'bg-orange-100 text-orange-800',
-    SHIPPING: 'bg-purple-100 text-purple-800',
-    DELIVERED: 'bg-green-100 text-green-800',
-    RETURN_REQUESTED: 'bg-amber-100 text-amber-800',
-    RETURN_APPROVED: 'bg-indigo-100 text-indigo-800',
-    RETURNED: 'bg-fuchsia-100 text-fuchsia-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-    CANCELLED: 'bg-red-100 text-red-800',
-    PAID: 'bg-green-100 text-green-800',
-    UNPAID: 'bg-red-100 text-red-800',
-    REFUNDED: 'bg-gray-100 text-gray-800',
-    ACTIVE: 'bg-green-100 text-green-800',
-    INACTIVE: 'bg-gray-100 text-gray-800',
-    IN_STOCK: 'bg-green-100 text-green-800',
-    LOW_STOCK: 'bg-yellow-100 text-yellow-800',
-    OUT_OF_STOCK: 'bg-red-100 text-red-800',
-  }
-  return colors[status] || 'bg-gray-100 text-gray-800'
+/**
+ * Formats a date as `dd/MM/yyyy HH:mm` (24h) in Vietnam time.
+ * Returns '' for empty or invalid input so templates never show "Invalid Date".
+ */
+export function formatDateTime(date: string | number | Date | null | undefined): string {
+  if (date === null || date === undefined || date === '') return ''
+  const d = date instanceof Date ? date : new Date(date)
+  if (Number.isNaN(d.getTime())) return ''
+  const parts = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(d)
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? ''
+  return `${get('day')}/${get('month')}/${get('year')} ${get('hour')}:${get('minute')}`
 }
 
-export function getStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    PENDING: 'Chờ xử lý',
-    CONFIRMED: 'Đã xác nhận',
-    PROCESSING: 'Đang đóng gói',
-    SHIPPING: 'Đang giao',
-    DELIVERED: 'Đã giao hàng',
-    RETURN_REQUESTED: 'Yêu cầu trả hàng',
-    RETURN_APPROVED: 'Đã duyệt trả hàng',
-    RETURNED: 'Đã hoàn trả',
-    COMPLETED: 'Hoàn thành',
-    CANCELLED: 'Đã hủy',
-    PAID: 'Đã thanh toán',
-    UNPAID: 'Chưa thanh toán',
-    REFUNDED: 'Đã hoàn tiền',
-    COD: 'Thanh toán khi nhận hàng',
-    BANK_TRANSFER: 'Chuyển khoản',
-    EWALLET: 'Ví điện tử',
-    VNPAY: 'VNPay',
-    MOMO: 'MoMo',
-    IN_STOCK: 'Còn hàng',
-    LOW_STOCK: 'Sắp hết',
-    OUT_OF_STOCK: 'Hết hàng',
-    ACTIVE: 'Hoạt động',
-    INACTIVE: 'Ngừng hoạt động',
+// ─── Canonical status table ──────────────────────────────────────────────────
+// Single source for status labels and badge colours used by StatusBadge, the
+// customer order pages and admin pages. Order, payment and refund statuses live
+// in separate maps because PENDING / CANCELLED / PROCESSING / REFUNDED exist in
+// more than one backend enum with different meanings.
+// Class strings are written out in full so Tailwind can detect them.
+
+export type StatusTone = 'amber' | 'blue' | 'indigo' | 'purple' | 'emerald' | 'green' | 'rose' | 'sky' | 'slate'
+
+export interface StatusToneClasses {
+  /** Pill background + text + border colour (includes the `border` width). */
+  badge: string
+  /** Small dot inside the pill. */
+  dot: string
+  /** Inline coloured text, no background. */
+  text: string
+  /** -500 shade, for Flutter / charts. */
+  hex: string
+}
+
+export const STATUS_TONE_CLASSES: Record<StatusTone, StatusToneClasses> = {
+  amber: {
+    badge: 'border bg-amber-50 text-amber-700 border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60',
+    dot: 'bg-amber-500',
+    text: 'text-amber-600 dark:text-amber-400',
+    hex: '#F59E0B',
+  },
+  blue: {
+    badge: 'border bg-blue-50 text-blue-700 border-blue-200/70 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60',
+    dot: 'bg-blue-500',
+    text: 'text-blue-600 dark:text-blue-400',
+    hex: '#3B82F6',
+  },
+  indigo: {
+    badge: 'border bg-indigo-50 text-indigo-700 border-indigo-200/70 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/60',
+    dot: 'bg-indigo-500',
+    text: 'text-indigo-600 dark:text-indigo-400',
+    hex: '#6366F1',
+  },
+  purple: {
+    badge: 'border bg-purple-50 text-purple-700 border-purple-200/70 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/60',
+    dot: 'bg-purple-500',
+    text: 'text-purple-600 dark:text-purple-400',
+    hex: '#A855F7',
+  },
+  emerald: {
+    badge: 'border bg-emerald-50 text-emerald-700 border-emerald-200/70 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60',
+    dot: 'bg-emerald-500',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    hex: '#10B981',
+  },
+  green: {
+    badge: 'border bg-green-50 text-green-700 border-green-200/70 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800/60',
+    dot: 'bg-green-500',
+    text: 'text-green-600 dark:text-green-400',
+    hex: '#22C55E',
+  },
+  rose: {
+    badge: 'border bg-rose-50 text-rose-700 border-rose-200/70 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60',
+    dot: 'bg-rose-500',
+    text: 'text-rose-600 dark:text-rose-400',
+    hex: '#F43F5E',
+  },
+  sky: {
+    badge: 'border bg-sky-50 text-sky-700 border-sky-200/70 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/60',
+    dot: 'bg-sky-500',
+    text: 'text-sky-600 dark:text-sky-400',
+    hex: '#0EA5E9',
+  },
+  slate: {
+    badge: 'border bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+    dot: 'bg-slate-500',
+    text: 'text-slate-600 dark:text-slate-400',
+    hex: '#64748B',
+  },
+}
+
+/** Neutral style for statuses missing from every map. */
+export const UNKNOWN_STATUS_CLASSES: StatusToneClasses = {
+  badge: 'border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800/60 dark:text-slate-400 dark:border-slate-700',
+  dot: 'bg-slate-400',
+  text: 'text-slate-500 dark:text-slate-400',
+  hex: '#94A3B8',
+}
+
+export interface StatusMeta {
+  label: string
+  tone: StatusTone
+}
+
+/** Mirrors backend OrderStatus (backend/src/common/enums). */
+export const ORDER_STATUS_META: Record<string, StatusMeta> = {
+  PENDING: { label: 'Chờ xác nhận', tone: 'amber' },
+  CONFIRMED: { label: 'Đã xác nhận', tone: 'blue' },
+  PROCESSING: { label: 'Đang chuẩn bị hàng', tone: 'indigo' },
+  SHIPPING: { label: 'Đang giao hàng', tone: 'purple' },
+  DELIVERED: { label: 'Đã giao thành công', tone: 'emerald' },
+  /** Deprecated in the backend; kept for historical orders. */
+  COMPLETED: { label: 'Hoàn thành', tone: 'green' },
+  RETURN_REQUESTED: { label: 'Yêu cầu trả hàng', tone: 'amber' },
+  RETURN_APPROVED: { label: 'Đã duyệt trả hàng', tone: 'sky' },
+  RETURNED: { label: 'Đã trả hàng', tone: 'slate' },
+  CANCELLED: { label: 'Đã hủy', tone: 'rose' },
+}
+
+/** Mirrors backend PaymentStatus. */
+export const PAYMENT_STATUS_META: Record<string, StatusMeta> = {
+  UNPAID: { label: 'Chưa thanh toán', tone: 'amber' },
+  PENDING: { label: 'Đang chờ thanh toán', tone: 'sky' },
+  PARTIALLY_PAID: { label: 'Thanh toán một phần', tone: 'blue' },
+  PAID: { label: 'Đã thanh toán', tone: 'emerald' },
+  FAILED: { label: 'Thanh toán thất bại', tone: 'rose' },
+  REFUNDED: { label: 'Đã hoàn tiền', tone: 'slate' },
+  CANCELLED: { label: 'Đã hủy thanh toán', tone: 'slate' },
+}
+
+/** Mirrors backend RefundStatus. NONE has an empty label: it is not meant to be displayed. */
+export const REFUND_STATUS_META: Record<string, StatusMeta> = {
+  NONE: { label: '', tone: 'slate' },
+  REQUESTED: { label: 'Chờ hoàn tiền', tone: 'amber' },
+  PROCESSING: { label: 'Đang hoàn tiền', tone: 'blue' },
+  REFUNDED: { label: 'Đã hoàn tiền', tone: 'emerald' },
+  FAILED: { label: 'Hoàn tiền thất bại', tone: 'rose' },
+  MANUAL_REQUIRED: { label: 'Cần xử lý thủ công', tone: 'purple' },
+}
+
+/** Mirrors backend PaymentMethod. */
+export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  COD: 'Thanh toán khi nhận hàng (COD)',
+  BANK_TRANSFER: 'Chuyển khoản ngân hàng',
+  VNPAY: 'Cổng thanh toán VNPay',
+  MOMO: 'Ví điện tử MoMo',
+  EWALLET: 'Ví điện tử',
+  CASH: 'Tiền mặt',
+  CREDIT: 'Công nợ',
+}
+
+export const INVENTORY_STATUS_META: Record<string, StatusMeta> = {
+  IN_STOCK: { label: 'Còn hàng', tone: 'emerald' },
+  LOW_STOCK: { label: 'Sắp hết hàng', tone: 'amber' },
+  OUT_OF_STOCK: { label: 'Hết hàng', tone: 'rose' },
+}
+
+export const BOOLEAN_STATUS_META: Record<string, StatusMeta> = {
+  ACTIVE: { label: 'Hoạt động', tone: 'emerald' },
+  TRUE: { label: 'Hoạt động', tone: 'emerald' },
+  INACTIVE: { label: 'Đã khóa', tone: 'rose' },
+  FALSE: { label: 'Đã khóa', tone: 'rose' },
+  LOCKED: { label: 'Đã khóa', tone: 'rose' },
+}
+
+export type StatusDomain = 'order' | 'payment' | 'refund' | 'inventory' | 'boolean'
+
+const STATUS_DOMAIN_MAPS: Record<StatusDomain, Record<string, StatusMeta>> = {
+  order: ORDER_STATUS_META,
+  payment: PAYMENT_STATUS_META,
+  refund: REFUND_STATUS_META,
+  inventory: INVENTORY_STATUS_META,
+  boolean: BOOLEAN_STATUS_META,
+}
+
+/** Lookup order when the caller does not know the domain (legacy getStatusLabel/getStatusColor). */
+const GENERIC_LOOKUP_ORDER: StatusDomain[] = ['order', 'payment', 'inventory', 'boolean']
+
+function normalizeStatus(status: unknown): string {
+  return String(status ?? '').toUpperCase().trim()
+}
+
+/**
+ * Returns the canonical meta for a status. With a domain, only that map is used
+ * (payment PENDING is not order PENDING); without one: order → payment → inventory → boolean.
+ */
+export function getStatusMeta(status: unknown, domain?: StatusDomain): StatusMeta | null {
+  const key = normalizeStatus(status)
+  if (!key) return null
+  const domains = domain ? [domain] : GENERIC_LOOKUP_ORDER
+  for (const d of domains) {
+    const meta = STATUS_DOMAIN_MAPS[d][key]
+    if (meta) return meta
   }
-  return labels[status] || status
+  return null
+}
+
+export function getStatusToneClasses(status: unknown, domain?: StatusDomain): StatusToneClasses {
+  const meta = getStatusMeta(status, domain)
+  return meta ? STATUS_TONE_CLASSES[meta.tone] : UNKNOWN_STATUS_CLASSES
+}
+
+export function getOrderStatusLabel(status: string | null | undefined): string {
+  return getStatusMeta(status, 'order')?.label ?? (status || '')
+}
+
+export function getPaymentStatusLabel(status: string | null | undefined): string {
+  if (!status) return PAYMENT_STATUS_META.UNPAID.label
+  return getStatusMeta(status, 'payment')?.label ?? status
+}
+
+export function getRefundStatusLabel(status: string | null | undefined): string {
+  return getStatusMeta(status, 'refund')?.label ?? (status || '')
+}
+
+export function getPaymentMethodLabel(method: string | null | undefined): string {
+  if (!method) return 'Chưa xác định'
+  return PAYMENT_METHOD_LABELS[normalizeStatus(method)] ?? method
+}
+
+/** Legacy: badge classes for a status of unknown domain. Prefer getStatusToneClasses(status, domain). */
+export function getStatusColor(status: string): string {
+  return getStatusToneClasses(status).badge
+}
+
+/** Legacy: label for a status or payment method of unknown domain. Prefer the domain-specific helpers. */
+export function getStatusLabel(status: string): string {
+  const meta = getStatusMeta(status)
+  if (meta) return meta.label
+  return PAYMENT_METHOD_LABELS[normalizeStatus(status)] ?? status
 }
 
 /** Decode user-profile values written by releases before HttpOnly cookies. */

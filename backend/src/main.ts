@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -6,6 +7,7 @@ import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import { randomUUID } from 'crypto';
 import { AppModule } from './app.module';
+import { applyTrustProxy } from './config/trust-proxy';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -15,7 +17,7 @@ import { ErrorCode } from './common/enums';
 import { json, urlencoded, Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
   const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
   const isCloudHosted = Boolean(
@@ -27,6 +29,15 @@ async function bootstrap() {
     process.env.VERCEL,
   );
   const isProduction = nodeEnv === 'production' || isCloudHosted;
+
+  // Trust exactly the platform proxy hop so req.ip (the throttler tracker) is
+  // the real client IP instead of Render's load balancer (BUG-011).
+  const trustProxy = applyTrustProxy(
+    app,
+    configService.get<string>('TRUST_PROXY'),
+    isCloudHosted,
+  );
+  new Logger('Bootstrap').log(`Express trust proxy: ${String(trustProxy)}`);
 
   // Helmet HTTP security headers
   app.use(

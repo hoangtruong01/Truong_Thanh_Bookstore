@@ -1,11 +1,28 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { CartItem, Product, Promotion } from '@/types'
-import { promotionService } from '@/services/promotion.service'
+import type { CartItem, CheckoutPreviewRequest, CheckoutPreviewResponse, PricingPolicy, Product } from '@/types'
 import { cartService } from '@/services/cart.service'
+import { orderService } from '@/services/order.service'
 
-export const FREE_SHIPPING_THRESHOLD = 299000
-export const DEFAULT_SHIPPING_FEE = 30000
+// Money is never computed here: subtotal, shipping, discounts and total all come from
+// POST /orders/checkout-preview. The store only keeps the item list (persistence) and the
+// latest server pricing for the selected lines.
+export const PRICING_DEBOUNCE_MS = 400
+
+export const PRICING_ERROR_MESSAGE = 'Không thể cập nhật giá. Vui lòng thử lại sau giây lát.'
+
+/** Checkout-only inputs that affect the preview (loyalty) or the guest voucher identity (phone/email). */
+export interface PricingContext {
+  loyaltyPointsUsed?: number
+  phone?: string
+  customerEmail?: string
+  shippingAddress?: string
+  paymentMethod?: string
+}
+
+function unwrapPayload<T>(res: any): T | null {
+  return ((res?.data as any)?.data || res?.data || null) as T | null
+}
 
 export const useCartStore = defineStore('cart', () => {
   const items = ref<CartItem[]>(
@@ -14,47 +31,47 @@ export const useCartStore = defineStore('cart', () => {
       selected: item.selected !== false
     }))
   )
-  const appliedPromotion = ref<Promotion | null>(null)
-  const discountAmount = ref(0)
+  const promotionCode = ref('')
   const promoError = ref('')
   const warnings = ref<string[]>([])
 
-  const subtotal = computed(() => {
-    return items.value.reduce((sum: number, item: CartItem) => {
-      if (item.selected === false) return sum
-      const price = (item.product.discountPrice != null && item.product.discountPrice > 0)
-        ? item.product.discountPrice
-        : item.product.price
-      return sum + price * item.quantity
-    }, 0)
-  })
+  const pricing = ref<CheckoutPreviewResponse | null>(null)
+  const pricingLoading = ref(false)
+  const pricingError = ref('')
+  const pricingContext = ref<PricingContext>({})
+  const pricingPolicy = ref<PricingPolicy | null>(null)
 
-  const isFreeShipping = computed(() => {
-    return subtotal.value >= FREE_SHIPPING_THRESHOLD
-  })
+  const selectedItems = computed(() => items.value.filter((item: CartItem) => item.selected !== false))
 
-  const amountNeededForFreeShipping = computed(() => {
-    return Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal.value)
-  })
-
-  const freeShippingProgress = computed(() => {
-    if (subtotal.value <= 0) return 0
-    return Math.min(100, Math.round((subtotal.value / FREE_SHIPPING_THRESHOLD) * 100))
-  })
-
-  const shippingFee = computed(() => {
-    if (subtotal.value === 0) return 0
-    return subtotal.value >= FREE_SHIPPING_THRESHOLD ? 0 : DEFAULT_SHIPPING_FEE
-  })
-
-  const total = computed(() => {
-    const val = subtotal.value + shippingFee.value - discountAmount.value
-    return val > 0 ? val : 0
-  })
+  // Public names kept for consumers; they are plain views over the server response.
+  const subtotal = computed(() => pricing.value?.subtotal ?? 0)
+  const shippingFee = computed(() => pricing.value?.shippingFee ?? 0)
+  const discountAmount = computed(() => pricing.value?.discount ?? 0)
+  const loyaltyDiscount = computed(() => pricing.value?.loyaltyDiscount ?? 0)
+  const total = computed(() => pricing.value?.total ?? 0)
+  const isFreeShipping = computed(() => pricing.value?.isEligibleForFreeShipping ?? false)
+  const amountNeededForFreeShipping = computed(() => pricing.value?.amountNeededForFreeShipping ?? 0)
+  const freeShippingProgress = computed(() => pricing.value?.freeShippingProgress ?? 0)
+  const freeShippingThreshold = computed<number | null>(
+    () => pricing.value?.freeShippingThreshold ?? pricingPolicy.value?.freeShippingThreshold ?? null,
+  )
+  const standardShippingFee = computed<number | null>(
+    () => pricing.value?.standardShippingFee ?? pricingPolicy.value?.shippingFee ?? null,
+  )
+  const appliedPromotion = computed(() => pricing.value?.appliedPromotion ?? null)
+  const loyalty = computed(() => pricing.value?.loyalty ?? null)
+  const unavailableItems = computed(() => pricing.value?.unavailableItems ?? [])
+  const isValidForCheckout = computed(
+    () => !!pricing.value && pricing.value.isValidForCheckout === true && !pricingError.value,
+  )
 
   const itemsCount = computed(() => {
     return items.value.reduce((sum: number, item: CartItem) => sum + item.quantity, 0)
   })
+
+  function getPreviewItem(productId: string) {
+    return pricing.value?.items?.find(item => item.product === productId) ?? null
+  }
 
   function addToCart(product: Product, quantity = 1) {
     const existing = items.value.find((item: CartItem) => item.product._id === product._id)
@@ -66,7 +83,6 @@ export const useCartStore = defineStore('cart', () => {
       items.value.push({ product, quantity: Math.min(quantity, product.stock), selected: true })
     }
     saveCart()
-    recalculateDiscount()
   }
 
   function updateQuantity(productId: string, quantity: number) {
@@ -78,13 +94,11 @@ export const useCartStore = defineStore('cart', () => {
       }
     }
     saveCart()
-    recalculateDiscount()
   }
 
   function removeFromCart(productId: string) {
     items.value = items.value.filter((item: CartItem) => item.product._id !== productId)
     saveCart()
-    recalculateDiscount()
   }
 
   function toggleItemSelection(productId: string) {
@@ -92,7 +106,6 @@ export const useCartStore = defineStore('cart', () => {
     if (item) {
       item.selected = item.selected !== false ? false : true
       saveCart()
-      recalculateDiscount()
     }
   }
 
@@ -101,44 +114,197 @@ export const useCartStore = defineStore('cart', () => {
       item.selected = selected
     })
     saveCart()
-    recalculateDiscount()
+  }
+
+  // ---------------------------------------------------------------------------
+  // Server pricing (checkout-preview): debounced, latest request wins
+  // ---------------------------------------------------------------------------
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null
+  let requestSeq = 0
+  let waiters: Array<(result: CheckoutPreviewResponse | null) => void> = []
+
+  function settleWaiters(result: CheckoutPreviewResponse | null) {
+    const pending = waiters
+    waiters = []
+    pending.forEach(resolve => resolve(result))
+  }
+
+  function buildPreviewRequest(): CheckoutPreviewRequest {
+    const ctx = pricingContext.value
+    return {
+      // Only selected lines, and never a client price: the backend reads prices from the DB.
+      items: selectedItems.value.map(item => ({ product: item.product._id, quantity: item.quantity })),
+      promotionCode: promotionCode.value || undefined,
+      loyaltyPointsUsed: ctx.loyaltyPointsUsed && ctx.loyaltyPointsUsed > 0 ? ctx.loyaltyPointsUsed : undefined,
+      paymentMethod: ctx.paymentMethod || undefined,
+      phone: ctx.phone || undefined,
+      customerEmail: ctx.customerEmail || undefined,
+      shippingAddress: ctx.shippingAddress || undefined,
+    }
+  }
+
+  /** Refresh local snapshots so the cart list and stock limits follow the server (stale guest prices). */
+  function syncSnapshotsFromPreview(data: CheckoutPreviewResponse) {
+    let changed = false
+    for (const line of data.items || []) {
+      const local = items.value.find((item: CartItem) => item.product._id === line.product)
+      if (!local) continue
+      const originalPrice = typeof line.originalPrice === 'number' ? line.originalPrice : line.price
+      const discountPrice = line.price < originalPrice ? line.price : 0
+      if (
+        local.product.price !== originalPrice ||
+        local.product.discountPrice !== discountPrice ||
+        local.product.stock !== line.stock
+      ) {
+        local.product = { ...local.product, price: originalPrice, discountPrice, stock: line.stock }
+        changed = true
+      }
+    }
+    for (const missing of data.unavailableItems || []) {
+      const local = items.value.find((item: CartItem) => item.product._id === missing.product)
+      if (local && typeof missing.stock === 'number' && local.product.stock !== missing.stock) {
+        local.product = { ...local.product, stock: missing.stock }
+        changed = true
+      }
+    }
+    if (changed) saveCart()
+  }
+
+  async function runPricingRequest() {
+    const seq = ++requestSeq
+    const isLatest = () => seq === requestSeq && debounceTimer === null
+
+    if (selectedItems.value.length === 0) {
+      pricing.value = null
+      pricingError.value = ''
+      warnings.value = []
+      pricingLoading.value = false
+      settleWaiters(null)
+      return
+    }
+
+    try {
+      const res = await orderService.checkoutPreview(buildPreviewRequest())
+      if (!isLatest()) return
+      const data = unwrapPayload<CheckoutPreviewResponse>(res)
+      if (!data || typeof data.total !== 'number') throw new Error('Invalid checkout-preview response')
+
+      pricing.value = data
+      pricingError.value = ''
+      warnings.value = Array.isArray(data.warnings) ? data.warnings : []
+      syncSnapshotsFromPreview(data)
+
+      const rejectedCode = !!promotionCode.value && !data.appliedPromotion
+      if (rejectedCode) {
+        // The voucher no longer applies (invalid, min order, per-customer limit): drop it and
+        // re-price without it so the summary and isValidForCheckout reflect the real order.
+        promoError.value = data.promotionError || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện.'
+        promotionCode.value = ''
+      }
+      settleWaiters(data)
+      if (rejectedCode) void refreshPricing()
+    } catch (err) {
+      if (!isLatest()) return
+      // Keep the last good response on screen, but flag it so checkout is blocked until it recovers.
+      console.warn('Checkout preview failed:', err)
+      pricingError.value = PRICING_ERROR_MESSAGE
+      settleWaiters(null)
+    } finally {
+      if (seq === requestSeq && debounceTimer === null) {
+        pricingLoading.value = false
+      }
+    }
+  }
+
+  /**
+   * Ask the backend to price the selected lines. Calls are debounced (PRICING_DEBOUNCE_MS) and only
+   * the latest response is applied. Passing a context replaces the stored checkout context; omitting
+   * it reuses the previous one. Resolves with the applied response, or null on error / empty selection.
+   */
+  function refreshPricing(
+    context?: PricingContext,
+    options: { immediate?: boolean } = {},
+  ): Promise<CheckoutPreviewResponse | null> {
+    if (context) pricingContext.value = { ...context }
+    pricingLoading.value = true
+    if (debounceTimer) {
+      clearTimeout(debounceTimer)
+      debounceTimer = null
+    }
+    return new Promise(resolve => {
+      waiters.push(resolve)
+      if (options.immediate) {
+        void runPricingRequest()
+      } else {
+        debounceTimer = setTimeout(() => {
+          debounceTimer = null
+          void runPricingRequest()
+        }, PRICING_DEBOUNCE_MS)
+      }
+    })
+  }
+
+  async function loadPricingPolicy() {
+    if (pricingPolicy.value) return pricingPolicy.value
+    try {
+      const res = await orderService.getPricingPolicy()
+      const data = unwrapPayload<PricingPolicy>(res)
+      if (data && typeof data.freeShippingThreshold === 'number') {
+        pricingPolicy.value = data
+      }
+    } catch {
+      // Optional display data: the threshold text is simply hidden without it.
+    }
+    return pricingPolicy.value
   }
 
   async function applyCoupon(code: string) {
     promoError.value = ''
-    try {
-      const res = await promotionService.apply(code, subtotal.value)
-      const payload = res.data
-      appliedPromotion.value = payload.promotion
-      discountAmount.value = payload.discount
-      return true
-    } catch (err: any) {
-      promoError.value = err.message || 'Mã giảm giá không hợp lệ'
-      appliedPromotion.value = null
-      discountAmount.value = 0
+    promotionCode.value = code.trim().toUpperCase()
+    const result = await refreshPricing(undefined, { immediate: true })
+    if (!result) {
+      // Network/server error: the code could not be verified, so it is not kept.
+      promotionCode.value = ''
+      promoError.value = promoError.value || pricingError.value || 'Không thể kiểm tra mã giảm giá'
       return false
     }
+    return !!result.appliedPromotion && !promoError.value
   }
 
   function removeCoupon() {
-    appliedPromotion.value = null
-    discountAmount.value = 0
+    promotionCode.value = ''
     promoError.value = ''
+    return refreshPricing(undefined, { immediate: true })
+  }
+
+  function resetPricing() {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer)
+      debounceTimer = null
+    }
+    requestSeq++
+    settleWaiters(null)
+    pricing.value = null
+    pricingLoading.value = false
+    pricingError.value = ''
+    warnings.value = []
   }
 
   function clearCart() {
     items.value = []
-    appliedPromotion.value = null
-    discountAmount.value = 0
+    promotionCode.value = ''
     promoError.value = ''
-    warnings.value = []
+    resetPricing()
     localStorage.removeItem('cart')
   }
 
   function clearCheckedOutItems() {
     items.value = items.value.filter((item: CartItem) => item.selected === false)
+    // The voucher was consumed by the order that was just placed.
+    promotionCode.value = ''
+    promoError.value = ''
+    resetPricing()
     saveCart()
-    recalculateDiscount()
   }
 
   async function syncWithServer(isAuthenticated: boolean) {
@@ -149,37 +315,33 @@ export const useCartStore = defineStore('cart', () => {
         quantity: i.quantity,
       }))
       if (syncPayload.length > 0) {
-        await cartService.syncCart(syncPayload)
+        // 'replace': the local list is the user's intent; 'merge' would add quantities on every visit.
+        await cartService.syncCart(syncPayload, 'replace')
       }
       const res = await cartService.getCart()
+      // Item persistence only: the server cart's money fields are ignored.
       if (res.data?.items && Array.isArray(res.data.items)) {
+        const previousSelection = new Map(items.value.map(i => [i.product._id, i.selected !== false]))
         items.value = res.data.items.map((ci: any) => ({
           product: ci.product,
           quantity: ci.quantity,
-          selected: true,
+          selected: previousSelection.get(ci.product?._id) ?? true,
         }))
         saveCart()
-        recalculateDiscount()
       }
     } catch (err) {
       console.warn('Sync cart with server failed:', err)
     }
   }
 
-  async function validateCartBeforeCheckout(isAuthenticated: boolean) {
-    warnings.value = []
-    if (isAuthenticated) {
-      try {
-        const res = await cartService.validateCart()
-        if (res.data?.warnings?.length > 0) {
-          warnings.value = res.data.warnings
-        }
-        return res.data
-      } catch (err) {
-        console.warn('Validate cart error:', err)
-      }
+  /** Gate checkout on a fresh server preview of the selected lines (works for guests too). */
+  async function validateCartBeforeCheckout() {
+    const result = await refreshPricing(undefined, { immediate: true })
+    return {
+      isValidForCheckout: !!result && result.isValidForCheckout === true && !pricingError.value,
+      warnings: result?.warnings ?? [],
+      error: pricingError.value,
     }
-    return { isValidForCheckout: items.value.length > 0 }
   }
 
   function saveCart() {
@@ -212,45 +374,39 @@ export const useCartStore = defineStore('cart', () => {
     }
   }
 
-  function recalculateDiscount() {
-    if (appliedPromotion.value) {
-      const promo = appliedPromotion.value
-      if (subtotal.value < promo.minOrderValue) {
-        removeCoupon()
-        promoError.value = `Đơn hàng tối thiểu ${promo.minOrderValue.toLocaleString('vi-VN')}đ để sử dụng mã này`
-      } else {
-        if (promo.discountType === 'PERCENT') {
-          let calculated = Math.floor(subtotal.value * promo.discountValue / 100)
-          if (promo.maxDiscount && promo.maxDiscount > 0) {
-            calculated = Math.min(calculated, promo.maxDiscount)
-          }
-          discountAmount.value = calculated
-        } else {
-          discountAmount.value = promo.discountValue
-        }
-      }
-    }
-  }
-
   return {
     items,
+    selectedItems,
+    promotionCode,
     appliedPromotion,
     discountAmount,
+    loyaltyDiscount,
+    loyalty,
     promoError,
     warnings,
+    pricing,
+    pricingLoading,
+    pricingError,
+    pricingPolicy,
+    unavailableItems,
+    isValidForCheckout,
     subtotal,
     shippingFee,
+    standardShippingFee,
     total,
     itemsCount,
     isFreeShipping,
     amountNeededForFreeShipping,
     freeShippingProgress,
-    freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+    freeShippingThreshold,
+    getPreviewItem,
     addToCart,
     updateQuantity,
     removeFromCart,
     toggleItemSelection,
     toggleAllSelection,
+    refreshPricing,
+    loadPricingPolicy,
     applyCoupon,
     removeCoupon,
     clearCart,
@@ -259,4 +415,3 @@ export const useCartStore = defineStore('cart', () => {
     validateCartBeforeCheckout,
   }
 })
-

@@ -146,10 +146,13 @@ export class UsersService {
 
   async createStaffOrAdmin(
     dto: CreateStaffUserDto,
-    actor: UserRole | string | { role: UserRole | string },
+    actor: UserRole | string | { role: UserRole | string; _id?: string },
+    actorIdParam?: string,
   ): Promise<UserDocument> {
     const actorRole =
       typeof actor === 'object' && actor !== null ? actor.role : actor;
+    const actorId =
+      typeof actor === 'object' && actor !== null ? actor._id : actorIdParam;
     const existing = await this.findByEmail(dto.email);
     if (existing) {
       throw new BadRequestException('Email này đã được sử dụng');
@@ -180,6 +183,14 @@ export class UsersService {
     });
 
     const saved = await user.save();
+    this.securityAuditService?.logAccountCreated({
+      actorId: actorId ? String(actorId) : undefined,
+      actorRole: typeof actorRole === 'string' ? actorRole : undefined,
+      targetUserId: String(saved._id),
+      email: saved.email,
+      newRole: assignedRole,
+      permissions: saved.permissions ? [...saved.permissions] : [],
+    });
     return this.sanitizeUser(saved);
   }
 
@@ -266,7 +277,7 @@ export class UsersService {
     const updated = await targetUser.save();
     this.securityAuditService?.logRoleAssignment({
       actorId: actorId ? String(actorId) : undefined,
-      actorRole: actorRole ? String(actorRole) : undefined,
+      actorRole: typeof actorRole === 'string' ? actorRole : undefined,
       targetUserId,
       newRole,
     });
@@ -279,7 +290,11 @@ export class UsersService {
       | StaffPermission[]
       | UpdateUserPermissionsDto
       | { permissions: StaffPermission[] },
-    _actorRoleParam?: UserRole | string,
+    actorRoleOrActor?:
+      | UserRole
+      | string
+      | { role: UserRole | string; _id?: string },
+    actorIdParam?: string,
   ): Promise<UserDocument> {
     if (!Types.ObjectId.isValid(targetUserId)) {
       throw new BadRequestException('ID người dùng không đúng định dạng');
@@ -288,6 +303,19 @@ export class UsersService {
     const permissions = Array.isArray(permissionsOrDto)
       ? permissionsOrDto
       : permissionsOrDto.permissions;
+    let actorRole = actorRoleOrActor;
+    let actorId = actorIdParam;
+
+    if (typeof actorRoleOrActor === 'object' && actorRoleOrActor !== null) {
+      actorRole = actorRoleOrActor.role;
+      actorId = actorRoleOrActor._id;
+    }
+
+    if (actorId && targetUserId === actorId.toString()) {
+      throw new ForbiddenException(
+        'Không thể tự thay đổi quyền của chính mình',
+      );
+    }
 
     const targetUser = await this.userModel.findById(targetUserId).exec();
     if (!targetUser) {
@@ -300,8 +328,16 @@ export class UsersService {
       );
     }
 
+    const previousPermissions = [...(targetUser.permissions || [])];
     targetUser.permissions = permissions;
     const updated = await targetUser.save();
+    this.securityAuditService?.logPermissionChange({
+      actorId: actorId ? String(actorId) : undefined,
+      actorRole: typeof actorRole === 'string' ? actorRole : undefined,
+      targetUserId,
+      previousPermissions,
+      newPermissions: [...permissions],
+    });
     return this.sanitizeUser(updated);
   }
 
@@ -361,7 +397,7 @@ export class UsersService {
     const updated = await targetUser.save();
     this.securityAuditService?.logAccountStatusChange({
       actorId: actorId ? String(actorId) : undefined,
-      actorRole: actorRole ? String(actorRole) : undefined,
+      actorRole: typeof actorRole === 'string' ? actorRole : undefined,
       targetUserId,
       status,
     });
@@ -411,6 +447,13 @@ export class UsersService {
     }
 
     await this.userModel.findByIdAndDelete(targetUserId).exec();
+    this.securityAuditService?.logAccountDeleted({
+      actorId: actorId ? String(actorId) : undefined,
+      actorRole: typeof actorRole === 'string' ? actorRole : undefined,
+      targetUserId,
+      email: targetUser.email,
+      targetRole: targetUser.role,
+    });
     return { success: true, message: 'Xóa tài khoản thành công' };
   }
 

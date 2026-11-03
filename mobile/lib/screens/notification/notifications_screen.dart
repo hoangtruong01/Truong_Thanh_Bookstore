@@ -4,9 +4,9 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/shimmer_loading.dart';
-import '../../widgets/empty_state_widget.dart';
-import '../../widgets/error_retry_widget.dart';
+import '../../core/widgets/shimmer_loading.dart';
+import '../../core/widgets/empty_state_widget.dart';
+import '../../core/widgets/error_retry_widget.dart';
 import '../order/order_detail_screen.dart';
 import '../order/order_history_screen.dart';
 

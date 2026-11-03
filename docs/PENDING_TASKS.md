@@ -55,6 +55,26 @@
 
 ---
 
+## 🚨 AUDIT-2026-11 — Kết quả audit 03/11/2026 (`PROJECT_AUDIT_AND_OPTIMIZATION.md`)
+
+Mã TASK/BUG bên dưới theo tài liệu audit. Chỉ liệt kê việc đã làm và việc P0/P1 còn mở; danh sách đầy đủ 44 task xem trong tài liệu audit.
+
+| Mã | Việc | Priority | Trạng thái | Ghi chú |
+| :--- | :--- | :---: | :---: | :--- |
+| **TASK-001** (BUG-003) | Đổi mật khẩu 4 tài khoản seed trên production, thu hồi phiên, rà log đăng nhập | P0 | 🔴 Chủ dự án làm | Thao tác trên production, AI không tự làm |
+| **TASK-002** (BUG-002) | Deploy backend `main` lên Render, tìm lý do CD không chạy | P0 | 🔴 Chủ dự án làm | Cần quyền Render/GitHub Actions |
+| **TASK-003** (BUG-001) | Checkout crash do `watch(immediate)` đọc biến khai báo sau | P0 | ✅ Đã sửa | Phiên refactor web↔mobile; test `CheckoutPreviewWatch.spec.ts` |
+| **TASK-005** | `PermissionsGuard`/`RolesGuard` deny-by-default + test quét mọi route | P0 | ✅ Đã làm | Thiếu `@Permissions`/`@Roles` ⇒ chỉ ADMIN/SUPER_ADMIN; `route-coverage.spec.ts` (hiện 0 vi phạm) |
+| **TASK-006** | Seed an toàn | P0 | ✅ Đã làm (một phần) | Seed demo/reset chỉ chạy trên DB local hoặc tên DB chứa `test/staging/e2e/demo`; mật khẩu mặc định chỉ dùng cho DB local; không in mật khẩu. **Chưa làm:** `seed:bootstrap` riêng cho production |
+| **TASK-004, 007, 008, 009, 010** | Cổng phát hành FE↔BE, e2e thao tác UI thật, staging, backup, Sentry | P0–P1 | ⬜ TODO | Cần hạ tầng/quyền CI |
+| **BUG-020** | Giá gạch ngang khi `discountPrice == price` | P3 | ✅ Đã sửa | `ProductCard.vue`; test `ProductCardPrice.spec.ts` |
+| **BUG-023** | Chính tả "Trường Thanh" | P3 | ✅ Đã sửa | `ProductDetail.vue` |
+| **BUG-024** | 9 trang Admin thiếu tiêu đề tab | P3 | ✅ Đã sửa | `router/index.ts` |
+| **BUG-027** | Nhãn vai trò Admin bị đảo | P3 | ✅ Đã sửa | `AdminLayout.vue`, `ProfileModal.vue`; test trong `ProfileModal.spec.ts` |
+| **TASK-012…020** | Làm sạch dữ liệu demo, đánh giá trung thực, combo, đa kho, KPI, upload ảnh, cài đặt cửa hàng | P1–P2 | ⬜ TODO | TASK-015/016 chờ chủ cửa hàng quyết định (giữ combo? có nhiều kho?) |
+
+---
+
 ## 🟢 TASK LÀM NGAY — Không Phụ Thuộc Bên Ngoài
 
 ---

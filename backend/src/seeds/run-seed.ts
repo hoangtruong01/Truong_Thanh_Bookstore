@@ -85,19 +85,14 @@ async function bootstrap(): Promise<void> {
     logger.log(`🎟️ Mã giảm giá (Promotions):   ${promos}`);
     logger.log(`🧾 Đơn hàng mẫu (Orders):      ${orders}`);
     logger.log('----------------------------------------------------');
-    logger.log('🔑 TÀI KHOẢN ĐĂNG NHẬP THỬ NGHIỆM:');
+    // TASK-006: never print passwords; they come from SEED_*_PASSWORD (local DB may use built-in defaults).
     logger.log(
-      '1. Super Admin: superadmin@truongthanh.vn | Pass: SuperAdmin@123456',
+      '🔑 TÀI KHOẢN ĐĂNG NHẬP THỬ NGHIỆM (mật khẩu: biến SEED_*_PASSWORD):',
     );
-    logger.log(
-      '2. Admin:       admin@truongthanh.vn      | Pass: Admin@123456',
-    );
-    logger.log(
-      '3. Staff:       staff@truongthanh.vn      | Pass: Staff@123456',
-    );
-    logger.log(
-      '4. Customer:    customer@truongthanh.vn   | Pass: Customer@123456',
-    );
+    logger.log('1. Super Admin: superadmin@truongthanh.vn');
+    logger.log('2. Admin:       admin@truongthanh.vn');
+    logger.log('3. Staff:       staff@truongthanh.vn');
+    logger.log('4. Customer:    customer@truongthanh.vn');
     logger.log('----------------------------------------------------');
   } catch (error) {
     logger.error('Lỗi khi thực thi seed dữ liệu:', error);

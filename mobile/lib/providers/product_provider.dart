@@ -1,13 +1,23 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants/api_constants.dart';
+import '../core/network/api_client.dart';
 import '../models/product_model.dart';
 import '../models/category_model.dart';
 
 class ProductProvider with ChangeNotifier {
-  ProductProvider({http.Client? client}) : _client = client;
-  final http.Client? _client;
+  ProductProvider({ApiClient? apiClient, http.Client? client})
+      : _api = apiClient ?? ApiClient(httpClient: client),
+        _ownsApi = apiClient == null;
+  final ApiClient _api;
+  final bool _ownsApi;
+
+  @override
+  void dispose() {
+    if (_ownsApi) _api.close();
+    super.dispose();
+  }
+
   List<ProductModel> _products = [];
   List<CategoryModel> _categories = [];
   bool _isLoading = false;
@@ -63,21 +73,10 @@ class ProductProvider with ChangeNotifier {
         'sort': _sortBy,
       };
 
-      final uri = Uri.parse(ApiConstants.products).replace(queryParameters: queryParams);
-      final response = await (_client?.get ?? http.get)(uri);
+      final response = await _api.get(ApiConstants.products, query: queryParams);
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        dynamic rawData = body['data'];
-        List dataList = [];
-        if (rawData is List) {
-          dataList = rawData;
-        } else if (rawData is Map && rawData['data'] is List) {
-          dataList = rawData['data'];
-        } else if (rawData is Map && rawData['items'] is List) {
-          dataList = rawData['items'];
-        }
-        _products = dataList.map((item) => ProductModel.fromJson(item)).toList();
+        _products = response.listData().map((item) => ProductModel.fromJson(item)).toList();
       }
     } catch (e) {
       debugPrint('Error fetching products: $e');
@@ -89,17 +88,9 @@ class ProductProvider with ChangeNotifier {
 
   Future<void> fetchCategories() async {
     try {
-      final response = await http.get(Uri.parse(ApiConstants.categories));
+      final response = await _api.get(ApiConstants.categories);
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        dynamic rawData = body['data'];
-        List dataList = [];
-        if (rawData is List) {
-          dataList = rawData;
-        } else if (rawData is Map && rawData['data'] is List) {
-          dataList = rawData['data'];
-        }
-        _categories = dataList.map((item) => CategoryModel.fromJson(item)).toList();
+        _categories = response.listData().map((item) => CategoryModel.fromJson(item)).toList();
         notifyListeners();
       }
     } catch (e) {

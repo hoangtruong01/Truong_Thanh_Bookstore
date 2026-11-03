@@ -5,6 +5,9 @@ export enum SecurityAuditEventType {
   AUTH_PASSWORD_CHANGED = 'AUTH_PASSWORD_CHANGED',
   USER_ROLE_ASSIGNED = 'USER_ROLE_ASSIGNED',
   USER_STATUS_CHANGED = 'USER_STATUS_CHANGED',
+  USER_PERMISSIONS_CHANGED = 'USER_PERMISSIONS_CHANGED',
+  USER_ACCOUNT_CREATED = 'USER_ACCOUNT_CREATED',
+  USER_ACCOUNT_DELETED = 'USER_ACCOUNT_DELETED',
   TOKEN_REVOKED = 'TOKEN_REVOKED',
 }
 
@@ -19,6 +22,9 @@ export interface SecurityAuditEvent {
   actorRole?: string;
   targetUserId?: string;
   newRole?: string;
+  targetRole?: string;
+  previousPermissions?: string[];
+  newPermissions?: string[];
   status?: boolean;
   reason?: string;
   metadata?: Record<string, any>;
@@ -107,6 +113,77 @@ export class SecurityAuditService {
       targetUserId: params.targetUserId,
       status: params.status,
       reason: params.status ? 'UNLOCKED' : 'LOCKED',
+      ip: params.ip,
+      correlationId: params.correlationId,
+    });
+  }
+
+  logPermissionChange(params: {
+    actorId?: string;
+    actorRole?: string;
+    targetUserId: string;
+    previousPermissions: string[];
+    newPermissions: string[];
+    ip?: string;
+    correlationId?: string;
+  }) {
+    const before = new Set(params.previousPermissions);
+    const after = new Set(params.newPermissions);
+    return this.logEvent({
+      eventType: SecurityAuditEventType.USER_PERMISSIONS_CHANGED,
+      actorId: params.actorId,
+      actorRole: params.actorRole,
+      targetUserId: params.targetUserId,
+      previousPermissions: [...params.previousPermissions],
+      newPermissions: [...params.newPermissions],
+      metadata: {
+        added: [...after].filter((p) => !before.has(p)),
+        removed: [...before].filter((p) => !after.has(p)),
+      },
+      ip: params.ip,
+      correlationId: params.correlationId,
+    });
+  }
+
+  logAccountCreated(params: {
+    actorId?: string;
+    actorRole?: string;
+    targetUserId: string;
+    email?: string;
+    newRole: string;
+    permissions?: string[];
+    ip?: string;
+    correlationId?: string;
+  }) {
+    return this.logEvent({
+      eventType: SecurityAuditEventType.USER_ACCOUNT_CREATED,
+      actorId: params.actorId,
+      actorRole: params.actorRole,
+      targetUserId: params.targetUserId,
+      email: params.email,
+      newRole: params.newRole,
+      newPermissions: params.permissions ? [...params.permissions] : undefined,
+      ip: params.ip,
+      correlationId: params.correlationId,
+    });
+  }
+
+  logAccountDeleted(params: {
+    actorId?: string;
+    actorRole?: string;
+    targetUserId: string;
+    email?: string;
+    targetRole?: string;
+    ip?: string;
+    correlationId?: string;
+  }) {
+    return this.logEvent({
+      eventType: SecurityAuditEventType.USER_ACCOUNT_DELETED,
+      actorId: params.actorId,
+      actorRole: params.actorRole,
+      targetUserId: params.targetUserId,
+      email: params.email,
+      targetRole: params.targetRole,
       ip: params.ip,
       correlationId: params.correlationId,
     });

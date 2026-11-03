@@ -187,11 +187,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
               color: isFav ? AppTheme.primaryRed : AppTheme.darkSlate,
             ),
-            onPressed: () {
-              wishlistProvider.toggleFavorite(product);
-              ScaffoldMessenger.of(context).showSnackBar(
+            onPressed: () async {
+              final token = context.read<AuthProvider>().token;
+              final messenger = ScaffoldMessenger.of(context);
+              final ok = await wishlistProvider.toggleFavorite(product, token);
+              // Tap ignored while the previous request is in flight: not a failure.
+              if (ok == null) return;
+              messenger.showSnackBar(
                 SnackBar(
-                  content: Text(isFav ? 'Đã xóa khỏi Yêu thích' : 'Đã thêm vào Yêu thích ❤️'),
+                  content: Text(!ok
+                      ? 'Không thể cập nhật Yêu thích, vui lòng thử lại'
+                      : isFav ? 'Đã xóa khỏi Yêu thích' : 'Đã thêm vào Yêu thích ❤️'),
                   duration: const Duration(seconds: 1),
                 ),
               );

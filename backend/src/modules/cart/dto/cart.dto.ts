@@ -4,9 +4,15 @@ import {
   Min,
   IsArray,
   ValidateNested,
+  ArrayMaxSize,
+  IsIn,
+  IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export const CART_SYNC_MODES = ['merge', 'replace'] as const;
+export type CartSyncMode = (typeof CART_SYNC_MODES)[number];
 import { IsMongoObjectId } from '../../../common/validators';
 
 export class AddToCartDto {
@@ -55,9 +61,20 @@ export class SyncCartDto {
     type: [CartSyncItemDto],
   })
   @IsArray({ message: 'items phải là một danh sách' })
+  @ArrayMaxSize(200, { message: 'Giỏ hàng tối đa 200 dòng sản phẩm' })
   @ValidateNested({ each: true })
   @Type(() => CartSyncItemDto)
   items: CartSyncItemDto[];
+
+  @ApiPropertyOptional({
+    description:
+      "'merge' (mặc định): cộng dồn vào giỏ server; 'replace': giỏ server phản chiếu đúng payload",
+    enum: CART_SYNC_MODES,
+    default: 'merge',
+  })
+  @IsOptional()
+  @IsIn(CART_SYNC_MODES, { message: "mode phải là 'merge' hoặc 'replace'" })
+  mode?: CartSyncMode;
 }
 
 export class ApplyVoucherDto {

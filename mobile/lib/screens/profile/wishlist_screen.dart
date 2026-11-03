@@ -6,7 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/empty_state_widget.dart';
+import '../../core/widgets/empty_state_widget.dart';
 import '../product/product_detail_screen.dart';
 
 class WishlistScreen extends StatefulWidget {

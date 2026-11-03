@@ -8,11 +8,23 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
   MinLength,
   validateSync,
 } from 'class-validator';
+import { resolveTrustProxy } from './trust-proxy';
+
+// Shapes accepted for Express 'trust proxy' (BUG-011): empty, true/false (true is
+// rejected later with a dedicated message), a hop count, or a comma-separated
+// list of loopback/linklocal/uniquelocal/IP/CIDR entries.
+const TRUST_PROXY_TOKEN =
+  '(?:loopback|linklocal|uniquelocal|[0-9a-f.:]+(?:\\/\\d{1,3})?)';
+const TRUST_PROXY_PATTERN = new RegExp(
+  `^\\s*(?:true|false|\\d{1,2}|${TRUST_PROXY_TOKEN}(?:\\s*,\\s*${TRUST_PROXY_TOKEN})*)?\\s*$`,
+  'i',
+);
 
 export enum Environment {
   DEVELOPMENT = 'development',
@@ -124,6 +136,14 @@ export class EnvironmentVariables {
   @IsBoolean({ message: 'COOKIE_SECURE phải là boolean (true/false)' })
   @IsOptional()
   COOKIE_SECURE?: boolean;
+
+  @IsString({ message: 'TRUST_PROXY phải là một chuỗi' })
+  @Matches(TRUST_PROXY_PATTERN, {
+    message:
+      'TRUST_PROXY chỉ chấp nhận false, số nguyên 0-10, loopback/linklocal/uniquelocal hoặc danh sách IP/CIDR',
+  })
+  @IsOptional()
+  TRUST_PROXY?: string;
 
   @IsString()
   @IsOptional()
@@ -501,7 +521,16 @@ export function validateEnv(
         'AUTO_SEED and RESET_DATABASE_ON_SEED must be false in production',
       );
     }
+
+    if (validatedConfig.TRUST_PROXY?.trim().toLowerCase() === 'true') {
+      throw new Error(
+        'TRUST_PROXY=true is not allowed in production: it trusts client-supplied X-Forwarded-For and bypasses rate limiting. Use the proxy hop count (Render: TRUST_PROXY=1)',
+      );
+    }
   }
+
+  // Semantic check (hop range, IP/CIDR validity) mirrors what main.ts applies at boot.
+  resolveTrustProxy(validatedConfig.TRUST_PROXY, isCloudHosted);
 
   if (
     validatedConfig.COOKIE_SAME_SITE === CookieSameSite.NONE &&

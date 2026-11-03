@@ -582,7 +582,7 @@
                         {{ formatCurrency(prod.discountPrice || prod.price) }}
                       </span>
                       <span
-                        v-if="prod.discountPrice"
+                        v-if="prod.discountPrice && prod.discountPrice < prod.price"
                         class="text-xs text-slate-400 line-through"
                       >
                         {{ formatCurrency(prod.price) }}
@@ -1140,7 +1140,7 @@ const navItems = computed(() => {
     {
       name: "Văn phòng phẩm",
       to: luuNiem
-        ? `/products?category=${luuNiem._id}&search=bút`
+        ? `/products?category=${luuNiem._id}&q=bút`
         : "/products",
       icon: "✏️",
     },
@@ -1208,7 +1208,7 @@ const featuredCategoriesList = computed(() => {
       bgImage: doLuuNiemBg,
       gradient: "bg-white border-blue-100 hover:border-blue-300 text-blue-950",
       to: luuNiem
-        ? `/products?category=${luuNiem._id}&search=bút`
+        ? `/products?category=${luuNiem._id}&q=bút`
         : "/products",
     },
     {

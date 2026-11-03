@@ -410,4 +410,42 @@ describe('HttpExceptionFilter', () => {
       );
     });
   });
+
+  describe('Client IP logging (BUG-011)', () => {
+    const captureClientIp = (reqOverwrites: Record<string, unknown>) => {
+      const mockSentryService = { captureException: jest.fn() };
+      const filterWithSentry = new HttpExceptionFilter(
+        mockSentryService as unknown as SentryService,
+      );
+      const { mockHost } = createMockHost(reqOverwrites);
+      filterWithSentry.catch(new Error('boom'), mockHost);
+      const [, context] = mockSentryService.captureException.mock.calls[0] as [
+        unknown,
+        { clientIp: string },
+      ];
+      return context.clientIp;
+    };
+
+    it('uses request.ip (trust-proxy aware) instead of a spoofed X-Forwarded-For header', () => {
+      expect(
+        captureClientIp({
+          ip: '203.0.113.7',
+          headers: { 'x-forwarded-for': '6.6.6.6' },
+          socket: { remoteAddress: '10.0.0.1' },
+        }),
+      ).toBe('203.0.113.7');
+    });
+
+    it('falls back to the socket address and never to X-Forwarded-For when request.ip is missing', () => {
+      expect(
+        captureClientIp({
+          headers: { 'x-forwarded-for': '6.6.6.6' },
+          socket: { remoteAddress: '10.0.0.1' },
+        }),
+      ).toBe('10.0.0.1');
+      expect(
+        captureClientIp({ headers: { 'x-forwarded-for': '6.6.6.6' } }),
+      ).toBe('UNKNOWN_IP');
+    });
+  });
 });

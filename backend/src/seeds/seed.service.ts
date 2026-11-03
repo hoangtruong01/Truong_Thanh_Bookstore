@@ -37,6 +37,7 @@ import {
   PaymentMethod,
   PaymentStatus,
 } from '../common/enums';
+import { isDemoSeedSafeUri, isLocalMongoUri } from './seed-safety';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -74,6 +75,16 @@ export class SeedService implements OnModuleInit {
       throw new Error(
         'RESET_DATABASE_ON_SEED is forbidden in production to prevent data loss.',
       );
+    }
+
+    // AUTO_SEED on a real database must not crash Nest startup (Render would
+    // restart-loop); log loudly and skip. Direct seed()/clearDatabase() calls
+    // (CLI run-seed) still throw via assertDemoSeedTarget.
+    if (!isDemoSeedSafeUri(this.configService.get<string>('MONGODB_URI'))) {
+      this.logger.error(
+        'AUTO_SEED=true was ignored: MONGODB_URI is not a demo-safe database (must be localhost/docker or a database whose name contains test|staging|e2e|demo). Set AUTO_SEED=false on this environment.',
+      );
+      return;
     }
 
     const hasUsers = await this.userModel.countDocuments({}).exec();
@@ -116,7 +127,18 @@ export class SeedService implements OnModuleInit {
     }
   }
 
+  /** TASK-006: demo data and resets are only allowed on local/test/staging databases. */
+  private assertDemoSeedTarget(action: string) {
+    const uri = this.configService.get<string>('MONGODB_URI');
+    if (!isDemoSeedSafeUri(uri)) {
+      throw new Error(
+        `${action} refused: MONGODB_URI must point to localhost/docker or a database whose name contains test|staging|e2e|demo.`,
+      );
+    }
+  }
+
   async clearDatabase() {
+    this.assertDemoSeedTarget('Database reset');
     await this.userModel.deleteMany({});
     await this.categoryModel.deleteMany({});
     await this.productModel.deleteMany({});
@@ -216,6 +238,7 @@ export class SeedService implements OnModuleInit {
   }
 
   async seed() {
+    this.assertDemoSeedTarget('Demo seed');
     const getSeedPassword = (key: string, fallbackDefault: string): string => {
       const value = this.configService.get<string>(key);
       if (value && value.length >= 12) {
@@ -223,11 +246,15 @@ export class SeedService implements OnModuleInit {
       }
       const nodeEnv =
         this.configService.get<string>('NODE_ENV') || 'development';
-      if (nodeEnv !== 'production') {
+      // Publicly known defaults are only acceptable on a database that never leaves this machine.
+      if (
+        nodeEnv !== 'production' &&
+        isLocalMongoUri(this.configService.get<string>('MONGODB_URI'))
+      ) {
         return fallbackDefault;
       }
       throw new Error(
-        `${key} is required and must contain at least 12 characters when AUTO_SEED=true.`,
+        `${key} is required and must contain at least 12 characters when seeding a production or remote database.`,
       );
     };
     const superAdminPassword = await bcrypt.hash(

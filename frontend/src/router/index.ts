@@ -195,6 +195,16 @@ router.afterEach((to) => {
     AdminCustomers: 'Quản Lý Khách Hàng — Trường Thành Admin',
     AdminPromotions: 'Mã Khuyến Mãi — Trường Thành Admin',
     AdminReports: 'Báo Cáo Doanh Thu — Trường Thành Admin',
+    // BUG-024: admin pages that previously fell back to the storefront title
+    AdminProductCreate: 'Thêm Sản Phẩm — Trường Thành Admin',
+    AdminProductEdit: 'Sửa Sản Phẩm — Trường Thành Admin',
+    AdminPOS: 'Bán Hàng Tại Quầy (POS) — Trường Thành Admin',
+    AdminWarehouses: 'Kho & Điều Chuyển — Trường Thành Admin',
+    AdminQuotations: 'Báo Giá Nhà Cung Cấp — Trường Thành Admin',
+    AdminDocuments: 'Chứng Từ — Trường Thành Admin',
+    AdminCombos: 'Quản Lý Combo — Trường Thành Admin',
+    AdminLandingPages: 'Landing Page — Trường Thành Admin',
+    AdminBanners: 'Banner & Popup — Trường Thành Admin',
     NotFound: '404 - Không Tìm Thấy Trang — Trường Thành Stationery',
   };
   const pageTitle = titles[to.name as string] || 'Trường Thành Stationery';

@@ -224,13 +224,21 @@ export class CheckoutPreviewDto {
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
 
-  @ApiPropertyOptional({ example: '123 Nguyễn Trãi, Q.5, TP.HCM' })
+  @ApiPropertyOptional({
+    example: '123 Nguyễn Trãi, Q.5, TP.HCM',
+    description: 'Không bắt buộc, hiện không ảnh hưởng tới giá',
+  })
   @IsOptional()
   @IsString()
+  @MaxLength(255, { message: 'Địa chỉ giao hàng không được quá 255 ký tự' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   shippingAddress?: string;
 
-  @ApiPropertyOptional({ example: '0901234567' })
+  @ApiPropertyOptional({
+    example: '0901234567',
+    description:
+      'Không bắt buộc; chỉ gửi khi đã nhập đủ (định danh khách vãng lai cho giới hạn voucher)',
+  })
   @IsOptional()
   @IsPhoneNumberVN()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -244,14 +252,17 @@ export class CheckoutPreviewDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(50, { message: 'Mã giảm giá không được quá 50 ký tự' })
   @Transform(({ value }) =>
     typeof value === 'string' ? value.trim().toUpperCase() : value,
   )
   promotionCode?: string;
 
+  // Không dùng IsEmail: client cũ gửi email đang gõ dở khi preview.
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(100, { message: 'Email không được quá 100 ký tự' })
   @Transform(({ value }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )

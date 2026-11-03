@@ -43,6 +43,8 @@ class ApiConstants {
 
   // Addresses Endpoints
   static String get addresses => '$baseUrl/addresses';
+  static String address(String id) => '$baseUrl/addresses/$id';
+  static String setDefaultAddress(String id) => '$baseUrl/addresses/$id/default';
 
   // Product Endpoints
   static String get products => '$baseUrl/products';
@@ -52,6 +54,11 @@ class ApiConstants {
   static String get orders => '$baseUrl/orders';
   static String get authenticatedOrders => '$baseUrl/orders/authenticated';
   static String get myOrders => '$baseUrl/orders/my-orders';
+  static String order(String id) => '$baseUrl/orders/$id';
+  static String guestOrder(String id) => '$baseUrl/orders/guest/$id';
+  // PDF invoice: JWT (or x-guest-order-token) header required, no query-token auth.
+  static String orderInvoice(String id) => '$baseUrl/orders/$id/invoice';
+  static String guestOrderInvoice(String id) => '$baseUrl/orders/guest/$id/invoice';
 
   // Payment Endpoints
   static String get payments => '$baseUrl/payments';
@@ -75,4 +82,6 @@ class ApiConstants {
   static String get unreadNotificationCount => '$baseUrl/notifications/unread-count';
   static String markNotificationRead(String id) => '$baseUrl/notifications/$id/read';
   static String get markAllNotificationsRead => '$baseUrl/notifications/read-all';
+  static String get deviceToken => '$baseUrl/notifications/device-token';
+  static String get unregisterDeviceToken => '$baseUrl/notifications/device-token/unregister';
 }

@@ -264,10 +264,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? rawCorrelationId.trim()
         : undefined;
 
+    // req.ip honours the 'trust proxy' setting; raw X-Forwarded-For is
+    // client-controlled and must not be logged as the client IP (BUG-011).
     const clientIp =
-      request?.headers?.['x-forwarded-for'] ||
-      request?.socket?.remoteAddress ||
-      'UNKNOWN_IP';
+      request?.ip || request?.socket?.remoteAddress || 'UNKNOWN_IP';
     const userId = request?.user?.id || request?.user?._id || 'ANONYMOUS';
     const logClientIp = Array.isArray(clientIp)
       ? clientIp.join(', ')

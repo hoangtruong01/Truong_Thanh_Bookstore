@@ -18,11 +18,6 @@ export class RolesGuard implements CanActivate {
       (UserRole | string)[]
     >(ROLES_KEY, [context.getHandler(), context.getClass()]);
 
-    // If no roles specified, allow access
-    if (!requiredRoles || requiredRoles.length === 0) {
-      return true;
-    }
-
     const { user } = context.switchToHttp().getRequest();
     if (!user) {
       throw new UnauthorizedException('Bạn chưa đăng nhập');
@@ -37,6 +32,15 @@ export class RolesGuard implements CanActivate {
     // SUPER_ADMIN has full access to all role-restricted routes
     if (userRole === UserRole.SUPER_ADMIN) {
       return true;
+    }
+
+    // Deny-by-default: a route guarded without @Roles is admin-only,
+    // so a forgotten decorator can never open the route to STAFF/CUSTOMER.
+    if (!requiredRoles || requiredRoles.length === 0) {
+      if (userRole === UserRole.ADMIN) {
+        return true;
+      }
+      throw new ForbiddenException('Bạn không có quyền truy cập chức năng này');
     }
 
     // Role Hierarchy:
