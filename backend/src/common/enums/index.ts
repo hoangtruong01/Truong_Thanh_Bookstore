@@ -118,6 +118,12 @@ export enum DiscountType {
   FIXED = 'FIXED',
 }
 
+export enum CodReconciliationStatus {
+  PENDING_RECONCILIATION = 'PENDING_RECONCILIATION',
+  RECONCILED = 'RECONCILED',
+  DISCREPANCY = 'DISCREPANCY',
+}
+
 export enum ProductStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',

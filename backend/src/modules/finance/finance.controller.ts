@@ -17,6 +17,8 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { StaffPermission } from '../../common/enums';
 import { FinanceService } from './finance.service';
 import { CustomerCreditService } from './services/customer-credit.service';
+import { CodReconciliationService } from './services/cod-reconciliation.service';
+import { ReconcileCodStatementDto } from './dto/cod-reconciliation.dto';
 import {
   CreateCashAccountDto,
   UpdateCashAccountDto,
@@ -42,6 +44,7 @@ export class FinanceController {
   constructor(
     private readonly financeService: FinanceService,
     private readonly customerCreditService: CustomerCreditService,
+    private readonly codReconciliationService: CodReconciliationService,
   ) {}
 
   // ==================== CASH ACCOUNTS ====================
@@ -260,5 +263,31 @@ export class FinanceController {
       `attachment; filename=BaoCaoTuoiNo_${new Date().toISOString().slice(0, 10)}.xlsx`,
     );
     res.send(buffer);
+  }
+
+  // ==================== COD LOGISTICS RECONCILIATION (FIN-COD-01) ====================
+
+  @Post('cod-reconciliation')
+  @Permissions(StaffPermission.MANAGE_FINANCE)
+  reconcileCodStatement(
+    @Body() dto: ReconcileCodStatementDto,
+    @Request() req: any,
+  ) {
+    return this.codReconciliationService.processStatement(
+      dto,
+      req.user.id || req.user._id,
+    );
+  }
+
+  @Get('cod-reconciliation/batches')
+  @Permissions(StaffPermission.MANAGE_FINANCE, StaffPermission.VIEW_REPORTS)
+  getCodBatches() {
+    return this.codReconciliationService.getBatches();
+  }
+
+  @Get('cod-reconciliation/pending')
+  @Permissions(StaffPermission.MANAGE_FINANCE, StaffPermission.MANAGE_ORDERS)
+  getPendingCodOrders() {
+    return this.codReconciliationService.getPendingCodOrders();
   }
 }

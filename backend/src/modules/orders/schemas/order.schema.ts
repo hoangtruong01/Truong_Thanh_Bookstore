@@ -6,6 +6,7 @@ import {
   PaymentMethod,
   PaymentStatus,
   RefundStatus,
+  CodReconciliationStatus,
 } from '../../../common/enums';
 
 @Schema()
@@ -231,6 +232,26 @@ export class Order {
 
   @Prop()
   shippingSyncedAt?: Date;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'CustomerReceivable' })
+  customerReceivable?: Types.ObjectId;
+
+  @Prop({
+    type: String,
+    enum: Object.values(CodReconciliationStatus),
+    default: CodReconciliationStatus.PENDING_RECONCILIATION,
+    index: true,
+  })
+  codStatus?: CodReconciliationStatus;
+
+  @Prop()
+  codReconciledAt?: Date;
+
+  @Prop()
+  codReconciledBatch?: string;
+
+  @Prop()
+  codDiscrepancyReason?: string;
 
   createdAt: Date;
   updatedAt: Date;

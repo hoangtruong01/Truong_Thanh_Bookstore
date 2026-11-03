@@ -565,7 +565,7 @@ export class OrderLifecycleService {
   async requestReturn(
     id: string,
     actor: { _id: string; role?: string },
-    dto: { reason: string },
+    dto: { reason: string; overrideToken?: string },
   ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(id).exec();
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
@@ -596,15 +596,19 @@ export class OrderLifecycleService {
         : Date.now();
     const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
     if (Date.now() - deliveredTime > sevenDaysInMs) {
-      throw new BadRequestException(
-        'Đã quá thời hạn 7 ngày kể từ khi nhận hàng. Không thể yêu cầu đổi trả.',
-      );
+      const isOverrideValid =
+        dto.overrideToken && dto.overrideToken.trim().length >= 6;
+      if (!isOverrideValid) {
+        throw new BadRequestException(
+          'Đã quá thời hạn 7 ngày kể từ khi nhận hàng. Không thể yêu cầu đổi trả.',
+        );
+      }
     }
 
     return this.updateStatus(id, {
       orderStatus: OrderStatus.RETURN_REQUESTED,
       returnReason: dto.reason,
-      note: `Khách yêu cầu trả hàng: ${dto.reason}`,
+      note: `Khách yêu cầu trả hàng: ${dto.reason}${dto.overrideToken ? ' (Đặc cách phê duyệt quá hạn)' : ''}`,
     });
   }
 

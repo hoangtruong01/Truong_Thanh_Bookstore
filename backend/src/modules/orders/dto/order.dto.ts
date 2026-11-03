@@ -287,6 +287,14 @@ export class RequestReturnDto {
     typeof value === 'string' ? value.trim() : (value as string),
   )
   reason: string;
+
+  @ApiPropertyOptional({
+    description: 'Mã phê duyệt đặc cách của quản lý nếu trả quá hạn 7 ngày',
+    example: 'MGR-OVR-882199',
+  })
+  @IsOptional()
+  @IsString({ message: 'overrideToken phải là chuỗi ký tự' })
+  overrideToken?: string;
 }
 
 export class RejectReturnDto {

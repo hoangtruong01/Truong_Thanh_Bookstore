@@ -14,9 +14,15 @@ import {
   CustomerCreditProfile,
   CustomerCreditProfileSchema,
 } from './schemas/customer-credit-profile.schema';
+import {
+  CodReconciliationBatch,
+  CodReconciliationBatchSchema,
+} from './schemas/cod-reconciliation-batch.schema';
+import { Order, OrderSchema } from '../orders/schemas/order.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { FinanceService } from './finance.service';
 import { CustomerCreditService } from './services/customer-credit.service';
+import { CodReconciliationService } from './services/cod-reconciliation.service';
 import { FinanceController } from './finance.controller';
 
 @Module({
@@ -30,11 +36,21 @@ import { FinanceController } from './finance.controller';
         name: CustomerCreditProfile.name,
         schema: CustomerCreditProfileSchema,
       },
+      {
+        name: CodReconciliationBatch.name,
+        schema: CodReconciliationBatchSchema,
+      },
+      { name: Order.name, schema: OrderSchema },
       { name: User.name, schema: UserSchema },
     ]),
   ],
   controllers: [FinanceController],
-  providers: [FinanceService, CustomerCreditService],
-  exports: [FinanceService, CustomerCreditService, MongooseModule],
+  providers: [FinanceService, CustomerCreditService, CodReconciliationService],
+  exports: [
+    FinanceService,
+    CustomerCreditService,
+    CodReconciliationService,
+    MongooseModule,
+  ],
 })
 export class FinanceModule {}
