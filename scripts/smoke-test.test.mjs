@@ -1,0 +1,79 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const { parseHealthPayload, evaluateHealth } = require('./smoke-test.js');
+
+test('smoke-test: parse direct raw health response', () => {
+  const raw = {
+    status: 'UP',
+    database: { status: 'HEALTHY', state: 'CONNECTED' },
+    release: 'abc1234',
+  };
+  const parsed = parseHealthPayload(raw);
+  assert.equal(parsed.status, 'UP');
+  assert.equal(parsed.database.status, 'HEALTHY');
+  assert.equal(parsed.release, 'abc1234');
+});
+
+test('smoke-test: parse TransformInterceptor wrapped response', () => {
+  const wrapped = {
+    success: true,
+    message: 'Thao tác thành công',
+    data: {
+      status: 'UP',
+      database: { status: 'HEALTHY' },
+      release: 'bf87e61',
+    },
+    meta: null,
+    timestamp: '2026-11-03T00:00:00.000Z',
+  };
+  const parsed = parseHealthPayload(wrapped);
+  assert.equal(parsed.status, 'UP');
+  assert.equal(parsed.database.status, 'HEALTHY');
+  assert.equal(parsed.release, 'bf87e61');
+});
+
+test('smoke-test: evaluateHealth passes when release matches and system healthy', () => {
+  const wrapped = {
+    data: {
+      status: 'UP',
+      database: { status: 'HEALTHY' },
+      release: 'target-sha',
+    },
+  };
+  const evalResult = evaluateHealth(200, wrapped, 'target-sha');
+  assert.equal(evalResult.isPassed, true);
+  assert.equal(evalResult.isUp, true);
+  assert.equal(evalResult.isDbHealthy, true);
+  assert.equal(evalResult.releaseMatches, true);
+});
+
+test('smoke-test: evaluateHealth fails when release mismatches despite healthy DB', () => {
+  const wrapped = {
+    data: {
+      status: 'UP',
+      database: { status: 'HEALTHY' },
+      release: 'old-sha',
+    },
+  };
+  const evalResult = evaluateHealth(200, wrapped, 'new-sha');
+  assert.equal(evalResult.isPassed, false);
+  assert.equal(evalResult.isUp, true);
+  assert.equal(evalResult.isDbHealthy, true);
+  assert.equal(evalResult.releaseMatches, false);
+});
+
+test('smoke-test: evaluateHealth fails when database is degraded', () => {
+  const wrapped = {
+    data: {
+      status: 'DEGRADED',
+      database: { status: 'UNHEALTHY' },
+      release: 'target-sha',
+    },
+  };
+  const evalResult = evaluateHealth(503, wrapped, 'target-sha');
+  assert.equal(evalResult.isPassed, false);
+  assert.equal(evalResult.isDbHealthy, false);
+});

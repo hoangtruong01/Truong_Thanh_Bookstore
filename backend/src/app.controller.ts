@@ -30,7 +30,15 @@ export class AppController {
 
     response.status(isDbConnected ? 200 : 503);
 
-    const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+    const isCloudProduction =
+      this.configService.get<string>('NODE_ENV') === 'production' ||
+      Boolean(this.configService.get('RENDER') || process.env.RENDER) ||
+      Boolean(
+        this.configService.get('RENDER_SERVICE_ID') ||
+        process.env.RENDER_SERVICE_ID,
+      ) ||
+      Boolean(this.configService.get('VERCEL') || process.env.VERCEL);
+
     const release =
       this.configService.get<string>('RELEASE_SHA') ||
       this.configService.get<string>('VERCEL_GIT_COMMIT_SHA') ||
@@ -38,7 +46,7 @@ export class AppController {
       process.env.GIT_COMMIT ||
       'latest';
 
-    if (isProd) {
+    if (isCloudProduction) {
       return {
         status: isDbConnected ? 'UP' : 'DEGRADED',
         database: {

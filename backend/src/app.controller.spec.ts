@@ -65,5 +65,27 @@ describe('AppController health readiness', () => {
     expect(health.database.status).toBe('HEALTHY');
     expect(health.release).toBe('commit_sha_abc123');
     expect(health.timestamp).toBeDefined();
+    expect((health as any).system).toBeUndefined();
+  });
+
+  it('masks system internals when deployed on cloud platform (RENDER=true) even if NODE_ENV is unset (OPS-01)', () => {
+    const { response } = createResponse();
+    const renderConfigService = {
+      get: jest.fn((key: string, fallback: unknown) => {
+        if (key === 'RENDER') return 'true';
+        if (key === 'RELEASE_SHA') return 'render_sha_789';
+        return fallback;
+      }),
+    } as unknown as ConfigService;
+
+    const controller = new AppController(
+      { readyState: 1 } as Connection,
+      renderConfigService,
+    );
+
+    const health = controller.getHealth(response);
+    expect(health.status).toBe('UP');
+    expect(health.database.status).toBe('HEALTHY');
+    expect((health as any).system).toBeUndefined();
   });
 });

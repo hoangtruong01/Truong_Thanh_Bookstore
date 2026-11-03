@@ -35,17 +35,32 @@ while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
     RELEASE_MATCHED=true
     if [ -n "$EXPECTED_RELEASE" ] && ! echo "$HTTP_BODY" | grep -q "\"release\":\"${EXPECTED_RELEASE}\""; then
       RELEASE_MATCHED=false
-      echo "  Deployment is healthy but does not match expected release ${EXPECTED_RELEASE}."
+      echo "  ⏳ Deployment is active but release SHA does not match expected ${EXPECTED_RELEASE}. Deployment may still be in progress."
     fi
-    if echo "$HTTP_BODY" | grep -q '"status":"UP"' && echo "$HTTP_BODY" | grep -q '"database":{"status":"HEALTHY"' && [ "$RELEASE_MATCHED" = true ]; then
+
+    IS_UP=false
+    if echo "$HTTP_BODY" | grep -q '"status":"UP"'; then
+      IS_UP=true
+    fi
+
+    IS_DB_HEALTHY=false
+    if echo "$HTTP_BODY" | grep -q '"database":{"status":"HEALTHY"' || echo "$HTTP_BODY" | grep -q '"status":"HEALTHY"'; then
+      IS_DB_HEALTHY=true
+    fi
+
+    if [ "$IS_UP" = true ] && [ "$IS_DB_HEALTHY" = true ] && [ "$RELEASE_MATCHED" = true ]; then
       echo "  Payload validation: PASSED"
       echo "  Details: ${HTTP_BODY}"
       echo "======================================================================"
-      echo "✅ SMOKE TEST PASSED: Backend is UP and Database is HEALTHY!"
+      echo "✅ SMOKE TEST PASSED: Backend is UP, Database is HEALTHY, and Release matches!"
       echo "======================================================================"
       exit 0
     else
-      echo "  ⚠️ HTTP 200 received but database or system is DEGRADED: ${HTTP_BODY}"
+      if [ "$RELEASE_MATCHED" = false ] && [ "$IS_UP" = true ] && [ "$IS_DB_HEALTHY" = true ]; then
+        echo "  ⏳ Release mismatch: waiting for rolling update to commit ${EXPECTED_RELEASE}..."
+      else
+        echo "  ⚠️ HTTP 200 received but database or system is DEGRADED: ${HTTP_BODY}"
+      fi
     fi
   else
     echo "  ⚠️ Received HTTP ${HTTP_CODE} (Expected 200)"

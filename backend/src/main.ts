@@ -18,7 +18,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
-  const isProduction = nodeEnv === 'production';
+  const isCloudHosted = Boolean(
+    configService.get('RENDER') ||
+    process.env.RENDER ||
+    configService.get('RENDER_SERVICE_ID') ||
+    process.env.RENDER_SERVICE_ID ||
+    configService.get('VERCEL') ||
+    process.env.VERCEL,
+  );
+  const isProduction = nodeEnv === 'production' || isCloudHosted;
 
   // Helmet HTTP security headers
   app.use(
