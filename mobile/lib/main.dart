@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/api_constants.dart';
+import 'core/network/api_client.dart';
 import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
@@ -47,18 +48,22 @@ Future<void> main() async {
 class TruongThanhApp extends StatelessWidget {
   const TruongThanhApp({super.key});
 
+  static ApiClient _api(BuildContext context) => Provider.of<ApiClient>(context, listen: false);
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        // One shared HTTP client; AuthProvider binds its session (401 -> refresh -> retry).
+        Provider<ApiClient>(create: (_) => ApiClient(), dispose: (_, api) => api.close()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => ProductProvider()),
-        ChangeNotifierProvider(create: (_) => CartProvider()),
-        ChangeNotifierProvider(create: (_) => OrderProvider()),
-        ChangeNotifierProvider(create: (_) => WishlistProvider()),
-        ChangeNotifierProvider(create: (_) => NotificationProvider()),
-        ChangeNotifierProvider(create: (_) => ReviewProvider()),
+        ChangeNotifierProvider(create: (ctx) => AuthProvider(apiClient: _api(ctx))),
+        ChangeNotifierProvider(create: (ctx) => ProductProvider(apiClient: _api(ctx))),
+        ChangeNotifierProvider(create: (ctx) => CartProvider(apiClient: _api(ctx))),
+        ChangeNotifierProvider(create: (ctx) => OrderProvider(apiClient: _api(ctx))),
+        ChangeNotifierProvider(create: (ctx) => WishlistProvider(apiClient: _api(ctx))),
+        ChangeNotifierProvider(create: (ctx) => NotificationProvider(apiClient: _api(ctx))),
+        ChangeNotifierProvider(create: (ctx) => ReviewProvider(apiClient: _api(ctx))),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {

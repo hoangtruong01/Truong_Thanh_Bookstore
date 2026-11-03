@@ -30,9 +30,38 @@ import { OrderLoyaltyService } from './order-loyalty.service';
 import { OrderNotificationService } from './order-notification.service';
 import { PricingService } from '../../pricing/pricing.service';
 import { Types } from 'mongoose';
+import {
+  FREE_SHIPPING_THRESHOLD,
+  SHIPPING_FEE,
+  LOYALTY_MIN_REDEEM_POINTS,
+  LOYALTY_POINT_VALUE,
+  LOYALTY_MAX_REDEEM_PERCENT,
+  computeShippingFee,
+  computeMaxRedeemablePoints,
+  computeMinSubtotalToRedeem,
+} from '../checkout-policy';
 
-const FREE_SHIPPING_THRESHOLD = 299000;
-const SHIPPING_FEE = 30000;
+export interface CheckoutPreviewUnavailableItem {
+  product: string;
+  name: string;
+  reason: 'UNAVAILABLE' | 'OUT_OF_STOCK';
+  stock: number;
+  requestedQuantity: number;
+}
+
+/** Thông tin Loyalty trong preview (null với khách vãng lai). */
+export interface CheckoutPreviewLoyalty {
+  availablePoints: number;
+  minRedeemPoints: number;
+  pointValue: number;
+  maxRedeemPercent: number;
+  maxRedeemablePoints: number;
+  minSubtotalToRedeem: number;
+  canRedeem: boolean;
+  requestedPoints: number;
+  appliedPoints: number;
+  error: string | null;
+}
 
 @Injectable()
 export class CheckoutService {
@@ -129,10 +158,14 @@ export class CheckoutService {
       price: number;
       originalPrice: number;
       quantity: number;
+      requestedQuantity: number;
       stock: number;
       image: string;
       subtotal: number;
     }> = [];
+    // Dòng bị loại khỏi `items` (không khả dụng / hết hàng) để client đánh dấu
+    // có cấu trúc thay vì chỉ dựa vào text trong `warnings`.
+    const unavailableItems: CheckoutPreviewUnavailableItem[] = [];
 
     for (const item of dto.items) {
       const product = await this.productsService.findById(item.product);
@@ -144,6 +177,13 @@ export class CheckoutService {
         warnings.push(
           `Sản phẩm "${item.name || item.product}" hiện không khả dụng.`,
         );
+        unavailableItems.push({
+          product: String(item.product),
+          name: (product as any)?.name || item.name || String(item.product),
+          reason: 'UNAVAILABLE',
+          stock: 0,
+          requestedQuantity: item.quantity,
+        });
         continue;
       }
 
@@ -152,6 +192,13 @@ export class CheckoutService {
       if (availableStock < item.quantity) {
         if (availableStock <= 0) {
           warnings.push(`Sản phẩm "${product.name}" đã hết hàng.`);
+          unavailableItems.push({
+            product: product._id.toString(),
+            name: product.name,
+            reason: 'OUT_OF_STOCK',
+            stock: 0,
+            requestedQuantity: item.quantity,
+          });
           continue;
         } else {
           effectiveQty = availableStock;
@@ -201,6 +248,7 @@ export class CheckoutService {
         price: effectivePrice,
         originalPrice: (product as any).price,
         quantity: effectiveQty,
+        requestedQuantity: item.quantity,
         stock: availableStock,
         image: (product as any).images?.[0] || item.image || '',
         subtotal: effectivePrice * effectiveQty,
@@ -209,15 +257,25 @@ export class CheckoutService {
 
     const subtotal = verifiedItems.reduce((sum, i) => sum + i.subtotal, 0);
     const isEligibleForFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
-    const shippingFee =
-      subtotal === 0 ? 0 : isEligibleForFreeShipping ? 0 : SHIPPING_FEE;
+    const shippingFee = computeShippingFee(subtotal);
     const amountNeededForFreeShipping = Math.max(
       0,
       FREE_SHIPPING_THRESHOLD - subtotal,
     );
+    // 0..100, chỉ đạt 100 khi thực sự được freeship (floor để 298.999đ không hiện 100%).
+    const freeShippingProgress =
+      subtotal <= 0
+        ? 0
+        : isEligibleForFreeShipping
+          ? 100
+          : Math.min(
+              99,
+              Math.floor((subtotal / FREE_SHIPPING_THRESHOLD) * 100),
+            );
 
     let discount = 0;
     let appliedPromotion: any = null;
+    let promotionError: string | null = null;
     if (dto.promotionCode && subtotal > 0) {
       try {
         const promoResult = await this.promotionsService.apply(
@@ -233,32 +291,58 @@ export class CheckoutService {
           discount,
         };
       } catch (err: any) {
-        warnings.push(
-          err.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện.',
-        );
+        promotionError =
+          err?.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện.';
+        warnings.push(promotionError as string);
       }
     }
 
+    // Loyalty: cùng quy tắc với lúc tạo đơn (OrderLoyaltyService). Yêu cầu
+    // không hợp lệ thì không giảm (không clamp) để tổng preview khớp với create.
+    const requestedPoints =
+      dto.loyaltyPointsUsed && dto.loyaltyPointsUsed > 0
+        ? dto.loyaltyPointsUsed
+        : 0;
     let loyaltyDiscount = 0;
-    if (dto.loyaltyPointsUsed && dto.loyaltyPointsUsed > 0) {
-      if (!userId) {
+    let loyalty: CheckoutPreviewLoyalty | null = null;
+    if (!userId) {
+      if (requestedPoints > 0) {
         warnings.push(
           'Chỉ khách hàng có tài khoản mới có thể sử dụng điểm thưởng Loyalty.',
         );
-      } else if (dto.loyaltyPointsUsed < 1000) {
-        warnings.push('Mức tiêu điểm tối thiểu là 1.000 điểm.');
-      } else {
-        const maxAllowedDiscount = Math.floor(subtotal * 0.2);
-        const attemptedDiscount = dto.loyaltyPointsUsed * 100;
-        if (attemptedDiscount > maxAllowedDiscount) {
-          warnings.push(
-            'Số điểm thưởng sử dụng vượt quá hạn mức tối đa (20% giá trị đơn hàng).',
-          );
-          loyaltyDiscount = maxAllowedDiscount;
-        } else {
-          loyaltyDiscount = attemptedDiscount;
-        }
       }
+    } else {
+      const availablePoints = await this.getLoyaltyBalance(userId);
+      const maxRedeemablePoints = computeMaxRedeemablePoints(
+        subtotal,
+        availablePoints,
+      );
+      let loyaltyError: string | null = null;
+      if (requestedPoints > 0) {
+        if (requestedPoints < LOYALTY_MIN_REDEEM_POINTS) {
+          loyaltyError = 'Mức tiêu điểm tối thiểu là 1.000 điểm.';
+        } else if (requestedPoints > availablePoints) {
+          loyaltyError = 'Vượt quá số điểm hiện có.';
+        } else if (requestedPoints > maxRedeemablePoints) {
+          loyaltyError =
+            'Số điểm thưởng sử dụng vượt quá hạn mức tối đa (20% giá trị đơn hàng).';
+        } else {
+          loyaltyDiscount = requestedPoints * LOYALTY_POINT_VALUE;
+        }
+        if (loyaltyError) warnings.push(loyaltyError);
+      }
+      loyalty = {
+        availablePoints,
+        minRedeemPoints: LOYALTY_MIN_REDEEM_POINTS,
+        pointValue: LOYALTY_POINT_VALUE,
+        maxRedeemPercent: LOYALTY_MAX_REDEEM_PERCENT,
+        maxRedeemablePoints,
+        minSubtotalToRedeem: computeMinSubtotalToRedeem(),
+        canRedeem: maxRedeemablePoints >= LOYALTY_MIN_REDEEM_POINTS,
+        requestedPoints,
+        appliedPoints: loyaltyDiscount > 0 ? requestedPoints : 0,
+        error: loyaltyError,
+      };
     }
 
     const total = Math.max(
@@ -268,21 +352,40 @@ export class CheckoutService {
 
     return {
       items: verifiedItems,
+      unavailableItems,
       itemCount: verifiedItems.reduce((sum, i) => sum + i.quantity, 0),
       subtotal,
       shippingFee,
+      standardShippingFee: SHIPPING_FEE,
       freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
       isEligibleForFreeShipping,
       amountNeededForFreeShipping,
       remainingForFreeShipping: amountNeededForFreeShipping,
+      freeShippingProgress,
       promotionDiscount: discount,
       discount,
       appliedPromotion,
+      promotionError,
       loyaltyDiscount,
+      loyalty,
       total,
       warnings,
       isValidForCheckout: verifiedItems.length > 0 && warnings.length === 0,
     };
+  }
+
+  /** Số dư điểm hiện tại; lỗi đọc user thì coi như 0 (preview không được fail). */
+  private async getLoyaltyBalance(userId: string): Promise<number> {
+    try {
+      const user: any = await this.usersService.findById(userId);
+      const points = Number(user?.loyaltyPoints ?? 0);
+      return Number.isFinite(points) && points > 0 ? Math.floor(points) : 0;
+    } catch (err) {
+      this.logger.warn(
+        `Không đọc được điểm Loyalty cho preview: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return 0;
+    }
   }
 
   async create(
@@ -533,7 +636,7 @@ export class CheckoutService {
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
-    const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+    const shippingFee = computeShippingFee(subtotal);
     const orderCode = this.generateOrderCode();
 
     const persist = async (session?: ClientSession): Promise<OrderDocument> => {

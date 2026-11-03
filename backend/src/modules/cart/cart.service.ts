@@ -18,9 +18,15 @@ import {
   ApplyVoucherDto,
 } from './dto/cart.dto';
 import { ProductStatus, DiscountType } from '../../common/enums';
+import {
+  FREE_SHIPPING_THRESHOLD,
+  SHIPPING_FEE,
+  computeShippingFee,
+} from '../orders/checkout-policy';
 
-export const FREE_SHIPPING_THRESHOLD = 299000;
-export const DEFAULT_SHIPPING_FEE = 30000;
+// Giữ các export cũ (re-export từ chính sách giá dùng chung) để không phá import hiện có.
+export { FREE_SHIPPING_THRESHOLD };
+export const DEFAULT_SHIPPING_FEE = SHIPPING_FEE;
 
 export interface CartValidationResult {
   cart: CartDocument;
@@ -59,12 +65,7 @@ export class CartService {
     }, 0);
 
     cart.subtotal = subtotal;
-    cart.shippingFee =
-      subtotal === 0
-        ? 0
-        : subtotal >= FREE_SHIPPING_THRESHOLD
-          ? 0
-          : DEFAULT_SHIPPING_FEE;
+    cart.shippingFee = computeShippingFee(subtotal);
 
     let discountAmount = 0;
     if (cart.appliedVoucher && cart.appliedVoucher.code) {
@@ -391,10 +392,14 @@ export class CartService {
   }
 
   /**
-   * Đồng bộ giỏ hàng offline của khách vào tài khoản khi đăng nhập
+   * Đồng bộ giỏ hàng offline của khách vào tài khoản.
+   * - mode 'merge' (mặc định, dùng lần sync đầu sau đăng nhập): cộng dồn số lượng.
+   * - mode 'replace': giỏ server phản chiếu đúng payload (số lượng = min(yêu cầu, tồn kho),
+   *   xóa các dòng không có trong payload hoặc không còn khả dụng).
    */
   async syncCart(userId: string, dto: SyncCartDto): Promise<CartDocument> {
     const userOid = this.toObjectId(userId);
+    const replace = dto.mode === 'replace';
     let cart = await this.cartModel.findOne({ user: userOid }).exec();
     if (!cart) {
       cart = new this.cartModel({
@@ -407,6 +412,13 @@ export class CartService {
       });
     }
 
+    if (replace) {
+      const payloadIds = new Set(dto.items.map((item) => item.productId));
+      cart.items = cart.items.filter((ci) =>
+        payloadIds.has(ci.product.toString()),
+      );
+    }
+
     for (const item of dto.items) {
       if (!Types.ObjectId.isValid(item.productId)) continue;
       const product = await this.productModel.findById(item.productId).exec();
@@ -416,6 +428,11 @@ export class CartService {
         product.status === ProductStatus.INACTIVE ||
         product.stock <= 0
       ) {
+        if (replace) {
+          cart.items = cart.items.filter(
+            (ci) => ci.product.toString() !== item.productId,
+          );
+        }
         continue;
       }
 
@@ -430,10 +447,12 @@ export class CartService {
         product.images && product.images.length > 0 ? product.images[0] : '';
 
       if (existingIdx > -1) {
-        cart.items[existingIdx].quantity = Math.min(
-          product.stock,
-          cart.items[existingIdx].quantity + cappedQuantity,
-        );
+        cart.items[existingIdx].quantity = replace
+          ? cappedQuantity
+          : Math.min(
+              product.stock,
+              cart.items[existingIdx].quantity + cappedQuantity,
+            );
         cart.items[existingIdx].price = price;
         cart.items[existingIdx].discountPrice = discountPrice;
         cart.items[existingIdx].image = image;

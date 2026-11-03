@@ -165,7 +165,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     height: 36,
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        final url = '${ApiConstants.baseUrl}/orders/${order.id}/invoice';
+                        // TODO(Phase 3): this endpoint requires a Bearer/guest header that an
+                        // external browser cannot send; needs an authenticated download flow.
+                        final url = ApiConstants.orderInvoice(order.id);
                         final uri = Uri.parse(url);
                         try {
                           final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);

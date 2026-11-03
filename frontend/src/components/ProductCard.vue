@@ -102,7 +102,8 @@
       <div class="flex items-baseline gap-1.5 flex-wrap">
         <template v-if="product.discountPrice > 0">
           <span class="text-sm font-bold text-red-600">{{ formatCurrency(product.discountPrice) }}</span>
-          <span class="text-[10px] text-slate-400 line-through">{{ formatCurrency(product.price) }}</span>
+          <!-- BUG-020: only strike the list price when it is really higher than the selling price -->
+          <span v-if="product.discountPrice < product.price" class="text-[10px] text-slate-400 line-through">{{ formatCurrency(product.price) }}</span>
         </template>
         <template v-else>
           <span class="text-sm font-bold text-red-600">{{ formatCurrency(product.price) }}</span>

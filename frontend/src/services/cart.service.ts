@@ -7,7 +7,9 @@ export const cartService = {
   updateQuantity: (productId: string, quantity: number) => api.patch(`/cart/items/${productId}`, { quantity }),
   removeItem: (productId: string) => api.delete(`/cart/items/${productId}`),
   clearCart: () => api.delete('/cart'),
-  syncCart: (items: Array<{ productId: string; quantity: number }>) => api.post('/cart/sync', { items }),
+  // 'replace' mirrors the local list (quantities set, missing lines removed); 'merge' adds quantities.
+  syncCart: (items: Array<{ productId: string; quantity: number }>, mode?: 'merge' | 'replace') =>
+    api.post('/cart/sync', mode ? { items, mode } : { items }),
   applyVoucher: (code: string) => api.post('/cart/voucher', { code }),
   removeVoucher: () => api.delete('/cart/voucher'),
 }

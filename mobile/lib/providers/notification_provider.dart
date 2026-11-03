@@ -1,16 +1,19 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants/api_constants.dart';
+import '../core/network/api_client.dart';
 import '../models/notification_model.dart';
 
 class NotificationProvider with ChangeNotifier {
-  NotificationProvider({http.Client? client}) : _client = client ?? http.Client();
-  final http.Client _client;
+  NotificationProvider({ApiClient? apiClient, http.Client? client})
+      : _api = apiClient ?? ApiClient(httpClient: client),
+        _ownsApi = apiClient == null;
+  final ApiClient _api;
+  final bool _ownsApi;
 
   @override
   void dispose() {
-    _client.close();
+    if (_ownsApi) _api.close();
     super.dispose();
   }
   List<NotificationModel> _notifications = [];
@@ -31,18 +34,10 @@ class NotificationProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await _client.get(
-        Uri.parse(ApiConstants.myNotifications),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final res = await _api.get(ApiConstants.myNotifications, token: token);
 
       if (res.statusCode == 200) {
-        final body = json.decode(res.body);
-        final dynamic data = body['data'] ?? body;
-        final dynamic items = data is Map ? data['items'] : data;
+        final dynamic items = res.data is Map ? res.data['items'] : res.data;
         if (items is List) {
           _notifications = items.map((item) => NotificationModel.fromJson(item)).toList();
         }
@@ -51,7 +46,7 @@ class NotificationProvider with ChangeNotifier {
         _errorMessage = 'Không thể tải thông báo';
       }
     } catch (e) {
-      _errorMessage = 'Lỗi kết nối mạng: $e';
+      _errorMessage = e is ApiNetworkException ? e.toString() : 'Không thể tải thông báo';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -66,18 +61,10 @@ class NotificationProvider with ChangeNotifier {
     }
 
     try {
-      final res = await _client.get(
-        Uri.parse(ApiConstants.unreadNotificationCount),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final res = await _api.get(ApiConstants.unreadNotificationCount, token: token);
 
       if (res.statusCode == 200) {
-        final body = json.decode(res.body);
-        final data = body['data'] ?? body;
-        _unreadCount = (data['unreadCount'] as num?)?.toInt() ?? 0;
+        _unreadCount = (res.mapData['unreadCount'] as num?)?.toInt() ?? 0;
         notifyListeners();
       }
     } catch (e) {
@@ -89,13 +76,7 @@ class NotificationProvider with ChangeNotifier {
     if (token == null || token.isEmpty) return false;
 
     try {
-      final res = await _client.patch(
-        Uri.parse(ApiConstants.markNotificationRead(id)),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final res = await _api.patch(ApiConstants.markNotificationRead(id), token: token);
 
       if (res.statusCode == 200) {
         final index = _notifications.indexWhere((n) => n.id == id);
@@ -125,13 +106,7 @@ class NotificationProvider with ChangeNotifier {
     if (token == null || token.isEmpty) return false;
 
     try {
-      final res = await _client.patch(
-        Uri.parse(ApiConstants.markAllNotificationsRead),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final res = await _api.patch(ApiConstants.markAllNotificationsRead, token: token);
 
       if (res.statusCode == 200) {
         _notifications = _notifications.map((n) {

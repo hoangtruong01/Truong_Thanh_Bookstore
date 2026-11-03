@@ -1,18 +1,26 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../core/theme/app_theme.dart';
+import '../theme/app_colors.dart';
 
 class GlassNavItemData {
   final IconData icon;
   final IconData activeIcon;
+
+  /// Nhãn ngắn hiển thị dưới icon, đồng thời là nhãn đọc cho trình đọc màn hình.
+  final String label;
   final bool hasBadge;
 
   const GlassNavItemData({
     required this.icon,
     required this.activeIcon,
+    required this.label,
     this.hasBadge = false,
   });
+
+  /// Nhãn trợ năng, kèm số lượng nếu tab có badge (vd. 'Giỏ hàng, 3 sản phẩm').
+  String semanticLabel(int badgeCount) =>
+      hasBadge && badgeCount > 0 ? '$label, $badgeCount sản phẩm' : label;
 }
 
 class LiquidGlassBottomNav extends StatefulWidget {
@@ -278,6 +286,7 @@ class _LiquidGlassBottomNavState extends State<LiquidGlassBottomNav>
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = context.palette;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -322,7 +331,7 @@ class _LiquidGlassBottomNavState extends State<LiquidGlassBottomNav>
                     BoxShadow(
                       color: isDark
                           ? Colors.black.withValues(alpha: 0.50)
-                          : const Color(0xFF0F172A).withValues(alpha: 0.10),
+                          : AppColors.slate900.withValues(alpha: 0.10),
                       blurRadius: 32,
                       spreadRadius: 0,
                       offset: const Offset(0, 10),
@@ -433,7 +442,12 @@ class _LiquidGlassBottomNavState extends State<LiquidGlassBottomNav>
                                 return Transform(
                                   alignment: Alignment.center,
                                   transform: Matrix4.identity()
-                                    ..scale(_stretchX * _liftAnimation.value, _stretchY * _liftAnimation.value)
+                                    ..scaleByDouble(
+                                      _stretchX * _liftAnimation.value,
+                                      _stretchY * _liftAnimation.value,
+                                      1.0,
+                                      1.0,
+                                    )
                                     ..rotateZ(_tiltAngle),
                                   child: child,
                                 );
@@ -443,23 +457,23 @@ class _LiquidGlassBottomNavState extends State<LiquidGlassBottomNav>
                                   borderRadius: BorderRadius.circular(28),
                                   // Hiệu ứng quang sai sắc viền (Chromatic Aberration Rim) rực rỡ và sang trọng trong Dark Mode
                                   boxShadow: [
-                                    // Ánh xanh Cyan quang học ở sườn
+                                    // Ánh xanh quang học ở sườn
                                     BoxShadow(
-                                      color: const Color(0xFF38BDF8).withValues(alpha: isDark ? 0.40 : 0.18),
+                                      color: palette.info.withValues(alpha: isDark ? 0.40 : 0.18),
                                       blurRadius: 18,
                                       spreadRadius: 1,
                                       offset: const Offset(-2, 1),
                                     ),
                                     // Ánh vàng/hổ phách đối diện tạo cảm giác tán sắc lăng kính
                                     BoxShadow(
-                                      color: const Color(0xFFFBBF24).withValues(alpha: isDark ? 0.28 : 0.10),
+                                      color: palette.warning.withValues(alpha: isDark ? 0.28 : 0.10),
                                       blurRadius: 16,
                                       spreadRadius: 0,
                                       offset: const Offset(2, -1),
                                     ),
                                     // Glow phản quang màu đỏ thương hiệu
                                     BoxShadow(
-                                      color: AppTheme.primaryRed.withValues(alpha: isDark ? 0.25 : 0.14),
+                                      color: palette.primary.withValues(alpha: isDark ? 0.25 : 0.14),
                                       blurRadius: 16,
                                       offset: const Offset(0, 3),
                                     ),
@@ -555,25 +569,46 @@ class _LiquidGlassBottomNavState extends State<LiquidGlassBottomNav>
                             ),
                           ),
 
-                          // 4. LAYER 4: ICONS (Tương tác tap và phản hồi thị giác mượt mà)
-                          Row(
-                            children: List.generate(itemCount, (index) {
-                              final item = widget.items[index];
-                              final isSelected = _activeDragIndex == index;
+                          // 4. LAYER 4: ICONS + NHÃN (Tương tác tap và phản hồi thị giác mượt mà)
+                          // Giới hạn phóng chữ để nhãn không tràn khi người dùng bật cỡ chữ lớn.
+                          MediaQuery.withClampedTextScaling(
+                            maxScaleFactor: 1.2,
+                            child: Row(
+                              children: List.generate(itemCount, (index) {
+                                final item = widget.items[index];
+                                final isSelected = _activeDragIndex == index;
+                                final badgeCount = item.hasBadge ? widget.badgeCount : 0;
 
-                              return Expanded(
-                                child: Container(
-                                  height: navHeight,
-                                  alignment: Alignment.center,
-                                  child: _GlassNavIconItem(
-                                    item: item,
-                                    isSelected: isSelected,
-                                    badgeCount: item.hasBadge ? widget.badgeCount : 0,
-                                    isDark: isDark,
+                                return Expanded(
+                                  child: Tooltip(
+                                    message: item.label,
+                                    // Nhãn đọc đã có ở Semantics bên dưới, tránh đọc trùng
+                                    excludeFromSemantics: true,
+                                    child: Semantics(
+                                      container: true,
+                                      button: true,
+                                      selected: isSelected,
+                                      label: item.semanticLabel(badgeCount),
+                                      onTap: () => _onTapTab(index, itemWidth),
+                                      child: ExcludeSemantics(
+                                        child: Container(
+                                          height: navHeight,
+                                          // Vùng chạm tối thiểu 48dp
+                                          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                          alignment: Alignment.center,
+                                          child: _GlassNavItem(
+                                            item: item,
+                                            isSelected: isSelected,
+                                            badgeCount: badgeCount,
+                                            isDark: isDark,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              );
-                            }),
+                                );
+                              }),
+                            ),
                           ),
                         ],
                       ),
@@ -589,13 +624,13 @@ class _LiquidGlassBottomNavState extends State<LiquidGlassBottomNav>
   }
 }
 
-class _GlassNavIconItem extends StatelessWidget {
+class _GlassNavItem extends StatelessWidget {
   final GlassNavItemData item;
   final bool isSelected;
   final int badgeCount;
   final bool isDark;
 
-  const _GlassNavIconItem({
+  const _GlassNavItem({
     required this.item,
     required this.isSelected,
     required this.badgeCount,
@@ -604,80 +639,103 @@ class _GlassNavIconItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Độ tương phản cao trong Dark mode giúp icon luôn sáng rõ tuyệt đối
+    final palette = context.palette;
+
+    // Độ tương phản cao trong Dark mode giúp icon & nhãn luôn sáng rõ trên lớp kính
     final inactiveColor = isDark
-        ? const Color(0xFFF1F5F9).withValues(alpha: 0.85) // Màu bạc sáng ánh kim
-        : const Color(0xFF64748B).withValues(alpha: 0.75);
+        ? palette.textPrimary.withValues(alpha: 0.85) // Màu bạc sáng ánh kim
+        : palette.textSecondary;
+    final activeColor = palette.primaryText; // Đỏ thương hiệu (sáng hơn trên nền tối)
+    final color = isSelected ? activeColor : inactiveColor;
 
-    final activeColor = isDark
-        ? const Color(0xFFFF4D4D) // Màu đỏ sáng nổi bật trong nền tối
-        : AppTheme.primaryRed;
+    final labelStyle = (Theme.of(context).textTheme.labelSmall ?? const TextStyle(fontSize: 11)).copyWith(
+      color: color,
+      fontSize: 11,
+      height: 1.1,
+      letterSpacing: 0,
+    );
 
-    return AnimatedScale(
-      scale: isSelected ? 1.08 : 0.96,
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            transitionBuilder: (child, anim) => FadeTransition(
-              opacity: anim,
-              child: ScaleTransition(scale: anim, child: child),
-            ),
-            child: Icon(
-              isSelected ? item.activeIcon : item.icon,
-              key: ValueKey('${item.icon.codePoint}_$isSelected'),
-              size: isSelected ? 24 : 22,
-              color: isSelected ? activeColor : inactiveColor,
-            ),
-          ),
-          // Cart Badge giữ nguyên hoạt động thời gian thực
-          if (badgeCount > 0)
-            Positioned(
-              right: -8,
-              top: -6,
-              child: AnimatedScale(
-                scale: 1.0,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        AnimatedScale(
+          scale: isSelected ? 1.08 : 0.96,
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                      width: 1.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryRed.withValues(alpha: 0.5),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
-                  child: Text(
-                    badgeCount > 99 ? '99+' : '$badgeCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 8.5,
-                      fontWeight: FontWeight.w900,
-                      height: 1.1,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: ScaleTransition(scale: anim, child: child),
+                ),
+                child: Icon(
+                  isSelected ? item.activeIcon : item.icon,
+                  key: ValueKey('${item.icon.codePoint}_$isSelected'),
+                  size: isSelected ? 24 : 22,
+                  color: color,
                 ),
               ),
-            ),
-        ],
-      ),
+              // Cart Badge giữ nguyên hoạt động thời gian thực
+              if (badgeCount > 0)
+                Positioned(
+                  right: -8,
+                  top: -6,
+                  child: AnimatedScale(
+                    scale: 1.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: palette.primary,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: palette.surface, width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: palette.primary.withValues(alpha: 0.5),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        badgeCount > 99 ? '99+' : '$badgeCount',
+                        style: TextStyle(
+                          color: palette.onPrimary,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w900,
+                          height: 1.1,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 3),
+        // Nhãn ngắn dưới icon (đổi màu mượt theo trạng thái chọn)
+        AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          style: labelStyle,
+          child: Text(
+            item.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
     );
   }
 }

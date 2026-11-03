@@ -366,10 +366,10 @@
             </div>
           </div>
 
-          <!-- Chính sách ưu đãi của Trường Thanh -->
+          <!-- Chính sách ưu đãi của Trường Thành -->
           <div class="border border-slate-200 rounded-2xl p-5 bg-white space-y-4 shadow-xs">
             <h3 class="text-sm font-extrabold text-slate-800 tracking-wide">
-              Chính sách ưu đãi của Trường Thanh
+              Chính sách ưu đãi của Trường Thành
             </h3>
             <div class="divide-y divide-slate-100">
               <!-- Item 1: Vận chuyển -->
@@ -1241,7 +1241,7 @@ const activePolicy = ref<'delivery' | 'return' | 'wholesale' | null>(null)
 const policyDetails = {
   delivery: {
     title: 'Chính sách vận chuyển & giao hàng',
-    description: 'Trường Thanh Bookstore cam kết mang đến dịch vụ giao hàng nhanh chóng, an toàn và uy tín nhất cho khách hàng.',
+    description: 'Trường Thành Bookstore cam kết mang đến dịch vụ giao hàng nhanh chóng, an toàn và uy tín nhất cho khách hàng.',
     items: [
       {
         title: 'Giao hàng hỏa tốc',

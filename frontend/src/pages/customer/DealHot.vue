@@ -131,8 +131,9 @@ onUnmounted(() => {
 async function loadDealProducts() {
   loading.value = true;
   try {
-    const res = await productService.getAll({ discounted: true, limit: 100 });
-    dealProducts.value = res.data?.data || [];
+    const res: any = await productService.getAll({ discounted: true, limit: 100 });
+    // api.ts unwraps the envelope, so a paginated list arrives as res.data = [...]
+    dealProducts.value = Array.isArray(res.data) ? res.data : res.data?.data || [];
   } catch (err: any) {
     console.error('Error loading deal products:', err);
     toast.error('Lỗi khi tải danh sách sản phẩm deal hot');

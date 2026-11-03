@@ -28,8 +28,8 @@
           <p class="text-xs text-slate-500 mt-0.5">Đặt ngày: {{ formatDate(order.createdAt) }}</p>
         </div>
         <div class="flex items-center gap-2">
-          <span :class="['px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wide', getStatusBadgeStyle(order.orderStatus)]">
-            {{ getStatusLabel(order.orderStatus) }}
+          <span :class="['px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wide', getStatusToneClasses(order.orderStatus, 'order').badge]">
+            {{ getOrderStatusLabel(order.orderStatus) }}
           </span>
           <button 
             v-if="order.orderStatus === 'PENDING'"
@@ -44,9 +44,11 @@
             </svg>
             <span>{{ isCancelling ? 'Đang hủy...' : 'Hủy đơn' }}</span>
           </button>
-          <button 
-            v-if="order.orderStatus === 'DELIVERED'"
+          <!-- Return requests use an authenticated endpoint, so guests get a hint instead (below). -->
+          <button
+            v-if="canRequestReturn"
             type="button"
+            data-testid="request-return-btn"
             class="border border-amber-300 text-amber-700 hover:bg-amber-50 font-bold py-1.5 px-3 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
             @click="openReturnModal"
           >
@@ -71,6 +73,20 @@
 
       <!-- Content -->
       <div class="p-6 space-y-6">
+        <!-- Guest return hint -->
+        <div
+          v-if="isGuestOrder && order.orderStatus === 'DELIVERED'"
+          data-testid="guest-return-hint"
+          class="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200/80 rounded-2xl text-[11.5px] text-amber-800"
+        >
+          <span>ℹ️</span>
+          <p>
+            Cần đổi/trả hàng? Vui lòng
+            <router-link to="/login" class="font-bold underline hover:text-amber-900">đăng nhập</router-link>
+            bằng tài khoản đã đặt đơn hoặc liên hệ hotline <strong>0982938316</strong> để được hỗ trợ.
+          </p>
+        </div>
+
         <!-- Delivery & Payment Info -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-slate-50/70 border border-slate-100 rounded-2xl">
           <div class="space-y-2">
@@ -90,7 +106,7 @@
               <p><strong>Phương thức:</strong> {{ getPaymentMethodLabel(order.paymentMethod) }}</p>
               <div class="flex items-center gap-2 py-0.5">
                 <strong>Trạng thái thanh toán:</strong>
-                <span :class="['px-2.5 py-0.5 rounded-full text-[11px] font-bold border', getPaymentStatusBadgeStyle(order.paymentStatus)]">
+                <span :class="['px-2.5 py-0.5 rounded-full text-[11px] font-bold', getStatusToneClasses(order.paymentStatus || 'UNPAID', 'payment').badge]">
                   {{ getPaymentStatusLabel(order.paymentStatus) }}
                 </span>
               </div>
@@ -211,7 +227,7 @@
               </span>
               <div class="space-y-0.5">
                 <span class="text-xs font-black text-slate-800 uppercase">
-                  {{ getStatusLabel(time.status) }}
+                  {{ getOrderStatusLabel(time.status) }}
                 </span>
                 <span class="text-[10px] text-slate-400 font-medium block">
                   {{ formatDate(time.createdAt) }}
@@ -359,7 +375,14 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { orderService } from '@/services/order.service'
-import { formatCurrency, formatDate, getStatusLabel } from '@/utils/helpers'
+import {
+  formatCurrency,
+  formatDate,
+  getOrderStatusLabel,
+  getPaymentMethodLabel,
+  getPaymentStatusLabel,
+  getStatusToneClasses,
+} from '@/utils/helpers'
 import type { Order } from '@/types'
 import { computed } from 'vue'
 import { useToast } from 'vue-toastification'
@@ -400,38 +423,8 @@ const order = ref<Order | any | null>(null)
 const loading = ref(true)
 const error = ref('')
 
-function getPaymentMethodLabel(method: string) {
-  switch (method) {
-    case 'COD': return 'Thanh toán khi nhận hàng (COD)'
-    case 'BANK_TRANSFER': return 'Chuyển khoản ngân hàng'
-    case 'VNPAY': return 'Cổng thanh toán VNPay'
-    case 'MOMO': return 'Ví điện tử MoMo'
-    case 'EWALLET': return 'Ví điện tử'
-    default: return method || 'Chưa xác định'
-  }
-}
-
-function getPaymentStatusLabel(status: string) {
-  switch (status) {
-    case 'PAID': return 'Đã thanh toán'
-    case 'UNPAID':
-    case 'PENDING': return 'Chưa thanh toán'
-    case 'FAILED': return 'Thanh toán thất bại'
-    case 'REFUNDED': return 'Đã hoàn tiền'
-    default: return status || 'Chưa thanh toán'
-  }
-}
-
-function getPaymentStatusBadgeStyle(status: string) {
-  switch (status) {
-    case 'PAID': return 'bg-green-50 text-green-700 border-green-200'
-    case 'UNPAID':
-    case 'PENDING': return 'bg-amber-50 text-amber-700 border-amber-200'
-    case 'FAILED': return 'bg-red-50 text-red-700 border-red-200'
-    case 'REFUNDED': return 'bg-purple-50 text-purple-700 border-purple-200'
-    default: return 'bg-slate-50 text-slate-700 border-slate-200'
-  }
-}
+// Only signed-in customers can call POST /orders/:id/return (JWT-only).
+const canRequestReturn = computed(() => !isGuestOrder.value && order.value?.orderStatus === 'DELIVERED')
 
 async function handleRetryOnlinePayment() {
   if (!order.value || isRetryingPayment.value) return
@@ -457,22 +450,6 @@ async function handleRetryOnlinePayment() {
   }
 }
 
-function getStatusBadgeStyle(status: string) {
-  switch (status) {
-    case 'PENDING': return 'bg-amber-100 text-amber-800'
-    case 'CONFIRMED': return 'bg-blue-100 text-blue-800'
-    case 'PROCESSING': return 'bg-orange-100 text-orange-800'
-    case 'SHIPPING': return 'bg-purple-100 text-purple-800'
-    case 'DELIVERED':
-    case 'COMPLETED': return 'bg-green-100 text-green-800'
-    case 'RETURN_REQUESTED': return 'bg-amber-100 text-amber-800'
-    case 'RETURN_APPROVED': return 'bg-sky-100 text-sky-800'
-    case 'RETURNED': return 'bg-fuchsia-100 text-fuchsia-800'
-    case 'CANCELLED': return 'bg-red-100 text-red-800'
-    default: return 'bg-slate-100 text-slate-600'
-  }
-}
-
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const isDownloadingInvoice = ref(false)
@@ -491,13 +468,14 @@ const isOverSevenDays = computed(() => {
 })
 
 function openReturnModal() {
+  if (!canRequestReturn.value) return
   returnDetailReason.value = ''
   returnOverrideToken.value = ''
   showReturnModal.value = true
 }
 
 async function submitReturnRequest() {
-  if (isRequestingReturn.value || !order.value || !returnDetailReason.value.trim()) return
+  if (isRequestingReturn.value || !order.value || !canRequestReturn.value || !returnDetailReason.value.trim()) return
   isRequestingReturn.value = true
   const fullReason = `${returnCategory.value}: ${returnDetailReason.value.trim()}`
   try {
@@ -542,7 +520,11 @@ async function handleCancelOrder() {
   if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return
   isCancelling.value = true
   try {
-    await orderService.cancel(order.value._id)
+    if (isGuestOrder.value) {
+      await orderService.cancelGuest(order.value._id, guestAccessToken.value)
+    } else {
+      await orderService.cancel(order.value._id)
+    }
     toast.success('Hủy đơn hàng thành công')
     order.value.orderStatus = 'CANCELLED'
   } catch (err: any) {

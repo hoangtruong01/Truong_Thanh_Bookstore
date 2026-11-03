@@ -100,3 +100,10 @@ test('smoke-test: evaluateHealth matches 7-char short SHA with 40-char full SHA 
   assert.equal(evalResult2.isPassed, true);
   assert.equal(evalResult2.releaseMatches, true);
 });
+
+test('smoke-test (TASK-004): accepts any SHA from a comma-separated release list', () => {
+  const body = { data: { status: 'UP', database: { status: 'HEALTHY' }, release: 'b7e2c91aaaa' } };
+  assert.equal(evaluateHealth(200, body, 'a1b2c3d4eeee,b7e2c91aaaa').releaseMatches, true);
+  assert.equal(evaluateHealth(200, body, 'a1b2c3d4eeee, b7e2c91').releaseMatches, true);
+  assert.equal(evaluateHealth(200, body, 'a1b2c3d4eeee,c0ffee12aaaa').releaseMatches, false);
+});

@@ -6,6 +6,9 @@ import { Product } from '../products/schemas/product.schema';
 import { Promotion } from '../promotions/schemas/promotion.schema';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProductStatus, DiscountType } from '../../common/enums';
+import { validate } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
+import { SyncCartDto } from './dto/cart.dto';
 
 interface MockCartItem {
   product?: string;
@@ -411,6 +414,165 @@ describe('CartService Unit Tests', () => {
       expect(userCart.appliedVoucher?.code).toBe('FREESHIP50');
       expect(userCart.discountAmount).toBe(50000);
       expect(userCart.totalPrice).toBe(250000);
+    });
+  });
+
+  describe('syncCart', () => {
+    const products: Record<string, Record<string, unknown> | null> = {
+      [validProductId]: mockProduct,
+      [validProductId2]: {
+        ...mockProduct,
+        _id: validProductId2,
+        name: 'Vở Campus',
+        price: 20000,
+        discountPrice: 0,
+        stock: 3,
+      },
+    };
+
+    const buildCart = (items: MockCartItem[]): MockCart => ({
+      _id: '507f1f77bcf86cd799439099',
+      user: validUserId,
+      items,
+      subtotal: 0,
+      shippingFee: 0,
+      discountAmount: 0,
+      totalPrice: 0,
+      save: jest.fn().mockImplementation(function (this: MockCart) {
+        return Promise.resolve(this);
+      }) as jest.Mock<Promise<MockCart>>,
+    });
+
+    const useCart = (cart: MockCart) => {
+      mockCartModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(cart),
+      });
+      mockCartModel.findById.mockReturnValue(createMockQuery(cart));
+    };
+
+    beforeEach(() => {
+      mockProductModel.findById.mockImplementation((id: string) => ({
+        exec: jest.fn().mockResolvedValue(products[id] ?? null),
+      }));
+    });
+
+    it('merge (default, backward compatible): adds quantities and keeps server-only items', async () => {
+      const cart = buildCart([
+        {
+          product: validProductId,
+          price: 35000,
+          discountPrice: 30000,
+          quantity: 2,
+        },
+        { product: validProductId2, price: 20000, quantity: 1 },
+      ]);
+      useCart(cart);
+
+      await cartService.syncCart(validUserId, {
+        items: [{ productId: validProductId, quantity: 3 }],
+      });
+
+      expect(cart.items).toHaveLength(2);
+      expect(cart.items[0].quantity).toBe(5);
+      expect(cart.items[1].quantity).toBe(1);
+    });
+
+    it('merge caps the summed quantity at stock', async () => {
+      const cart = buildCart([
+        { product: validProductId2, price: 20000, quantity: 2 },
+      ]);
+      useCart(cart);
+
+      await cartService.syncCart(validUserId, {
+        items: [{ productId: validProductId2, quantity: 2 }],
+        mode: 'merge',
+      });
+
+      expect(cart.items[0].quantity).toBe(3);
+    });
+
+    it('replace: sets quantities from the payload and removes server items missing from it', async () => {
+      const cart = buildCart([
+        {
+          product: validProductId,
+          price: 35000,
+          discountPrice: 30000,
+          quantity: 2,
+        },
+        { product: validProductId2, price: 20000, quantity: 1 },
+      ]);
+      useCart(cart);
+
+      await cartService.syncCart(validUserId, {
+        items: [{ productId: validProductId, quantity: 3 }],
+        mode: 'replace',
+      });
+
+      expect(cart.items).toHaveLength(1);
+      expect(String(cart.items[0].product)).toBe(validProductId);
+      expect(cart.items[0].quantity).toBe(3);
+      expect(cart.subtotal).toBe(90000);
+    });
+
+    it('replace is idempotent: repeated syncs never double quantities (Cart page remount bug)', async () => {
+      const cart = buildCart([]);
+      useCart(cart);
+      const payload = {
+        items: [
+          { productId: validProductId, quantity: 2 },
+          { productId: validProductId2, quantity: 1 },
+        ],
+        mode: 'replace' as const,
+      };
+
+      await cartService.syncCart(validUserId, payload);
+      await cartService.syncCart(validUserId, payload);
+      await cartService.syncCart(validUserId, payload);
+
+      expect(cart.items.map((item) => item.quantity)).toEqual([2, 1]);
+    });
+
+    it('replace caps at stock and drops payload lines that are no longer available', async () => {
+      const unavailableId = '507f1f77bcf86cd799439014';
+      products[unavailableId] = {
+        ...mockProduct,
+        _id: unavailableId,
+        stock: 0,
+      };
+      const cart = buildCart([
+        { product: unavailableId, price: 35000, quantity: 1 },
+      ]);
+      useCart(cart);
+
+      await cartService.syncCart(validUserId, {
+        items: [
+          { productId: validProductId2, quantity: 10 },
+          { productId: unavailableId, quantity: 1 },
+        ],
+        mode: 'replace',
+      });
+
+      expect(cart.items).toHaveLength(1);
+      expect(String(cart.items[0].product)).toBe(validProductId2);
+      expect(cart.items[0].quantity).toBe(3);
+      delete products[unavailableId];
+    });
+
+    it('SyncCartDto validates mode and caps the number of lines', async () => {
+      const item = { productId: validProductId, quantity: 1 };
+      const errorsFor = async (payload: Record<string, unknown>) =>
+        validate(plainToInstance(SyncCartDto, payload));
+
+      expect(await errorsFor({ items: [item] })).toHaveLength(0);
+      expect(await errorsFor({ items: [item], mode: 'replace' })).toHaveLength(
+        0,
+      );
+      const badMode = await errorsFor({ items: [item], mode: 'overwrite' });
+      expect(badMode.map((error) => error.property)).toContain('mode');
+      const tooMany = await errorsFor({
+        items: Array.from({ length: 201 }, () => item),
+      });
+      expect(tooMany.map((error) => error.property)).toContain('items');
     });
   });
 });

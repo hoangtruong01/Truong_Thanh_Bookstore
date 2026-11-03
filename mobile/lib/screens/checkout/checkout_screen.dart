@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 import '../../core/constants/api_constants.dart';
+import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../providers/auth_provider.dart';
@@ -53,21 +52,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<void> _fetchUserAddresses() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
+    final api = Provider.of<ApiClient>(context, listen: false);
     if (!auth.isAuthenticated || auth.token == null) return;
 
     try {
-      final res = await http.get(
-        Uri.parse(ApiConstants.addresses),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${auth.token}',
-        },
-      );
+      final res = await api.get(ApiConstants.addresses, token: auth.token);
 
-
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        final list = (body['data'] ?? body) as List<dynamic>;
+      if (res.statusCode == 200 && mounted) {
+        final list = res.listData();
         setState(() {
           _addresses = list;
           if (_addresses.isNotEmpty) {
@@ -113,7 +105,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       );
 
       if (createdOrder != null && mounted) {
-        cart.clearCart();
+        // Only selected items were ordered; unselected ones stay in the cart.
+        cart.removeOrderedItems();
         final paymentAction = orderProv.lastPaymentAction;
         final paymentHint = paymentAction?['instructions'] ??
             (paymentAction?['redirectUrl'] != null

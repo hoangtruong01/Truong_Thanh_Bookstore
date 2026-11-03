@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/api_constants.dart';
+import '../core/network/api_client.dart';
 import '../screens/order/order_detail_screen.dart';
 
 class FcmNotificationService {
@@ -13,9 +13,9 @@ class FcmNotificationService {
   @visibleForTesting
   FcmNotificationService.forTesting({required http.Client client,
     required Future<String?> Function() tokenLoader})
-      : _client = client, _tokenLoader = tokenLoader;
+      : _api = ApiClient(httpClient: client), _tokenLoader = tokenLoader;
   static final FcmNotificationService instance = FcmNotificationService._internal();
-  http.Client? _client;
+  ApiClient? _api;
   Future<String?> Function()? _tokenLoader;
   String? Function()? _authTokenProvider;
   StreamSubscription<String>? _tokenSubscription;
@@ -45,6 +45,13 @@ class FcmNotificationService {
   void setAuthTokenProvider(String? Function() provider) {
     _authTokenProvider = provider;
   }
+
+  /// Shares the app's session-aware client (401 -> refresh -> retry).
+  void setApiClient(ApiClient client) {
+    _api = client;
+  }
+
+  ApiClient get _client => _api ??= ApiClient();
 
   GlobalKey<NavigatorState>? _navigatorKey;
   String? _fcmToken;
@@ -150,17 +157,15 @@ class FcmNotificationService {
     final token = await getDeviceToken();
     if (token == null || token.isEmpty) return;
     try {
-      await (_client?.patch ?? http.patch)(
-        Uri.parse('${ApiConstants.baseUrl}/notifications/device-token/unregister'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $authToken',
-        },
-        body: jsonEncode({
+      await _client.patch(
+        ApiConstants.unregisterDeviceToken,
+        token: authToken,
+        body: {
           'deviceToken': token,
           'platform': _platform,
-        }),
-      ).timeout(const Duration(seconds: 10));
+        },
+        timeout: const Duration(seconds: 10),
+      );
     } catch (e) {
       debugPrint('Failed to unregister device token: $e');
     }
@@ -169,18 +174,16 @@ class FcmNotificationService {
   /// Syncs FCM push token with backend server.
   Future<bool> syncTokenWithBackend(String token, String authToken) async {
     try {
-      final response = await (_client?.post ?? http.post)(
-        Uri.parse('${ApiConstants.baseUrl}/notifications/device-token'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $authToken',
-        },
-        body: jsonEncode({
+      final response = await _client.post(
+        ApiConstants.deviceToken,
+        token: authToken,
+        body: {
           'deviceToken': token,
           'platform': _platform,
-        }),
-      ).timeout(const Duration(seconds: 10));
-      return response.statusCode == 200 || response.statusCode == 201;
+        },
+        timeout: const Duration(seconds: 10),
+      );
+      return response.isSuccess;
     } catch (e) {
       debugPrint('Failed to sync device token with backend: $e');
       return false;

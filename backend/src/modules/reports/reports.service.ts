@@ -10,6 +10,7 @@ import {
   OrderSource,
   OrderStatus,
   PaymentMethod,
+  PaymentStatus,
   InventoryTransactionType,
 } from '../../common/enums';
 import {
@@ -226,10 +227,13 @@ export class ReportsService {
 
     // 1. Lấy dữ liệu từ kênh Online (nếu channel không giới hạn chỉ POS hoặc WHOLESALE)
     if (channel !== 'POS' && channel !== 'WHOLESALE') {
-      const onlineRows = await this.ordersService.getRevenueByDateRange(
-        start,
-        end,
-      );
+      // BUG-012: WEB/MOBILE phải lọc theo orderSource, ALL giữ nguyên luồng cũ
+      const onlineRows =
+        channel === 'WEB'
+          ? await this.aggregateOnlineRevenue(start, end, OrderSource.WEB)
+          : channel === 'MOBILE'
+            ? await this.aggregateOnlineRevenue(start, end, OrderSource.MOBILE)
+            : await this.ordersService.getRevenueByDateRange(start, end);
       for (const row of onlineRows) {
         const rowCogs = row.cogs || 0;
         const rowTotal = row.total || 0;
@@ -307,6 +311,94 @@ export class ReportsService {
     return Array.from(dateMap.values()).sort((a, b) =>
       a._id.localeCompare(b._id),
     );
+  }
+
+  /**
+   * BUG-012: Doanh thu đã ghi nhận của kênh Online theo từng ngày, lọc theo orderSource.
+   * Đang sao chép điều kiện $match và $group của OrdersService.getRevenueByDateRange
+   * (getRealizedRevenueMatch + getRevenueDateMatch). Cần gộp về một nơi ở TASK-017.
+   * Kênh WEB tính cả đơn cũ chưa có trường orderSource (null/thiếu field).
+   */
+  private async aggregateOnlineRevenue(
+    start: Date,
+    end: Date,
+    orderSource: OrderSource.WEB | OrderSource.MOBILE,
+  ): Promise<any[]> {
+    if (!this.orderModel) return [];
+
+    const range = { $gte: start, $lte: end };
+    return this.orderModel.aggregate([
+      {
+        $match: {
+          orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+          $or: [
+            { paymentStatus: PaymentStatus.PAID },
+            {
+              orderStatus: {
+                $in: [OrderStatus.DELIVERED, OrderStatus.COMPLETED],
+              },
+            },
+          ],
+          $and: [
+            {
+              $or: [
+                { revenueRecognizedAt: range },
+                {
+                  revenueRecognizedAt: { $exists: false },
+                  createdAt: range,
+                },
+              ],
+            },
+          ],
+          orderSource:
+            orderSource === OrderSource.WEB
+              ? { $in: [OrderSource.WEB, null] }
+              : OrderSource.MOBILE,
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: '%Y-%m-%d',
+              date: { $ifNull: ['$revenueRecognizedAt', '$createdAt'] },
+              timezone: 'Asia/Ho_Chi_Minh',
+            },
+          },
+          total: { $sum: '$total' },
+          subtotal: { $sum: '$subtotal' },
+          discount: {
+            $sum: {
+              $add: [
+                { $ifNull: ['$discount', 0] },
+                { $ifNull: ['$loyaltyDiscount', 0] },
+              ],
+            },
+          },
+          cogs: {
+            $sum: {
+              $reduce: {
+                input: { $ifNull: ['$items', []] },
+                initialValue: 0,
+                in: {
+                  $add: [
+                    '$$value',
+                    {
+                      $multiply: [
+                        { $ifNull: ['$$this.costPrice', 0] },
+                        { $ifNull: ['$$this.quantity', 0] },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
   }
 
   async getBestSellingProducts(limit = 10) {

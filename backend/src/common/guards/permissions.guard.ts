@@ -18,11 +18,6 @@ export class PermissionsGuard implements CanActivate {
       (StaffPermission | string)[]
     >(PERMISSIONS_KEY, [context.getHandler(), context.getClass()]);
 
-    // No permissions required — allow access
-    if (!requiredPermissions || requiredPermissions.length === 0) {
-      return true;
-    }
-
     const { user } = context.switchToHttp().getRequest();
     if (!user) {
       throw new UnauthorizedException('Bạn chưa đăng nhập');
@@ -40,6 +35,12 @@ export class PermissionsGuard implements CanActivate {
       user.role === 'ADMIN'
     ) {
       return true;
+    }
+
+    // Deny-by-default: a route guarded without @Permissions is admin-only,
+    // so a forgotten decorator can never open the route to STAFF/CUSTOMER.
+    if (!requiredPermissions || requiredPermissions.length === 0) {
+      throw new ForbiddenException('Bạn không có quyền truy cập chức năng này');
     }
 
     // STAFF must have at least one of the required permissions

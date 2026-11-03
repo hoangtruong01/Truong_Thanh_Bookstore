@@ -52,7 +52,11 @@ export class UsersController {
     summary: 'Tạo tài khoản nhân viên hoặc quản trị viên (Admin/SuperAdmin)',
   })
   async createStaff(@Body() dto: CreateStaffUserDto, @Request() req: any) {
-    return this.usersService.createStaffOrAdmin(dto, req.user.role);
+    return this.usersService.createStaffOrAdmin(
+      dto,
+      req.user.role,
+      req.user._id,
+    );
   }
 
   // ── Customer / Authenticated User Routes (Must be declared before :id) ──
@@ -128,6 +132,7 @@ export class UsersController {
   @Patch(':id/permissions')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
     summary: 'Cập nhật quyền cho tài khoản nhân viên (Admin/SuperAdmin)',
   })
@@ -140,6 +145,7 @@ export class UsersController {
       id,
       dto.permissions,
       req.user.role,
+      req.user._id,
     );
   }
 
@@ -166,6 +172,7 @@ export class UsersController {
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Xóa tài khoản người dùng (Admin/SuperAdmin)' })
   async deleteUser(@Param('id') id: string, @Request() req: any) {
     return this.usersService.deleteUser(id, req.user.role, req.user._id);

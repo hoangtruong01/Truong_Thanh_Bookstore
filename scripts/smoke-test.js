@@ -31,13 +31,18 @@ function evaluateHealth(statusCode, rawBody, expectedRel = '') {
   const isUp = payload?.status === 'UP';
   const isDbHealthy = payload?.database?.status === 'HEALTHY';
   const currentRelease = payload?.release || '';
-  const releaseMatches =
-    !expectedRel ||
-    currentRelease === expectedRel ||
-    (expectedRel.length >= 7 &&
+  // TASK-004: expectedRel may be a comma-separated list of acceptable SHAs.
+  const candidates = String(expectedRel || '')
+    .split(',')
+    .map((sha) => sha.trim())
+    .filter(Boolean);
+  const matchesOne = (sha) =>
+    currentRelease === sha ||
+    (sha.length >= 7 &&
       currentRelease.length >= 7 &&
-      (currentRelease.startsWith(expectedRel.slice(0, 7)) ||
-        expectedRel.startsWith(currentRelease.slice(0, 7))));
+      (currentRelease.startsWith(sha.slice(0, 7)) ||
+        sha.startsWith(currentRelease.slice(0, 7))));
+  const releaseMatches = candidates.length === 0 || candidates.some(matchesOne);
 
   return {
     isPassed: statusCode === 200 && isUp && isDbHealthy && releaseMatches,

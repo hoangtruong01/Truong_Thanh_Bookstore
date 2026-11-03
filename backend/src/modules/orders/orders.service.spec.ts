@@ -440,6 +440,350 @@ describe('ALL QA FIXES VERIFICATION SUITE', () => {
     });
   });
 
+  describe('PRICING-CONTRACT: checkout preview is the single pricing source', () => {
+    const productWith = (overrides: Record<string, unknown>) => ({
+      ...mockProduct,
+      ...overrides,
+    });
+
+    it('returns full pricing without shippingAddress/phone (no placeholders needed)', async () => {
+      mockProductsService.findById.mockResolvedValueOnce(
+        productWith({ price: 50000 }),
+      );
+
+      const result = await ordersService.checkoutPreview({
+        items: [{ product: mockProduct._id, quantity: 2 }],
+      });
+
+      expect(result.subtotal).toBe(100000);
+      expect(result.shippingFee).toBe(30000);
+      expect(result.standardShippingFee).toBe(30000);
+      expect(result.total).toBe(130000);
+      expect(result.isValidForCheckout).toBe(true);
+      expect(result.unavailableItems).toEqual([]);
+      expect(result.promotionError).toBeNull();
+    });
+
+    it('ignores a client-sent item price: DB price wins in preview', async () => {
+      mockProductsService.findById.mockResolvedValueOnce(
+        productWith({ price: 100000, discountPrice: 80000 }),
+      );
+
+      const result = await ordersService.checkoutPreview({
+        items: [{ product: mockProduct._id, quantity: 2, price: 1 }],
+      });
+
+      expect(result.items[0].price).toBe(80000);
+      expect(result.items[0].originalPrice).toBe(100000);
+      expect(result.items[0].subtotal).toBe(160000);
+      expect(result.subtotal).toBe(160000);
+      expect(result.total).toBe(160000 + 30000);
+    });
+
+    it('ignores client price, shippingFee and discount when creating an order', async () => {
+      mockProductsService.findByIds.mockResolvedValueOnce([
+        productWith({ price: 120000 }),
+      ]);
+
+      const result = await ordersService.create({
+        items: [{ product: mockProduct._id, quantity: 2, price: 1 }],
+        shippingAddress: '123 Nguyễn Huệ, Q1, HCM',
+        phone: '0901234567',
+        paymentMethod: PaymentMethod.COD,
+        shippingFee: 0,
+        discount: 999999,
+      });
+
+      expect(result.items[0].price).toBe(120000);
+      expect(result.subtotal).toBe(240000);
+      expect(result.shippingFee).toBe(30000);
+      expect(result.discount).toBe(0);
+      expect(result.total).toBe(270000);
+    });
+
+    it.each([
+      { price: 298999, shippingFee: 30000, eligible: false, needed: 1 },
+      { price: 299000, shippingFee: 0, eligible: true, needed: 0 },
+    ])(
+      'free-ship boundary in preview: subtotal $price -> shipping $shippingFee',
+      async ({ price, shippingFee, eligible, needed }) => {
+        mockProductsService.findById.mockResolvedValueOnce(
+          productWith({ price }),
+        );
+
+        const result = await ordersService.checkoutPreview({
+          items: [{ product: mockProduct._id, quantity: 1 }],
+        });
+
+        expect(result.shippingFee).toBe(shippingFee);
+        expect(result.isEligibleForFreeShipping).toBe(eligible);
+        expect(result.amountNeededForFreeShipping).toBe(needed);
+        expect(result.standardShippingFee).toBe(30000);
+        // 100% chỉ khi thực sự được freeship
+        expect(result.freeShippingProgress).toBe(eligible ? 100 : 99);
+        expect(result.total).toBe(price + shippingFee);
+      },
+    );
+
+    it.each([
+      { price: 298999, shippingFee: 30000 },
+      { price: 299000, shippingFee: 0 },
+    ])(
+      'free-ship boundary in create: subtotal $price -> shipping $shippingFee',
+      async ({ price, shippingFee }) => {
+        mockProductsService.findByIds.mockResolvedValueOnce([
+          productWith({ price }),
+        ]);
+
+        const result = await ordersService.create({
+          items: [{ product: mockProduct._id, quantity: 1 }],
+          shippingAddress: '123 Nguyễn Huệ, Q1, HCM',
+          phone: '0901234567',
+          paymentMethod: PaymentMethod.COD,
+        });
+
+        expect(result.shippingFee).toBe(shippingFee);
+        expect(result.total).toBe(price + shippingFee);
+      },
+    );
+
+    it('reports freeShippingProgress as an integer percentage', async () => {
+      mockProductsService.findById.mockResolvedValueOnce(
+        productWith({ price: 149500 }),
+      );
+
+      const result = await ordersService.checkoutPreview({
+        items: [{ product: mockProduct._id, quantity: 1 }],
+      });
+
+      expect(result.freeShippingProgress).toBe(50);
+    });
+
+    it('lists dropped lines in unavailableItems and keeps requestedQuantity on capped lines', async () => {
+      const outOfStockId = '507f1f77bcf86cd799439012';
+      const missingId = '507f1f77bcf86cd799439013';
+      mockProductsService.findById
+        .mockResolvedValueOnce(productWith({ stock: 2 }))
+        .mockResolvedValueOnce(
+          productWith({ _id: outOfStockId, name: 'Vở hết hàng', stock: 0 }),
+        )
+        .mockResolvedValueOnce(null);
+
+      const result = await ordersService.checkoutPreview({
+        items: [
+          { product: mockProduct._id, quantity: 5 },
+          { product: outOfStockId, quantity: 1 },
+          { product: missingId, name: 'Sách cũ', quantity: 3 },
+        ],
+      });
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].quantity).toBe(2);
+      expect(result.items[0].requestedQuantity).toBe(5);
+      expect(result.unavailableItems).toEqual([
+        {
+          product: outOfStockId,
+          name: 'Vở hết hàng',
+          reason: 'OUT_OF_STOCK',
+          stock: 0,
+          requestedQuantity: 1,
+        },
+        {
+          product: missingId,
+          name: 'Sách cũ',
+          reason: 'UNAVAILABLE',
+          stock: 0,
+          requestedQuantity: 3,
+        },
+      ]);
+      expect(result.subtotal).toBe(10000);
+      expect(result.isValidForCheckout).toBe(false);
+    });
+
+    it('exposes promotionError and applies no discount when the voucher is rejected', async () => {
+      mockProductsService.findById.mockResolvedValueOnce(
+        productWith({ price: 100000 }),
+      );
+      mockPromotionsService.apply.mockRejectedValueOnce(
+        new BadRequestException('Mã giảm giá đã hết hạn'),
+      );
+
+      const result = await ordersService.checkoutPreview({
+        items: [{ product: mockProduct._id, quantity: 1 }],
+        promotionCode: 'EXPIRED',
+      });
+
+      expect(result.promotionError).toBe('Mã giảm giá đã hết hạn');
+      expect(result.warnings).toContain('Mã giảm giá đã hết hạn');
+      expect(result.discount).toBe(0);
+      expect(result.appliedPromotion).toBeNull();
+      expect(result.total).toBe(130000);
+    });
+
+    describe('loyalty', () => {
+      it('returns the loyalty object and applies a valid redemption for an authenticated user', async () => {
+        mockProductsService.findById.mockResolvedValueOnce(
+          productWith({ price: 1000000 }),
+        );
+        mockUsersService.findById.mockResolvedValueOnce({
+          loyaltyPoints: 1500,
+        });
+
+        const result = await ordersService.checkoutPreview(
+          {
+            items: [{ product: mockProduct._id, quantity: 1 }],
+            loyaltyPointsUsed: 1000,
+          },
+          mockUserId,
+        );
+
+        expect(mockUsersService.findById).toHaveBeenCalledWith(mockUserId);
+        expect(result.loyalty).toEqual({
+          availablePoints: 1500,
+          minRedeemPoints: 1000,
+          pointValue: 100,
+          maxRedeemPercent: 20,
+          // cap = floor(1.000.000 × 20%) / 100 = 2000 điểm, giới hạn bởi số dư 1500
+          maxRedeemablePoints: 1500,
+          minSubtotalToRedeem: 500000,
+          canRedeem: true,
+          requestedPoints: 1000,
+          appliedPoints: 1000,
+          error: null,
+        });
+        expect(result.loyaltyDiscount).toBe(100000);
+        expect(result.total).toBe(900000);
+        expect(result.isValidForCheckout).toBe(true);
+      });
+
+      it('returns loyalty info with zero redemption when no points are requested', async () => {
+        mockProductsService.findById.mockResolvedValueOnce(
+          productWith({ price: 100000 }),
+        );
+        mockUsersService.findById.mockResolvedValueOnce({
+          loyaltyPoints: 5000,
+        });
+
+        const result = await ordersService.checkoutPreview(
+          { items: [{ product: mockProduct._id, quantity: 1 }] },
+          mockUserId,
+        );
+
+        expect(result.loyalty?.availablePoints).toBe(5000);
+        expect(result.loyalty?.maxRedeemablePoints).toBe(200);
+        expect(result.loyalty?.canRedeem).toBe(false);
+        expect(result.loyalty?.requestedPoints).toBe(0);
+        expect(result.loyalty?.appliedPoints).toBe(0);
+        expect(result.loyaltyDiscount).toBe(0);
+        expect(result.warnings).toEqual([]);
+      });
+
+      it('rejects (no discount) points above the current balance', async () => {
+        mockProductsService.findById.mockResolvedValueOnce(
+          productWith({ price: 1000000 }),
+        );
+        mockUsersService.findById.mockResolvedValueOnce({
+          loyaltyPoints: 1500,
+        });
+
+        const result = await ordersService.checkoutPreview(
+          {
+            items: [{ product: mockProduct._id, quantity: 1 }],
+            loyaltyPointsUsed: 1600,
+          },
+          mockUserId,
+        );
+
+        expect(result.loyaltyDiscount).toBe(0);
+        expect(result.loyalty?.error).toBe('Vượt quá số điểm hiện có.');
+        expect(result.loyalty?.appliedPoints).toBe(0);
+        expect(result.warnings).toContain('Vượt quá số điểm hiện có.');
+        expect(result.total).toBe(1000000);
+        expect(result.isValidForCheckout).toBe(false);
+      });
+
+      it('rejects (does not clamp) points above the 20% cap, matching order creation', async () => {
+        mockProductsService.findById.mockResolvedValueOnce(
+          productWith({ price: 100000 }),
+        );
+        mockUsersService.findById.mockResolvedValueOnce({
+          loyaltyPoints: 5000,
+        });
+
+        const result = await ordersService.checkoutPreview(
+          {
+            items: [{ product: mockProduct._id, quantity: 1 }],
+            loyaltyPointsUsed: 1000,
+          },
+          mockUserId,
+        );
+
+        expect(result.loyaltyDiscount).toBe(0);
+        expect(result.loyalty?.error).toContain('vượt quá hạn mức tối đa');
+        expect(result.total).toBe(130000);
+        expect(result.isValidForCheckout).toBe(false);
+      });
+
+      it('rejects points below the 1,000 minimum', async () => {
+        mockProductsService.findById.mockResolvedValueOnce(
+          productWith({ price: 1000000 }),
+        );
+        mockUsersService.findById.mockResolvedValueOnce({
+          loyaltyPoints: 5000,
+        });
+
+        const result = await ordersService.checkoutPreview(
+          {
+            items: [{ product: mockProduct._id, quantity: 1 }],
+            loyaltyPointsUsed: 500,
+          },
+          mockUserId,
+        );
+
+        expect(result.loyaltyDiscount).toBe(0);
+        expect(result.loyalty?.error).toBe(
+          'Mức tiêu điểm tối thiểu là 1.000 điểm.',
+        );
+      });
+
+      it('treats an unreadable balance as 0 instead of failing the preview', async () => {
+        mockProductsService.findById.mockResolvedValueOnce(
+          productWith({ price: 1000000 }),
+        );
+        mockUsersService.findById.mockRejectedValueOnce(
+          new Error('db unavailable'),
+        );
+
+        const result = await ordersService.checkoutPreview(
+          { items: [{ product: mockProduct._id, quantity: 1 }] },
+          mockUserId,
+        );
+
+        expect(result.loyalty?.availablePoints).toBe(0);
+        expect(result.loyalty?.maxRedeemablePoints).toBe(0);
+        expect(result.total).toBe(1000000);
+      });
+
+      it('returns loyalty: null for guests and never reads a user', async () => {
+        mockProductsService.findById.mockResolvedValueOnce(
+          productWith({ price: 1000000 }),
+        );
+
+        const result = await ordersService.checkoutPreview({
+          items: [{ product: mockProduct._id, quantity: 1 }],
+          loyaltyPointsUsed: 1000,
+        });
+
+        expect(result.loyalty).toBeNull();
+        expect(result.loyaltyDiscount).toBe(0);
+        expect(mockUsersService.findById).not.toHaveBeenCalled();
+        expect(result.warnings).toContain(
+          'Chỉ khách hàng có tài khoản mới có thể sử dụng điểm thưởng Loyalty.',
+        );
+      });
+    });
+  });
+
   describe('Task 17: Strict order lifecycle', () => {
     it('rejects a transition that skips required lifecycle steps', async () => {
       mockOrderModel.findById.mockReturnValueOnce({

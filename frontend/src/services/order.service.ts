@@ -1,7 +1,12 @@
 import api from '@/utils/api'
+import type { CheckoutPreviewRequest, CheckoutPreviewResponse, PricingPolicy } from '@/types'
 
 export const orderService = {
-  checkoutPreview: (data: any) => api.post('/orders/checkout-preview', data),
+  checkoutPreview: (data: CheckoutPreviewRequest) =>
+    api.post<CheckoutPreviewResponse>('/orders/checkout-preview', data),
+  // Display-only policy for screens without a preview (empty cart, banners). Optional, so no global toast.
+  getPricingPolicy: () =>
+    api.get<PricingPolicy>('/orders/pricing-policy', { skipGlobalErrorHandler: true }),
   create: (data: any) => api.post('/orders', data),
   createAuthenticated: (data: any) => api.post('/orders/authenticated', data),
   getAll: (params?: any) => api.get('/orders', { params }),

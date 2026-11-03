@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
@@ -41,7 +42,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           const SnackBar(content: Text('Yêu cầu gửi mã OTP thành công!')),
         );
         setState(() {
-          _devOtp = res['otp'] ?? '';
+          // Dev-only helper: never surface an OTP from the API in release builds
+          _devOtp = kDebugMode ? (res['otp'] ?? '') : '';
           _step = 2;
         });
       }
@@ -146,7 +148,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                 ),
               ] else ...[
-                if (_devOtp.isNotEmpty) ...[
+                if (kDebugMode && _devOtp.isNotEmpty) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
                     width: double.infinity,

@@ -1,16 +1,19 @@
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/constants/api_constants.dart';
+import '../core/network/api_client.dart';
 import '../models/order_model.dart';
 import '../models/cart_item_model.dart';
 
 class OrderProvider with ChangeNotifier {
-  OrderProvider({http.Client? client, FlutterSecureStorage? storage})
-      : _client = client, _storage = storage ?? const FlutterSecureStorage();
-  final http.Client? _client;
+  OrderProvider({ApiClient? apiClient, http.Client? client, FlutterSecureStorage? storage})
+      : _api = apiClient ?? ApiClient(httpClient: client),
+        _ownsApi = apiClient == null,
+        _storage = storage ?? const FlutterSecureStorage();
+  final ApiClient _api;
+  final bool _ownsApi;
   final FlutterSecureStorage _storage;
   bool _disposed = false;
 
@@ -22,6 +25,7 @@ class OrderProvider with ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    if (_ownsApi) _api.close();
     super.dispose();
   }
   String _guestTokenKey(String orderId) => 'guest_order_token_$orderId';
@@ -56,13 +60,18 @@ class OrderProvider with ChangeNotifier {
     String? token,
   }) async {
     if (_placingOrder) throw StateError('Đơn hàng đang được xử lý');
+    // Only checked-out (selected) items are ordered, matching CartProvider.subtotal.
+    final selectedItems = items.where((i) => i.selected).toList();
+    if (items.isNotEmpty && selectedItems.isEmpty) {
+      throw Exception('Vui lòng chọn ít nhất một sản phẩm để đặt hàng');
+    }
     _placingOrder = true;
     _isLoading = true;
     notifyListeners();
 
     try {
       _pendingIdempotencyKey ??= _newIdempotencyKey();
-      final orderItems = items.map((i) => {
+      final orderItems = selectedItems.map((i) => {
         'product': i.product.id,
         'name': i.product.name,
         'price': i.product.effectivePrice,
@@ -85,20 +94,11 @@ class OrderProvider with ChangeNotifier {
       final isAuth = token != null && token.isNotEmpty;
       final url = isAuth ? ApiConstants.authenticatedOrders : ApiConstants.orders;
 
-      final response = await (_client?.post ?? http.post)(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          if (isAuth) 'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(payload),
-      );
+      final response = await _api.post(url, token: isAuth ? token : null, body: payload);
 
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final order = OrderModel.fromJson(body['data']);
-        final guestToken = body['data']['guestAccessToken'];
+      if (response.isSuccess) {
+        final order = OrderModel.fromJson(response.mapData);
+        final guestToken = response.mapData['guestAccessToken'];
         if (!isAuth && guestToken is String && guestToken.isNotEmpty) {
           await _storage.write(key: _guestTokenKey(order.id), value: guestToken);
         }
@@ -106,20 +106,16 @@ class OrderProvider with ChangeNotifier {
         _lastPaymentAction = null;
         if (isAuth && paymentMethod != 'COD') {
           try {
-            final paymentResponse = await (_client?.post ?? http.post)(
-              Uri.parse(ApiConstants.payments),
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer $token',
-              },
-              body: jsonEncode({
+            final paymentResponse = await _api.post(
+              ApiConstants.payments,
+              token: token,
+              body: {
                 'orderId': order.id,
                 'provider': paymentMethod,
-              }),
+              },
             );
-            if (paymentResponse.statusCode == 200 || paymentResponse.statusCode == 201) {
-              final paymentBody = jsonDecode(paymentResponse.body);
-              final paymentData = paymentBody['data'];
+            if (paymentResponse.isSuccess) {
+              final paymentData = paymentResponse.data;
               if (paymentData is Map && paymentData['action'] is Map) {
                 _lastPaymentAction = Map<String, dynamic>.from(paymentData['action']);
               }
@@ -130,7 +126,7 @@ class OrderProvider with ChangeNotifier {
         }
         return order;
       } else {
-        throw Exception(body['message'] ?? 'Đặt hàng thất bại');
+        throw Exception(response.message ?? 'Đặt hàng thất bại');
       }
     } finally {
       _placingOrder = false;
@@ -144,21 +140,10 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await (_client?.get ?? http.get)(
-        Uri.parse(ApiConstants.myOrders),
-        headers: {'Authorization': 'Bearer $token'},
-      );
+      final response = await _api.get(ApiConstants.myOrders, token: token);
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        dynamic dataField = body['data'];
-        List rawList = [];
-        if (dataField is List) {
-          rawList = dataField;
-        } else if (dataField is Map && dataField['data'] is List) {
-          rawList = dataField['data'];
-        }
-        _myOrders = rawList.map((item) => OrderModel.fromJson(item)).toList();
+        _myOrders = response.listData().map((item) => OrderModel.fromJson(item)).toList();
       }
     } catch (e) {
       debugPrint('Error fetching my orders: $e');
@@ -199,10 +184,11 @@ class OrderProvider with ChangeNotifier {
       final guestToken = await _storage.read(key: _guestTokenKey(orderId));
       if ((guestToken == null || guestToken.isEmpty) && (token == null || token.isEmpty)) return false;
       final isGuest = guestToken != null && guestToken.isNotEmpty;
-      final response = await (_client?.delete ?? http.delete)(
-        Uri.parse('${ApiConstants.orders}/${isGuest ? 'guest/' : ''}$orderId'),
-        headers: isGuest ? {'x-guest-order-token': guestToken} : {'Authorization': 'Bearer $token'},
-      );
+      // Guest capability and account bearer are never sent together.
+      final response = isGuest
+          ? await _api.delete(ApiConstants.guestOrder(orderId),
+              headers: {'x-guest-order-token': guestToken})
+          : await _api.delete(ApiConstants.order(orderId), token: token);
 
       if (response.statusCode == 200) {
         if (isGuest) {
@@ -223,24 +209,13 @@ class OrderProvider with ChangeNotifier {
       final guestToken = await _storage.read(key: _guestTokenKey(orderId));
       final isGuest = guestToken != null && guestToken.isNotEmpty;
       if (!isGuest && (token == null || token.isEmpty)) return null;
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
-      if (isGuest) {
-        headers['x-guest-order-token'] = guestToken;
-      } else if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await (_client?.get ?? http.get)(
-        Uri.parse('${ApiConstants.orders}/${isGuest ? 'guest/' : ''}$orderId'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 15));
+      final response = isGuest
+          ? await _api.get(ApiConstants.guestOrder(orderId),
+              headers: {'x-guest-order-token': guestToken})
+          : await _api.get(ApiConstants.order(orderId), token: token);
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        final data = body['data'] ?? body;
-        return OrderModel.fromJson(data);
+        return OrderModel.fromJson(response.mapData);
       }
     } catch (e) {
       debugPrint('Error fetching order by id: $e');

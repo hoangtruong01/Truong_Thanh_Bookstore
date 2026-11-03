@@ -144,6 +144,88 @@ export interface Promotion {
   status: boolean
 }
 
+// Pricing contract shared by Cart and Checkout. Every money value below is computed by the
+// backend (POST /orders/checkout-preview); clients display them and never recompute them.
+export interface CheckoutPreviewRequestItem {
+  product: string
+  quantity: number
+}
+
+export interface CheckoutPreviewRequest {
+  items: CheckoutPreviewRequestItem[]
+  promotionCode?: string
+  loyaltyPointsUsed?: number
+  paymentMethod?: string
+  phone?: string
+  customerEmail?: string
+  shippingAddress?: string
+  landingPageId?: string
+}
+
+export interface CheckoutPreviewItem {
+  product: string
+  name: string
+  price: number
+  originalPrice: number
+  quantity: number
+  requestedQuantity?: number
+  stock: number
+  image?: string
+  subtotal: number
+}
+
+export interface CheckoutPreviewUnavailableItem {
+  product: string
+  name?: string
+  reason: 'UNAVAILABLE' | 'OUT_OF_STOCK'
+  stock?: number
+  requestedQuantity?: number
+}
+
+export interface CheckoutPreviewLoyalty {
+  availablePoints: number
+  minRedeemPoints: number
+  pointValue: number
+  maxRedeemPercent: number
+  maxRedeemablePoints: number
+  minSubtotalToRedeem: number
+  canRedeem: boolean
+  requestedPoints: number
+  appliedPoints: number
+  error: string | null
+}
+
+export interface CheckoutPreviewResponse {
+  items: CheckoutPreviewItem[]
+  unavailableItems?: CheckoutPreviewUnavailableItem[]
+  itemCount: number
+  subtotal: number
+  shippingFee: number
+  standardShippingFee?: number
+  freeShippingThreshold: number
+  isEligibleForFreeShipping: boolean
+  amountNeededForFreeShipping: number
+  freeShippingProgress?: number
+  discount: number
+  appliedPromotion: { code: string; discount: number } | null
+  promotionError?: string | null
+  loyaltyDiscount: number
+  loyalty?: CheckoutPreviewLoyalty | null
+  total: number
+  warnings: string[]
+  isValidForCheckout: boolean
+}
+
+export interface PricingPolicy {
+  freeShippingThreshold: number
+  shippingFee: number
+  loyalty: {
+    minRedeemPoints: number
+    pointValue: number
+    maxRedeemPercent: number
+  }
+}
+
 export interface Inventory {
   _id: string
   product: Product | string

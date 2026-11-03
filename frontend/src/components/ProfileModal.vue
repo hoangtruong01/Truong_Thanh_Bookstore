@@ -272,13 +272,15 @@ const initials = computed(() => {
 })
 
 const roleLabel = computed(() => {
-  if (form.value.role === 'ADMIN') return 'Super Admin'
+  // BUG-027: SUPER_ADMIN previously fell through to "Khách hàng"
+  if (form.value.role === 'SUPER_ADMIN') return 'Super Admin'
+  if (form.value.role === 'ADMIN') return 'Quản trị viên'
   if (form.value.role === 'STAFF') return 'Nhân viên'
   return 'Khách hàng'
 })
 
 const roleClass = computed(() => {
-  if (form.value.role === 'ADMIN') return 'bg-purple-600'
+  if (form.value.role === 'SUPER_ADMIN' || form.value.role === 'ADMIN') return 'bg-purple-600'
   if (form.value.role === 'STAFF') return 'bg-blue-600'
   return 'bg-emerald-600'
 })

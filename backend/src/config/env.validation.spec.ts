@@ -330,4 +330,60 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
       ).toThrow(/BANK_NAME/);
     });
   });
+
+  describe('TRUST_PROXY (BUG-011)', () => {
+    it('rejects TRUST_PROXY=true in production because it trusts client-supplied X-Forwarded-For', () => {
+      expect(() =>
+        validateEnv({ ...validProductionConfig, TRUST_PROXY: 'true' }),
+      ).toThrow(/TRUST_PROXY=true is not allowed in production/);
+      expect(() =>
+        validateEnv({ ...validProductionConfig, TRUST_PROXY: ' TRUE ' }),
+      ).toThrow(/TRUST_PROXY=true is not allowed in production/);
+    });
+
+    it('rejects TRUST_PROXY=true outside production too (boot would fail anyway)', () => {
+      expect(() =>
+        validateEnv({ ...validBaseConfig, TRUST_PROXY: 'true' }),
+      ).toThrow(/TRUST_PROXY=true/);
+    });
+
+    it('accepts a hop count of 1 in production (Render)', () => {
+      const result = validateEnv({
+        ...validProductionConfig,
+        TRUST_PROXY: '1',
+      });
+      expect(result.TRUST_PROXY).toBe('1');
+    });
+
+    it('accepts unset, false, named subnets and IP/CIDR lists', () => {
+      expect(validateEnv(validProductionConfig).TRUST_PROXY).toBeUndefined();
+      expect(
+        validateEnv({ ...validBaseConfig, TRUST_PROXY: 'false' }).TRUST_PROXY,
+      ).toBe('false');
+      expect(
+        validateEnv({
+          ...validBaseConfig,
+          TRUST_PROXY: 'loopback, 10.0.0.0/8',
+        }).TRUST_PROXY,
+      ).toBe('loopback, 10.0.0.0/8');
+    });
+
+    it.each(['yes', 'anything; rm -rf', '1;2', 'http://proxy'])(
+      'rejects garbage value %s at schema level',
+      (value) => {
+        expect(() =>
+          validateEnv({ ...validBaseConfig, TRUST_PROXY: value }),
+        ).toThrow(/TRUST_PROXY chỉ chấp nhận/);
+      },
+    );
+
+    it.each(['11', '10.0.0.0/33', '999.1.1.1'])(
+      'rejects well-shaped but invalid value %s',
+      (value) => {
+        expect(() =>
+          validateEnv({ ...validBaseConfig, TRUST_PROXY: value }),
+        ).toThrow(/TRUST_PROXY/);
+      },
+    );
+  });
 });

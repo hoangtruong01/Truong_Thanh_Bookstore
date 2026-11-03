@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/api_constants.dart';
+import '../../core/network/api_client.dart';
 import '../../providers/auth_provider.dart';
 
 class AddressBookScreen extends StatefulWidget {
@@ -26,20 +25,14 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
   Future<void> _fetchAddresses() async {
     setState(() => _isLoading = true);
     final auth = Provider.of<AuthProvider>(context, listen: false);
+    final api = Provider.of<ApiClient>(context, listen: false);
 
     try {
-      final res = await http.get(
-        Uri.parse(ApiConstants.addresses),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${auth.token}',
-        },
-      );
+      final res = await api.get(ApiConstants.addresses, token: auth.token);
 
-      final body = jsonDecode(res.body);
-      if (res.statusCode == 200) {
+      if (res.statusCode == 200 && mounted) {
         setState(() {
-          _addresses = body['data'] ?? body;
+          _addresses = res.listData();
         });
       }
     } catch (e) {
@@ -55,13 +48,9 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
 
   Future<void> _deleteAddress(String id) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
+    final api = Provider.of<ApiClient>(context, listen: false);
     try {
-      final res = await http.delete(
-        Uri.parse('${ApiConstants.addresses}/$id'),
-        headers: {
-          'Authorization': 'Bearer ${auth.token}',
-        },
-      );
+      final res = await api.delete(ApiConstants.address(id), token: auth.token);
       if (res.statusCode == 200 || res.statusCode == 201) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -81,13 +70,9 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
 
   Future<void> _setDefaultAddress(String id) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
+    final api = Provider.of<ApiClient>(context, listen: false);
     try {
-      final res = await http.put(
-        Uri.parse('${ApiConstants.addresses}/$id/default'),
-        headers: {
-          'Authorization': 'Bearer ${auth.token}',
-        },
-      );
+      final res = await api.put(ApiConstants.setDefaultAddress(id), token: auth.token);
       if (res.statusCode == 200 || res.statusCode == 201) {
         _fetchAddresses();
       }
@@ -213,6 +198,7 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
                           onPressed: () async {
                             if (!formKey.currentState!.validate()) return;
                             final auth = Provider.of<AuthProvider>(context, listen: false);
+                            final api = Provider.of<ApiClient>(context, listen: false);
 
                             final payload = {
                               'label': labelCtrl.text.trim(),
@@ -229,24 +215,18 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
                             final navigator = Navigator.of(ctx);
 
                             try {
-                              http.Response response;
+                              final ApiResponse response;
                               if (address == null) {
-                                response = await http.post(
-                                  Uri.parse(ApiConstants.addresses),
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': 'Bearer ${auth.token}',
-                                  },
-                                  body: jsonEncode(payload),
+                                response = await api.post(
+                                  ApiConstants.addresses,
+                                  token: auth.token,
+                                  body: payload,
                                 );
                               } else {
-                                response = await http.put(
-                                  Uri.parse('${ApiConstants.addresses}/${address['_id']}'),
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': 'Bearer ${auth.token}',
-                                  },
-                                  body: jsonEncode(payload),
+                                response = await api.put(
+                                  ApiConstants.address(address['_id'].toString()),
+                                  token: auth.token,
+                                  body: payload,
                                 );
                               }
 

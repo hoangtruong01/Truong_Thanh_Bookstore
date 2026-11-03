@@ -18,6 +18,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      # TASK-004: Render does not rebuild for commits that leave backend/ untouched,
+      # so the last commit that changed backend/ is also an acceptable live release.
+      - name: Resolve acceptable backend releases
+        id: release
+        run: |
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          BACKEND_SHA=$(git log -1 --format=%H "$HEAD_SHA" -- backend)
+          echo "expected=${HEAD_SHA},${BACKEND_SHA}" >> "$GITHUB_OUTPUT"
+          echo "Accepting backend release ${HEAD_SHA} or ${BACKEND_SHA}"
 
       - name: Trigger Render Deploy Hook (if configured)
         env:
@@ -33,10 +44,12 @@ jobs:
       - name: 🩺 Run Automated Smoke Test
         run: |
           chmod +x ./scripts/smoke-test.sh
-          MAX_ATTEMPTS=60 WAIT_SECONDS=10 ./scripts/smoke-test.sh "${{ secrets.BACKEND_PRODUCTION_URL || 'https://truong-thanh-bookstore.onrender.com' }}" "${{ github.event.workflow_run.head_sha }}"
+          MAX_ATTEMPTS=60 WAIT_SECONDS=10 ./scripts/smoke-test.sh "${{ secrets.BACKEND_PRODUCTION_URL || 'https://truong-thanh-bookstore.onrender.com' }}" "${{ steps.release.outputs.expected }}"
 
   deploy-frontend:
     name: Deploy Frontend to Vercel
+    # TASK-004 (BUG-002): never ship a frontend whose backend failed to go live.
+    needs: deploy-backend
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository }}
     runs-on: ubuntu-latest
     steps:
