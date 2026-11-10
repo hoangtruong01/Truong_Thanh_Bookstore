@@ -16,3 +16,8 @@ export class StockAlert {
 }
 
 export const StockAlertSchema = SchemaFactory.createForClass(StockAlert);
+
+// Phục vụ: findOne({product, email}) khi đăng ký nhận báo hàng về, và find/deleteMany({product})
+// khi gửi thông báo (dùng tiền tố `product` của index). Không đặt unique: code chỉ kiểm tra
+// check-then-insert (có thể đã có bản ghi trùng do race), unique sẽ làm build index thất bại.
+StockAlertSchema.index({ product: 1, email: 1 });

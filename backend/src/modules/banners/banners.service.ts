@@ -51,21 +51,36 @@ export class BannersService {
     await this.bannerModel.updateMany(filter, { isActive: false }).exec();
   }
 
+  /**
+   * Truy vấn đọc dùng `.lean()` (bỏ chi phí hydrate). Banner không có virtual/transform,
+   * nhưng lean không áp default schema cho bản ghi cũ thiếu trường popup (frequency,
+   * ctaLabel, closeable, startAt...) — áp lại để JSON trả về giữ nguyên shape.
+   */
+  private withLeanDefaults<T extends object>(banner: T): T {
+    this.bannerModel.applyDefaults(banner);
+    return banner;
+  }
+
   async findAll(): Promise<Banner[]> {
-    return this.bannerModel
+    const banners = await this.bannerModel
       .find()
       .sort({ position: 1, sortOrder: 1, createdAt: -1 })
+      .lean<Banner[]>()
       .exec();
+    return banners.map((banner) => this.withLeanDefaults(banner));
   }
 
   async findActive(): Promise<Record<string, Banner[]>> {
-    const banners = await this.bannerModel
-      .find({
-        isActive: true,
-        position: { $ne: BannerPosition.ENTRY_POPUP },
-      })
-      .sort({ sortOrder: 1 })
-      .exec();
+    const banners = (
+      await this.bannerModel
+        .find({
+          isActive: true,
+          position: { $ne: BannerPosition.ENTRY_POPUP },
+        })
+        .sort({ sortOrder: 1 })
+        .lean<Banner[]>()
+        .exec()
+    ).map((banner) => this.withLeanDefaults(banner));
 
     // Group banners by position
     const grouped: Record<string, Banner[]> = {};
@@ -103,9 +118,10 @@ export class BannersService {
         ],
       })
       .sort({ updatedAt: -1, createdAt: -1 })
+      .lean<Banner>()
       .exec();
 
-    return popup || null;
+    return popup ? this.withLeanDefaults(popup) : null;
   }
 
   async create(dto: CreateBannerDto): Promise<Banner> {

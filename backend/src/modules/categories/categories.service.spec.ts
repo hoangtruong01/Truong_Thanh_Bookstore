@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { CategoriesService } from './categories.service';
+import { Types } from 'mongoose';
+import {
+  CategoriesService,
+  collectDescendantCategoryIds,
+} from './categories.service';
 import { Category } from './schemas/category.schema';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
 
@@ -341,31 +345,88 @@ describe('CategoriesService (TASK 11: Multi-level Category Tree & Slug)', () => 
     });
 
     it('TT-010: should get all descendant category IDs recursively', async () => {
-      mockCategoryModel.find.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockReturnValue({
-            exec: jest.fn().mockResolvedValue([{ _id: mockChildCat._id }]),
-          }),
+      const select = jest.fn().mockReturnValue({
+        lean: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue([
+            { _id: mockRootCat._id, parentId: null },
+            { _id: mockChildCat._id, parentId: mockRootCat._id },
+            { _id: mockSubChildCat._id, parentId: mockChildCat._id },
+          ]),
         }),
       });
-      mockCategoryModel.find.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockReturnValue({
-            exec: jest.fn().mockResolvedValue([{ _id: mockSubChildCat._id }]),
-          }),
-        }),
-      });
-      mockCategoryModel.find.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockReturnValue({
-            exec: jest.fn().mockResolvedValue([]),
-          }),
-        }),
-      });
+      mockCategoryModel.find.mockReturnValueOnce({ select });
 
       const ids = await service.getAllDescendantCategoryIds(mockRootCat._id);
       expect(ids).toBeDefined();
       expect(ids.length).toBe(3);
+      // Một truy vấn phẳng duy nhất, không lọc status (giữ hành vi cũ)
+      expect(mockCategoryModel.find).toHaveBeenCalledTimes(1);
+      expect(mockCategoryModel.find).toHaveBeenCalledWith({});
+      expect(select).toHaveBeenCalledWith('_id parentId');
+    });
+
+    describe('collectDescendantCategoryIds (in-memory tree walk)', () => {
+      const oid = (n: number) =>
+        new Types.ObjectId(n.toString(16).padStart(24, '0'));
+      const [root, a, b, a1, a2, a1x, other] = [1, 2, 3, 4, 5, 6, 7].map(oid);
+      const tree = [
+        { _id: a1x, parentId: a1 },
+        { _id: root, parentId: null },
+        { _id: a, parentId: root },
+        { _id: b, parentId: root.toHexString() }, // parentId dạng chuỗi
+        { _id: a1, parentId: a },
+        { _id: a2, parentId: a },
+        { _id: other, parentId: null },
+      ];
+      const hex = (ids: Types.ObjectId[]) => ids.map((id) => id.toHexString());
+
+      it('walks a 3-level tree breadth-first and excludes unrelated categories', () => {
+        expect(hex(collectDescendantCategoryIds(root, tree))).toEqual(
+          hex([root, a, b, a1, a2, a1x]),
+        );
+        expect(hex(collectDescendantCategoryIds(a, tree))).toEqual(
+          hex([a, a1, a2, a1x]),
+        );
+        expect(hex(collectDescendantCategoryIds(a1x, tree))).toEqual(
+          hex([a1x]),
+        );
+      });
+
+      it('is cycle-safe (A -> B -> A, self-parent) and terminates', () => {
+        const cyclic = [
+          { _id: a, parentId: b },
+          { _id: b, parentId: a },
+          { _id: a1, parentId: a1 },
+        ];
+        expect(hex(collectDescendantCategoryIds(a, cyclic))).toEqual(
+          hex([a, b]),
+        );
+        expect(hex(collectDescendantCategoryIds(a1, cyclic))).toEqual(
+          hex([a1]),
+        );
+      });
+
+      it('returns only the root id for an unknown category id', () => {
+        const unknown = oid(999);
+        const result = collectDescendantCategoryIds(unknown, tree);
+        expect(result).toHaveLength(1);
+        expect(result[0]).toBe(unknown);
+      });
+
+      it('getAllDescendantCategoryIds accepts a string id and returns ObjectIds', async () => {
+        mockCategoryModel.find.mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            lean: jest.fn().mockReturnValue({
+              exec: jest.fn().mockResolvedValue(tree),
+            }),
+          }),
+        });
+        const result = await service.getAllDescendantCategoryIds(
+          a.toHexString(),
+        );
+        expect(result[0]).toBeInstanceOf(Types.ObjectId);
+        expect(hex(result)).toEqual(hex([a, a1, a2, a1x]));
+      });
     });
 
     it('should toggle category active status', async () => {

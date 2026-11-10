@@ -41,6 +41,49 @@ export interface CategoryTreeItem {
   children: CategoryTreeItem[];
 }
 
+/** Liên kết cha-con tối thiểu của một danh mục (kết quả lean của select('_id parentId')). */
+export interface CategoryParentLink {
+  _id: Types.ObjectId;
+  parentId?: Types.ObjectId | string | null;
+}
+
+/**
+ * TT-010: Duyệt BFS trong bộ nhớ trên danh sách phẳng {_id, parentId} để lấy ID của danh mục gốc
+ * cùng toàn bộ con, cháu cấp sâu. Có chống vòng lặp (cycle) qua tập `visited`.
+ * Hàm thuần — dùng chung cho CategoriesService và ProductsService.
+ */
+export function collectDescendantCategoryIds(
+  rootId: Types.ObjectId,
+  categories: CategoryParentLink[],
+): Types.ObjectId[] {
+  const childrenByParent = new Map<string, Types.ObjectId[]>();
+  for (const cat of categories) {
+    if (!cat.parentId) continue;
+    const parentKey = cat.parentId.toString();
+    const siblings = childrenByParent.get(parentKey);
+    if (siblings) siblings.push(cat._id);
+    else childrenByParent.set(parentKey, [cat._id]);
+  }
+
+  const resultIds: Types.ObjectId[] = [rootId];
+  const queue: Types.ObjectId[] = [rootId];
+  const visited = new Set<string>([rootId.toString()]);
+
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    for (const cId of childrenByParent.get(currentId.toString()) ?? []) {
+      const cIdStr = cId.toString();
+      if (!visited.has(cIdStr)) {
+        visited.add(cIdStr);
+        resultIds.push(cId);
+        queue.push(cId);
+      }
+    }
+  }
+
+  return resultIds;
+}
+
 @Injectable()
 export class CategoriesService {
   constructor(
@@ -260,30 +303,15 @@ export class CategoriesService {
         ? new Types.ObjectId(categoryId)
         : categoryId;
 
-    const resultIds: Types.ObjectId[] = [rootId];
-    const queue: Types.ObjectId[] = [rootId];
-    const visited = new Set<string>([rootId.toString()]);
+    // Nạp phẳng {_id, parentId} của toàn bộ danh mục trong MỘT truy vấn rồi duyệt cây trong bộ nhớ
+    // (thay cho 1 truy vấn / cấp). Không lọc theo status — giữ đúng hành vi cũ.
+    const categories = await this.categoryModel
+      .find({})
+      .select('_id parentId')
+      .lean<CategoryParentLink[]>()
+      .exec();
 
-    while (queue.length > 0) {
-      const currentId = queue.shift()!;
-      const children = await this.categoryModel
-        .find({ parentId: currentId })
-        .select('_id')
-        .lean()
-        .exec();
-
-      for (const child of children) {
-        const cId = child._id;
-        const cIdStr = cId.toString();
-        if (!visited.has(cIdStr)) {
-          visited.add(cIdStr);
-          resultIds.push(cId);
-          queue.push(cId);
-        }
-      }
-    }
-
-    return resultIds;
+    return collectDescendantCategoryIds(rootId, categories);
   }
 
   /**
