@@ -399,6 +399,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { categoryService } from '@/services/category.service'
 import { productService } from '@/services/product.service'
+import { formatCurrency } from '@/utils/helpers'
 import type { Category, Product } from '@/types'
 
 const formatNumberWithDots = (val: string | number | undefined | null): string => {
@@ -693,12 +694,5 @@ async function deleteCombo(id: string) {
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Lỗi khi xóa combo')
   }
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND'
-  }).format(value)
 }
 </script>

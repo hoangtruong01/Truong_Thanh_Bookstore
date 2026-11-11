@@ -1,12 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { Mongoose, Types } from 'mongoose';
 import * as ExcelJS from 'exceljs';
 import { ProductsService } from './products.service';
 import { Product, ProductSchema } from './schemas/product.schema';
-import { StockAlert } from './schemas/stock-alert.schema';
-import { Category } from '../categories/schemas/category.schema';
+import { StockAlert, StockAlertSchema } from './schemas/stock-alert.schema';
+import {
+  Category,
+  CategorySchema,
+} from '../categories/schemas/category.schema';
 import { Inventory } from '../inventory/schemas/inventory.schema';
 import { ReviewsService } from '../reviews/reviews.service';
 import { EmailService } from '../email/email.service';
@@ -134,12 +137,14 @@ interface MockProductModelType {
   findByIdAndUpdate: jest.Mock;
   countDocuments: jest.Mock;
   distinct: jest.Mock;
+  applyDefaults: jest.Mock;
 }
 
 interface MockCategoryModelType {
   find: jest.Mock;
   findOne: jest.Mock;
   create: jest.Mock;
+  applyDefaults: jest.Mock;
 }
 
 interface MockInventoryModelType {
@@ -232,6 +237,8 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
     mockProductModel.distinct = jest.fn().mockReturnValue({
       exec: jest.fn().mockResolvedValue(['Thiên Long', 'Bến Nghé']),
     });
+    // Mặc định không đổi object (tránh mutate fixture dùng chung); test lean dùng bản thật.
+    mockProductModel.applyDefaults = jest.fn((doc: unknown) => doc);
 
     mockCategoryModel = {
       find: jest.fn().mockImplementation(() => createMockQuery([mockCategory])),
@@ -240,6 +247,7 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
         exec: jest.fn().mockResolvedValue(mockCategory),
       }),
       create: jest.fn().mockResolvedValue(mockCategory),
+      applyDefaults: jest.fn((doc: unknown) => doc),
     };
 
     mockInventoryModel = {
@@ -562,16 +570,103 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
     });
 
     it('should handle recursive category filtering when parent category ID is provided', async () => {
-      const parentCatId = '507f1f77bcf86cd799439011';
-      const childCat = { _id: '507f1f77bcf86cd799439099', name: 'Bút viết' };
-      mockCategoryModel.find.mockReturnValueOnce({
-        exec: jest.fn().mockResolvedValue([childCat]),
+      // Cây 3 cấp: root -> child -> grandChild, cộng 1 danh mục ngoài cây.
+      const rootId = new Types.ObjectId('507f1f77bcf86cd799439011');
+      const childId = new Types.ObjectId('507f1f77bcf86cd799439099');
+      const grandChildId = new Types.ObjectId('507f1f77bcf86cd799439098');
+      const otherId = new Types.ObjectId('507f1f77bcf86cd799439097');
+      mockCategoryModel.find.mockReturnValueOnce(
+        createMockQuery([
+          { _id: rootId, parentId: null },
+          { _id: grandChildId, parentId: childId },
+          { _id: childId, parentId: rootId },
+          { _id: otherId, parentId: null },
+        ]),
+      );
+
+      await service.findAll({ category: rootId.toHexString() });
+
+      // Chỉ MỘT truy vấn danh mục (không còn 1 truy vấn / cấp)
+      expect(mockCategoryModel.find).toHaveBeenCalledTimes(1);
+      expect(mockCategoryModel.find).toHaveBeenCalledWith({});
+      const calls = mockProductModel.find.mock.calls as [MongoFilterQuery][];
+      const findArgs = calls[calls.length - 1][0];
+      const ids = (findArgs.category as { $in: Types.ObjectId[] }).$in.map(
+        (id) => id.toString(),
+      );
+      expect(ids).toEqual([
+        rootId.toHexString(),
+        childId.toHexString(),
+        grandChildId.toHexString(),
+      ]);
+    });
+
+    it('findAll and public lists use lean() and keep populated category + price fields', async () => {
+      // applyDefaults thật của schema (static, không cần DB) để kiểm tra shape sau lean.
+      const realMongoose = new Mongoose();
+      const realProductModel = realMongoose.model(Product.name, ProductSchema);
+      const realCategoryModel = realMongoose.model(
+        Category.name,
+        CategorySchema,
+      );
+      mockProductModel.applyDefaults.mockImplementation((doc: object) =>
+        realProductModel.applyDefaults(doc),
+      );
+      mockCategoryModel.applyDefaults.mockImplementation((doc: object) =>
+        realCategoryModel.applyDefaults(doc),
+      );
+
+      // Bản ghi lean "cũ": thiếu các trường có default (unitConversions, language...)
+      const leanProduct = () => ({
+        _id: new Types.ObjectId('507f1f77bcf86cd799439022'),
+        name: 'Bút bi Thiên Long TL-027',
+        slug: 'but-bi-thien-long-tl-027',
+        sku: 'TL-027-BLUE',
+        price: 5000,
+        discountPrice: 4500,
+        stock: 100,
+        status: ProductStatus.ACTIVE,
+        isDeleted: false,
+        category: {
+          _id: new Types.ObjectId(mockCategory._id),
+          name: 'Văn phòng phẩm',
+          slug: 'van-phong-pham',
+          parentId: { _id: new Types.ObjectId(), name: 'Gốc', slug: 'goc' },
+        },
       });
 
-      await service.findAll({ category: parentCatId });
-      expect(mockCategoryModel.find).toHaveBeenCalledWith({
-        parentId: expect.anything() as unknown,
+      const leanQueries: MockQuery[] = [];
+      mockProductModel.find.mockImplementation(() => {
+        const q = createMockQuery([leanProduct()]);
+        leanQueries.push(q);
+        return q;
       });
+
+      const page = await service.findAll({});
+      const lists = await Promise.all([
+        service.getFeatured(),
+        service.getBestSelling(5),
+        service.getDiscounted(5),
+        service.getNew(5),
+        service.search('but'),
+      ]);
+
+      expect(leanQueries).toHaveLength(6);
+      for (const q of leanQueries) expect(q.lean).toHaveBeenCalledTimes(1);
+
+      for (const product of [page.data[0], ...lists.map((l) => l[0])]) {
+        const p = product as unknown as Record<string, any>;
+        expect(p.discountPrice).toBe(4500);
+        expect(p.price).toBe(5000);
+        expect(p.category.name).toBe('Văn phòng phẩm');
+        expect(p.category.parentId.name).toBe('Gốc');
+        // Default của schema được áp lại như document Mongoose
+        expect(p.unitConversions).toEqual([]);
+        expect(p.language).toBe('Tiếng Việt');
+        expect(p.category.options).toEqual([]);
+        expect(p.category.status).toBe(true);
+        expect(typeof p.save).toBe('undefined');
+      }
     });
 
     it('should handle all 7 sorting modes correctly', async () => {
@@ -711,6 +806,17 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       mockProductModel.findOne.mockReturnValueOnce(createMockQuery(null));
       const res = await service.getRelated('unknown-id', 8);
       expect(res).toEqual([]);
+    });
+  });
+
+  describe('StockAlertSchema indexes', () => {
+    it('has a non-unique {product, email} index matching subscribe/notify queries', () => {
+      const entry = StockAlertSchema.indexes().find(
+        ([fields]) =>
+          JSON.stringify(fields) === JSON.stringify({ product: 1, email: 1 }),
+      );
+      expect(entry).toBeDefined();
+      expect(entry![1]?.unique).not.toBe(true);
     });
   });
 

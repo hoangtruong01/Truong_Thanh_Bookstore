@@ -41,7 +41,6 @@
         <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800 space-y-1">
           <p class="font-bold">Mã OTP đã được gửi!</p>
           <p>Vui lòng kiểm tra email của bạn để lấy mã OTP.</p>
-          <p v-if="isDev && devOtp" class="text-red-600 font-bold">Mã OTP (Development): {{ devOtp }}</p>
         </div>
 
         <div>
@@ -116,23 +115,14 @@ const email = ref('')
 const otp = ref('')
 const newPassword = ref('')
 const loading = ref(false)
-const devOtp = ref('')
-const isDev = import.meta.env.DEV
 
 async function handleRequestOtp() {
   if (loading.value || !email.value) return
   loading.value = true
   try {
-    const res = await authService.forgotPassword(email.value)
-    toast.success('Mã OTP đã được tạo!')
-    // Dev-only helper: never surface an OTP from the API in production builds
-    if (import.meta.env.DEV) {
-      if (res.data && res.data.data && res.data.data.otp) {
-        devOtp.value = res.data.data.otp
-      } else if (res.data && res.data.otp) {
-        devOtp.value = res.data.otp
-      }
-    }
+    // SEC-029: backend không còn trả OTP; mã chỉ được gửi qua email.
+    await authService.forgotPassword(email.value)
+    toast.success('Mã OTP đã được gửi!')
     step.value = 2
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Không thể gửi mã OTP. Vui lòng kiểm tra lại email.')

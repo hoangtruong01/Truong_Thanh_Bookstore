@@ -66,7 +66,7 @@ void main() {
       if (hasOrderId) {
         expect(find.byType(OrderDetailScreen), findsOneWidget);
         expect(orders.requestedOrderId, 'order-123');
-        expect(find.text('ĐƠN HÀNG #TT-AUDIT'), findsOneWidget);
+        expect(find.text('Đơn hàng #TT-AUDIT'), findsOneWidget);
         expect(find.text('Điểm thưởng (1000 điểm)'), findsOneWidget);
       } else {
         expect(find.byType(OrderHistoryScreen), findsOneWidget);

@@ -40,6 +40,10 @@
       "destination": "https://truong-thanh-bookstore.onrender.com/api/:path*"
     },
     {
+      "source": "/sitemap.xml",
+      "destination": "https://truong-thanh-bookstore.onrender.com/api/seo/sitemap.xml"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

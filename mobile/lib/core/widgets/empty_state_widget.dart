@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_tokens.dart';
 
+/// Trạng thái rỗng dùng chung. Màu lấy từ `context.palette` nên hiển thị đúng
+/// ở cả Sáng / Tối; nút dùng theme mặc định của `ElevatedButton`.
 class EmptyStateWidget extends StatelessWidget {
   final IconData icon;
   final String title;
   final String message;
   final String? buttonText;
   final VoidCallback? onButtonPressed;
+
+  /// Màu icon tuỳ chọn (nên là một màu từ `context.palette`).
   final Color? iconColor;
 
   const EmptyStateWidget({
@@ -21,60 +26,39 @@ class EmptyStateWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+    final textTheme = Theme.of(context).textTheme;
+    final accent = iconColor ?? palette.primaryText;
+    final circle = iconColor == null ? palette.primarySoft : accent.withValues(alpha: 0.12);
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxxl, vertical: AppSpacing.xxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: (iconColor ?? AppTheme.primaryColor).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: 64,
-                color: iconColor ?? AppTheme.primaryColor,
-              ),
+              padding: const EdgeInsets.all(AppSpacing.xxl),
+              decoration: BoxDecoration(color: circle, shape: BoxShape.circle),
+              child: Icon(icon, size: 64, color: accent),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.xl),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
+              style: textTheme.titleLarge?.copyWith(color: palette.textPrimary),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-                height: 1.4,
-              ),
+              style: textTheme.bodyLarge?.copyWith(color: palette.textSecondary),
             ),
             if (buttonText != null && onButtonPressed != null) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xxl),
               ElevatedButton(
                 onPressed: onButtonPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: Text(
-                  buttonText!,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                ),
+                child: Text(buttonText!),
               ),
             ],
           ],

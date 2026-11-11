@@ -12,12 +12,21 @@ import {
   Min,
   IsInt,
   ArrayMinSize,
+  ArrayMaxSize,
+  Max,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus, PaymentMethod, OrderSource } from '../../../common/enums';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { IsMongoObjectId, IsPhoneNumberVN } from '../../../common/validators';
+
+/**
+ * SEC-013: giới hạn số dòng/số lượng cho endpoint công khai (preview, create).
+ * Phải bằng trần giỏ hàng (CartSyncDto: 200 dòng) để giỏ hợp lệ luôn checkout được.
+ */
+export const ORDER_MAX_ITEMS = 200;
+export const ORDER_ITEM_MAX_QUANTITY = 1000;
 
 export class OrderItemDto {
   @ApiProperty({
@@ -51,6 +60,9 @@ export class OrderItemDto {
   @Type(() => Number)
   @IsInt({ message: 'Số lượng mua phải là số nguyên' })
   @Min(1, { message: 'Số lượng tối thiểu là 1' })
+  @Max(ORDER_ITEM_MAX_QUANTITY, {
+    message: `Số lượng mỗi sản phẩm tối đa là ${ORDER_ITEM_MAX_QUANTITY}`,
+  })
   quantity: number;
 
   @ApiPropertyOptional()
@@ -64,6 +76,9 @@ export class CreateOrderDto {
   @ApiProperty({ type: [OrderItemDto] })
   @IsArray({ message: 'items phải là một danh sách sản phẩm' })
   @ArrayMinSize(1, { message: 'Đơn hàng phải có ít nhất 1 sản phẩm' })
+  @ArrayMaxSize(ORDER_MAX_ITEMS, {
+    message: `Đơn hàng tối đa ${ORDER_MAX_ITEMS} dòng sản phẩm`,
+  })
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
@@ -220,6 +235,9 @@ export class CheckoutPreviewDto {
   @ApiProperty({ type: [OrderItemDto] })
   @IsArray({ message: 'items phải là một danh sách sản phẩm' })
   @ArrayMinSize(1, { message: 'Đơn hàng phải có ít nhất 1 sản phẩm' })
+  @ArrayMaxSize(ORDER_MAX_ITEMS, {
+    message: `Đơn hàng tối đa ${ORDER_MAX_ITEMS} dòng sản phẩm`,
+  })
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items: OrderItemDto[];

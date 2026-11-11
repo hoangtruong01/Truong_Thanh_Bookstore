@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   UnauthorizedException,
@@ -346,7 +347,9 @@ describe('AuthService (auth.service.spec.ts)', () => {
   describe('Logout & Blacklist Flow', () => {
     it('should clear refresh token in database and blacklist access token on logout', async () => {
       const rawAccessToken = 'user.access.token';
-      jwtService.decode.mockReturnValue({
+      jwtService.verifyAsync.mockResolvedValue({
+        sub: mockUser._id,
+        type: 'access',
         exp: Math.floor(Date.now() / 1000) + 3600,
         jti: 'logout-jti-1',
       });
@@ -748,14 +751,11 @@ describe('AuthService (auth.service.spec.ts)', () => {
       usersService.findByIdWithPassword.mockResolvedValue(user);
 
       const mockAccessToken = 'header.bearer.token';
-      jwtService.decode.mockReturnValue({
-        sub: mockUser._id,
-        jti: 'access-jti-123',
-        exp: Math.floor(Date.now() / 1000) + 900,
-      });
       jwtService.verifyAsync.mockResolvedValue({
         sub: mockUser._id,
         type: 'access',
+        jti: 'access-jti-123',
+        exp: Math.floor(Date.now() / 1000) + 900,
       });
 
       const result = await authService.logout(
@@ -786,14 +786,11 @@ describe('AuthService (auth.service.spec.ts)', () => {
       usersService.findByIdWithPassword.mockResolvedValue(user);
 
       const mockRefreshToken = 'refresh.jwt.token';
-      jwtService.decode.mockReturnValue({
-        sub: mockUser._id,
-        jti: 'refresh-jti-789',
-        exp: Math.floor(Date.now() / 1000) + 86400,
-      });
       jwtService.verifyAsync.mockResolvedValue({
         sub: mockUser._id,
         type: 'refresh',
+        jti: 'refresh-jti-789',
+        exp: Math.floor(Date.now() / 1000) + 86400,
       });
 
       await authService.logout(undefined, undefined, mockRefreshToken);
@@ -828,6 +825,179 @@ describe('AuthService (auth.service.spec.ts)', () => {
       expect(result.success).toBe(true);
       // Victim user DB record is never queried or mutated
       expect(usersService.findByIdWithPassword).not.toHaveBeenCalled();
+    });
+
+    it('SEC-005: does not write blacklist entries for tokens with an invalid signature', async () => {
+      jwtService.decode.mockReturnValue({
+        jti: 'attacker-jti',
+        exp: Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600,
+      });
+      jwtService.verifyAsync.mockRejectedValue(new Error('invalid signature'));
+
+      await authService.logout(
+        undefined,
+        'forged.access.jwt',
+        'forged.refresh.jwt',
+      );
+
+      expect(spyBlacklistJti).not.toHaveBeenCalled();
+      expect(spyBlacklistToken).not.toHaveBeenCalled();
+    });
+
+    it('SEC-005: does not blacklist a validly-signed token of the wrong type', async () => {
+      jwtService.verifyAsync.mockResolvedValue({
+        sub: mockUser._id,
+        type: 'refresh',
+        jti: 'wrong-type-jti',
+        exp: Math.floor(Date.now() / 1000) + 900,
+      });
+
+      await authService.logout(undefined, 'refresh.used.as.access');
+
+      expect(spyBlacklistJti).not.toHaveBeenCalled();
+      expect(spyBlacklistToken).not.toHaveBeenCalled();
+    });
+
+    it('SEC-005: verifies the access token with the access secret and caps the blacklist TTL', async () => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      jwtService.verifyAsync.mockResolvedValue({
+        sub: mockUser._id,
+        type: 'access',
+        jti: 'long-lived-jti',
+        // exp rất xa trong tương lai (vượt trần TTL)
+        exp: nowSec + 10 * 365 * 24 * 3600,
+      });
+      usersService.findByIdWithPassword.mockResolvedValue({
+        ...mockUser,
+        save: jest.fn().mockResolvedValue(true),
+      });
+
+      await authService.logout(undefined, 'valid.access.jwt');
+
+      expect(jwtService.verifyAsync).toHaveBeenCalledWith(
+        'valid.access.jwt',
+        expect.objectContaining({ secret: jwtSecrets.JWT_SECRET }),
+      );
+      const maxExp = nowSec + 30 * 24 * 3600 + 5;
+      const jtiExp = spyBlacklistJti.mock.calls[0][1] as number;
+      const tokenExp = spyBlacklistToken.mock.calls[0][1] as number;
+      expect(jtiExp).toBeLessThanOrEqual(maxExp);
+      expect(tokenExp).toBeLessThanOrEqual(maxExp);
+    });
+
+    it('SEC-005: skips blacklist write for an already expired (but validly signed) token', async () => {
+      jwtService.verifyAsync.mockResolvedValue({
+        sub: mockUser._id,
+        type: 'access',
+        jti: 'expired-jti',
+        exp: Math.floor(Date.now() / 1000) - 60,
+      });
+      usersService.findByIdWithPassword.mockResolvedValue({
+        ...mockUser,
+        save: jest.fn().mockResolvedValue(true),
+      });
+
+      await authService.logout(undefined, 'expired.access.jwt');
+
+      expect(spyBlacklistJti).not.toHaveBeenCalled();
+      expect(spyBlacklistToken).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('SEC-019 atomic OTP attempt counter', () => {
+    const rawOtp = '123456';
+    const otpHash = createHash('sha256').update(rawOtp).digest('hex');
+
+    /** Mô phỏng Mongoose Model.findOneAndUpdate (atomic) trên một document in-memory. */
+    function makeMongooseLikeUser(attempts: number) {
+      const findOneAndUpdate = jest.fn(
+        (
+          filter: Record<string, any>,
+          update: Record<string, any>,
+          _options?: Record<string, any>,
+        ) => ({
+          exec: () => {
+            const limit = filter.resetOtpAttempts.$not.$gte as number;
+            if (
+              filter.resetOtp !== doc.resetOtp ||
+              (doc.resetOtpAttempts ?? 0) >= limit
+            ) {
+              return Promise.resolve(null);
+            }
+            doc.resetOtpAttempts =
+              (doc.resetOtpAttempts ?? 0) + update.$inc.resetOtpAttempts;
+            return Promise.resolve({ ...doc });
+          },
+        }),
+      );
+      const doc: any = {
+        ...mockUser,
+        resetOtp: otpHash,
+        resetOtpExpiry: new Date(Date.now() + 600000),
+        resetOtpAttempts: attempts,
+        save: jest.fn().mockResolvedValue(true),
+        constructor: { findOneAndUpdate },
+      };
+      return { doc, findOneAndUpdate };
+    }
+
+    it('reserves an attempt atomically with findOneAndUpdate/$inc before comparing the OTP', async () => {
+      const { doc, findOneAndUpdate } = makeMongooseLikeUser(0);
+      usersService.findByEmail.mockResolvedValue(doc);
+
+      await expect(
+        authService.verifyOtp(mockUser.email, '000000'),
+      ).rejects.toThrow('Mã OTP không hợp lệ hoặc đã hết hạn');
+
+      expect(findOneAndUpdate).toHaveBeenCalledTimes(1);
+      const [filter, update, options] = findOneAndUpdate.mock.calls[0];
+      expect(filter.resetOtpAttempts).toEqual({ $not: { $gte: 5 } });
+      expect(update).toEqual({ $inc: { resetOtpAttempts: 1 } });
+      expect(options).toEqual({ new: true });
+      expect(doc.resetOtpAttempts).toBe(1);
+      // Bộ đếm không được ghi bằng read-modify-write qua save()
+      expect(doc.save).not.toHaveBeenCalled();
+    });
+
+    it('parallel wrong guesses can never exceed the attempt limit', async () => {
+      const { doc } = makeMongooseLikeUser(0);
+      usersService.findByEmail.mockResolvedValue(doc);
+      const compareSpy = jest.spyOn(
+        authService as unknown as { isOtpHashValid: () => boolean },
+        'isOtpHashValid',
+      );
+
+      const results = await Promise.allSettled(
+        Array.from({ length: 20 }, (_, i) =>
+          authService.verifyOtp(
+            mockUser.email,
+            String(100000 + i).padStart(6, '0'),
+          ),
+        ),
+      );
+
+      expect(results.every((r) => r.status === 'rejected')).toBe(true);
+      // Chỉ tối đa 5 lượt đoán thực sự được so khớp với OTP
+      expect(compareSpy).toHaveBeenCalledTimes(5);
+    });
+
+    it('does not even compare the OTP once attempts are exhausted, even if the guess is correct', async () => {
+      const { doc } = makeMongooseLikeUser(5);
+      usersService.findByEmail.mockResolvedValue(doc);
+
+      await expect(
+        authService.verifyOtp(mockUser.email, rawOtp),
+      ).rejects.toThrow('Mã OTP không hợp lệ hoặc đã hết hạn');
+      expect(doc.resetOtp).toBeUndefined();
+      expect(jwtService.sign).not.toHaveBeenCalled();
+    });
+
+    it('still accepts the correct OTP on the last allowed attempt', async () => {
+      const { doc } = makeMongooseLikeUser(4);
+      usersService.findByEmail.mockResolvedValue(doc);
+
+      const result = await authService.verifyOtp(mockUser.email, rawOtp);
+      expect(result.success).toBe(true);
     });
   });
 });

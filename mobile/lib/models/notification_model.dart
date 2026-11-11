@@ -33,6 +33,25 @@ class NotificationModel {
     );
   }
 
+  NotificationModel copyWith({bool? isRead}) {
+    return NotificationModel(
+      id: id,
+      title: title,
+      message: message,
+      type: type,
+      data: data,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt,
+    );
+  }
+
+  /// Order id carried by backend `meta.orderId` (legacy payloads: `order_id`).
+  String? get orderId {
+    final value = data?['orderId'] ?? data?['order_id'];
+    final id = value?.toString().trim();
+    return id == null || id.isEmpty ? null : id;
+  }
+
   Map<String, dynamic> toJson() {
     return {
       '_id': id,

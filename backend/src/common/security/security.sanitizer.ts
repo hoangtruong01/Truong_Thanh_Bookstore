@@ -3,6 +3,8 @@
  * Provides protection against NoSQL Injection, Prototype Pollution, and Stored XSS.
  */
 
+import { BadRequestException } from '@nestjs/common';
+
 // sanitize-html exposes a CommonJS callable; this import keeps Jest and Node aligned.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import sanitizeHtml = require('sanitize-html');
@@ -120,8 +122,17 @@ export function sanitizePayload<T = any>(
     maxDepth = 15,
   } = options;
 
-  if (currentDepth > maxDepth || data === null || data === undefined) {
+  if (data === null || data === undefined) {
     return data;
+  }
+
+  // SEC-026: payload lồng quá sâu không được bỏ qua bước lọc NoSQL/XSS.
+  // Từ chối thay vì trả nguyên dạng (chỉ primitive số/boolean mới vô hại).
+  if (
+    currentDepth > maxDepth &&
+    (typeof data === 'object' || typeof data === 'string')
+  ) {
+    throw new BadRequestException('Dữ liệu đầu vào lồng quá sâu');
   }
 
   // Handle Strings

@@ -34,10 +34,10 @@
 
         <!-- Brand Titles (Enlarged Typography) -->
         <div class="space-y-2 mb-8">
-          <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-2">
+          <div class="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-2">
             <span>TRƯỜNG THÀNH</span>
             <span class="w-2 h-2 rounded-full bg-red-600 inline-block animate-ping"></span>
-          </h1>
+          </div>
           <p class="text-xs sm:text-sm uppercase tracking-[0.28em] text-red-600 dark:text-red-400 font-extrabold">
             Bookstore & Stationery
           </p>

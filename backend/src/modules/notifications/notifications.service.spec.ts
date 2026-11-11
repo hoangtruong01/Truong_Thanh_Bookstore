@@ -127,6 +127,51 @@ describe('NotificationsService', () => {
       expect(result.total).toBe(1);
       expect(result.unreadCount).toBe(1);
     });
+
+    it('SEC-018: never exposes readBy (other users ids) and returns a per-user isRead boolean', async () => {
+      const otherUserId = new Types.ObjectId();
+      const mockItems = [
+        {
+          _id: new Types.ObjectId().toString(),
+          userId: null,
+          title: 'Broadcast đã đọc',
+          readBy: [otherUserId, new Types.ObjectId(mockUserId)],
+        },
+        {
+          _id: new Types.ObjectId().toString(),
+          userId: null,
+          title: 'Broadcast chưa đọc',
+          readBy: [otherUserId],
+        },
+      ];
+
+      mockNotificationModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              lean: jest.fn().mockReturnValue({
+                exec: jest.fn().mockResolvedValue(mockItems),
+              }),
+            }),
+          }),
+        }),
+      });
+      mockNotificationModel.countDocuments
+        .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(2) })
+        .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(1) });
+
+      const result = await service.findByUser(mockUserId, {
+        page: 1,
+        limit: 10,
+      });
+
+      expect(result.items[0].isRead).toBe(true);
+      expect(result.items[1].isRead).toBe(false);
+      for (const item of result.items) {
+        expect(item).not.toHaveProperty('readBy');
+      }
+      expect(JSON.stringify(result)).not.toContain(otherUserId.toString());
+    });
   });
 
   describe('markAsRead & markAllAsRead', () => {

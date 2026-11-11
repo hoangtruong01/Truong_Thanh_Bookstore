@@ -47,6 +47,10 @@ import {
 } from '../finance/schemas/cash-entry.schema';
 import { FinanceService } from '../finance/finance.service';
 import { POSShift } from './dto/pos.dto';
+import * as bcrypt from 'bcrypt';
+
+// SEC-006: mật khẩu Quản lý trong CSDL luôn là bcrypt hash
+const ADMIN_PASSWORD_HASH = bcrypt.hashSync('adminPassword123', 4);
 
 describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
   let service: PosService;
@@ -236,7 +240,7 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
             role: adminUser.role,
             status: true,
             permissions: [],
-            password: 'adminPassword123',
+            password: ADMIN_PASSWORD_HASH,
           });
         }
         if (id === '507f1f77bcf86cd799439011') {
@@ -246,7 +250,7 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
             role: UserRole.ADMIN,
             status: false,
             permissions: [],
-            password: 'adminPassword123',
+            password: ADMIN_PASSWORD_HASH,
           });
         }
         return Promise.resolve(null);
@@ -1172,8 +1176,8 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
       );
 
       // Verify the hộp item was refunded (1 * 80000 = 80000)
-      const boxItem = res.items.find((it) => it.unit === 'hộp');
-      const penItem = res.items.find((it) => it.unit === 'cây');
+      const boxItem = res.items.find((it: any) => it.unit === 'hộp');
+      const penItem = res.items.find((it: any) => it.unit === 'cây');
       expect(boxItem?.returnedQuantity).toBe(1);
       expect(penItem?.returnedQuantity).toBe(0);
       expect(res.totalRefundedAmount).toBe(80000);
@@ -1203,7 +1207,7 @@ describe('PosService (POS-01 to POS-12 & SPRINT 1 NEW-001 -> NEW-006)', () => {
       });
 
       const result = await service.createPOSOrder(dto, cashierUser);
-      expect(result).toBe(existingOrder);
+      expect(result).toEqual(existingOrder);
       expect(mockProductsService.deductStock).not.toHaveBeenCalled();
     });
 

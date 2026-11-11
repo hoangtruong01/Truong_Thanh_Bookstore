@@ -217,7 +217,8 @@ void main() {
         ..addToCart(_product('a'), quantity: 2)
         ..addToCart(_product('b', price: 50000));
       cart.items.firstWhere((i) => i.product.id == 'b').selected = false;
-      expect(cart.subtotal, 200000);
+      // Money comes from the server preview; locally only the selection is checked.
+      expect(cart.selectedItems.map((i) => i.product.id), ['a']);
 
       final orders = OrderProvider(client: client);
       final order = await orders.placeOrder(items: cart.items, fullName: 'QA',

@@ -61,7 +61,7 @@
         <div class="p-4 sm:p-6 divide-y divide-slate-100">
           <div v-for="item in order.items" :key="item.product" class="flex gap-4 py-4 first:pt-0 last:pb-0">
             <div class="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden flex-shrink-0">
-              <img :src="item.image || 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400'" class="w-full h-full object-cover" />
+              <img :src="item.image || 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400'" loading="lazy" decoding="async" class="w-full h-full object-cover" />
             </div>
             <div class="flex-grow min-w-0 flex flex-col justify-between">
               <div>

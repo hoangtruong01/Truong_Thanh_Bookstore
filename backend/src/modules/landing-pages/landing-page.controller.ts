@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { LandingPageService } from './landing-page.service';
 import {
   CreateLandingPageDto,
@@ -78,7 +79,9 @@ export class LandingPageController {
   }
 
   // Public endpoint for submitting checkout orders from landing pages
+  // Giới hạn tần suất ngang POST /orders (guest): 10 request / 60 giây / IP.
   @Post('submit-order')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Gửi đơn hàng từ landing page' })
   submitOrder(@Body() dto: SubmitOrderDto) {
     return this.landingPageService.submitOrder(dto);

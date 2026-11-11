@@ -1,197 +1,253 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/empty_state_widget.dart';
+import '../../../core/widgets/error_retry_widget.dart';
+import '../../../core/widgets/shimmer_loading.dart';
+import '../../../models/promotion_model.dart';
 import '../../../providers/cart_provider.dart';
 
-class VoucherBottomSheet extends StatelessWidget {
+/// Suggested vouchers. The list is display-only: applying a code always goes through the
+/// server preview, which decides whether it applies and how much it discounts.
+class VoucherBottomSheet extends StatefulWidget {
   const VoucherBottomSheet({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final cartProvider = Provider.of<CartProvider>(context);
-    final promotions = cartProvider.activePromotions;
+  State<VoucherBottomSheet> createState() => _VoucherBottomSheetState();
+}
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+class _VoucherBottomSheetState extends State<VoucherBottomSheet> {
+  String? _applyingCode;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final cart = context.read<CartProvider>();
+      if (cart.activePromotions.isEmpty && !cart.promotionsLoading) cart.fetchActivePromotions();
+    });
+  }
+
+  Future<void> _toggle(PromotionModel promo, bool isApplied) async {
+    if (_applyingCode != null) return;
+    final cart = context.read<CartProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    if (isApplied) {
+      await cart.removeCoupon();
+      if (mounted) navigator.pop();
+      return;
+    }
+    setState(() => _applyingCode = promo.code);
+    final ok = await cart.applyCoupon(promo.code);
+    if (!mounted) return;
+    setState(() => _applyingCode = null);
+    if (ok) {
+      navigator.pop();
+      messenger.showSnackBar(const SnackBar(content: Text('Áp dụng mã giảm giá thành công')));
+    } else {
+      messenger.showSnackBar(SnackBar(content: Text(cart.promoError ?? 'Mã giảm giá không hợp lệ')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cart = context.watch<CartProvider>();
+    final palette = context.palette;
+    final textTheme = Theme.of(context).textTheme;
+    final promotions = cart.activePromotions;
+
+    Widget body;
+    if (cart.promotionsLoading && promotions.isEmpty) {
+      body = Column(
+        children: List.generate(
+          3,
+          (_) => const Padding(
+            padding: EdgeInsets.only(bottom: AppSpacing.md),
+            child: ShimmerSkeleton(height: 84, borderRadius: AppRadii.lg),
+          ),
+        ),
+      );
+    } else if (cart.promotionsError != null && promotions.isEmpty) {
+      body = ErrorRetryWidget(message: cart.promotionsError!, onRetry: cart.fetchActivePromotions);
+    } else if (promotions.isEmpty) {
+      body = const EmptyStateWidget(
+        icon: Icons.confirmation_number_outlined,
+        title: 'Chưa có mã giảm giá',
+        message: 'Hiện chưa có mã giảm giá nào đang diễn ra.',
+      );
+    } else {
+      body = ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: promotions.length,
+        separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
+        itemBuilder: (context, index) {
+          final promo = promotions[index];
+          final isApplied = cart.appliedPromotion?.code.toUpperCase() == promo.code.toUpperCase();
+          // Display hint only (mirrors web); the server re-checks the minimum order.
+          final belowMinimum = cart.pricing != null && cart.subtotal < promo.minOrderValue;
+          return _VoucherTicket(
+            promo: promo,
+            isApplied: isApplied,
+            isBusy: _applyingCode == promo.code,
+            enabled: _applyingCode == null && (isApplied || !belowMinimum),
+            onPressed: () => _toggle(promo, isApplied),
+          );
+        },
+      );
+    }
+
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.confirmation_number_outlined, color: palette.primaryText),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(child: Text('Chọn mã giảm giá', style: textTheme.titleMedium)),
+                IconButton(
+                  tooltip: 'Đóng',
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            body,
+          ],
+        ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    );
+  }
+}
+
+class _VoucherTicket extends StatelessWidget {
+  final PromotionModel promo;
+  final bool isApplied;
+  final bool isBusy;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  const _VoucherTicket({
+    required this.promo,
+    required this.isApplied,
+    required this.isBusy,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    final textTheme = Theme.of(context).textTheme;
+    final headline = promo.discountType == 'PERCENT'
+        ? 'Giảm ${promo.discountValue}%'
+        : 'Giảm ${Formatters.formatCurrency(promo.discountValue)}';
+    return ClipPath(
+      clipper: TicketClipper(separatorX: 80.0, cutoutRadius: 7.0),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 94),
+        decoration: BoxDecoration(
+          color: isApplied ? palette.primarySoft : palette.surfaceMuted,
+          borderRadius: BorderRadius.circular(AppRadii.md + 2),
+          border: Border.all(
+            color: isApplied ? palette.primary : palette.border,
+            width: isApplied ? 1.5 : 1,
+          ),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                '🎟️ Chọn Mã Giảm Giá',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppTheme.darkSlate),
+              Container(
+                width: 80,
+                color: isApplied ? palette.primary : palette.textSecondary,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.confirmation_number_rounded, color: palette.onPrimary, size: 26),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Voucher',
+                      style: textTheme.labelSmall?.copyWith(color: palette.onPrimary, fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
               ),
-              IconButton(
-                icon: const Icon(Icons.close_rounded),
-                onPressed: () => Navigator.pop(context),
+              SizedBox(
+                width: 1,
+                child: CustomPaint(
+                  painter: DashedLinePainter(
+                    color: isApplied ? palette.primary.withValues(alpha: 0.4) : palette.border,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md + 2, vertical: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(promo.code,
+                                style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+                            const SizedBox(height: AppSpacing.xxs),
+                            Text(headline,
+                                style: textTheme.labelMedium?.copyWith(color: palette.primaryText)),
+                            if ((promo.description ?? '').isNotEmpty)
+                              Text(
+                                promo.description!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: textTheme.bodySmall,
+                              ),
+                            if (promo.minOrderValue > 0)
+                              Text(
+                                'Đơn tối thiểu ${Formatters.formatCurrency(promo.minOrderValue)}',
+                                style: textTheme.labelSmall,
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      ElevatedButton(
+                        onPressed: enabled ? onPressed : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isApplied ? palette.textSecondary : palette.primary,
+                          foregroundColor: palette.onPrimary,
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs + 2),
+                          minimumSize: const Size(0, 36),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(AppRadii.sm))),
+                          textStyle: textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        child: isBusy
+                            ? SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: palette.onPrimary),
+                              )
+                            : Text(isApplied ? 'Bỏ chọn' : 'Áp dụng'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          if (promotions.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Text('Hiện không có mã giảm giá nào sẵn có.', style: TextStyle(color: Colors.grey)),
-              ),
-            )
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: promotions.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-
-              itemBuilder: (context, index) {
-                final promo = promotions[index];
-                final code = promo.code;
-                final isApplied = cartProvider.appliedPromotion?.code == code;
-
-                return ClipPath(
-                  clipper: TicketClipper(separatorX: 80.0, cutoutRadius: 7.0),
-                  child: Container(
-                    height: 94,
-                    decoration: BoxDecoration(
-                      color: isApplied ? const Color(0xFFFFEDD5) : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isApplied ? AppTheme.primaryRed : const Color(0xFFE2E8F0),
-                        width: isApplied ? 1.5 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        // Left Voucher Icon Box
-                        Container(
-                          width: 80,
-                          height: double.infinity,
-                          decoration: BoxDecoration(
-                            gradient: isApplied
-                                ? const LinearGradient(
-                                    colors: [Color(0xFFFB5607), Color(0xFFDC2626)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  )
-                                : const LinearGradient(
-                                    colors: [Color(0xFF64748B), Color(0xFF475569)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.confirmation_number_rounded, color: Colors.white, size: 26),
-                              SizedBox(height: 4),
-                              Text(
-                                'VOUCHER',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Dashed Separator Line
-                        CustomPaint(
-                          size: const Size(1, double.infinity),
-                          painter: DashedLinePainter(
-                            color: isApplied ? AppTheme.primaryRed.withOpacity(0.4) : const Color(0xFFCBD5E1),
-                          ),
-                        ),
-                        // Right Voucher Info & Button
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        code,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 14,
-                                          color: AppTheme.darkSlate,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        promo.description ?? 'Giảm giá cực ưu đãi',
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFF475569),
-                                          fontWeight: FontWeight.w600,
-                                          height: 1.15,
-                                        ),
-                                      ),
-                                      if (promo.minOrderValue > 0) ...[
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          'Đơn tối thiểu ${Formatters.formatCurrency(promo.minOrderValue)}',
-                                          style: const TextStyle(
-                                            fontSize: 9.5,
-                                            color: AppTheme.primaryRed,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    if (isApplied) {
-                                      cartProvider.removeCoupon();
-                                    } else {
-                                      cartProvider.applyCoupon(code);
-                                    }
-                                    Navigator.pop(context);
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: isApplied ? const Color(0xFF64748B) : AppTheme.primaryRed,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    isApplied ? 'Bỏ chọn' : 'Áp dụng',
-                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          const SizedBox(height: 12),
-        ],
+        ),
       ),
     );
   }
@@ -268,6 +324,5 @@ class DashedLinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant DashedLinePainter oldDelegate) => oldDelegate.color != color;
 }
-

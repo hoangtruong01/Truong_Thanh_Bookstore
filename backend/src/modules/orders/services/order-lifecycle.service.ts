@@ -26,7 +26,14 @@ import { OrderInventoryService } from './order-inventory.service';
 import { OrderLoyaltyService } from './order-loyalty.service';
 import { OrderNotificationService } from './order-notification.service';
 
-type OrderStatusChange = UpdateOrderStatusDto & { returnReason?: string };
+type OrderStatusChange = UpdateOrderStatusDto & {
+  returnReason?: string;
+  /**
+   * SEC-022: nội bộ — trạng thái đơn bắt buộc phải đang có khi chuyển (kiểm tra
+   * lại bên trong transaction để tránh race với thao tác xác nhận của staff).
+   */
+  _expectedStatus?: OrderStatus;
+};
 
 @Injectable()
 export class OrderLifecycleService {
@@ -116,6 +123,10 @@ export class OrderLifecycleService {
             'Chỉ có thể hủy đơn hàng khi đơn đang ở trạng thái Chờ xử lý',
           );
         }
+
+        // SEC-022: kiểm tra lại PENDING bên trong transaction (không tin kết quả
+        // đọc ngoài transaction ở trên).
+        dto._expectedStatus = OrderStatus.PENDING;
       }
     }
 
@@ -222,6 +233,11 @@ export class OrderLifecycleService {
     if (!order) throw new NotFoundException('Order not found');
 
     const oldStatus = order.orderStatus;
+    if (dto._expectedStatus && oldStatus !== dto._expectedStatus) {
+      throw new BadRequestException(
+        'Chỉ có thể hủy đơn hàng khi đơn đang ở trạng thái Chờ xử lý',
+      );
+    }
     const allowedTransitions: Record<string, OrderStatus[]> = {
       [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
       [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
@@ -559,12 +575,13 @@ export class OrderLifecycleService {
     return this.updateStatus(id, {
       orderStatus: OrderStatus.CANCELLED,
       note: reason,
+      _expectedStatus: OrderStatus.PENDING,
     });
   }
 
   async requestReturn(
     id: string,
-    actor: { _id: string; role?: string },
+    actor: { _id: string; role?: string; permissions?: string[] },
     dto: { reason: string; overrideToken?: string },
   ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(id).exec();
@@ -595,20 +612,30 @@ export class OrderLifecycleService {
         ? order.updatedAt.getTime()
         : Date.now();
     const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+    // SEC-008: chỉ ADMIN/SUPER_ADMIN hoặc STAFF có quyền MANAGE_ORDERS mới được
+    // đặc cách quá hạn; với khách hàng overrideToken bị bỏ qua hoàn toàn.
+    const canOverrideWindow =
+      isAdmin ||
+      (actorRole === (UserRole.STAFF as string) &&
+        !!actor.permissions?.includes(StaffPermission.MANAGE_ORDERS));
+    let overrideApplied = false;
     if (Date.now() - deliveredTime > sevenDaysInMs) {
       const isOverrideValid =
-        dto.overrideToken && dto.overrideToken.trim().length >= 6;
+        canOverrideWindow &&
+        !!dto.overrideToken &&
+        dto.overrideToken.trim().length >= 6;
       if (!isOverrideValid) {
         throw new BadRequestException(
           'Đã quá thời hạn 7 ngày kể từ khi nhận hàng. Không thể yêu cầu đổi trả.',
         );
       }
+      overrideApplied = true;
     }
 
     return this.updateStatus(id, {
       orderStatus: OrderStatus.RETURN_REQUESTED,
       returnReason: dto.reason,
-      note: `Khách yêu cầu trả hàng: ${dto.reason}${dto.overrideToken ? ' (Đặc cách phê duyệt quá hạn)' : ''}`,
+      note: `Khách yêu cầu trả hàng: ${dto.reason}${overrideApplied ? ' (Đặc cách phê duyệt quá hạn)' : ''}`,
     });
   }
 

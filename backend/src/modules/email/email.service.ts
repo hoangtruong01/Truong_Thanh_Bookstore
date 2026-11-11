@@ -25,6 +25,19 @@ export interface EmailOrderStatusDetails {
   customerName: string;
 }
 
+/**
+ * SEC-011: Escape ký tự đặc biệt HTML cho mọi giá trị do người dùng kiểm soát
+ * trước khi nhúng vào nội dung email (chống chèn HTML/phishing).
+ */
+export function escapeHtml(value: string | number | null | undefined): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -131,7 +144,7 @@ Content: ${sanitizedHtml}...
         <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản tại <strong>Trường Thành Bookstore</strong>.</p>
         <p>Vui lòng sử dụng mã OTP dưới đây để hoàn tất quy trình (Mã này có hiệu lực trong <strong>10 phút</strong>):</p>
         <div style="text-align: center; margin: 30px 0;">
-          <span style="font-family: monospace; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #dc2626; padding: 10px 20px; background-color: #fef2f2; border: 1px dashed #fca5a5; border-radius: 8px; display: inline-block;">${otp}</span>
+          <span style="font-family: monospace; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #dc2626; padding: 10px 20px; background-color: #fef2f2; border: 1px dashed #fca5a5; border-radius: 8px; display: inline-block;">${escapeHtml(otp)}</span>
         </div>
         <p style="color: #64748b; font-size: 12px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 15px; margin-top: 30px;">
           Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này hoặc liên hệ bộ phận hỗ trợ của chúng tôi.<br>
@@ -152,8 +165,8 @@ Content: ${sanitizedHtml}...
       .map(
         (item: EmailOrderItem) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${item.name}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">${item.quantity}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${escapeHtml(item.name)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">${escapeHtml(item.quantity)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">${item.price.toLocaleString('vi-VN')}đ</td>
         <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">${(item.price * item.quantity).toLocaleString('vi-VN')}đ</td>
       </tr>
@@ -170,19 +183,19 @@ Content: ${sanitizedHtml}...
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <tr>
             <td style="padding: 5px 0; font-weight: bold; width: 120px;">Mã đơn hàng:</td>
-            <td style="padding: 5px 0; font-family: monospace; color: #dc2626; font-weight: bold;">#${order.orderCode}</td>
+            <td style="padding: 5px 0; font-family: monospace; color: #dc2626; font-weight: bold;">#${escapeHtml(order.orderCode)}</td>
           </tr>
           <tr>
             <td style="padding: 5px 0; font-weight: bold;">Người nhận:</td>
-            <td style="padding: 5px 0;">${order.customerName}</td>
+            <td style="padding: 5px 0;">${escapeHtml(order.customerName)}</td>
           </tr>
           <tr>
             <td style="padding: 5px 0; font-weight: bold;">Số điện thoại:</td>
-            <td style="padding: 5px 0;">${order.phone}</td>
+            <td style="padding: 5px 0;">${escapeHtml(order.phone)}</td>
           </tr>
           <tr>
             <td style="padding: 5px 0; font-weight: bold;">Địa chỉ nhận:</td>
-            <td style="padding: 5px 0;">${order.shippingAddress}</td>
+            <td style="padding: 5px 0;">${escapeHtml(order.shippingAddress)}</td>
           </tr>
         </table>
 
@@ -244,11 +257,11 @@ Content: ${sanitizedHtml}...
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; background-color: #ffffff;">
         <h2 style="color: #dc2626; text-align: center; border-bottom: 2px solid #dc2626; padding-bottom: 10px; margin-bottom: 20px;">CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG</h2>
-        <p>Xin chào <strong>${order.customerName}</strong>,</p>
+        <p>Xin chào <strong>${escapeHtml(order.customerName)}</strong>,</p>
         <p>Đơn hàng của bạn tại <strong>Trường Thành Bookstore</strong> đã thay đổi trạng thái:</p>
         
         <div style="background-color: #f8fafc; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; font-size: 16px; font-weight: bold; color: #1e293b;">
-          Đơn hàng #${order.orderCode} ${statusText}.
+          Đơn hàng #${escapeHtml(order.orderCode)} ${escapeHtml(statusText)}.
         </div>
 
         <p>Bạn có thể tra cứu hành trình chi tiết của đơn hàng trực tiếp bằng cách đăng nhập vào tài khoản trên website Trường Thành Bookstore.</p>

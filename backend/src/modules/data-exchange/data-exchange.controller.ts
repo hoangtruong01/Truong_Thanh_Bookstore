@@ -22,6 +22,8 @@ import { StaffPermission, UserRole } from '../../common/enums';
 import { DataExchangeService } from './data-exchange.service';
 import { ImportOptionsDto, RowError } from './dto/data-exchange.dto';
 
+const VALID_ENTITY_TYPES = ['products', 'suppliers', 'opening_stock'] as const;
+
 const UPLOAD_LIMITS = {
   fileSize: 10 * 1024 * 1024, // 10MB (SEC-01)
 };
@@ -59,6 +61,14 @@ export class DataExchangeController {
     user: any,
     type: 'products' | 'suppliers' | 'opening_stock',
   ): void {
+    // SEC-014: validate :type theo whitelist trước khi dùng (kể cả cho ADMIN),
+    // tránh giá trị tùy ý đi vào service / header Content-Disposition.
+    if (!(VALID_ENTITY_TYPES as readonly string[]).includes(type)) {
+      throw new BadRequestException(
+        `Loại dữ liệu không hợp lệ. Chỉ hỗ trợ: ${VALID_ENTITY_TYPES.join(', ')}`,
+      );
+    }
+
     if (
       user.role === UserRole.SUPER_ADMIN ||
       user.role === 'SUPER_ADMIN' ||

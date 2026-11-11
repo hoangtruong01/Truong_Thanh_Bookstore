@@ -13,6 +13,7 @@ import {
   Res,
   ForbiddenException,
   Headers,
+  Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
@@ -29,6 +30,7 @@ import {
   ProcessRefundDto,
   CancelOrderDto,
 } from './dto/order.dto';
+import { ReturnNoteDto } from './dto/return-note.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt.guard';
@@ -46,7 +48,36 @@ interface AuthenticatedRequest {
 @ApiTags('orders')
 @Controller('orders')
 export class OrdersController {
+  private readonly logger = new Logger(OrdersController.name);
+
   constructor(private ordersService: OrdersService) {}
+
+  /**
+   * ADMOPS-B1: generateInvoicePdf() đã end() tài liệu; ở đây chỉ pipe ra response.
+   * Không gọi end() lần hai (push after EOF làm sập process) và luôn gắn listener
+   * 'error' để lỗi stream PDF không bao giờ thành unhandled error.
+   */
+  private sendInvoicePdf(pdfDoc: any, res: Response, orderCode: string) {
+    pdfDoc.on('error', (err: Error) => {
+      this.logger.error(
+        `Invoice PDF stream failed for #${orderCode}: ${err?.message}`,
+      );
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: 'Không thể tạo hóa đơn PDF, vui lòng thử lại',
+        });
+      } else {
+        res.destroy();
+      }
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=invoice-${orderCode}.pdf`,
+    );
+    pdfDoc.pipe(res);
+  }
 
   @Post('checkout-preview')
   @UseGuards(OptionalJwtAuthGuard)
@@ -130,14 +161,7 @@ export class OrdersController {
     }
 
     const pdfDoc = await this.ordersService.generateInvoicePdf(order);
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename=invoice-${order.orderCode}.pdf`,
-    );
-    pdfDoc.pipe(res);
-    pdfDoc.end();
+    this.sendInvoicePdf(pdfDoc, res, order.orderCode);
   }
 
   @Get('guest/:id/invoice')
@@ -151,13 +175,7 @@ export class OrdersController {
   ) {
     const order = await this.ordersService.findGuestById(id, accessToken);
     const pdfDoc = await this.ordersService.generateInvoicePdf(order);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename=invoice-${order.orderCode}.pdf`,
-    );
-    pdfDoc.pipe(res);
-    pdfDoc.end();
+    this.sendInvoicePdf(pdfDoc, res, order.orderCode);
   }
 
   @Get('guest/:id')
@@ -255,7 +273,7 @@ export class OrdersController {
   })
   approveReturn(
     @Param('id') id: string,
-    @Body('note') note: string,
+    @Body() dto: ReturnNoteDto,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.ordersService.approveReturn(
@@ -264,7 +282,7 @@ export class OrdersController {
         ...req.user,
         _id: req.user._id.toString(),
       },
-      note,
+      dto?.note,
     );
   }
 
@@ -298,7 +316,7 @@ export class OrdersController {
   })
   confirmReturnReceived(
     @Param('id') id: string,
-    @Body('note') note: string,
+    @Body() dto: ReturnNoteDto,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.ordersService.confirmReturnReceived(
@@ -307,7 +325,7 @@ export class OrdersController {
         ...req.user,
         _id: req.user._id.toString(),
       },
-      note,
+      dto?.note,
     );
   }
 

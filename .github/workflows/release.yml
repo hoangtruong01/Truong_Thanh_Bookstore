@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*.*.*'
 
+# SEC-031: quyền tối thiểu cho GITHUB_TOKEN; job create-release tự nâng contents: write
+permissions:
+  contents: read
+
 jobs:
   verify-release:
     name: Verify tagged source
@@ -90,8 +94,10 @@ jobs:
 
       - name: 📝 Generate Release Notes
         id: release_notes
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          echo "## Trường Thành Bookstore — Release ${{ github.ref_name }}" > release_notes.md
+          echo "## Trường Thành Bookstore — Release ${REF_NAME}" > release_notes.md
           echo "Hệ thống thương mại điện tử đa kênh Sách & Văn phòng phẩm." >> release_notes.md
           echo "" >> release_notes.md
           echo "### 🌟 Các tính năng nổi bật:" >> release_notes.md

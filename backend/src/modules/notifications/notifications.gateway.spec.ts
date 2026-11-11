@@ -1,4 +1,5 @@
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { Socket } from 'socket.io';
 import { NotificationsGateway } from './notifications.gateway';
 import { UsersService } from '../users/users.service';
@@ -125,6 +126,90 @@ describe('Notification socket authentication and permissions', () => {
     });
     await gateway.sendAlertToAdmins({ type: 'stock' });
     expect(socket.emit).not.toHaveBeenCalled();
+  });
+
+  describe('SEC-020 WebSocket Origin check for cookie handshakes', () => {
+    const makeGateway = (frontendUrl?: string, nodeEnv = 'production') =>
+      new NotificationsGateway(
+        jwt as unknown as JwtService,
+        users as unknown as UsersService,
+        {
+          isJtiBlacklisted: jest.fn().mockResolvedValue(false),
+          isTokenBlacklisted: jest.fn().mockResolvedValue(false),
+        } as unknown as TokenBlacklistService,
+        {
+          get: (key: string) =>
+            key === 'FRONTEND_URL'
+              ? frontendUrl
+              : key === 'NODE_ENV'
+                ? nodeEnv
+                : undefined,
+        } as unknown as ConfigService,
+      );
+
+    const cookieSocket = (origin?: string) => ({
+      ...socket,
+      handshake: {
+        auth: {},
+        headers: {
+          cookie: 'theme=dark; access_token=signed-token',
+          ...(origin ? { origin } : {}),
+        },
+      },
+    });
+
+    it('rejects a cookie-authenticated handshake from a foreign Origin', async () => {
+      const gw = makeGateway('https://shop.example.com');
+      const client = cookieSocket('https://evil.example.org');
+      await gw.handleConnection(client as unknown as Socket);
+      expect(client.disconnect).toHaveBeenCalledWith(true);
+      expect(client.join).not.toHaveBeenCalled();
+      expect(jwt.verifyAsync).not.toHaveBeenCalled();
+    });
+
+    it('accepts a cookie handshake from an allowed Origin (multiple origins supported)', async () => {
+      const gw = makeGateway(
+        'https://admin.example.com, https://shop.example.com',
+      );
+      const client = cookieSocket('https://shop.example.com');
+      await gw.handleConnection(client as unknown as Socket);
+      expect(client.disconnect).not.toHaveBeenCalled();
+      expect(client.join).toHaveBeenCalledWith('user:user-1');
+    });
+
+    it('does not trust localhost origins in production', async () => {
+      const gw = makeGateway('https://shop.example.com', 'production');
+      const client = cookieSocket('http://localhost:5173');
+      await gw.handleConnection(client as unknown as Socket);
+      expect(client.disconnect).toHaveBeenCalledWith(true);
+    });
+
+    it('allows non-browser clients using an explicit token regardless of Origin', async () => {
+      const gw = makeGateway('https://shop.example.com');
+      const bearer = {
+        ...socket,
+        handshake: {
+          auth: {},
+          headers: { authorization: 'Bearer signed-token' },
+        },
+      };
+      await gw.handleConnection(bearer as unknown as Socket);
+      expect(bearer.disconnect).not.toHaveBeenCalled();
+      expect(bearer.join).toHaveBeenCalledWith('user:user-1');
+    });
+
+    it('allows a token passed in handshake.auth even with a foreign Origin header', async () => {
+      const gw = makeGateway('https://shop.example.com');
+      const client = {
+        ...socket,
+        handshake: {
+          auth: { token: 'signed-token' },
+          headers: { origin: 'https://evil.example.org' },
+        },
+      };
+      await gw.handleConnection(client as unknown as Socket);
+      expect(client.disconnect).not.toHaveBeenCalled();
+    });
   });
 
   it('removes disconnected clients and never delivers another user notification', async () => {

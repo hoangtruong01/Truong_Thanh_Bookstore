@@ -60,7 +60,8 @@
 - [ ] Chạy `cd backend && npm test && npm run lint && npm run build`. Lỗi lint ở `landing-page.service.spec.ts` là của phiên bảo mật; chờ họ sửa xong.
 - [ ] Commit theo đường dẫn cụ thể, **không** `git add -A`. Có 5 phiên dùng chung working tree:
   - GĐ5: `backend/src/modules/{cart,categories,banners}/**`, `backend/src/modules/products/{products.service.ts,products.service.spec.ts,schemas/stock-alert.schema.ts}`.
-    - Chú ý: `products.service.ts` có thêm thay đổi bảo mật của phiên `-62` (`stripPrivateProductFields`, `clampLimit`). Thống nhất với phiên đó ai commit file này.
+    - ✅ Phần `cart`, `banners`, `categories.service`, `stock-alert` đã commit trong `dbb497d`.
+    - ⚠️ `products.service.ts` và `products.service.spec.ts` **chưa commit**. Hai file này chứa cả phần `.lean()`/`withLeanDefaults`/`collectDescendantCategoryIds` của luồng này lẫn bản vá bảo mật của phiên `-62` (`stripPrivateProductFields`, `clampLimit`). Bản vá phụ thuộc `products.controller.ts`, `pagination.dto.ts` và `products.public-exposure.spec.ts`. Đã thống nhất: người dùng review rồi commit hai file này **cùng lúc** với bộ bản vá bảo mật (khoảng 40 file). Không commit riêng, vì commit riêng có thể làm build hoặc test đỏ.
   - GĐ3: `mobile/**`. Không gồm các file đăng ký plugin do Flutter tự sinh cho linux/macos/windows.
   - GĐ4: `frontend/src/{layouts/CustomerLayout.vue,pages/customer/*,components/customer/**,composables/useCountdown.ts,composables/useCoupon.ts,utils/helpers.ts,utils/category.ts,router/index.ts}`, `frontend/package.json` và `package-lock.json`.
     - Chú ý: phiên SEO `-44` cũng đã sửa nhiều file trong nhóm này (router, Home, ProductDetail, ProductList, Cart, CustomerLayout, ProductCard), và chưa commit.

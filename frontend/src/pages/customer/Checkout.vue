@@ -3,136 +3,16 @@
     <h1 class="text-2xl font-extrabold text-slate-900 mb-8">Thanh toán đơn hàng</h1>
 
     <!-- 1. Trạng Thái: Đặt Hàng & Thanh Toán Thành Công -->
-    <div v-if="orderSuccess" class="bg-white border border-slate-200 rounded-3xl p-8 sm:p-12 max-w-2xl mx-auto space-y-6 shadow-xs">
-      <div class="w-20 h-20 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-10 h-10"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-      </div>
-
-      <div class="space-y-2 text-center">
-        <h2 class="text-2xl font-extrabold text-slate-800">Đặt hàng thành công!</h2>
-        <p class="text-slate-500 text-sm">
-          Cảm ơn quý khách đã đặt mua tại Nhà Sách Trường Thành.
-        </p>
-      </div>
-
-      <!-- Tóm tắt mã đơn và thông tin thanh toán -->
-      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3 text-xs">
-        <div class="flex justify-between items-center pb-3 border-b border-slate-200/80">
-          <span class="text-slate-500 font-medium">Mã đơn hàng:</span>
-          <div class="flex items-center gap-2">
-            <span class="font-mono font-black text-slate-900 text-sm">#{{ orderCode }}</span>
-            <button
-              type="button"
-              class="text-[#dc2626] hover:underline font-bold text-[11px] cursor-pointer"
-              @click="copyText(orderCode, 'Mã đơn hàng')"
-            >
-              Sao chép
-            </button>
-          </div>
-        </div>
-
-        <div class="flex justify-between items-center">
-          <span class="text-slate-500 font-medium">Người nhận:</span>
-          <span class="font-bold text-slate-800">{{ shippingInfo.fullName }} ({{ shippingInfo.phone }})</span>
-        </div>
-
-        <div class="flex justify-between items-center">
-          <span class="text-slate-500 font-medium">Địa chỉ giao:</span>
-          <span class="font-bold text-slate-800 text-right max-w-[320px] truncate">{{ shippingInfo.address }}</span>
-        </div>
-
-        <div class="flex justify-between items-center">
-          <span class="text-slate-500 font-medium">Phương thức:</span>
-          <span class="font-bold text-slate-800">{{ getSelectedPaymentMethodLabel() }}</span>
-        </div>
-
-        <div class="flex justify-between items-center pt-2 border-t border-slate-200/80 text-sm">
-          <span class="font-black text-slate-900">Tổng thanh toán:</span>
-          <span class="font-black text-[#dc2626] text-base">{{ formatCurrency(lastSubmittedTotal) }}</span>
-        </div>
-      </div>
-
-      <!-- Hướng dẫn chuyển khoản ngân hàng (nếu chọn BANK_TRANSFER) -->
-      <div v-if="submittedPaymentMethod === 'BANK_TRANSFER'" class="bg-gradient-to-br from-amber-50 to-orange-50/40 border border-amber-200 rounded-2xl p-6 space-y-4">
-        <div class="flex items-center gap-2">
-          <span class="text-lg">🏦</span>
-          <h3 class="font-extrabold text-amber-900 text-sm uppercase tracking-wide">Hướng dẫn thanh toán chuyển khoản ngân hàng</h3>
-        </div>
-        <p class="text-xs text-amber-800 leading-relaxed">
-          Quý khách vui lòng chuyển khoản theo đúng thông tin bên dưới và ghi rõ mã đơn hàng trong nội dung chuyển khoản. Nhân viên nhà sách sẽ kiểm tra đối soát và xử lý giao hàng ngay sau khi nhận được tiền.
-        </p>
-
-        <div v-if="bankTransferConfig && bankTransferConfig.accountNumber" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-white p-4 rounded-xl border border-amber-200">
-          <div class="text-center">
-            <img
-              :src="`https://img.vietqr.io/image/${encodeURIComponent(bankTransferConfig.bankName || 'MB')}-${encodeURIComponent(bankTransferConfig.accountNumber)}-compact2.png?amount=${lastSubmittedTotal}&addInfo=${encodeURIComponent(orderCode)}&accountName=${encodeURIComponent(bankTransferConfig.accountHolder || 'TRUONG THANH BOOKSTORE')}`"
-              alt="VietQR Mã Đơn Hàng"
-              class="w-44 h-44 mx-auto rounded-lg border border-slate-200 p-1 shadow-xs"
-            />
-            <span class="text-[10.5px] text-slate-400 mt-1 block">Quét QR bằng mọi App Ngân hàng</span>
-          </div>
-
-          <div class="space-y-2 text-xs text-slate-700">
-            <div>
-              <span class="text-slate-400 block text-[10px] uppercase font-bold">Ngân hàng thụ hưởng</span>
-              <strong class="text-slate-900">{{ bankTransferConfig.bankName || 'Ngân hàng' }}</strong>
-            </div>
-            <div>
-              <span class="text-slate-400 block text-[10px] uppercase font-bold">Số tài khoản</span>
-              <div class="flex items-center gap-2">
-                <strong class="font-mono text-slate-900 text-sm">{{ bankTransferConfig.accountNumber }}</strong>
-                <button type="button" class="text-xs font-bold text-red-600 hover:underline" @click="copyText(bankTransferConfig.accountNumber, 'Số tài khoản')">Copy</button>
-              </div>
-            </div>
-            <div>
-              <span class="text-slate-400 block text-[10px] uppercase font-bold">Chủ tài khoản</span>
-              <strong class="text-slate-900">{{ bankTransferConfig.accountHolder || 'TRUONG THANH BOOKSTORE' }}</strong>
-            </div>
-            <div>
-              <span class="text-slate-400 block text-[10px] uppercase font-bold">Số tiền chuyển</span>
-              <div class="flex items-center gap-2">
-                <strong class="text-[#dc2626] font-bold text-sm">{{ formatCurrency(lastSubmittedTotal) }}</strong>
-                <button type="button" class="text-xs font-bold text-red-600 hover:underline" @click="copyText(lastSubmittedTotal.toString(), 'Số tiền')">Copy</button>
-              </div>
-            </div>
-            <div>
-              <span class="text-slate-400 block text-[10px] uppercase font-bold">Nội dung chuyển khoản (bắt buộc)</span>
-              <div class="flex items-center gap-2">
-                <strong class="font-mono text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded text-sm">{{ orderCode }}</strong>
-                <button type="button" class="text-xs font-bold text-red-600 hover:underline" @click="copyText(orderCode, 'Nội dung chuyển khoản')">Copy</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-else class="bg-white p-4 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
-          <p>Mã đơn hàng: <strong class="font-mono text-red-600">#{{ orderCode }}</strong></p>
-          <p>Số tiền cần thanh toán: <strong class="text-red-600">{{ formatCurrency(lastSubmittedTotal) }}</strong></p>
-          <p class="text-slate-600">Vui lòng liên hệ hotline: <strong>0982938316</strong> để được hỗ trợ hướng dẫn thông tin tài khoản chuyển khoản.</p>
-        </div>
-      </div>
-
-      <!-- Thông báo cho COD -->
-      <div v-else-if="submittedPaymentMethod === 'COD'" class="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-xs text-blue-800 flex items-start gap-3">
-        <span class="text-lg mt-0.5">📦</span>
-        <div>
-          <p class="font-bold text-blue-900">Thanh toán khi nhận hàng (COD)</p>
-          <p class="mt-0.5 text-blue-700">Đơn hàng sẽ được đóng gói và giao đến quý khách trong 2 - 4 ngày làm việc. Quý khách vui lòng chuẩn bị số tiền <strong>{{ formatCurrency(lastSubmittedTotal) }}</strong> khi nhận hàng.</p>
-        </div>
-      </div>
-
-      <div class="flex flex-col sm:flex-row justify-center gap-3 pt-2">
-        <router-link
-          v-if="createdOrderId"
-          :to="authStore.isAuthenticated ? `/my-orders/${createdOrderId}` : `/guest-orders/${createdOrderId}`"
-          class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-3 px-8 rounded-xl transition-colors inline-block text-sm text-center shadow-md shadow-red-500/20"
-        >
-          Xem tình trạng đơn hàng
-        </router-link>
-        <router-link to="/products" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 px-8 rounded-xl transition-colors inline-block text-sm text-center">
-          Tiếp tục mua sách
-        </router-link>
-      </div>
-    </div>
+    <OrderSuccess
+      v-if="orderSuccess"
+      :order-code="orderCode"
+      :order-id="createdOrderId"
+      :recipient="shippingInfo"
+      :payment-method="submittedPaymentMethod"
+      :total="lastSubmittedTotal"
+      :bank-transfer-config="bankTransferConfig"
+      :is-authenticated="authStore.isAuthenticated"
+    />
 
     <!-- 2. Trạng Thái: Đặt Hàng Thất Bại -->
     <div v-else-if="orderFailed" class="bg-white border border-red-200 rounded-3xl p-12 text-center max-w-xl mx-auto space-y-6 shadow-xs">
@@ -164,114 +44,21 @@
       <!-- Checkout Form -->
       <div class="lg:col-span-2 space-y-6">
         <!-- Shipping details -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
-          <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3">Thông tin giao nhận</h3>
-          
-          <!-- Address Selection from Address Book -->
-          <div v-if="authStore.isAuthenticated && addresses.length > 0" class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 mb-4">
-            <label class="text-xs font-bold text-slate-700 block">Chọn nhanh từ Sổ địa chỉ</label>
-            <select 
-              v-model="selectedAddressId"
-              class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
-              @change="onAddressSelectChange"
-            >
-              <option value="" disabled>-- Chọn địa chỉ --</option>
-              <option v-for="addr in addresses" :key="addr._id" :value="addr._id">
-                [{{ addr.label }}] {{ addr.recipientName }} - {{ addr.phone }} ({{ addr.detail }}, {{ addr.ward }}, {{ addr.district }}, {{ addr.province }})
-              </option>
-            </select>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="sm:col-span-2">
-              <label class="text-xs font-bold text-slate-700">Họ và tên người nhận</label>
-              <input
-                v-model="shippingInfo.fullName"
-                type="text"
-                required
-                placeholder="Nguyễn Văn A"
-                maxlength="100"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
-              />
-            </div>
-            <div>
-              <label class="text-xs font-bold text-slate-700">Số điện thoại</label>
-              <input
-                v-model="shippingInfo.phone"
-                type="tel"
-                required
-                placeholder="09xx xxx xxx"
-                maxlength="10"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
-                :class="{ 'border-red-300 ring-1 ring-red-300': shippingInfo.phone && !isPhoneValid }"
-                @input="onPhoneInput"
-              />
-              <p v-if="shippingInfo.phone && !isPhoneValid" class="text-[10px] text-red-500 mt-1 font-medium">
-                Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0
-              </p>
-            </div>
-            <div>
-              <label class="text-xs font-bold text-slate-700">Địa chỉ Email</label>
-              <input
-                v-model="shippingInfo.email"
-                type="email"
-                required
-                placeholder="customer@example.com"
-                maxlength="100"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
-              />
-            </div>
-            <div class="sm:col-span-2">
-              <label class="text-xs font-bold text-slate-700">Địa chỉ giao hàng chi tiết</label>
-              <input
-                v-model="shippingInfo.address"
-                type="text"
-                required
-                placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
-                maxlength="200"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
-              />
-            </div>
-            <div class="sm:col-span-2">
-              <label class="text-xs font-bold text-slate-700">Ghi chú đơn hàng (Tùy chọn)</label>
-              <textarea
-                v-model="shippingInfo.note"
-                rows="3"
-                placeholder="Ví dụ: Giao giờ hành chính, gọi điện trước khi giao..."
-                maxlength="500"
-                class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white"
-              ></textarea>
-            </div>
-          </div>
-        </div>
+        <AddressSection
+          v-model:selected-address-id="selectedAddressId"
+          v-model:full-name="shippingInfo.fullName"
+          v-model:phone="shippingInfo.phone"
+          v-model:email="shippingInfo.email"
+          v-model:address="shippingInfo.address"
+          v-model:note="shippingInfo.note"
+          :addresses="addresses"
+          :is-authenticated="authStore.isAuthenticated"
+          :phone-valid="isPhoneValid"
+          @address-change="onAddressSelectChange"
+        />
 
         <!-- Payment Method -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
-          <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3">Phương thức thanh toán</h3>
-          <div class="space-y-3">
-            <label
-              v-for="method in paymentMethods"
-              :key="method.value"
-              class="flex items-start gap-4 p-4 border rounded-2xl cursor-pointer transition-all hover:bg-slate-50"
-              :class="[paymentMethod === method.value ? 'border-[#dc2626] bg-red-50/20' : 'border-slate-200']"
-            >
-              <input
-                v-model="paymentMethod"
-                type="radio"
-                :value="method.value"
-                name="payment_method"
-                class="mt-1 text-[#dc2626] focus:ring-[#dc2626] accent-[#dc2626]"
-              />
-              <div class="flex-grow">
-                <div class="flex items-center gap-2">
-                  <p class="text-sm font-bold text-slate-800">{{ method.label }}</p>
-                  <span v-if="method.tag" class="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">{{ method.tag }}</span>
-                </div>
-                <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">{{ method.description }}</p>
-              </div>
-            </label>
-          </div>
-        </div>
+        <PaymentMethodSelector v-model="paymentMethod" :methods="paymentMethods" />
       </div>
 
       <!-- Order Review & Transparent Pricing Summary (FE-06) -->
@@ -403,204 +190,24 @@
           </div>
 
           <!-- Coupon Block on Checkout -->
-          <div class="border-t border-slate-100 pt-4 space-y-3">
-            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Mã giảm giá (Voucher)</h4>
-            
-            <div v-if="cartStore.appliedPromotion" class="bg-green-50 border border-green-200 rounded-xl p-3 flex justify-between items-center">
-              <div class="text-xs text-green-800 font-medium">
-                <p class="font-bold">Đã áp dụng: {{ cartStore.appliedPromotion.code }}</p>
-                <p>Giảm {{ formatCurrency(cartStore.discountAmount) }}</p>
-              </div>
-              <button class="text-xs font-bold text-red-600 hover:underline" @click="cartStore.removeCoupon()">Gỡ</button>
-            </div>
-            
-            <div v-else class="flex gap-2">
-              <input
-                v-model="couponCode"
-                type="text"
-                placeholder="Nhập mã giảm giá..."
-                maxlength="30"
-                class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#dc2626] focus:bg-white font-mono uppercase tracking-wider"
-              />
-              <button 
-                type="button"
-                :disabled="isApplyingCoupon || !couponCode.trim()" 
-                class="bg-slate-950 hover:bg-[#dc2626] text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                @click="handleApplyCoupon"
-              >
-                <svg v-if="isApplyingCoupon" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>{{ isApplyingCoupon ? 'Đang áp dụng...' : 'Áp dụng' }}</span>
-              </button>
-            </div>
-            <p v-if="cartStore.promoError" class="text-[10px] text-red-500 font-medium mt-1">{{ cartStore.promoError }}</p>
-
-            <!-- Collapsible Suggestive Vouchers list -->
-            <div v-if="activePromotions.length > 0" class="mt-2">
-              <button 
-                class="text-xs font-bold text-[#dc2626] hover:text-[#b91c1c] flex items-center gap-1.5 focus:outline-none cursor-pointer" 
-                @click="showVoucherList = !showVoucherList"
-              >
-                <span>{{ showVoucherList ? 'Ẩn danh sách Voucher' : 'Xem Voucher khả dụng' }}</span>
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke-width="2.5" 
-                  stroke="currentColor" 
-                  class="w-3.5 h-3.5 transition-transform duration-200"
-                  :class="{'rotate-180': showVoucherList}"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                </svg>
-              </button>
-
-              <div v-if="showVoucherList" class="mt-2 space-y-2 max-h-40 overflow-y-auto pr-1">
-                <div 
-                  v-for="promo in activePromotions" 
-                  :key="promo._id" 
-                  class="border border-dashed border-red-200 rounded-xl p-2.5 bg-red-50/10 flex justify-between items-center gap-2 hover:bg-red-50/20 transition-colors"
-                >
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <span class="bg-red-100 text-red-700 text-[10px] font-black px-1.5 py-0.5 rounded font-mono uppercase tracking-wider">{{ promo.code }}</span>
-                      <span class="text-xs font-extrabold text-slate-800">
-                        {{ promo.discountType === 'PERCENT' ? `Giảm ${promo.discountValue}%` : `Giảm ${formatCurrency(promo.discountValue)}` }}
-                      </span>
-                    </div>
-                    <p class="text-[10px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{{ promo.description }}</p>
-                    <p class="text-[9px] text-slate-400 mt-0.5 font-medium">Đơn tối thiểu: {{ formatCurrency(promo.minOrderValue) }}</p>
-                  </div>
-                  <button 
-                    type="button"
-                    :disabled="isApplyingCoupon || cartStore.subtotal < promo.minOrderValue"
-                    class="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2.5 rounded-lg text-[10px] transition-colors disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
-                    @click="applySuggestedCoupon(promo.code)"
-                  >
-                    <svg v-if="isApplyingCoupon" class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Dùng</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <VoucherSection
+            v-model:code="couponCode"
+            v-model:expanded="showVoucherList"
+            :promotions="activePromotions"
+            :applying="isApplyingCoupon"
+            @apply="handleApplyCoupon"
+            @apply-suggested="applySuggestedCoupon"
+          />
 
           <!-- Loyalty Points Redemption Block -->
-          <!-- Balance, limits and errors come from preview.loyalty (server), not from the cached profile -->
-          <div v-if="authStore.isAuthenticated && loyalty && loyalty.availablePoints > 0" class="border-t border-slate-100 pt-4 space-y-3" data-testid="checkout-loyalty">
-            <div class="flex justify-between items-center">
-              <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span>Điểm thưởng tích lũy</span>
-              </h4>
-              <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                Có: {{ loyalty.availablePoints.toLocaleString() }} điểm
-              </span>
-            </div>
+          <LoyaltySection
+            v-if="authStore.isAuthenticated && loyalty && loyalty.availablePoints > 0"
+            v-model:points="loyaltyPointsInput"
+            :loyalty="loyalty"
+            :error="loyaltyError"
+          />
 
-            <div v-if="loyalty.availablePoints < loyalty.minRedeemPoints" class="text-[11px] text-slate-400 font-medium">
-              Bạn cần tối thiểu {{ loyalty.minRedeemPoints.toLocaleString() }} điểm để quy đổi (hiện có {{ loyalty.availablePoints.toLocaleString() }} điểm).
-            </div>
-
-            <div v-else-if="!loyalty.canRedeem" class="text-[11px] text-slate-400 font-medium">
-              Đơn hàng từ {{ formatCurrency(loyalty.minSubtotalToRedeem) }} mới có thể dùng điểm (tối đa {{ loyalty.maxRedeemPercent }}% giá trị đơn).
-            </div>
-
-            <div v-else class="space-y-2">
-              <div class="flex gap-2">
-                <input
-                  v-model.number="loyaltyPointsInput"
-                  type="number"
-                  min="0"
-                  :max="loyalty.maxRedeemablePoints"
-                  step="100"
-                  :placeholder="`Nhập số điểm muốn tiêu (tối thiểu ${loyalty.minRedeemPoints.toLocaleString()})...`"
-                  class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-semibold"
-                />
-                <button
-                  type="button"
-                  class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-2 px-3 rounded-xl text-xs transition-colors cursor-pointer whitespace-nowrap"
-                  @click="applyMaxPoints"
-                >
-                  Tối đa
-                </button>
-              </div>
-              <p class="text-[10px] text-slate-500">
-                1 điểm = {{ loyalty.pointValue.toLocaleString() }} VNĐ. Tối đa {{ loyalty.maxRedeemPercent }}% giá trị đơn (tối đa {{ loyalty.maxRedeemablePoints.toLocaleString() }} điểm = {{ formatCurrency(loyalty.maxRedeemablePoints * loyalty.pointValue) }}).
-              </p>
-              <p v-if="loyaltyError" class="text-[10px] text-red-500 font-medium">{{ loyaltyError }}</p>
-            </div>
-          </div>
-
-          <!-- Bảng Minh Bạch Chi Phí Đơn Hàng (FE-06 Transparency Table) -->
-          <div class="border-t border-slate-100 pt-4 space-y-2.5 text-xs font-medium">
-            <!-- Server warning messages if prices or stock adjusted -->
-            <div v-if="cartStore.warnings.length" class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 space-y-1">
-              <div class="font-bold flex items-center gap-1">
-                <span>⚠️</span>
-                <span>Thông báo cập nhật từ hệ thống:</span>
-              </div>
-              <p v-for="(warn, idx) in cartStore.warnings" :key="idx" class="text-[11px] leading-relaxed">
-                • {{ warn }}
-              </p>
-            </div>
-
-            <!-- Preview failed: the last good numbers stay visible, but ordering is blocked -->
-            <div v-if="cartStore.pricingError" class="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-medium flex items-center justify-between gap-2" data-testid="checkout-pricing-error">
-              <span>{{ cartStore.pricingError }}</span>
-              <button type="button" class="font-bold hover:underline cursor-pointer whitespace-nowrap" @click="retryPricing">Thử lại</button>
-            </div>
-
-            <SkeletonLoader v-if="!cartStore.pricing && cartStore.pricingLoading" type="lines" :count="4" data-testid="checkout-pricing-skeleton" />
-
-            <template v-else-if="cartStore.pricing">
-              <div class="flex justify-between text-slate-600">
-                <span>Tiền hàng</span>
-                <span class="text-slate-800 font-bold" data-testid="checkout-subtotal">{{ formatCurrency(cartStore.subtotal) }}</span>
-              </div>
-
-              <div class="flex justify-between text-slate-600 items-center">
-                <span>Phí vận chuyển</span>
-                <div class="text-right">
-                  <span v-if="cartStore.shippingFee === 0" class="font-bold text-green-600 flex items-center gap-1">
-                    <span v-if="cartStore.standardShippingFee" class="line-through text-slate-400 font-normal">{{ formatCurrency(cartStore.standardShippingFee) }}</span>
-                    <span>Miễn phí</span>
-                  </span>
-                  <span v-else class="text-slate-800 font-bold" data-testid="checkout-shipping-fee">
-                    {{ formatCurrency(cartStore.shippingFee) }}
-                  </span>
-                </div>
-              </div>
-
-              <div v-if="cartStore.discountAmount > 0" class="flex justify-between text-red-600">
-                <span class="flex items-center gap-1">
-                  <span>Voucher giảm giá</span>
-                  <span class="font-mono font-bold bg-red-50 px-1 py-0.2 rounded border border-red-200 text-[10px]">{{ cartStore.appliedPromotion?.code }}</span>
-                </span>
-                <span class="font-bold">-{{ formatCurrency(cartStore.discountAmount) }}</span>
-              </div>
-
-              <div v-if="cartStore.loyaltyDiscount > 0" class="flex justify-between text-amber-600">
-                <span>Điểm thưởng<template v-if="loyalty?.appliedPoints"> ({{ loyalty.appliedPoints.toLocaleString() }} điểm)</template></span>
-                <span class="font-bold">-{{ formatCurrency(cartStore.loyaltyDiscount) }}</span>
-              </div>
-
-              <div class="border-t border-slate-200 pt-3 flex justify-between items-baseline text-slate-900">
-                <div>
-                  <span class="text-sm font-black block">Tổng thanh toán cuối cùng</span>
-                  <span class="text-[10px] text-slate-400 font-normal">
-                    {{ cartStore.pricingLoading ? 'Đang cập nhật giá...' : 'Đã bao gồm VAT, không phí ẩn' }}
-                  </span>
-                </div>
-                <span class="text-xl font-black text-[#dc2626]" :class="{ 'opacity-50': cartStore.pricingLoading }" data-testid="checkout-total">{{ formatCurrency(cartStore.total) }}</span>
-              </div>
-            </template>
-          </div>
+          <PricingSummary @retry="retryPricing" />
 
           <!-- Button Đặt Hàng kèm Submit-Lock Guard (FE-05 + FE-06) -->
           <button
@@ -634,11 +241,19 @@ import { useAuthStore } from '@/stores/auth'
 import { orderService } from '@/services/order.service'
 import { paymentService, type BankTransferConfig } from '@/services/payment.service'
 import { addressService } from '@/services/address.service'
-import { formatCurrency } from '@/utils/helpers'
+import { PAYMENT_METHOD_LABELS, formatCurrency } from '@/utils/helpers'
 import { promotionService } from '@/services/promotion.service'
 import type { Promotion, Address } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 import { useDoubleSubmit } from '@/composables/useDoubleSubmit'
+import { useCoupon } from '@/composables/useCoupon'
+import OrderSuccess from '@/components/customer/checkout/OrderSuccess.vue'
+import AddressSection from '@/components/customer/checkout/AddressSection.vue'
+import PaymentMethodSelector from '@/components/customer/checkout/PaymentMethodSelector.vue'
+import VoucherSection from '@/components/customer/checkout/VoucherSection.vue'
+import LoyaltySection from '@/components/customer/checkout/LoyaltySection.vue'
+import PricingSummary from '@/components/customer/checkout/PricingSummary.vue'
+import type { CheckoutPaymentMethod, PaymentMethodOption } from '@/components/customer/checkout/types'
 
 useSeoMeta({
   title: 'Thanh toán đơn hàng',
@@ -649,21 +264,20 @@ const cartStore = useCartStore()
 const authStore = useAuthStore()
 const toast = useToast()
 const { isSubmitting: isPlacingOrder } = useDoubleSubmit({ cooldownMs: 1000 })
+const { couponCode, isApplyingCoupon, handleApplyCoupon, applySuggestedCoupon } = useCoupon()
 
 const checkoutItems = computed(() => cartStore.items.filter(item => item.selected !== false))
 
 const submitting = ref(false)
-const isApplyingCoupon = ref(false)
 const orderSuccess = ref(false)
 const orderFailed = ref(false)
 const orderFailReason = ref('')
 const orderCode = ref('')
-const couponCode = ref('')
 const activePromotions = ref<Promotion[]>([])
 const showVoucherList = ref(false)
 const createdOrderId = ref('')
 const lastSubmittedTotal = ref(0)
-const submittedPaymentMethod = ref<'COD' | 'BANK_TRANSFER' | 'VNPAY' | 'MOMO'>('COD')
+const submittedPaymentMethod = ref<CheckoutPaymentMethod>('COD')
 
 const enabledPaymentMethods = ref<string[]>(['COD'])
 const bankTransferConfig = ref<BankTransferConfig | null>(null)
@@ -724,14 +338,6 @@ const loyaltyError = computed(() => {
   return loyalty.value?.error || ''
 })
 
-function applyMaxPoints() {
-  if (loyalty.value?.canRedeem && loyalty.value.maxRedeemablePoints > 0) {
-    loyaltyPointsInput.value = loyalty.value.maxRedeemablePoints
-  } else {
-    toast.info('Đơn hàng hiện tại hoặc số dư điểm chưa đủ điều kiện quy đổi')
-  }
-}
-
 // Ordering requires a fresh, successful server preview of exactly what is on screen.
 const isPricingReady = computed(() => !!cartStore.pricing && !cartStore.pricingLoading && !cartStore.pricingError)
 
@@ -773,29 +379,29 @@ function onAddressSelectChange() {
   }
 }
 
-const paymentMethod = ref<'COD' | 'BANK_TRANSFER' | 'VNPAY' | 'MOMO'>('COD')
+const paymentMethod = ref<CheckoutPaymentMethod>('COD')
 
-const allPaymentMethods = [
+const allPaymentMethods: PaymentMethodOption[] = [
   {
     value: 'COD',
-    label: 'Thanh toán khi nhận hàng (COD)',
+    label: PAYMENT_METHOD_LABELS.COD,
     description: 'Thanh toán bằng tiền mặt khi shipper giao hàng tận nơi.',
     tag: 'Phổ biến',
   },
   {
     value: 'BANK_TRANSFER',
-    label: 'Chuyển khoản ngân hàng',
+    label: PAYMENT_METHOD_LABELS.BANK_TRANSFER,
     description: 'Chuyển khoản theo số tài khoản hoặc quét QR, đối soát và xác nhận nhanh.',
     tag: 'Khuyên dùng',
   },
   {
     value: 'VNPAY',
-    label: 'Cổng thanh toán VNPay',
+    label: PAYMENT_METHOD_LABELS.VNPAY,
     description: 'Thanh toán an toàn qua VNPAY-QR, thẻ ATM nội địa hoặc thẻ quốc tế.',
   },
   {
     value: 'MOMO',
-    label: 'Ví điện tử MoMo',
+    label: PAYMENT_METHOD_LABELS.MOMO,
     description: 'Quét mã qua ứng dụng MoMo chỉ với 1 chạm.',
   },
 ]
@@ -821,22 +427,12 @@ async function fetchEnabledPaymentMethods() {
       bankTransferConfig.value = data.bankTransfer
     }
     if (!paymentMethods.value.some(m => m.value === paymentMethod.value)) {
-      paymentMethod.value = (paymentMethods.value[0]?.value as any) || 'COD'
+      paymentMethod.value = paymentMethods.value[0]?.value || 'COD'
     }
   } catch (_err) {
     enabledPaymentMethods.value = ['COD']
     paymentMethod.value = 'COD'
   }
-}
-
-function getSelectedPaymentMethodLabel(): string {
-  const found = paymentMethods.value.find(m => m.value === submittedPaymentMethod.value)
-  return found ? found.label : submittedPaymentMethod.value
-}
-
-function copyText(text: string, label: string) {
-  navigator.clipboard.writeText(text)
-  toast.success(`Đã sao chép ${label}!`)
 }
 
 const checkoutIdempotencyKey = ref<string>(
@@ -862,44 +458,6 @@ const isPhoneValid = computed(() => {
   if (!shippingInfo.phone) return true
   return /^0\d{9}$/.test(shippingInfo.phone)
 })
-
-function onPhoneInput(e: Event) {
-  const input = e.target as HTMLInputElement
-  input.value = input.value.replace(/\D/g, '')
-  shippingInfo.phone = input.value
-}
-
-async function handleApplyCoupon() {
-  if (isApplyingCoupon.value || !couponCode.value.trim()) return
-  isApplyingCoupon.value = true
-  try {
-    // The store re-prices the order with the code; the discount shown is the server's.
-    const success = await cartStore.applyCoupon(couponCode.value.trim().toUpperCase())
-    if (success) {
-      toast.success('Áp dụng mã giảm giá thành công!')
-      couponCode.value = ''
-    } else {
-      toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
-    }
-  } finally {
-    isApplyingCoupon.value = false
-  }
-}
-
-async function applySuggestedCoupon(code: string) {
-  if (isApplyingCoupon.value) return
-  isApplyingCoupon.value = true
-  try {
-    const success = await cartStore.applyCoupon(code)
-    if (success) {
-      toast.success('Áp dụng mã giảm giá thành công!')
-    } else {
-      toast.error(cartStore.promoError || 'Mã giảm giá không hợp lệ')
-    }
-  } finally {
-    isApplyingCoupon.value = false
-  }
-}
 
 const EMAIL_LOOKS_COMPLETE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 

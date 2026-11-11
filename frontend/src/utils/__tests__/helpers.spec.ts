@@ -4,6 +4,7 @@ import {
   formatNumber,
   getDiscountPercent,
   getEffectivePrice,
+  getProductPlaceholder,
   getStatusLabel,
   optimizeCloudinaryUrl,
 } from '../helpers'
@@ -57,6 +58,37 @@ describe('helpers.ts', () => {
       expect(getStatusLabel('DELIVERED')).toBe('Đã giao thành công')
       expect(getStatusLabel('CANCELLED')).toBe('Đã hủy')
       expect(formatCurrency(50000)).toContain('50.000')
+    })
+  })
+
+  describe('getProductPlaceholder', () => {
+    it.each([
+      ['Bút bi Thiên Long', 'pencil', 'bg-gradient-to-br from-red-400 to-rose-500'],
+      ['Vở kẻ ngang 200 trang', 'document', 'bg-gradient-to-br from-emerald-400 to-teal-500'],
+      ['Máy tính Casio FX-580', 'calculator', 'bg-gradient-to-br from-indigo-400 to-purple-500'],
+      ['Bìa hồ sơ A4', 'folder', 'bg-gradient-to-br from-blue-400 to-sky-500'],
+      ['Combo văn phòng', 'briefcase', 'bg-gradient-to-br from-blue-500 to-indigo-600'],
+      ['Bộ dụng cụ học sinh tiểu học', 'academic', 'bg-gradient-to-br from-amber-400 to-orange-500'],
+      ['Balo du lịch', 'tag', 'bg-gradient-to-br from-pink-400 to-rose-500'],
+    ])('maps "%s" to the %s placeholder', (name, icon, gradient) => {
+      expect(getProductPlaceholder(name)).toEqual({ icon, gradient })
+    })
+
+    it('matches case-insensitively and keeps the first matching rule', () => {
+      // "BÚT" (pencil) wins over "SỔ" (document) because the pencil rule comes first.
+      expect(getProductPlaceholder('BÚT VÀ SỔ').icon).toBe('pencil')
+    })
+
+    it('falls back to the tag placeholder for empty input', () => {
+      expect(getProductPlaceholder('').icon).toBe('tag')
+      expect(getProductPlaceholder(undefined).icon).toBe('tag')
+      expect(getProductPlaceholder(null).icon).toBe('tag')
+    })
+
+    it('returns a fresh object on every call', () => {
+      const first = getProductPlaceholder('Bút')
+      first.gradient = 'mutated'
+      expect(getProductPlaceholder('Bút').gradient).toBe('bg-gradient-to-br from-red-400 to-rose-500')
     })
   })
 })

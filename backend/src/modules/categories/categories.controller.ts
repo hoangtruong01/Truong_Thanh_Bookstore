@@ -21,7 +21,21 @@ import { CategoriesService } from './categories.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
-import { StaffPermission } from '../../common/enums';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { StaffPermission, UserRole } from '../../common/enums';
+
+/** SEC-016: ADMIN / SUPER_ADMIN / STAFF mới được xem danh mục đang ẩn. */
+export function canViewInactiveCategories(
+  user?: { role?: string } | null,
+): boolean {
+  const role = user?.role;
+  return (
+    role === UserRole.SUPER_ADMIN ||
+    role === UserRole.ADMIN ||
+    role === UserRole.STAFF
+  );
+}
 
 @ApiTags('categories')
 @Controller('categories')
@@ -35,6 +49,7 @@ export class CategoriesController {
   }
 
   @Get('tree')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get category tree hierarchy (multi-level)' })
   @ApiQuery({
     name: 'includeInactive',
@@ -42,8 +57,13 @@ export class CategoriesController {
     type: Boolean,
     description: 'Bao gồm cả danh mục bị ẩn',
   })
-  getTree(@Query('includeInactive') includeInactive?: string) {
-    const isInclude = includeInactive === 'true';
+  getTree(
+    @Query('includeInactive') includeInactive?: string,
+    @CurrentUser() user?: { role?: string } | null,
+  ) {
+    // SEC-016: khách / CUSTOMER không được yêu cầu danh mục ẩn; tham số bị bỏ qua.
+    const isInclude =
+      String(includeInactive) === 'true' && canViewInactiveCategories(user);
     return this.categoriesService.getCategoryTree(isInclude);
   }
 

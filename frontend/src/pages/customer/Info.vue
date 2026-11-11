@@ -251,6 +251,7 @@ import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { useSeoMeta } from '@/composables/useSeoMeta'
+import { buildCanonicalUrl } from '@/utils/seo'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 
 const route = useRoute()
@@ -287,6 +288,12 @@ const activeTabInfo = computed(() => tabs.find(t => t.id === activeTab.value) ||
 useSeoMeta(() => ({
   title: activeTabInfo.value.title,
   description: `${activeTabInfo.value.title} chính thức của cửa hàng Văn Phòng Phẩm Trường Thành Stationery. Cam kết uy tín, chất lượng.`,
+  // SEO-TASK-008: mỗi tab là một trang nội dung riêng => canonical giữ ?tab (tab mặc định privacy = /info)
+  canonical: buildCanonicalUrl(
+    '/info',
+    { tab: activeTabInfo.value.id === 'privacy' ? undefined : activeTabInfo.value.id },
+    ['tab'],
+  ),
 }))
 
 const breadcrumbItems = computed(() => [

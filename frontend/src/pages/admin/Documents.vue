@@ -324,6 +324,7 @@ import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import FormModal from '@/components/FormModal.vue'
 import { useToast } from 'vue-toastification'
+import { formatCurrency } from '@/utils/helpers'
 
 const toast = useToast()
 
@@ -495,10 +496,6 @@ function getStatusBadgeClass(status: string): string {
     case 'CANCELLED': return 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
     default: return 'bg-slate-100 text-slate-700'
   }
-}
-
-function formatCurrency(val: number): string {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)
 }
 
 function formatDate(dateStr?: string): string {

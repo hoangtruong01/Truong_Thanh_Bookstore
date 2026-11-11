@@ -11,7 +11,7 @@ import {
   Matches,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { DiscountType } from '../../../common/enums';
 
 export class CreatePromotionDto {
@@ -98,6 +98,13 @@ export class CreatePromotionDto {
   @IsBoolean({ message: 'Trạng thái phải là boolean' })
   status?: boolean;
 }
+
+/**
+ * DTO cập nhật khuyến mãi. Kế thừa toàn bộ validator của CreatePromotionDto
+ * (tất cả optional). Cố ý KHÔNG có usedCount/_id/createdAt... để bộ đếm sử dụng
+ * không thể bị ghi đè qua API (ValidationPipe forbidNonWhitelisted sẽ trả 400).
+ */
+export class UpdatePromotionDto extends PartialType(CreatePromotionDto) {}
 
 export class ApplyPromotionDto {
   @ApiProperty({ example: 'SUMMER2024' })

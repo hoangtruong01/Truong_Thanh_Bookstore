@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+# SEC-031: quyền tối thiểu cho GITHUB_TOKEN (deploy dùng secrets riêng, không cần ghi repo)
+permissions:
+  contents: read
+
 jobs:
   deploy-backend:
     name: Deploy Backend to Render
@@ -24,8 +28,9 @@ jobs:
       # so the last commit that changed backend/ is also an acceptable live release.
       - name: Resolve acceptable backend releases
         id: release
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
           BACKEND_SHA=$(git log -1 --format=%H "$HEAD_SHA" -- backend)
           echo "expected=${HEAD_SHA},${BACKEND_SHA}" >> "$GITHUB_OUTPUT"
           echo "Accepting backend release ${HEAD_SHA} or ${BACKEND_SHA}"
@@ -42,9 +47,12 @@ jobs:
           fi
 
       - name: 🩺 Run Automated Smoke Test
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_PRODUCTION_URL || 'https://truong-thanh-bookstore.onrender.com' }}
+          EXPECTED_RELEASES: ${{ steps.release.outputs.expected }}
         run: |
           chmod +x ./scripts/smoke-test.sh
-          MAX_ATTEMPTS=60 WAIT_SECONDS=10 ./scripts/smoke-test.sh "${{ secrets.BACKEND_PRODUCTION_URL || 'https://truong-thanh-bookstore.onrender.com' }}" "${{ steps.release.outputs.expected }}"
+          MAX_ATTEMPTS=60 WAIT_SECONDS=10 ./scripts/smoke-test.sh "$BACKEND_URL" "$EXPECTED_RELEASES"
 
   deploy-frontend:
     name: Deploy Frontend to Vercel
@@ -83,4 +91,6 @@ jobs:
           fi
 
       - name: Smoke Test Frontend Deployment
-        run: curl --fail --show-error --silent --retry 12 --retry-all-errors --retry-delay 5 "${{ steps.deploy.outputs.url }}" > /dev/null
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
+        run: curl --fail --show-error --silent --retry 12 --retry-all-errors --retry-delay 5 "$DEPLOY_URL" > /dev/null

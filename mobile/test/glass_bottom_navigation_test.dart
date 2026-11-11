@@ -149,19 +149,19 @@ void main() {
 
       await tester.tap(_inNav(find.text('Sản phẩm')));
       await tester.pumpAndSettle();
-      expect(find.text('DANH SÁCH SẢN PHẨM'), findsOneWidget);
+      expect(find.text('Danh sách sản phẩm'), findsOneWidget);
 
       await tester.tap(_inNav(find.text('Giỏ hàng')));
       await tester.pumpAndSettle();
-      expect(find.text('GIỎ HÀNG CỦA BẠN'), findsOneWidget);
+      expect(find.text('Giỏ hàng của bạn'), findsOneWidget);
 
       await tester.tap(_inNav(find.text('Đơn hàng')));
       await tester.pumpAndSettle();
-      expect(find.text('ĐƠN HÀNG CỦA TÔI'), findsOneWidget);
+      expect(find.text('Đơn hàng của tôi'), findsOneWidget);
 
       await tester.tap(_inNav(find.text('Tài khoản')));
       await tester.pumpAndSettle();
-      expect(find.text('TÀI KHOẢN'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Tài khoản'), findsOneWidget);
     });
   });
 }

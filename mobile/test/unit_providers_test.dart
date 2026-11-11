@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mobile/models/product_model.dart';
 import 'package:mobile/models/address_model.dart';
 import 'package:mobile/models/review_model.dart';
@@ -146,9 +149,25 @@ void main() {
     });
   });
 
-  group('CartProvider Business Logic & 299K Freeship Rule', () {
-    test('Cart calculates subtotal, shipping fee and freeship threshold 299K', () {
-      final cart = CartProvider();
+  group('CartProvider shows server pricing (checkout-preview), no client money math', () {
+    test('Cart totals and free-shipping state come from the preview response', () async {
+      final sentBodies = <Map<String, dynamic>>[];
+      // The mock plays the backend: it alone decides subtotal, shipping and free-ship state.
+      final client = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        sentBodies.add(body);
+        final qty = (body['items'] as List).single['quantity'] as int;
+        final subtotal = 20000 * qty;
+        final free = subtotal >= 299000;
+        return http.Response(jsonEncode({'success': true, 'data': {
+          'items': [], 'subtotal': subtotal, 'shippingFee': free ? 0 : 30000,
+          'isEligibleForFreeShipping': free, 'amountNeededForFreeShipping': free ? 0 : 299000 - subtotal,
+          'freeShippingThreshold': 299000, 'freeShippingProgress': free ? 100 : 33,
+          'discount': 0, 'loyaltyDiscount': 0, 'total': subtotal + (free ? 0 : 30000),
+          'warnings': [], 'isValidForCheckout': true,
+        }}), 200);
+      });
+      final cart = CartProvider(client: client, pricingDebounce: Duration.zero);
       final p1 = ProductModel(
         id: 'p1',
         name: 'Vở kẻ ngang 200 trang',
@@ -163,25 +182,33 @@ void main() {
         isFeatured: false,
       );
 
-      // Add 5 items -> Subtotal = 100,000đ (< 299,000đ => Shipping fee = 30,000đ)
       for (int i = 0; i < 5; i++) {
         cart.addToCart(p1);
       }
-      expect(cart.totalAmount, 100000);
+      // Nothing is computed locally before the server answers.
+      expect(cart.subtotal, 0);
+      expect(cart.total, 0);
+      await cart.refreshPricing(immediate: true);
+      expect(sentBodies.last['items'], [{'product': 'p1', 'quantity': 5}]);
+      expect(cart.subtotal, 100000);
       expect(cart.shippingFee, 30000);
-      expect(cart.isEligibleForFreeShipping, false);
+      expect(cart.isFreeShipping, false);
       expect(cart.amountNeededForFreeShipping, 199000);
-      expect(cart.finalTotal, 130000);
+      expect(cart.total, 130000);
 
-      // Add 10 more items -> Total 15 items * 20,000 = 300,000đ (>= 299,000đ => Shipping fee = 0đ)
       for (int i = 0; i < 10; i++) {
         cart.addToCart(p1);
       }
-      expect(cart.totalAmount, 300000);
+      await cart.refreshPricing(immediate: true);
+      expect(sentBodies.last['items'], [{'product': 'p1', 'quantity': 15}]);
+      expect(cart.subtotal, 300000);
       expect(cart.shippingFee, 0);
-      expect(cart.isEligibleForFreeShipping, true);
+      expect(cart.isFreeShipping, true);
+      expect(cart.freeShippingProgress, 1.0);
       expect(cart.amountNeededForFreeShipping, 0);
-      expect(cart.finalTotal, 300000);
+      expect(cart.total, 300000);
+      cart.dispose();
+      client.close();
     });
   });
 

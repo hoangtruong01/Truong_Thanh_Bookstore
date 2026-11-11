@@ -79,3 +79,18 @@ playwright-report/
 blob-report/
 **/blob-report/
 playwright/.cache/
+
+# Secrets / keys (SEC-030)
+.env.*
+!.env.example
+!backend/.env.test
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+**/key.properties
+!**/key.properties.example
+**/google-services.json
+**/GoogleService-Info.plist

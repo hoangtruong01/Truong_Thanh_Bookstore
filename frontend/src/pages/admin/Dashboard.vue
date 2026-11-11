@@ -417,7 +417,6 @@ import { inventoryService } from '@/services/inventory.service'
 import { getStoreInfo, saveStoreInfo, type StoreInfo } from '@/services/store-info.service'
 import { useToast } from 'vue-toastification'
 import { formatCurrency, getStatusLabel } from '@/utils/helpers'
-import api from '@/utils/api'
 import type { DashboardStats, Order, Product } from '@/types'
 
 const showStoreConfigModal = ref(false)
@@ -452,7 +451,7 @@ function getStatusWidthPercent(count: number) {
 
 async function loadAdvancedStats() {
   try {
-    const res = await api.get('/reports/dashboard/advanced')
+    const res = await reportService.getAdvancedDashboard()
     advancedStats.value = res.data.data || res.data
   } catch (err) {
     console.error('Failed to load advanced reports', err)

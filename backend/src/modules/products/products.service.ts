@@ -15,6 +15,10 @@ import {
   CategoryDocument,
 } from '../categories/schemas/category.schema';
 import {
+  CategoryParentLink,
+  collectDescendantCategoryIds,
+} from '../categories/categories.service';
+import {
   Inventory,
   InventoryDocument,
   InventoryTransaction,
@@ -29,12 +33,72 @@ import {
   UpdateProductDto,
   ProductQueryDto,
 } from './dto/product.dto';
-import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
+import {
+  PaginatedResult,
+  paginate,
+  clampLimit,
+} from '../../common/dto/pagination.dto';
 import {
   InventoryStatus,
   InventoryTransactionType,
   ProductStatus,
+  UserRole,
 } from '../../common/enums';
+
+/** SEC-025: Giới hạn an toàn cho import Excel sản phẩm. */
+export const PRODUCT_IMPORT_MAX_ROWS = 5000;
+export const PRODUCT_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
+
+/** SEC-016: Người xem (từ OptionalJwtAuthGuard) — null/undefined = khách vãng lai. */
+export type ProductViewer = { role?: string } | null | undefined;
+
+/** SEC-016: Chỉ ADMIN / SUPER_ADMIN / STAFF được xem sản phẩm ẩn và giá nội bộ. */
+export function isStaffViewer(viewer: ProductViewer): boolean {
+  const role = viewer?.role;
+  return (
+    role === UserRole.SUPER_ADMIN ||
+    role === UserRole.ADMIN ||
+    role === UserRole.STAFF
+  );
+}
+
+/** SEC-016: Các trường giá nội bộ không được lộ ra API công khai. */
+const PRIVATE_PRODUCT_FIELDS = [
+  'wholesalePrice',
+  'costPrice',
+  'purchasePrice',
+  'importPrice',
+] as const;
+
+/**
+ * SEC-016: Loại bỏ giá sỉ / giá vốn khỏi sản phẩm (document hoặc object thường)
+ * trước khi trả cho khách. Đệ quy cho mảng và kết quả phân trang `{ data: [] }`.
+ */
+export function stripPrivateProductFields<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripPrivateProductFields(item)) as T;
+  }
+  if (!value || typeof value !== 'object') return value;
+  const source = value as unknown as {
+    toJSON?: () => Record<string, unknown>;
+    data?: unknown;
+  };
+  if (Array.isArray(source.data) && typeof source.toJSON !== 'function') {
+    return {
+      ...(value as Record<string, unknown>),
+      data: stripPrivateProductFields(source.data),
+    } as T;
+  }
+  const plain: Record<string, unknown> =
+    typeof source.toJSON === 'function'
+      ? { ...source.toJSON() }
+      : { ...(value as Record<string, unknown>) };
+  for (const field of PRIVATE_PRODUCT_FIELDS) delete plain[field];
+  if (Array.isArray(plain.products)) {
+    plain.products = stripPrivateProductFields(plain.products);
+  }
+  return plain as T;
+}
 
 interface LeanProductExportItem {
   sku?: string;
@@ -95,6 +159,29 @@ export class ProductsService {
     @InjectModel(InventoryTransaction.name)
     private readonly transactionModel?: Model<InventoryTransactionDocument>,
   ) {}
+
+  /**
+   * Các truy vấn danh sách công khai dùng `.lean()` để bỏ chi phí hydrate Mongoose document.
+   * Product/Category không có virtual hay toJSON transform, nên JSON trả về chỉ khác ở chỗ:
+   * lean KHÔNG áp default của schema cho document cũ thiếu trường (vd. unitConversions, language).
+   * Hàm này bù lại phần đó cho sản phẩm và danh mục được populate để response giữ nguyên shape.
+   * Lưu ý: applyDefaults không biết projection — nếu thêm select('-field') vào các truy vấn
+   * dùng hàm này thì phải loại bỏ field đó SAU khi gọi hàm này.
+   */
+  private withLeanDefaults(products: ProductDocument[]): ProductDocument[] {
+    for (const product of products) {
+      this.productModel.applyDefaults(product);
+      const category: unknown = (product as { category?: unknown }).category;
+      if (
+        category &&
+        typeof category === 'object' &&
+        !(category instanceof Types.ObjectId)
+      ) {
+        this.categoryModel.applyDefaults(category);
+      }
+    }
+    return products;
+  }
 
   /**
    * TT-009: Sinh mã SKU tuần tự tự động dạng SP000001, SP000002...
@@ -317,12 +404,16 @@ export class ProductsService {
     return savedProduct;
   }
 
+  /**
+   * SEC-016: `viewer` mặc định là khách vãng lai — bị ép status=ACTIVE, bỏ qua
+   * query.status. Chỉ ADMIN/SUPER_ADMIN/STAFF mới được lọc theo status tuỳ ý.
+   */
   async findAll(
     query: ProductQueryDto,
+    viewer?: ProductViewer,
   ): Promise<PaginatedResult<ProductDocument>> {
     const {
       page = 1,
-      limit = 10,
       category,
       brand,
       author,
@@ -340,9 +431,15 @@ export class ProductsService {
       inStock,
       isFlashSale,
     } = query;
+    // SEC-012: limit=0 / NaN / âm không bao giờ có nghĩa là "không giới hạn".
+    const limit = clampLimit(query.limit, 10);
     const filter: Record<string, unknown> = { isDeleted: false };
 
-    if (status) filter.status = status;
+    if (isStaffViewer(viewer)) {
+      if (status) filter.status = status;
+    } else {
+      filter.status = ProductStatus.ACTIVE;
+    }
 
     if (discounted === true || String(discounted) === 'true') {
       filter.discountPrice = { $gt: 0 };
@@ -369,27 +466,17 @@ export class ProductsService {
         }
 
         if (catObjId) {
-          // TT-010: Tìm đệ quy toàn bộ ID danh mục con và cháu cấp sâu để hiển thị đủ sản phẩm
-          const categoryIds: Types.ObjectId[] = [catObjId];
-          const queue: Types.ObjectId[] = [catObjId];
-          const visited = new Set<string>([catObjId.toString()]);
-          while (queue.length > 0) {
-            const current = queue.shift()!;
-            const children = await this.categoryModel
-              .find({ parentId: current })
-              .select('_id')
-              .lean()
-              .exec();
-            for (const child of children) {
-              const cId = child._id;
-              const cIdStr = cId.toString();
-              if (!visited.has(cIdStr)) {
-                visited.add(cIdStr);
-                categoryIds.push(cId);
-                queue.push(cId);
-              }
-            }
-          }
+          // TT-010: Tìm toàn bộ ID danh mục con và cháu cấp sâu để hiển thị đủ sản phẩm.
+          // Nạp phẳng {_id, parentId} trong 1 truy vấn rồi duyệt cây trong bộ nhớ (chống vòng lặp).
+          const allCategoryLinks = await this.categoryModel
+            .find({})
+            .select('_id parentId')
+            .lean<CategoryParentLink[]>()
+            .exec();
+          const categoryIds = collectDescendantCategoryIds(
+            catObjId,
+            allCategoryLinks,
+          );
           filter.category = { $in: categoryIds };
         } else {
           filter.category = category;
@@ -546,11 +633,12 @@ export class ProductsService {
         .sort(sortObj as never)
         .skip(skip)
         .limit(limit)
+        .lean<ProductDocument[]>()
         .exec(),
       this.productModel.countDocuments(filter as never).exec(),
     ]);
 
-    return paginate(data, total, page, limit);
+    return paginate(this.withLeanDefaults(data), total, page, limit);
   }
 
   async findById(id: string): Promise<ProductDocument> {
@@ -567,6 +655,22 @@ export class ProductsService {
         .exec();
     }
     if (!product || product.isDeleted) {
+      throw new NotFoundException('Sản phẩm không tồn tại hoặc đã bị xóa');
+    }
+    return product;
+  }
+
+  /**
+   * SEC-016: Chi tiết sản phẩm cho API công khai — khách chỉ thấy sản phẩm ACTIVE
+   * (sản phẩm INACTIVE/OUT_OF_STOCK trả 404). Nhân sự nội bộ xem được mọi trạng thái.
+   * `findById` giữ nguyên cho các module nội bộ (checkout, landing page...).
+   */
+  async findByIdForViewer(
+    id: string,
+    viewer?: ProductViewer,
+  ): Promise<ProductDocument> {
+    const product = await this.findById(id);
+    if (!isStaffViewer(viewer) && product.status !== ProductStatus.ACTIVE) {
       throw new NotFoundException('Sản phẩm không tồn tại hoặc đã bị xóa');
     }
     return product;
@@ -593,7 +697,11 @@ export class ProductsService {
       .exec();
   }
 
-  async getRelated(id: string, limit = 8): Promise<ProductDocument[]> {
+  async getRelated(
+    id: string,
+    rawLimit: unknown = 8,
+  ): Promise<ProductDocument[]> {
+    const limit = clampLimit(rawLimit, 8, 100); // SEC-012
     let currentProduct: ProductDocument | null = null;
     if (Types.ObjectId.isValid(id)) {
       currentProduct = await this.productModel.findById(id).exec();
@@ -645,6 +753,7 @@ export class ProductsService {
       .populate('category')
       .sort({ rating: -1, sold: -1, createdAt: -1 })
       .limit(limit)
+      .lean<ProductDocument[]>()
       .exec();
 
     // Fallback if no matching related items found
@@ -658,10 +767,11 @@ export class ProductsService {
         .populate('category')
         .sort({ rating: -1, sold: -1, createdAt: -1 })
         .limit(limit)
+        .lean<ProductDocument[]>()
         .exec();
     }
 
-    return related;
+    return this.withLeanDefaults(related);
   }
 
   async update(id: string, dto: UpdateProductDto): Promise<ProductDocument> {
@@ -730,7 +840,7 @@ export class ProductsService {
   }
 
   async getFeatured(): Promise<ProductDocument[]> {
-    return this.productModel
+    const products = await this.productModel
       .find({
         isFeatured: true,
         isDeleted: false,
@@ -738,7 +848,9 @@ export class ProductsService {
       })
       .populate('category')
       .limit(12)
+      .lean<ProductDocument[]>()
       .exec();
+    return this.withLeanDefaults(products);
   }
 
   async search(q: string): Promise<ProductDocument[]> {
@@ -747,7 +859,7 @@ export class ProductsService {
     const regexPattern = makeDiacriticRegex(safeQ);
     const rawEscaped = safeQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    return this.productModel
+    const products = await this.productModel
       .find({
         isDeleted: false,
         status: ProductStatus.ACTIVE,
@@ -765,17 +877,20 @@ export class ProductsService {
       })
       .populate('category')
       .limit(20)
+      .lean<ProductDocument[]>()
       .exec();
+    return this.withLeanDefaults(products);
   }
 
   async getSuggestions(
     q: string,
-    limit = 6,
+    rawLimit: unknown = 6,
   ): Promise<{
     keywords: string[];
     categories: any[];
     products: ProductDocument[];
   }> {
+    const limit = clampLimit(rawLimit, 6, 50); // SEC-012
     if (!q || !q.trim()) {
       return { keywords: [], categories: [], products: [] };
     }
@@ -830,17 +945,21 @@ export class ProductsService {
     };
   }
 
-  async getBestSelling(limit = 10): Promise<ProductDocument[]> {
-    return this.productModel
+  async getBestSelling(rawLimit: unknown = 10): Promise<ProductDocument[]> {
+    const limit = clampLimit(rawLimit, 10, 100); // SEC-012
+    const products = await this.productModel
       .find({ isDeleted: false, status: ProductStatus.ACTIVE })
       .sort({ sold: -1 })
       .limit(limit)
       .populate('category')
+      .lean<ProductDocument[]>()
       .exec();
+    return this.withLeanDefaults(products);
   }
 
-  async getDiscounted(limit = 10): Promise<ProductDocument[]> {
-    return this.productModel
+  async getDiscounted(rawLimit: unknown = 10): Promise<ProductDocument[]> {
+    const limit = clampLimit(rawLimit, 10, 100); // SEC-012
+    const products = await this.productModel
       .find({
         isDeleted: false,
         status: ProductStatus.ACTIVE,
@@ -849,16 +968,21 @@ export class ProductsService {
       .sort({ createdAt: -1 })
       .limit(limit)
       .populate('category')
+      .lean<ProductDocument[]>()
       .exec();
+    return this.withLeanDefaults(products);
   }
 
-  async getNew(limit = 10): Promise<ProductDocument[]> {
-    return this.productModel
+  async getNew(rawLimit: unknown = 10): Promise<ProductDocument[]> {
+    const limit = clampLimit(rawLimit, 10, 100); // SEC-012
+    const products = await this.productModel
       .find({ isDeleted: false, status: ProductStatus.ACTIVE })
       .sort({ createdAt: -1 })
       .limit(limit)
       .populate('category')
+      .lean<ProductDocument[]>()
       .exec();
+    return this.withLeanDefaults(products);
   }
 
   async count(): Promise<number> {
@@ -1562,16 +1686,62 @@ export class ProductsService {
   }
 
   /**
+   * SEC-025: Mirror DataExchangeService.validateFileSafety (không import trực tiếp
+   * để tránh phụ thuộc vòng giữa module products <-> data-exchange).
+   * .xlsx là file zip nên buffer phải bắt đầu bằng "PK" + signature zip hợp lệ.
+   */
+  private validateImportFileSafety(buffer: Buffer, fileName?: string): void {
+    if (!buffer || buffer.length === 0) {
+      throw new BadRequestException('File tải lên không có nội dung');
+    }
+    if (buffer.length > PRODUCT_IMPORT_MAX_BYTES) {
+      throw new BadRequestException(
+        'File Excel vượt quá dung lượng tối đa 10MB',
+      );
+    }
+    const isZip =
+      buffer.length >= 4 &&
+      buffer[0] === 0x50 &&
+      buffer[1] === 0x4b &&
+      (buffer[2] === 0x03 || buffer[2] === 0x05 || buffer[2] === 0x07) &&
+      (buffer[3] === 0x04 || buffer[3] === 0x06 || buffer[3] === 0x08);
+    if (!isZip) {
+      throw new BadRequestException(
+        'Định dạng file không phải file Excel .xlsx hợp lệ',
+      );
+    }
+    if (
+      fileName &&
+      (fileName.includes('..') ||
+        fileName.includes('/') ||
+        fileName.includes('\\'))
+    ) {
+      throw new BadRequestException(
+        'Tên file không hợp lệ hoặc chứa ký tự nguy hiểm',
+      );
+    }
+  }
+
+  /**
    * 3. Nhập sản phẩm từ file Excel (.xlsx), kiểm tra trùng lặp SKU & Tên,
    * từ chối tải lại những sản phẩm đã có và báo cáo thống kê chi tiết.
    */
-  async importFromExcel(buffer: Buffer, userId?: string) {
+  async importFromExcel(buffer: Buffer, userId?: string, fileName?: string) {
+    // SEC-025: kiểm tra magic bytes / kích thước / tên file TRƯỚC khi nạp workbook.
+    this.validateImportFileSafety(buffer, fileName);
+
     const workbook = new ExcelJS.Workbook();
     try {
       await workbook.xlsx.load(buffer as never);
     } catch {
       throw new BadRequestException(
         'Định dạng file Excel không hợp lệ hoặc file bị hỏng.',
+      );
+    }
+
+    if (workbook.worksheets.length > 10) {
+      throw new BadRequestException(
+        'File Excel có quá nhiều sheet (tối đa 10 sheets)',
       );
     }
 
@@ -1583,6 +1753,13 @@ export class ProductsService {
     if (!sheet) {
       throw new BadRequestException(
         'Không tìm thấy Sheet dữ liệu trong file Excel.',
+      );
+    }
+
+    // SEC-025: giới hạn số dòng (đồng bộ với data-exchange) trước khi truy vấn DB / duyệt dòng.
+    if (sheet.rowCount > PRODUCT_IMPORT_MAX_ROWS) {
+      throw new BadRequestException(
+        `File Excel vượt quá giới hạn tối đa ${PRODUCT_IMPORT_MAX_ROWS} dòng`,
       );
     }
 

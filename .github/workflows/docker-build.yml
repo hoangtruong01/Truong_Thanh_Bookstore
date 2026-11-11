@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [ main ]
 
+# SEC-031: quyền tối thiểu cho GITHUB_TOKEN (push: false nên không cần packages: write)
+permissions:
+  contents: read
+
 jobs:
   docker-build-backend:
     name: 🐳 Docker Build — Backend NestJS

@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mobile/main.dart';
 import 'package:mobile/models/product_model.dart';
-import 'package:mobile/models/promotion_model.dart';
 import 'package:mobile/providers/cart_provider.dart';
 import 'package:mobile/providers/auth_provider.dart';
 import 'package:mobile/core/widgets/glass_bottom_navigation.dart';
@@ -87,67 +89,92 @@ void main() {
       );
     });
 
-    test('E2E-02: Cart & Pricing Logic E2E (Add, Quantity, Voucher & Free Shipping)', () {
-      final cart = CartProvider();
+    // Plays the backend checkout-preview: the server prices lines from its own catalogue
+    // and validates vouchers; the app only displays the response.
+    MockClient fakePreviewServer(List<Map<String, dynamic>> bodies) => MockClient((request) async {
+          expect(request.url.path, '/api/orders/checkout-preview');
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          bodies.add(body);
+          const prices = {'prod1': 85000, 'prod2': 300000};
+          final subtotal = (body['items'] as List)
+              .fold<int>(0, (sum, i) => sum + prices[i['product']]! * (i['quantity'] as int));
+          final shipping = subtotal >= 299000 ? 0 : 30000;
+          final code = body['promotionCode'];
+          final discount = code == 'TT10' ? subtotal ~/ 10 : 0;
+          return http.Response(jsonEncode({'data': {
+            'items': [], 'subtotal': subtotal, 'shippingFee': shipping,
+            'isEligibleForFreeShipping': shipping == 0, 'amountNeededForFreeShipping': 0,
+            'discount': discount,
+            'appliedPromotion': code == 'TT10' ? {'code': 'TT10', 'discount': discount} : null,
+            'promotionError': code != null && code != 'TT10' ? 'Mã giảm giá không tồn tại' : null,
+            'loyaltyDiscount': 0, 'total': subtotal + shipping - discount,
+            'warnings': [], 'isValidForCheckout': true,
+          }}), 200, headers: {'content-type': 'application/json; charset=utf-8'});
+        });
 
-      // 1. Add 100K item
+    test('E2E-02: Cart lines are local, totals come from the server preview', () async {
+      final bodies = <Map<String, dynamic>>[];
+      final client = fakePreviewServer(bodies);
+      final cart = CartProvider(client: client, pricingDebounce: Duration.zero);
+
+      // 1. Add an 85K item
       cart.addToCart(mockProduct1, quantity: 1);
       expect(cart.items.length, 1);
       expect(cart.totalItemCount, 1);
+      await cart.refreshPricing(immediate: true);
+      expect(bodies.last['items'], [{'product': 'prod1', 'quantity': 1}]);
       expect(cart.subtotal, 85000);
-      expect(cart.shippingFee, 30000); // 85K < 299K -> ship 30K
+      expect(cart.shippingFee, 30000);
       expect(cart.total, 115000);
 
-      // 2. Add 300K item -> total subtotal >= 299K -> Free Shipping
+      // 2. Add a 300K item -> the server grants free shipping
       cart.addToCart(mockProduct2, quantity: 1);
-      expect(cart.items.length, 2);
       expect(cart.totalItemCount, 2);
+      await cart.refreshPricing(immediate: true);
       expect(cart.subtotal, 385000);
-      expect(cart.shippingFee, 0); // 385K >= 299K -> Free shipping (0đ)
+      expect(cart.shippingFee, 0);
 
-      // 3. Update quantity
-      cart.updateQuantity(mockProduct1.id, 1); // quantity becomes 2
-      expect(cart.totalItemCount, 3);
-      expect(cart.subtotal, 470000);
+      // 3. Quantity changes are capped at stock (prod2 has 5)
+      cart.updateQuantity(mockProduct1.id, 1);
+      cart.updateQuantity(mockProduct2.id, 10);
+      expect(cart.items.firstWhere((i) => i.product.id == 'prod2').quantity, 5);
+      await cart.refreshPricing(immediate: true);
+      expect(cart.subtotal, 1670000);
 
-      // 4. Clear cart
+      // 4. Clear cart -> no selection, no pricing
       cart.clearCart();
       expect(cart.items.length, 0);
       expect(cart.totalItemCount, 0);
-      expect(cart.subtotal, 0);
-      expect(cart.shippingFee, 0);
+      expect(cart.pricing, isNull);
       expect(cart.total, 0);
+      cart.dispose();
+      client.close();
     });
 
-    test('E2E-03: Voucher Application & Discount Logic', () {
-      final cart = CartProvider();
-      cart.addToCart(mockProduct2, quantity: 1); // subtotal = 300,000đ
+    test('E2E-03: Voucher is validated and priced by the server', () async {
+      final bodies = <Map<String, dynamic>>[];
+      final client = fakePreviewServer(bodies);
+      final cart = CartProvider(client: client, pricingDebounce: Duration.zero);
+      cart.addToCart(mockProduct2, quantity: 1);
 
-      // Active voucher
-      final promo = PromotionModel(
-        id: 'promo1',
-        code: 'TT10',
-        name: 'Giảm 10%',
-        discountType: 'PERCENT',
-        discountValue: 10,
-        minOrderValue: 200000,
-        status: true,
-      );
+      expect(await cart.applyCoupon('tt10'), isTrue);
+      expect(bodies.last['promotionCode'], 'TT10');
+      expect(cart.appliedPromotion?.code, 'TT10');
+      expect(cart.discountAmount, 30000);
+      expect(cart.total, 270000);
 
-      // Inject active promos
-      cart.activePromotions.add(promo);
-
-      final success = cart.applyCoupon('TT10');
-      expect(success, isTrue);
-      expect(cart.appliedPromotion, isNotNull);
-      expect(cart.discountAmount, 30000); // 10% of 300K = 30K
-      expect(cart.total, 270000); // 300K + 0 ship - 30K discount = 270K
-
-      // Remove coupon
-      cart.removeCoupon();
+      await cart.removeCoupon();
+      expect(bodies.last.containsKey('promotionCode'), isFalse);
       expect(cart.appliedPromotion, isNull);
       expect(cart.discountAmount, 0);
       expect(cart.total, 300000);
+
+      // A code the server rejects is dropped with the server's message.
+      expect(await cart.applyCoupon('FAKE'), isFalse);
+      expect(cart.promoError, 'Mã giảm giá không tồn tại');
+      expect(cart.promotionCode, isEmpty);
+      cart.dispose();
+      client.close();
     });
 
     testWidgets('E2E-04: Bottom Navigation Bar Tab Switching Flow', (WidgetTester tester) async {
@@ -160,7 +187,7 @@ void main() {
         matching: find.byIcon(Icons.grid_view_outlined),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('DANH SÁCH SẢN PHẨM'), findsOneWidget);
+      expect(find.text('Danh sách sản phẩm'), findsOneWidget);
 
       // Switch to Cart Tab
       await tester.tap(find.descendant(
@@ -168,7 +195,7 @@ void main() {
         matching: find.byIcon(Icons.shopping_bag_outlined),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('GIỎ HÀNG CỦA BẠN'), findsOneWidget);
+      expect(find.text('Giỏ hàng của bạn'), findsOneWidget);
 
       // Switch to Orders Tab
       await tester.tap(find.descendant(
@@ -176,7 +203,7 @@ void main() {
         matching: find.byIcon(Icons.receipt_long_outlined),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('ĐƠN HÀNG CỦA TÔI'), findsOneWidget);
+      expect(find.text('Đơn hàng của tôi'), findsOneWidget);
 
       // Switch to Account Tab
       await tester.tap(find.descendant(
@@ -184,7 +211,7 @@ void main() {
         matching: find.byIcon(Icons.person_outline_rounded),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('TÀI KHOẢN'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Tài khoản'), findsOneWidget);
     });
 
     test('E2E-05: Auth Provider Session Persistence State', () async {

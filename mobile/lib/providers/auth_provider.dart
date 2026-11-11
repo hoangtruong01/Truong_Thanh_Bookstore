@@ -15,6 +15,8 @@ class AuthProvider with ChangeNotifier {
   String? _token;
   String? _refreshToken;
   bool _isLoading = false;
+  bool _isRefreshingProfile = false;
+  bool _isSavingProfile = false;
   late final Future<void> sessionReady;
 
   UserModel? get user => _user;
@@ -22,6 +24,8 @@ class AuthProvider with ChangeNotifier {
   String? get refreshToken => _refreshToken;
   bool get isAuthenticated => _token != null && _token!.isNotEmpty;
   bool get isLoading => _isLoading;
+  bool get isRefreshingProfile => _isRefreshingProfile;
+  bool get isSavingProfile => _isSavingProfile;
 
   AuthProvider({ApiClient? apiClient}) : _api = apiClient ?? ApiClient() {
     // Authenticated calls through this client refresh once on 401 and retry.
@@ -197,6 +201,64 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Tải lại hồ sơ (kèm điểm tích lũy, hạng thành viên) từ GET /auth/me.
+  /// Trả về false khi lỗi mạng / server; hồ sơ đang lưu được giữ nguyên.
+  Future<bool> refreshProfile() async {
+    await sessionReady;
+    if (!isAuthenticated) return false;
+    _isRefreshingProfile = true;
+    notifyListeners();
+    try {
+      final response = await _api.get(ApiConstants.profile, token: _token, authenticated: true);
+      // Đã đăng xuất trong lúc chờ: bỏ kết quả.
+      if (!response.isSuccess || !isAuthenticated) return false;
+      final data = response.mapData;
+      if (data.isEmpty) return false;
+      _user = UserModel.fromJson(data);
+      await _persistSession();
+      return true;
+    } catch (e) {
+      debugPrint('Không tải được hồ sơ: $e');
+      return false;
+    } finally {
+      _isRefreshingProfile = false;
+      notifyListeners();
+    }
+  }
+
+  /// Cập nhật họ tên / số điện thoại qua PUT /auth/profile.
+  /// Ném Exception kèm thông báo của Backend khi thất bại.
+  Future<void> updateProfile({required String fullName, String? phone}) async {
+    _isSavingProfile = true;
+    notifyListeners();
+    try {
+      final trimmedPhone = phone?.trim() ?? '';
+      final response = await _api.put(
+        ApiConstants.updateProfile,
+        token: _token,
+        authenticated: true,
+        body: {
+          'fullName': fullName.trim(),
+          // Backend kiểm tra định dạng SĐT; chuỗi rỗng sẽ bị từ chối nên bỏ qua.
+          if (trimmedPhone.isNotEmpty) 'phone': trimmedPhone,
+        },
+      );
+      if (!response.isSuccess) {
+        throw Exception(response.message ?? 'Cập nhật hồ sơ thất bại');
+      }
+      final data = response.mapData;
+      if (data.isNotEmpty) {
+        _user = UserModel.fromJson(data);
+        await _persistSession();
+      }
+    } finally {
+      _isSavingProfile = false;
+      notifyListeners();
+    }
+  }
+
+  /// Đổi mật khẩu. Backend thu hồi mọi phiên (kể cả phiên hiện tại) nên
+  /// thiết bị này được đăng xuất ngay để người dùng đăng nhập lại.
   Future<void> changePassword(String currentPassword, String newPassword) async {
     _isLoading = true;
     notifyListeners();
@@ -215,7 +277,7 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      if (response.statusCode != 200) {
+      if (!response.isSuccess) {
         throw Exception(response.message ?? 'Đổi mật khẩu thất bại');
       }
     } catch (e) {
@@ -223,6 +285,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       rethrow;
     }
+    await logout();
   }
 
   Future<void> logout() async {
@@ -261,21 +324,15 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>> forgotPassword(String email) async {
-    try {
-      final response = await _api.post(
-        ApiConstants.forgotPassword,
-        body: {'email': email},
-      );
-
-      if (response.isSuccess) {
-        final data = response.data ?? response.body;
-        return data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
-      } else {
-        throw Exception(response.message ?? 'Yêu cầu OTP thất bại');
-      }
-    } catch (e) {
-      rethrow;
+  /// Yêu cầu gửi OTP qua email. Nội dung phản hồi không được dùng: OTP chỉ
+  /// được gửi tới hộp thư của người dùng.
+  Future<void> forgotPassword(String email) async {
+    final response = await _api.post(
+      ApiConstants.forgotPassword,
+      body: {'email': email},
+    );
+    if (!response.isSuccess) {
+      throw Exception(response.message ?? 'Yêu cầu OTP thất bại');
     }
   }
 

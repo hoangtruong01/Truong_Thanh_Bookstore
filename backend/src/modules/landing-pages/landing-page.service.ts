@@ -290,6 +290,12 @@ export class LandingPageService {
       throw new NotFoundException('Không tìm thấy trang bán hàng');
     }
 
+    // SEC-021: chỉ nhận đơn từ landing page đang được xuất bản (deny-by-default).
+    // Schema hiện chưa có cửa sổ ngày hiệu lực nên chỉ kiểm tra cờ status.
+    if (page.status !== true) {
+      throw new NotFoundException('Không tìm thấy trang bán hàng');
+    }
+
     // Find selected package details flexibly
     const searchPkgName = (dto.packageName || '').trim().toLowerCase();
     const selectedPkg = page.packages?.find(

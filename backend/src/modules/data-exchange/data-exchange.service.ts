@@ -61,6 +61,14 @@ export class DataExchangeService {
   }
 
   /**
+   * SEC-014: Escape ký tự đặc biệt của RegExp để dữ liệu từ file Excel không
+   * bị hiểu là pattern (chống ReDoS / regex injection).
+   */
+  private escapeRegex(input: string): string {
+    return String(input).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
    * Bảo mật: Khử nguy cơ Formula Injection (CSV/Excel Formula Injection - CWE-1236)
    */
   public sanitizeCellValue(val: any): any {
@@ -782,7 +790,7 @@ export class DataExchangeService {
       } = command;
 
       let category = await this.categoryModel.findOne({
-        name: new RegExp(`^${catName}$`, 'i'),
+        name: new RegExp(`^${this.escapeRegex(catName)}$`, 'i'),
       });
 
       if (!category) {

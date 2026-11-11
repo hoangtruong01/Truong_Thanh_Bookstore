@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { BadRequestException } from '@nestjs/common';
@@ -111,6 +112,32 @@ describe('DataExchangeService (TASK XLS-01 & SEC-01)', () => {
       await expect(service.parseWorkbook(buffer, 'products')).rejects.toThrow(
         'File Excel có quá nhiều sheet',
       );
+    });
+  });
+
+  describe('SEC-014: Escape regex khi tra cứu danh mục từ Excel', () => {
+    it('Tên danh mục chứa ký tự regex -> findOne dùng pattern đã escape, khớp theo nghĩa đen', async () => {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('Du_Lieu');
+      sheet.addRow(['SKU', 'Tên', 'Danh mục', 'Giá bán']);
+      sheet.addRow(['SKU-RE-01', 'Sách', '(a+)+$.*', 50000]);
+
+      const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+
+      mockCategoryModel.findOne.mockResolvedValue({ _id: 'cat_re' });
+      mockProductModel.findOne.mockResolvedValue(null);
+
+      await service.executeImport('products', buffer, 'user_1');
+
+      expect(mockCategoryModel.findOne).toHaveBeenCalled();
+      const filter = mockCategoryModel.findOne.mock.calls[0][0];
+      const regex: RegExp = filter.name;
+      expect(regex).toBeInstanceOf(RegExp);
+      expect(regex.source).toBe('^\\(a\\+\\)\\+\\$\\.\\*$');
+      expect(regex.flags).toContain('i');
+      // Không bị hiểu là pattern (a+)+ -> không khớp chuỗi 'aaaa'
+      expect(regex.test('aaaa')).toBe(false);
+      expect(regex.test('(A+)+$.*')).toBe(true);
     });
   });
 

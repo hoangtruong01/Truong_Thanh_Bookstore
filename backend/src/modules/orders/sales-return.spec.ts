@@ -157,7 +157,8 @@ describe('SALES-RET-01: Customer Sales Return & Refund Suite', () => {
 
       const result = await orderLifecycleService.requestReturn(
         'order_ret_override',
-        { _id: 'cust_123', role: UserRole.CUSTOMER },
+        // SEC-008: chỉ ADMIN/STAFF có MANAGE_ORDERS mới được đặc cách quá hạn
+        { _id: 'admin_1', role: UserRole.ADMIN },
         {
           reason: 'Khách VIP đổi sách sau 10 ngày',
           overrideToken: 'MGR-OVR-778899',

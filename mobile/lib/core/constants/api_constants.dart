@@ -48,7 +48,13 @@ class ApiConstants {
 
   // Product Endpoints
   static String get products => '$baseUrl/products';
+  static String relatedProducts(String id) => '$baseUrl/products/${Uri.encodeComponent(id)}/related';
+  // Public list of products with a discount price (`?limit=` capped at 100 by the backend).
+  static String get discountedProducts => '$baseUrl/products/discounted';
   static String get categories => '$baseUrl/categories';
+
+  // Banner Endpoints (public, grouped by position)
+  static String get activeBanners => '$baseUrl/banners/active';
 
   // Order Endpoints
   static String get orders => '$baseUrl/orders';
@@ -56,12 +62,21 @@ class ApiConstants {
   static String get myOrders => '$baseUrl/orders/my-orders';
   static String order(String id) => '$baseUrl/orders/$id';
   static String guestOrder(String id) => '$baseUrl/orders/guest/$id';
+  static String orderReturnRequest(String id) => '$baseUrl/orders/$id/return-request';
   // PDF invoice: JWT (or x-guest-order-token) header required, no query-token auth.
   static String orderInvoice(String id) => '$baseUrl/orders/$id/invoice';
   static String guestOrderInvoice(String id) => '$baseUrl/orders/guest/$id/invoice';
+  // Server pricing (optional JWT): the only source of cart/checkout money values.
+  static String get checkoutPreview => '$baseUrl/orders/checkout-preview';
+  static String get pricingPolicy => '$baseUrl/orders/pricing-policy';
+
+  // Cart Endpoints (JWT): server copy of the cart for logged-in users.
+  static String get cart => '$baseUrl/cart';
+  static String get cartSync => '$baseUrl/cart/sync';
 
   // Payment Endpoints
   static String get payments => '$baseUrl/payments';
+  static String get paymentMethods => '$baseUrl/payments/methods';
 
   // Promotion Endpoints
   static String get activePromotions => '$baseUrl/promotions/active';

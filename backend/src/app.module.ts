@@ -40,6 +40,7 @@ import { PricingModule } from './modules/pricing/pricing.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { DataExchangeModule } from './modules/data-exchange/data-exchange.module';
 import { WarehousesModule } from './modules/warehouses/warehouses.module';
+import { SeoModule } from './modules/seo/seo.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 
 @Module({
@@ -116,6 +117,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
     FinanceModule,
     DataExchangeModule,
     WarehousesModule,
+    SeoModule,
     DocumentsModule,
   ],
   controllers: [AppController],

@@ -27,6 +27,8 @@
           <img
             src="@/assets/logo.jpg"
             alt="Trường Thành Logo"
+            loading="lazy"
+            decoding="async"
             class="w-9 h-9 rounded-full object-cover border-2 border-white/40 shadow-xs flex-shrink-0 bg-white"
           />
           <div>
@@ -60,6 +62,8 @@
             v-if="msg.sender === 'bot'"
             src="@/assets/logo.jpg"
             alt="Trường Thành Bot"
+            loading="lazy"
+            decoding="async"
             class="w-7 h-7 rounded-full object-cover border border-red-100 flex-shrink-0 shadow-xs bg-white"
           />
           

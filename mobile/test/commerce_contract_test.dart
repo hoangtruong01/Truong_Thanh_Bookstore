@@ -27,6 +27,8 @@ void main() {
         final body = jsonDecode(request.body);
         expect(body['items'][0]['product'], 'product-1');
         expect(body['items'][0]['quantity'], 2);
+        // Backend prices every line from the DB: no client price is sent.
+        expect((body['items'][0] as Map).keys, unorderedEquals(['product', 'quantity']));
         expect(body['paymentMethod'], 'COD');
         expect(body['idempotencyKey'], isNotEmpty);
         return http.Response(jsonEncode({'data': order}), 201);
@@ -35,11 +37,19 @@ void main() {
       return http.Response(jsonEncode({'data': {'data': [order], 'total': 1}}), 200);
     });
     final products = ProductProvider(client: client);
-    final cart = CartProvider();
+    // Cart totals are the server preview's numbers (separate mock: not counted in `requests`).
+    final previewClient = MockClient((request) async {
+      expect(request.url.path, '/api/orders/checkout-preview');
+      return http.Response(jsonEncode({'data': {'subtotal': 200000, 'shippingFee': 30000,
+        'discount': 0, 'loyaltyDiscount': 0, 'total': 230000, 'warnings': [],
+        'isValidForCheckout': true}}), 200);
+    });
+    final cart = CartProvider(client: previewClient);
     final orders = OrderProvider(client: client);
     await products.fetchProducts(query: 'sách tiếng Việt');
     expect(products.products, hasLength(1));
     cart.addToCart(products.products.single, quantity: 2);
+    await cart.refreshPricing(immediate: true);
     expect(cart.total, 230000);
     final order = await orders.placeOrder(items: cart.items, fullName: 'QA',
       phone: '0901234567', email: 'qa@example.test', address: 'Test address',
@@ -50,7 +60,7 @@ void main() {
     await orders.fetchMyOrders('access');
     expect(orders.myOrders.single.id, 'order-1');
     expect(requests, hasLength(3));
-    products.dispose(); cart.dispose(); orders.dispose(); client.close();
+    products.dispose(); cart.dispose(); orders.dispose(); client.close(); previewClient.close();
   });
 
   test('Checkout transport retry retains idempotency key and releases loading', () async {

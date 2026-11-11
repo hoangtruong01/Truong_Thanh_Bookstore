@@ -20,9 +20,6 @@ export default defineConfig({
             if (id.includes('vue') || id.includes('pinia')) {
               return 'vendor-vue'
             }
-            if (id.includes('chart.js')) {
-              return 'vendor-chart'
-            }
             if (id.includes('axios') || id.includes('vue-toastification')) {
               return 'vendor-utils'
             }

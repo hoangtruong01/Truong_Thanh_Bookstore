@@ -163,7 +163,7 @@
         <h2 class="text-sm font-black uppercase tracking-wider text-center select-none">Hình ảnh chi tiết sản phẩm</h2>
         <div class="space-y-3">
           <div v-for="(img, idx) in page.images" :key="idx" class="rounded-2xl overflow-hidden bg-white border border-slate-200/50 shadow-md">
-            <img :src="img" class="w-full h-auto object-contain" />
+            <img :src="img" loading="lazy" decoding="async" class="w-full h-auto object-contain" />
           </div>
         </div>
       </div>
@@ -174,7 +174,7 @@
         <div class="grid grid-cols-1 gap-3.5">
           <div v-for="(t, idx) in page.testimonials" :key="idx" class="bg-white border border-slate-200/50 p-4.5 rounded-2xl shadow-xs text-slate-800 space-y-2.5">
             <div class="flex items-center gap-3">
-              <img :src="t.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'" class="w-9 h-9 rounded-full object-cover border border-slate-100" />
+              <img :src="t.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'" loading="lazy" decoding="async" class="w-9 h-9 rounded-full object-cover border border-slate-100" />
               <div>
                 <h4 class="text-xs font-black text-slate-800 leading-none">{{ t.authorName }}</h4>
                 <div class="flex items-center text-amber-400 text-xs mt-1">
@@ -212,14 +212,18 @@
 
               <!-- Package specific image -->
               <img 
-                v-if="pkg.image" 
-                :src="pkg.image" 
+                v-if="pkg.image"
+                :src="pkg.image"
+                loading="lazy"
+                decoding="async"
                 class="w-12 h-12 object-contain rounded-lg border border-slate-100 flex-shrink-0 bg-slate-50" 
               />
               <!-- Fallback to first product image if package image is missing -->
               <img 
-                v-else-if="page.images && page.images.length > 0" 
-                :src="page.images[0]" 
+                v-else-if="page.images && page.images.length > 0"
+                :src="page.images[0]"
+                loading="lazy"
+                decoding="async"
                 class="w-12 h-12 object-contain rounded-lg border border-slate-100 flex-shrink-0 bg-slate-50" 
               />
 
@@ -365,6 +369,8 @@ import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { landingPageService } from '@/services/landingPage';
 import { useToast } from 'vue-toastification';
+import { useSeoMeta, INDEX_ROBOTS, NOINDEX_ROBOTS } from '@/composables/useSeoMeta';
+import { toMetaDescription } from '@/utils/seo';
 
 const route = useRoute();
 const router = useRouter();
@@ -373,6 +379,14 @@ const toast = useToast();
 const loading = ref(true);
 const error = ref(false);
 const page = ref<any>({});
+
+// SEO-TASK-008: metadata riêng cho landing page; trang lỗi/không tồn tại => noindex (chống soft-404)
+useSeoMeta(() => ({
+  title: page.value?.title || 'Trường Thành Stationery',
+  description: toMetaDescription(page.value?.description) || undefined,
+  ogImage: page.value?.images?.[0] || '',
+  robots: error.value ? NOINDEX_ROBOTS : INDEX_ROBOTS,
+}));
 const currentImageIdx = ref(0);
 const selectedPackage = ref('');
 const submittingOrder = ref(false);

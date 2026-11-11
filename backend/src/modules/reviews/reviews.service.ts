@@ -2,13 +2,14 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Review, ReviewDocument } from './schemas/review.schema';
 import { Product, ProductDocument } from '../products/schemas/product.schema';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
-import { OrderStatus } from '../../common/enums';
+import { OrderStatus, StaffPermission } from '../../common/enums';
 import {
   CreateReviewDto,
   UpdateReviewDto,
@@ -24,6 +25,30 @@ export class ReviewsService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
   ) {}
+
+  /**
+   * SEC-002: phòng thủ chiều sâu — dù DTO đã validate, service vẫn từ chối
+   * mọi ảnh không phải URL http/https (javascript:, data:, vbscript:, ...).
+   */
+  private assertSafeImageUrls(images?: string[]): void {
+    if (!images) return;
+    for (const raw of images) {
+      let ok = false;
+      if (typeof raw === 'string') {
+        try {
+          const parsed = new URL(raw);
+          ok = parsed.protocol === 'http:' || parsed.protocol === 'https:';
+        } catch {
+          ok = false;
+        }
+      }
+      if (!ok) {
+        throw new BadRequestException(
+          'Ảnh đánh giá phải là URL http/https hợp lệ',
+        );
+      }
+    }
+  }
 
   async findByProduct(productId: string): Promise<ReviewDocument[]> {
     return this.reviewModel
@@ -110,6 +135,7 @@ export class ReviewsService {
     userName: string,
     dto: CreateReviewDto,
   ): Promise<ReviewDocument> {
+    this.assertSafeImageUrls(dto.images);
     const product = await this.productModel.findById(productId).exec();
     if (!product) {
       throw new NotFoundException('Không tìm thấy sản phẩm');
@@ -168,6 +194,7 @@ export class ReviewsService {
     userId: string,
     dto: UpdateReviewDto,
   ): Promise<ReviewDocument> {
+    this.assertSafeImageUrls(dto.images);
     const review = await this.reviewModel.findById(reviewId).exec();
     if (!review) {
       throw new NotFoundException('Không tìm thấy đánh giá');
@@ -199,6 +226,7 @@ export class ReviewsService {
     reviewId: string,
     userId: string,
     userRole: string,
+    userPermissions: string[] = [],
   ): Promise<{ success: boolean }> {
     const review = await this.reviewModel.findById(reviewId).exec();
     if (!review) {
@@ -210,11 +238,17 @@ export class ReviewsService {
       throw new NotFoundException('Không tìm thấy đánh giá cho sản phẩm này');
     }
 
+    // SEC-015: ADMIN/SUPER_ADMIN xóa được mọi đánh giá; STAFF chỉ khi có
+    // quyền MANAGE_PRODUCTS (kiểm duyệt đánh giá); khách chỉ xóa đánh giá của mình.
+    const isPrivileged = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+    const isModeratingStaff =
+      userRole === 'STAFF' &&
+      Array.isArray(userPermissions) &&
+      userPermissions.includes(StaffPermission.MANAGE_PRODUCTS);
     if (
       review.user.toString() !== userId &&
-      userRole !== 'ADMIN' &&
-      userRole !== 'STAFF' &&
-      userRole !== 'SUPER_ADMIN'
+      !isPrivileged &&
+      !isModeratingStaff
     ) {
       throw new ForbiddenException('Bạn không có quyền xóa đánh giá này');
     }

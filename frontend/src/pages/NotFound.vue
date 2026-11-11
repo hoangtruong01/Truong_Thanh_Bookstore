@@ -41,10 +41,12 @@
 </template>
 
 <script setup lang="ts">
-import { useSeoMeta } from '@/composables/useSeoMeta'
+import { useSeoMeta, NOINDEX_ROBOTS } from '@/composables/useSeoMeta'
 
+// SEO-TASK-007: SPA trả HTTP 200 cho mọi URL => trang 404 phải noindex để tránh soft-404 bị index
 useSeoMeta({
   title: 'Không tìm thấy trang - 404',
   description: 'Trang bạn tìm kiếm không tồn tại hoặc đã được di chuyển.',
+  robots: NOINDEX_ROBOTS,
 })
 </script>

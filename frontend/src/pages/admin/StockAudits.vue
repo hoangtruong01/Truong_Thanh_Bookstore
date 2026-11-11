@@ -281,6 +281,7 @@
 import { ref, onMounted } from 'vue'
 import { stockAuditService } from '@/services/stock-audit.service'
 import { useToast } from 'vue-toastification'
+import { formatCurrency } from '@/utils/helpers'
 
 const toast = useToast()
 
@@ -412,10 +413,6 @@ function getAuditStatusLabel(status: string) {
     case 'REJECTED': return 'Đã từ chối'
     default: return status
   }
-}
-
-function formatCurrency(val: number) {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)
 }
 
 function formatDate(val: string | Date | undefined) {
