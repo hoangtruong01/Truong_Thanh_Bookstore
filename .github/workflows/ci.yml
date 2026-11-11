@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, master, develop, dev ]
 
+# SEC-031: quyền tối thiểu cho GITHUB_TOKEN
+permissions:
+  contents: read
+
 jobs:
   # -------------------------------------------------------------
   # Security Scan (Gitleaks) — Scan repository for leaked secrets
@@ -13,6 +17,9 @@ jobs:
   gitleaks:
     name: 🛡️ Secret Scan (Gitleaks)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # gitleaks-action cần đọc commit của PR
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4

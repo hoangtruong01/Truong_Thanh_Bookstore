@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants/api_constants.dart';
@@ -11,8 +12,16 @@ class NotificationProvider with ChangeNotifier {
   final ApiClient _api;
   final bool _ownsApi;
 
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     if (_ownsApi) _api.close();
     super.dispose();
   }
@@ -21,13 +30,46 @@ class NotificationProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  /// Bumped on reset so answers for the previous session are dropped.
+  int _generation = 0;
+  bool? _boundAuthenticated;
+
+  /// Called by the provider tree whenever the session changes. Leaving an account
+  /// (sign-out, expired session) drops that account's notifications and badge.
+  void bindAuth({required bool isAuthenticated}) {
+    final previous = _boundAuthenticated;
+    _boundAuthenticated = isAuthenticated;
+    if (previous == true && !isAuthenticated) {
+      _clear();
+      // Deferred: this runs while the provider tree builds.
+      scheduleMicrotask(notifyListeners);
+    }
+  }
+
+  void _clear() {
+    _generation++;
+    _notifications = [];
+    _unreadCount = 0;
+    _errorMessage = null;
+    _isLoading = false;
+  }
+
   List<NotificationModel> get notifications => List.unmodifiable(_notifications);
+  /// Server-side unread count (GET /notifications/unread-count), for the home bell.
   int get unreadCount => _unreadCount;
+  bool get hasUnread => _unreadCount > 0;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  /// Clears per-user state (call on logout so the bell does not keep a stale badge).
+  void reset() {
+    _clear();
+    notifyListeners();
+  }
+
   Future<void> fetchNotifications(String? token) async {
     if (token == null || token.isEmpty) return;
+    final generation = _generation;
 
     _isLoading = true;
     _errorMessage = null;
@@ -35,6 +77,7 @@ class NotificationProvider with ChangeNotifier {
 
     try {
       final res = await _api.get(ApiConstants.myNotifications, token: token);
+      if (generation != _generation) return;
 
       if (res.statusCode == 200) {
         final dynamic items = res.data is Map ? res.data['items'] : res.data;
@@ -46,10 +89,13 @@ class NotificationProvider with ChangeNotifier {
         _errorMessage = 'Không thể tải thông báo';
       }
     } catch (e) {
+      if (generation != _generation) return;
       _errorMessage = e is ApiNetworkException ? e.toString() : 'Không thể tải thông báo';
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _generation) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -59,9 +105,11 @@ class NotificationProvider with ChangeNotifier {
       notifyListeners();
       return;
     }
+    final generation = _generation;
 
     try {
       final res = await _api.get(ApiConstants.unreadNotificationCount, token: token);
+      if (generation != _generation) return;
 
       if (res.statusCode == 200) {
         _unreadCount = (res.mapData['unreadCount'] as num?)?.toInt() ?? 0;
@@ -78,19 +126,10 @@ class NotificationProvider with ChangeNotifier {
     try {
       final res = await _api.patch(ApiConstants.markNotificationRead(id), token: token);
 
-      if (res.statusCode == 200) {
+      if (res.isSuccess) {
         final index = _notifications.indexWhere((n) => n.id == id);
-        if (index != -1) {
-          final old = _notifications[index];
-          _notifications[index] = NotificationModel(
-            id: old.id,
-            title: old.title,
-            message: old.message,
-            type: old.type,
-            data: old.data,
-            isRead: true,
-            createdAt: old.createdAt,
-          );
+        if (index != -1 && !_notifications[index].isRead) {
+          _notifications[index] = _notifications[index].copyWith(isRead: true);
           if (_unreadCount > 0) _unreadCount--;
           notifyListeners();
         }
@@ -108,18 +147,8 @@ class NotificationProvider with ChangeNotifier {
     try {
       final res = await _api.patch(ApiConstants.markAllNotificationsRead, token: token);
 
-      if (res.statusCode == 200) {
-        _notifications = _notifications.map((n) {
-          return NotificationModel(
-            id: n.id,
-            title: n.title,
-            message: n.message,
-            type: n.type,
-            data: n.data,
-            isRead: true,
-            createdAt: n.createdAt,
-          );
-        }).toList();
+      if (res.isSuccess) {
+        _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
         _unreadCount = 0;
         notifyListeners();
         return true;

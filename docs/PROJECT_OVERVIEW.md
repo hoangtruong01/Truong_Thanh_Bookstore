@@ -873,19 +873,19 @@ Phase 1 đã triệt tiêu toàn bộ lỗ hổng bảo mật cốt lõi, đảm
 | Backend Health & Release SHA (TT-014) | `cd backend && npm test -- app.controller.spec.ts` | **3/3 health readiness & release SHA tests PASS** |
 | Backend Security Suite | `cd backend && npm test -- security-p0-audit.spec.ts` | **16/16 security regression tests PASS** |
 | Backend Commerce Suite | `cd backend && npm test -- orders.commerce-regression.spec.ts` | **14/14 commerce invariant tests PASS** |
-| Backend Unit & Integration Tests | `cd backend && npm test` | **75/75 suites, 885/885 tests PASS (100%)** |
-| Backend Linting | `cd backend && npm run lint` | **0 errors** (2.573 warnings, --max-warnings 2650) |
+| Backend Unit & Integration Tests | `cd backend && npm test` | **92/92 suites, 1.197/1.197 tests PASS (100%)** |
+| Backend Linting | `cd backend && npm run lint` | **0 errors** (2.669 warnings, --max-warnings 2700) |
 | Backend Build | `cd backend && npm run build` | **Biên dịch thành công** |
-| Frontend Unit Tests | `cd frontend && npm run test:unit` | **22/22 suites, 109/109 tests PASS (100%)** |
+| Frontend Unit Tests | `cd frontend && npm run test:unit` | **62/62 files, 450/450 tests PASS (100%)** |
 | Frontend TypeCheck | `cd frontend && npm run typecheck` | **0 errors** (vue-tsc -b) |
 | Frontend Linting | `cd frontend && npm run lint` | **0 errors, 0 warnings (Sạch 100%)** |
 | Frontend Build | `cd frontend && npm run build` | **Biên dịch thành công** |
 | Concurrency & Load Benchmark | `node --test scripts/load/load.test.js` | **8/8 benchmark tests PASS** |
 | Frontend Multi-Device E2E (TT-024) | `cd frontend && npx playwright test` | **9/9 tests PASS (100%)** (Desktop, Mobile, Tablet & Barcode Scanner) |
 | Smoke Tests | `node --test scripts/smoke-test.test.mjs` | **6/6 tests PASS (100%)** |
-| Mobile Tests | `cd mobile && flutter test` | **47/47 tests PASS (100%)** |
+| Mobile Tests | `cd mobile && flutter test` | **206/206 tests PASS (100%)** |
 | Mobile Analyze | `cd mobile && flutter analyze` | **0 issues** |
-| **Tổng Cộng Toàn Dự Án** | **Toàn bộ Test Suite** | **1.064/1.064 tests PASS (100% tỷ lệ thành công)** |
+| **Tổng Cộng Toàn Dự Án** | **Toàn bộ Test Suite** | **1.853/1.853 tests PASS (100% tỷ lệ thành công)** |
 
 ### 11.3. Cổng Nghiệm Thu CTO — Đã Đạt 4/4
 

@@ -25,6 +25,44 @@ import {
   CustomerReceivableStatus,
 } from './schemas/customer-receivable.schema';
 
+/**
+ * Mô phỏng findOneAndUpdate nguyên tử của MongoDB trên "document hiện tại"
+ * (lấy từ mock findOne): kiểm tra điều kiện lọc rồi áp $inc/$set/$push.
+ * Trả null nếu điều kiện không thỏa (giống Mongo khi không match).
+ */
+function emulateAtomicUpdate(getCurrentDoc: () => any) {
+  return (filter: any, update: any) => {
+    const exec = async () => {
+      const q = getCurrentDoc();
+      let doc = q;
+      if (q && typeof q.populate === 'function') {
+        doc = await q.populate().exec();
+      } else if (q && typeof q.exec === 'function') {
+        doc = await q.exec();
+      }
+      if (!doc) return null;
+      const cond = filter.remainingAmount;
+      if (typeof cond === 'number' && doc.remainingAmount !== cond) return null;
+      if (cond?.$gte !== undefined && doc.remainingAmount < cond.$gte) {
+        return null;
+      }
+      if (filter.status?.$ne && doc.status === filter.status.$ne) return null;
+      for (const [k, v] of Object.entries(update.$inc || {})) {
+        doc[k] = (doc[k] || 0) + (v as number);
+      }
+      Object.assign(doc, update.$set || {});
+      for (const [k, v] of Object.entries(update.$push || {})) {
+        doc[k] = doc[k] || [];
+        doc[k].push(v);
+      }
+      return doc;
+    };
+    const query: any = { exec };
+    query.session = jest.fn().mockReturnValue(query);
+    return query;
+  };
+}
+
 describe('FinanceService', () => {
   let service: FinanceService;
   let mockAccountModel: any;
@@ -64,6 +102,11 @@ describe('FinanceService', () => {
     mockPayableModel.find = jest.fn();
     mockPayableModel.findOne = jest.fn();
     mockPayableModel.countDocuments = jest.fn();
+    mockPayableModel.findOneAndUpdate = jest
+      .fn()
+      .mockImplementation(
+        emulateAtomicUpdate(() => mockPayableModel.findOne()),
+      );
 
     mockReceivableModel = jest.fn().mockImplementation((dto) => ({
       ...dto,
@@ -72,6 +115,11 @@ describe('FinanceService', () => {
     mockReceivableModel.find = jest.fn();
     mockReceivableModel.findOne = jest.fn();
     mockReceivableModel.countDocuments = jest.fn();
+    mockReceivableModel.findOneAndUpdate = jest
+      .fn()
+      .mockImplementation(
+        emulateAtomicUpdate(() => mockReceivableModel.findOne()),
+      );
 
     mockConnection = {
       startSession: jest
@@ -864,6 +912,14 @@ describe('FinanceService', () => {
         exec: jest.fn().mockResolvedValue(null),
       });
 
+      // SEC-009: cập nhật payable nay đi qua findOneAndUpdate nguyên tử (không còn save())
+      mockPayableModel.findOneAndUpdate.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest
+          .fn()
+          .mockRejectedValue(new Error('Lỗi CSDL khi lưu payable')),
+      });
+
       await expect(
         service.paySupplier(
           payableId,
@@ -1115,6 +1171,226 @@ describe('FinanceService', () => {
       });
       const errsCollect = await validate(dtoCollectZero);
       expect(errsCollect.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('SEC-009: Race condition khi thanh toán / thu nợ (không ghi đè doc stale)', () => {
+    const accountId = new Types.ObjectId().toString();
+
+    const setupAccountAndEntryMocks = () => {
+      mockAccountModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          _id: new Types.ObjectId(accountId),
+          name: 'Quỹ tiền mặt',
+          status: CashAccountStatus.ACTIVE,
+          currentBalance: 100000000,
+        }),
+      });
+      mockAccountModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ currentBalance: 90000000 }),
+      });
+      mockEntryModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+    };
+
+    it('SEC-009-T01: paySupplier - update có điều kiện không match (doc stale) -> ConflictException, KHÔNG gọi payable.save()', async () => {
+      const payableId = new Types.ObjectId().toString();
+      const save = jest.fn();
+      const stalePayable: any = {
+        _id: new Types.ObjectId(payableId),
+        invoiceCode: 'PN-RACE-1',
+        paidAmount: 0,
+        remainingAmount: 5000000,
+        status: SupplierPayableStatus.UNPAID,
+        supplier: { name: 'NCC' },
+        paymentHistory: [],
+        save,
+      };
+      mockPayableModel.findOne.mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(stalePayable),
+        }),
+      });
+      setupAccountAndEntryMocks();
+      // Request khác đã trả hết trước đó -> guard remainingAmount $gte không match
+      mockPayableModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(
+        service.paySupplier(
+          payableId,
+          { accountId, amount: 4000000 },
+          new Types.ObjectId().toString(),
+        ),
+      ).rejects.toThrow(ConflictException);
+
+      expect(save).not.toHaveBeenCalled();
+      expect(stalePayable.remainingAmount).toBe(5000000);
+      expect(stalePayable.paymentHistory).toHaveLength(0);
+    });
+
+    it('SEC-009-T02: collectCustomerPayment - update có điều kiện không match (doc stale) -> ConflictException, KHÔNG gọi receivable.save()', async () => {
+      const receivableId = new Types.ObjectId().toString();
+      const save = jest.fn();
+      const staleReceivable: any = {
+        _id: new Types.ObjectId(receivableId),
+        invoiceCode: 'HD-RACE-1',
+        customerName: 'Đại lý',
+        paidAmount: 0,
+        remainingAmount: 5000000,
+        status: CustomerReceivableStatus.UNPAID,
+        collectionHistory: [],
+        save,
+      };
+      mockReceivableModel.findOne.mockReturnValue(staleReceivable);
+      setupAccountAndEntryMocks();
+      mockReceivableModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(
+        service.collectCustomerPayment(
+          receivableId,
+          { accountId, amount: 4000000 },
+          new Types.ObjectId().toString(),
+        ),
+      ).rejects.toThrow(ConflictException);
+
+      expect(save).not.toHaveBeenCalled();
+      expect(staleReceivable.remainingAmount).toBe(5000000);
+      expect(staleReceivable.collectionHistory).toHaveLength(0);
+    });
+
+    it('SEC-009-T03: 2 request paySupplier đồng thời cùng snapshot cũ (3tr + 3tr / nợ 5tr) -> chỉ 1 thành công, không trả vượt nợ', async () => {
+      const payableId = new Types.ObjectId().toString();
+      // "DB" thật: trạng thái nguyên tử duy nhất
+      const dbDoc: any = {
+        _id: new Types.ObjectId(payableId),
+        invoiceCode: 'PN-RACE-3',
+        paidAmount: 0,
+        remainingAmount: 5000000,
+        status: SupplierPayableStatus.UNPAID,
+        paymentHistory: [],
+      };
+      // Mỗi lần đọc trả snapshot riêng (cũ khi request kia ghi trước); save() ghi đè
+      // dbDoc giống hành vi doc.save() cũ -> nếu còn fallback, test sẽ fail.
+      mockPayableModel.findOne.mockImplementation(() => {
+        const snap: any = {
+          ...dbDoc,
+          paymentHistory: [...dbDoc.paymentHistory],
+          supplier: { name: 'NCC' },
+        };
+        snap.save = jest.fn().mockImplementation(() => {
+          Object.assign(dbDoc, {
+            paidAmount: snap.paidAmount,
+            remainingAmount: snap.remainingAmount,
+            status: snap.status,
+            paymentHistory: snap.paymentHistory,
+          });
+          return Promise.resolve(snap);
+        });
+        return {
+          populate: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue(snap),
+          }),
+        };
+      });
+      mockPayableModel.findOneAndUpdate.mockImplementation(
+        emulateAtomicUpdate(() => dbDoc),
+      );
+      setupAccountAndEntryMocks();
+
+      const userId = new Types.ObjectId().toString();
+      const results = await Promise.allSettled([
+        service.paySupplier(payableId, { accountId, amount: 3000000 }, userId),
+        service.paySupplier(payableId, { accountId, amount: 3000000 }, userId),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter(
+        (r): r is PromiseRejectedResult => r.status === 'rejected',
+      );
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0].reason).toBeInstanceOf(ConflictException);
+      expect(dbDoc.paidAmount).toBe(3000000);
+      expect(dbDoc.remainingAmount).toBe(2000000);
+      expect(dbDoc.paymentHistory).toHaveLength(1);
+    });
+
+    it('SEC-009-T04: 2 request thu nợ đồng thời tổng đúng bằng số nợ -> remaining = 0 và status được đồng bộ về PAID (không kẹt PARTIALLY_PAID)', async () => {
+      const receivableId = new Types.ObjectId().toString();
+      const dbDoc: any = {
+        _id: new Types.ObjectId(receivableId),
+        invoiceCode: 'HD-RACE-4',
+        customerName: 'Đại lý',
+        paidAmount: 0,
+        remainingAmount: 5000000,
+        status: CustomerReceivableStatus.UNPAID,
+        collectionHistory: [],
+      };
+      mockReceivableModel.findOne.mockImplementation(() => ({
+        ...dbDoc,
+        collectionHistory: [...dbDoc.collectionHistory],
+        save: jest.fn(),
+      }));
+      mockReceivableModel.findOneAndUpdate.mockImplementation(
+        emulateAtomicUpdate(() => dbDoc),
+      );
+      setupAccountAndEntryMocks();
+
+      const userId = new Types.ObjectId().toString();
+      const results = await Promise.all([
+        service.collectCustomerPayment(
+          receivableId,
+          { accountId, amount: 2500000 },
+          userId,
+        ),
+        service.collectCustomerPayment(
+          receivableId,
+          { accountId, amount: 2500000 },
+          userId,
+        ),
+      ]);
+
+      expect(results).toHaveLength(2);
+      expect(dbDoc.paidAmount).toBe(5000000);
+      expect(dbDoc.remainingAmount).toBe(0);
+      expect(dbDoc.status).toBe(CustomerReceivableStatus.PAID);
+      expect(dbDoc.collectionHistory).toHaveLength(2);
+    });
+  });
+
+  describe('SEC-014: Escape regex trong tìm kiếm (finance)', () => {
+    it('SEC-014-T01: buildCashEntryFilter escape ký tự đặc biệt -> không hiểu input là pattern', () => {
+      const filter = service.buildCashEntryFilter({ search: '(a+)+$.*' });
+      const regex: RegExp = filter.$or[0].entryCode;
+      expect(regex).toBeInstanceOf(RegExp);
+      expect(regex.source).toBe('\\(a\\+\\)\\+\\$\\.\\*');
+      // Khớp theo nghĩa đen, không khớp "aaaa" như pattern (a+)+
+      expect(regex.test('aaaa')).toBe(false);
+      expect(regex.test('xx(a+)+$.*yy')).toBe(true);
+    });
+
+    it('SEC-014-T02: findAllPayables escape search', async () => {
+      const chain: any = {
+        populate: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([]),
+      };
+      mockPayableModel.find.mockReturnValue(chain);
+      mockPayableModel.countDocuments.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(0),
+      });
+
+      await service.findAllPayables({ search: '.*' });
+
+      const filter = mockPayableModel.find.mock.calls[0][0];
+      expect(filter.invoiceCode.source).toBe('\\.\\*');
     });
   });
 

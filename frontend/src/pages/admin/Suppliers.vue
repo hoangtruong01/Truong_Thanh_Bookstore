@@ -339,6 +339,7 @@
 import { ref, onMounted } from 'vue'
 import { supplierService } from '@/services/supplier.service'
 import { useToast } from 'vue-toastification'
+import { formatCurrency } from '@/utils/helpers'
 
 const toast = useToast()
 
@@ -465,10 +466,6 @@ async function handleDelete(sup: any) {
 function openProductHistoryModal(sup: any) {
   selectedSupplier.value = sup
   showProductModal.value = true
-}
-
-function formatCurrency(val: number) {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)
 }
 
 function formatDate(val: string | Date | undefined) {

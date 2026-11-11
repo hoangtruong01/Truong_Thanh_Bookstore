@@ -155,8 +155,11 @@ export class NotificationsService {
           isRead = item.readBy.some((id) => id.toString() === userId);
         }
 
+        // SEC-018: không trả readBy (danh sách userId của người khác đã đọc
+        // thông báo broadcast); chỉ trả isRead tính riêng cho người gọi.
+        const { readBy: _readBy, ...safeItem } = item;
         return {
-          ...item,
+          ...safeItem,
           isRead,
         };
       },

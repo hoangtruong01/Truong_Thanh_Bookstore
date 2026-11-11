@@ -43,6 +43,8 @@
         width="320"
         height="320"
         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 240px"
+        alt=""
+        aria-hidden="true"
         class="absolute inset-0 w-full h-full object-cover blur-xl opacity-[0.22] scale-125 select-none pointer-events-none" 
       />
       
@@ -55,6 +57,7 @@
         width="320"
         height="320"
         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 240px"
+        :alt="product.name"
         class="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-500 relative z-10 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.06)]"
         @error="handleImageError" 
       />
@@ -94,7 +97,7 @@
 
     <!-- Title -->
     <h3 class="text-xs font-bold text-slate-800 line-clamp-2 min-h-[36px] group-hover:text-[#dc2626] transition-colors leading-tight">
-      <router-link :to="`/products/${product._id}`">{{ product.name }}</router-link>
+      <router-link :to="`/products/${product.slug || product._id}`">{{ product.name }}</router-link>
     </h3>
 
     <!-- Price & Info -->
@@ -141,9 +144,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { formatCurrency, getDiscountPercent, formatNumber } from '@/utils/helpers'
+import { formatCurrency, getDiscountPercent, formatNumber, getProductPlaceholder } from '@/utils/helpers'
+import { useCountdown } from '@/composables/useCountdown'
 import type { Product } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
@@ -190,40 +194,11 @@ async function onWishlistToggle() {
   }
 }
 
-// Flash Sale Countdown Logic
-const timeRemaining = ref('')
-let timerInterval: any = null
-
-function updateCountdown() {
-  if (!props.product.isFlashSale || !props.product.flashSaleExpiry) {
-    timeRemaining.value = ''
-    return
-  }
-  const now = new Date()
-  const expiry = new Date(props.product.flashSaleExpiry)
-  const diff = expiry.getTime() - now.getTime()
-  
-  if (diff <= 0) {
-    timeRemaining.value = 'Hết hạn'
-    return
-  }
-  
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-  
-  timeRemaining.value = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-}
-
-onMounted(() => {
-  if (props.product.isFlashSale) {
-    updateCountdown()
-    timerInterval = setInterval(updateCountdown, 1000)
-  }
-})
-
-onUnmounted(() => {
-  if (timerInterval) clearInterval(timerInterval)
+// Flash Sale Countdown (ticks only while the product is a flash sale with an expiry)
+const flashSaleCountdown = useCountdown(() => (props.product.isFlashSale ? props.product.flashSaleExpiry : null))
+const timeRemaining = computed(() => {
+  if (!flashSaleCountdown.isActive.value) return ''
+  return flashSaleCountdown.isExpired.value ? 'Hết hạn' : flashSaleCountdown.formatted.value
 })
 
 const isImageBroken = ref(false)
@@ -237,55 +212,12 @@ function handleImageError() {
 }
 
 function goToDetail() {
-  router.push(`/products/${props.product._id}`)
+  router.push(`/products/${props.product.slug || props.product._id}`)
 }
 
 const discountPercent = computed(() => {
   return getDiscountPercent(props.product.price, props.product.discountPrice)
 })
 
-
-const placeholder = computed(() => {
-  const name = (props.product.name || '').toLowerCase()
-  if (name.includes('bút') || name.includes('viết') || name.includes('chì')) {
-    return {
-      gradient: 'bg-gradient-to-br from-red-400 to-rose-500',
-      icon: 'pencil'
-    }
-  }
-  if (name.includes('giấy') || name.includes('sổ') || name.includes('vở') || name.includes('tập') || name.includes('note')) {
-    return {
-      gradient: 'bg-gradient-to-br from-emerald-400 to-teal-500',
-      icon: 'document'
-    }
-  }
-  if (name.includes('máy tính') || name.includes('casio')) {
-    return {
-      gradient: 'bg-gradient-to-br from-indigo-400 to-purple-500',
-      icon: 'calculator'
-    }
-  }
-  if (name.includes('hồ sơ') || name.includes('bìa') || name.includes('kẹp') || name.includes('keo') || name.includes('thước')) {
-    return {
-      gradient: 'bg-gradient-to-br from-blue-400 to-sky-500',
-      icon: 'folder'
-    }
-  }
-  if (name.includes('combo') || name.includes('văn phòng')) {
-    return {
-      gradient: 'bg-gradient-to-br from-blue-500 to-indigo-600',
-      icon: 'briefcase'
-    }
-  }
-  if (name.includes('học sinh') || name.includes('tiểu học') || name.includes('bộ dụng cụ')) {
-    return {
-      gradient: 'bg-gradient-to-br from-amber-400 to-orange-500',
-      icon: 'academic'
-    }
-  }
-  return {
-    gradient: 'bg-gradient-to-br from-pink-400 to-rose-500',
-    icon: 'tag'
-  }
-})
+const placeholder = computed(() => getProductPlaceholder(props.product.name))
 </script>

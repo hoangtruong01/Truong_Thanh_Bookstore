@@ -86,8 +86,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { productService } from '@/services/product.service';
+import { useCountdown, startOfTomorrow } from '@/composables/useCountdown';
 import { useCartStore } from '@/stores/cart';
 import { useToast } from 'vue-toastification';
 import ProductCard from '@/components/ProductCard.vue';
@@ -108,11 +109,12 @@ const cartStore = useCartStore();
 const loading = ref(true);
 const dealProducts = ref<any[]>([]);
 
-// Countdown Timer settings
-const timerHours = ref("00");
-const timerMinutes = ref("00");
-const timerSeconds = ref("00");
-let timerInterval: any = null;
+// Countdown to midnight ("deal ends today"); cleared automatically on unmount
+const {
+  hours: timerHours,
+  minutes: timerMinutes,
+  seconds: timerSeconds,
+} = useCountdown(startOfTomorrow);
 
 function addToCart(product: any) {
   cartStore.addToCart(product, 1);
@@ -121,11 +123,6 @@ function addToCart(product: any) {
 
 onMounted(() => {
   loadDealProducts();
-  startTimer();
-});
-
-onUnmounted(() => {
-  if (timerInterval) clearInterval(timerInterval);
 });
 
 async function loadDealProducts() {
@@ -140,26 +137,5 @@ async function loadDealProducts() {
   } finally {
     loading.value = false;
   }
-}
-
-function startTimer() {
-  if (timerInterval) clearInterval(timerInterval);
-  const updateTimer = () => {
-    const now = new Date();
-    const midnight = new Date();
-    midnight.setHours(24, 0, 0, 0);
-    const diff = midnight.getTime() - now.getTime();
-    if (diff <= 0) {
-      return;
-    }
-    const h = Math.floor(diff / (1000 * 60 * 60));
-    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const s = Math.floor((diff % (1000 * 60)) / 1000);
-    timerHours.value = h.toString().padStart(2, "0");
-    timerMinutes.value = m.toString().padStart(2, "0");
-    timerSeconds.value = s.toString().padStart(2, "0");
-  };
-  updateTimer();
-  timerInterval = setInterval(updateTimer, 1000);
 }
 </script>

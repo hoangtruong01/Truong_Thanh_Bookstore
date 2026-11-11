@@ -114,9 +114,9 @@
           <p class="text-slate-800 leading-relaxed">{{ row.content }}</p>
 
           <!-- Review Images -->
-          <div v-if="row.images && row.images.length > 0" class="flex gap-1.5 mt-1">
+          <div v-if="safeReviewImages(row.images).length > 0" class="flex gap-1.5 mt-1">
             <img
-              v-for="(img, idx) in row.images"
+              v-for="(img, idx) in safeReviewImages(row.images)"
               :key="idx"
               :src="img"
               class="w-8 h-8 rounded object-cover border border-slate-200 cursor-pointer"
@@ -217,6 +217,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { reviewService, type ReviewQuery } from '@/services/review.service'
 import { formatDate } from '@/utils/helpers'
+import { toSafeHttpUrl, safeReviewImages } from './reviewImageUrl'
 import { useToast } from 'vue-toastification'
 import FilterBar from '@/components/FilterBar.vue'
 import DataTable, { type TableColumn } from '@/components/DataTable.vue'
@@ -340,7 +341,10 @@ async function submitDelete() {
 }
 
 function previewImage(url: string) {
-  window.open(url, '_blank')
+  // SEC-002: chỉ mở URL http/https, bỏ qua javascript:/data:/...
+  const safeUrl = toSafeHttpUrl(url)
+  if (!safeUrl) return
+  window.open(safeUrl, '_blank', 'noopener,noreferrer')
 }
 
 onMounted(fetchReviews)

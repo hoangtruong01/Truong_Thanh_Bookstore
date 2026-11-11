@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import {
   createHash,
@@ -31,6 +32,14 @@ import { EmailService } from '../email/email.service';
 import { UserDocument } from '../users/schemas/user.schema';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { SecurityAuditService } from '../../common/audit/security-audit.service';
+
+// SEC-005: trần an toàn (giây) cho TTL ghi blacklist. exp đã được verify chữ ký nên
+// chính là thời gian sống thực của token; trần chỉ để chặn cấu hình/giá trị bất thường
+// và phải >= JWT_EXPIRES_IN / JWT_REFRESH_EXPIRES_IN tối đa được phép cấu hình.
+const MAX_ACCESS_TOKEN_BLACKLIST_TTL_SECONDS = 30 * 24 * 60 * 60;
+const MAX_REFRESH_TOKEN_BLACKLIST_TTL_SECONDS = 365 * 24 * 60 * 60;
+// SEC-019: số lần thử OTP tối đa.
+const MAX_OTP_ATTEMPTS = 5;
 
 const INVALID_OTP_MESSAGE = 'Mã OTP không hợp lệ hoặc đã hết hạn';
 const INVALID_PASSWORD_RESET_MESSAGE =
@@ -140,6 +149,44 @@ export class AuthService implements OnModuleInit {
     }
   }
 
+  /**
+   * SEC-019: tăng bộ đếm số lần thử OTP một cách nguyên tử (findOneAndUpdate + $inc,
+   * chỉ khi attempts < MAX và OTP chưa bị đổi/xóa). Nhờ đó các request song song không
+   * thể vượt quá giới hạn. Trả về số lần thử sau khi tăng, hoặc null nếu đã hết lượt.
+   */
+  private async reserveOtpAttempt(user: UserDocument): Promise<number | null> {
+    const model = user.constructor as unknown as Model<UserDocument>;
+    if (typeof model?.findOneAndUpdate !== 'function') {
+      // Chỉ xảy ra với đối tượng không phải Mongoose document (mock trong test cũ);
+      // trong runtime UsersService luôn trả hydrated document nên nhánh này không chạy.
+      const current = user.resetOtpAttempts || 0;
+      if (current >= MAX_OTP_ATTEMPTS) return null;
+      user.resetOtpAttempts = current + 1;
+      await user.save();
+      return user.resetOtpAttempts;
+    }
+    const updated = await model
+      .findOneAndUpdate(
+        {
+          _id: user._id,
+          resetOtp: user.resetOtp,
+          resetOtpAttempts: { $not: { $gte: MAX_OTP_ATTEMPTS } },
+        },
+        { $inc: { resetOtpAttempts: 1 } },
+        { new: true },
+      )
+      .exec();
+    if (!updated) return null;
+    return updated.resetOtpAttempts ?? 1;
+  }
+
+  private async clearOtp(user: UserDocument): Promise<void> {
+    user.resetOtp = undefined;
+    user.resetOtpExpiry = undefined;
+    user.resetOtpAttempts = 0;
+    await user.save();
+  }
+
   private sanitizeUser(user: any) {
     const userObj = user.toObject ? user.toObject() : user;
     const {
@@ -163,6 +210,43 @@ export class AuthService implements OnModuleInit {
 
   private getResetSecret(): string {
     return this.configService.getOrThrow<string>('JWT_RESET_SECRET');
+  }
+
+  /**
+   * SEC-005: verify chữ ký + loại token trước khi ghi blacklist.
+   * - Trả về null nếu chữ ký/type sai, thiếu exp hoặc token đã hết hạn (không cần blacklist).
+   * - exp trả về được chặn trên bởi maxTtlSeconds để TTL Redis không vượt quá vòng đời thực.
+   */
+  private async verifyTokenForRevocation(
+    token: string,
+    secret: string,
+    expectedType: 'access' | 'refresh',
+    maxTtlSeconds: number,
+  ): Promise<{ jti?: string; exp: number } | null> {
+    let payload: any;
+    try {
+      payload = await this.jwtService.verifyAsync(token, {
+        secret,
+        ignoreExpiration: true,
+      });
+    } catch {
+      return null;
+    }
+    if (!payload || payload.type !== expectedType) return null;
+    if (typeof payload.exp !== 'number' || !Number.isFinite(payload.exp)) {
+      return null;
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (payload.exp <= nowSec) return null; // đã hết hạn, không cần ghi blacklist
+
+    return {
+      jti:
+        typeof payload.jti === 'string' && payload.jti
+          ? payload.jti
+          : undefined,
+      exp: Math.min(payload.exp, nowSec + maxTtlSeconds),
+    };
   }
 
   private async generateTokens(user: UserDocument) {
@@ -365,29 +449,59 @@ export class AuthService implements OnModuleInit {
     rawAccessToken?: string,
     rawRefreshToken?: string,
   ) {
+    // SEC-005: chỉ ghi blacklist (Redis) khi token có chữ ký hợp lệ. jti/exp lấy từ
+    // payload đã được xác thực (không tin decode() chưa verify) và TTL bị chặn trên
+    // bởi thời gian sống thực của token. Token không hợp lệ -> bỏ qua, chỉ xóa cookie.
+
     // 1. Blacklist access token if provided
     if (rawAccessToken) {
       try {
-        const decoded: any = this.jwtService.decode(rawAccessToken);
-        const exp = decoded?.exp;
-        const jti = decoded?.jti;
-        if (jti) await this.tokenBlacklistService.blacklistJti(jti, exp);
-        await this.tokenBlacklistService.blacklistToken(rawAccessToken, exp);
+        const verified = await this.verifyTokenForRevocation(
+          rawAccessToken,
+          this.getAccessSecret(),
+          'access',
+          MAX_ACCESS_TOKEN_BLACKLIST_TTL_SECONDS,
+        );
+        if (verified) {
+          if (verified.jti) {
+            await this.tokenBlacklistService.blacklistJti(
+              verified.jti,
+              verified.exp,
+            );
+          }
+          await this.tokenBlacklistService.blacklistToken(
+            rawAccessToken,
+            verified.exp,
+          );
+        }
       } catch {
-        await this.tokenBlacklistService.blacklistToken(rawAccessToken);
+        // Continue logout even if blacklist write fails
       }
     }
 
     // 2. Blacklist refresh token if provided
     if (rawRefreshToken) {
       try {
-        const decoded: any = this.jwtService.decode(rawRefreshToken);
-        const exp = typeof decoded?.exp === 'number' ? decoded.exp : undefined;
-        const jti = typeof decoded?.jti === 'string' ? decoded.jti : undefined;
-        if (jti) await this.tokenBlacklistService.blacklistJti(jti, exp);
-        await this.tokenBlacklistService.blacklistToken(rawRefreshToken, exp);
+        const verified = await this.verifyTokenForRevocation(
+          rawRefreshToken,
+          this.getRefreshSecret(),
+          'refresh',
+          MAX_REFRESH_TOKEN_BLACKLIST_TTL_SECONDS,
+        );
+        if (verified) {
+          if (verified.jti) {
+            await this.tokenBlacklistService.blacklistJti(
+              verified.jti,
+              verified.exp,
+            );
+          }
+          await this.tokenBlacklistService.blacklistToken(
+            rawRefreshToken,
+            verified.exp,
+          );
+        }
       } catch {
-        // Continue logout even if refresh token decode fails
+        // Continue logout even if refresh token blacklist fails
       }
     }
 
@@ -557,33 +671,22 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException(INVALID_OTP_MESSAGE);
     }
 
-    const currentAttempts = user.resetOtpAttempts || 0;
-    if (currentAttempts >= 5) {
-      user.resetOtp = undefined;
-      user.resetOtpExpiry = undefined;
-      user.resetOtpAttempts = 0;
-      await user.save();
+    if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
+      await this.clearOtp(user);
       throw new UnauthorizedException(INVALID_OTP_MESSAGE);
     }
 
-    if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
-      user.resetOtp = undefined;
-      user.resetOtpExpiry = undefined;
-      user.resetOtpAttempts = 0;
-      await user.save();
+    // SEC-019: đặt chỗ 1 lượt thử một cách nguyên tử TRƯỚC khi so khớp OTP.
+    const attemptsUsed = await this.reserveOtpAttempt(user);
+    if (attemptsUsed === null) {
+      await this.clearOtp(user);
       throw new UnauthorizedException(INVALID_OTP_MESSAGE);
     }
 
     if (!this.isOtpHashValid(user.resetOtp, otp)) {
-      user.resetOtpAttempts = currentAttempts + 1;
-      if (user.resetOtpAttempts >= 5) {
-        user.resetOtp = undefined;
-        user.resetOtpExpiry = undefined;
-        user.resetOtpAttempts = 0;
-        await user.save();
-        throw new UnauthorizedException(INVALID_OTP_MESSAGE);
+      if (attemptsUsed >= MAX_OTP_ATTEMPTS) {
+        await this.clearOtp(user);
       }
-      await user.save();
       throw new UnauthorizedException(INVALID_OTP_MESSAGE);
     }
 
@@ -635,33 +738,22 @@ export class AuthService implements OnModuleInit {
         throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
       }
 
-      const currentAttempts = user.resetOtpAttempts || 0;
-      if (currentAttempts >= 5) {
-        user.resetOtp = undefined;
-        user.resetOtpExpiry = undefined;
-        user.resetOtpAttempts = 0;
-        await user.save();
+      if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
+        await this.clearOtp(user);
         throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
       }
 
-      if (!user.resetOtpExpiry || new Date() > user.resetOtpExpiry) {
-        user.resetOtp = undefined;
-        user.resetOtpExpiry = undefined;
-        user.resetOtpAttempts = 0;
-        await user.save();
+      // SEC-019: đặt chỗ 1 lượt thử nguyên tử trước khi so khớp OTP.
+      const attemptsUsed = await this.reserveOtpAttempt(user);
+      if (attemptsUsed === null) {
+        await this.clearOtp(user);
         throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
       }
 
       if (!this.isOtpHashValid(user.resetOtp, otp)) {
-        user.resetOtpAttempts = currentAttempts + 1;
-        if (user.resetOtpAttempts >= 5) {
-          user.resetOtp = undefined;
-          user.resetOtpExpiry = undefined;
-          user.resetOtpAttempts = 0;
-          await user.save();
-          throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
+        if (attemptsUsed >= MAX_OTP_ATTEMPTS) {
+          await this.clearOtp(user);
         }
-        await user.save();
         throw new UnauthorizedException(INVALID_PASSWORD_RESET_MESSAGE);
       }
     } else {

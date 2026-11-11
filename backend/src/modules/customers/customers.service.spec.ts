@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
+import { NotFoundException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { CustomersService } from './customers.service';
 import { User } from '../users/schemas/user.schema';
@@ -50,6 +51,10 @@ describe('CustomersService (BUG-004 Analytics Accuracy Suite)', () => {
         exec: jest.fn().mockResolvedValue(1),
       }),
       findById: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockUserDoc),
+      }),
+      findOne: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(mockUserDoc),
       }),
@@ -164,13 +169,99 @@ describe('CustomersService (BUG-004 Analytics Accuracy Suite)', () => {
     });
 
     it('returns null if customer does not exist', async () => {
-      mockUserModel.findById.mockReturnValue({
+      mockUserModel.findOne.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(null),
       });
 
+      const result = await service.findById(new Types.ObjectId().toString());
+      expect(result).toBeNull();
+    });
+
+    it('returns null for an invalid ObjectId without querying', async () => {
       const result = await service.findById('non_existing_id');
       expect(result).toBeNull();
+      expect(mockUserModel.findOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('SEC-017: Chỉ thao tác trên tài khoản CUSTOMER', () => {
+    // Giả lập DB: query có role=CUSTOMER sẽ không match tài khoản STAFF/ADMIN
+    const staffId = new Types.ObjectId();
+    const mockStaffLookup = () => {
+      mockUserModel.findOne.mockImplementation((filter: any) => ({
+        select: jest.fn().mockReturnThis(),
+        exec: jest
+          .fn()
+          .mockResolvedValue(
+            filter.role === UserRole.CUSTOMER ? null : { _id: staffId },
+          ),
+      }));
+    };
+
+    it('SEC-017-T01: findById truy vấn kèm role CUSTOMER và trả null cho tài khoản STAFF/ADMIN', async () => {
+      mockStaffLookup();
+
+      const result = await service.findById(staffId.toString());
+
+      expect(result).toBeNull();
+      expect(mockUserModel.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({ role: UserRole.CUSTOMER }),
+      );
+      expect(mockUserModel.findById).not.toHaveBeenCalled();
+    });
+
+    it('SEC-017-T02: updateCRMProfile từ chối (NotFound) khi id là STAFF/ADMIN và không tạo/sửa CRM profile', async () => {
+      mockStaffLookup();
+      const spy = jest.spyOn(service, 'getOrCreateCRMProfile');
+
+      await expect(
+        service.updateCRMProfile(staffId, { notes: 'hack' }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(mockCrmProfileModel.create).not.toHaveBeenCalled();
+    });
+
+    it('SEC-017-T03: evaluateCustomerTier từ chối (NotFound) khi id là STAFF/ADMIN', async () => {
+      mockStaffLookup();
+
+      await expect(service.evaluateCustomerTier(staffId)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockOrderModel.aggregate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('SEC-014: findAll - escape regex và giới hạn limit', () => {
+    beforeEach(() => {
+      mockOrderModel.aggregate.mockResolvedValue([]);
+    });
+
+    it('SEC-014-T01: escape ký tự đặc biệt trong search', async () => {
+      await service.findAll(1, 10, '(a+)+$.*');
+
+      const filter = mockUserModel.find.mock.calls[0][0];
+      expect(filter.role).toBe(UserRole.CUSTOMER);
+      expect(filter.$or[0].fullName.$regex).toBe('\\(a\\+\\)\\+\\$\\.\\*');
+      expect(filter.$or[1].email.$regex).toBe('\\(a\\+\\)\\+\\$\\.\\*');
+      expect(filter.$or[2].phone.$regex).toBe('\\(a\\+\\)\\+\\$\\.\\*');
+      // Pattern đã escape chỉ khớp theo nghĩa đen
+      expect(new RegExp(filter.$or[0].fullName.$regex).test('aaaa')).toBe(
+        false,
+      );
+    });
+
+    it('SEC-014-T02: giới hạn limit tối đa 100 và chuẩn hóa page/limit không hợp lệ', async () => {
+      await service.findAll(1, 100000);
+      const limitMock = mockUserModel.find.mock.results[0].value.limit;
+      expect(limitMock).toHaveBeenCalledWith(100);
+
+      mockUserModel.find.mockClear();
+      await service.findAll(-5, 0);
+      const chain = mockUserModel.find.mock.results[0].value;
+      expect(chain.skip).toHaveBeenCalledWith(0);
+      expect(chain.limit).toHaveBeenCalledWith(10);
     });
   });
 

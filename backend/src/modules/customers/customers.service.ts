@@ -27,6 +27,30 @@ export class CustomersService {
     private crmProfileModel: Model<CustomerCRMProfileDocument>,
   ) {}
 
+  /**
+   * SEC-014: Escape ký tự đặc biệt của RegExp để input người dùng không bị
+   * hiểu là pattern (chống ReDoS / regex injection).
+   */
+  private escapeRegex(input: string): string {
+    return String(input).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+   * SEC-017: Chỉ cho phép thao tác trên tài khoản có role CUSTOMER.
+   * Người có quyền MANAGE_CUSTOMERS không được đọc/sửa hồ sơ STAFF/ADMIN/SUPER_ADMIN.
+   */
+  private async assertIsCustomer(customerId: Types.ObjectId): Promise<void> {
+    const customer = await this.userModel
+      .findOne({ _id: customerId, role: UserRole.CUSTOMER })
+      .select('_id')
+      .exec();
+    if (!customer) {
+      throw new NotFoundException(
+        `Không tìm thấy khách hàng với ID: ${customerId.toString()}`,
+      );
+    }
+  }
+
   async getOrCreateCRMProfile(
     customerId: Types.ObjectId,
   ): Promise<CustomerCRMProfileDocument> {
@@ -52,6 +76,7 @@ export class CustomersService {
     actorId?: Types.ObjectId,
   ): Promise<CustomerCRMProfileDocument> {
     const cId = new Types.ObjectId(customerId.toString());
+    await this.assertIsCustomer(cId);
     const profile = await this.getOrCreateCRMProfile(cId);
 
     if (dto.tier && dto.tier !== profile.tier) {
@@ -92,12 +117,7 @@ export class CustomersService {
     actorId?: Types.ObjectId,
   ): Promise<CustomerCRMProfileDocument> {
     const cId = new Types.ObjectId(customerId.toString());
-    const user = await this.userModel.findById(cId).exec();
-    if (!user) {
-      throw new NotFoundException(
-        `Không tìm thấy khách hàng với ID: ${String(customerId)}`,
-      );
-    }
+    await this.assertIsCustomer(cId);
 
     const profile = await this.getOrCreateCRMProfile(cId);
 
@@ -208,12 +228,18 @@ export class CustomersService {
     limit = 10,
     search?: string,
   ): Promise<PaginatedResult<any>> {
+    // SEC-014: chuẩn hóa phân trang, giới hạn tối đa 100 bản ghi/trang
+    page = Math.max(1, Math.floor(Number(page)) || 1);
+    limit = Math.min(100, Math.max(1, Math.floor(Number(limit)) || 10));
+
     const filter: any = { role: UserRole.CUSTOMER };
-    if (search) {
+    const keyword = typeof search === 'string' ? search.trim() : '';
+    if (keyword) {
+      const safeKeyword = this.escapeRegex(keyword);
       filter.$or = [
-        { fullName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
+        { fullName: { $regex: safeKeyword, $options: 'i' } },
+        { email: { $regex: safeKeyword, $options: 'i' } },
+        { phone: { $regex: safeKeyword, $options: 'i' } },
       ];
     }
 
@@ -305,7 +331,12 @@ export class CustomersService {
   }
 
   async findById(id: string): Promise<any> {
-    const user = await this.userModel.findById(id).select('-password').exec();
+    // SEC-017: chỉ trả về tài khoản CUSTOMER (không lộ hồ sơ STAFF/ADMIN)
+    if (!Types.ObjectId.isValid(id)) return null;
+    const user = await this.userModel
+      .findOne({ _id: id, role: UserRole.CUSTOMER })
+      .select('-password')
+      .exec();
     if (!user) return null;
 
     const [orders, orderStats, crmProfile] = await Promise.all([

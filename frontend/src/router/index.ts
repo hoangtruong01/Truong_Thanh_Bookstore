@@ -1,10 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { resetSeoForRoute } from '@/composables/useSeoMeta';
 
-// Layouts (keep eager since they wrap everything)
-import CustomerLayout from '@/layouts/CustomerLayout.vue';
-import AdminLayout from '@/layouts/AdminLayout.vue';
-import AuthLayout from '@/layouts/AuthLayout.vue';
+// Layouts - lazy loaded so storefront visitors never download the admin shell (and vice versa).
+// Guards below only read route meta/name, never the component objects.
+const CustomerLayout = () => import('@/layouts/CustomerLayout.vue');
+const AdminLayout = () => import('@/layouts/AdminLayout.vue');
+const AuthLayout = () => import('@/layouts/AuthLayout.vue');
 
 // Customer Pages - lazy loaded for better performance (PERF-01)
 const Home = () => import('@/pages/customer/Home.vue');
@@ -109,7 +111,8 @@ const routes = [
     ],
   },
   // UX-04: Proper 404 page instead of silent redirect
-  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
+  // SEO-TASK-007: trang 404 không được index (SPA trả HTTP 200 => tránh soft-404 bị index)
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound, meta: { noIndex: true } },
 ];
 
 const router = createRouter({
@@ -157,17 +160,13 @@ router.beforeEach(async (to, _from, next) => {
   }
 });
 
-// FIX-3.1: Dynamic SEO Document Title update on route changes
-router.afterEach((to) => {
-  let robotsMeta = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
-  if (!robotsMeta) {
-    robotsMeta = document.createElement('meta');
-    robotsMeta.name = 'robots';
-    document.head.appendChild(robotsMeta);
-  }
-  robotsMeta.content = to.matched.some((record) => record.meta.noIndex)
-    ? 'noindex, nofollow'
-    : 'index, follow';
+// FIX-3.1 + SEO-TASK-003: reset head SEO (title, robots, canonical, og, description) khi đổi route.
+// Điều hướng chỉ đổi query/param trên CÙNG route (vd. lọc danh mục, sang sản phẩm khác) do
+// useSeoMeta của chính component xử lý => không ghi đè ở đây (tránh title/robots bị "nhảy").
+router.afterEach((to, from) => {
+  if (from.name && to.name === from.name) return;
+
+  const noIndex = to.matched.some((record) => record.meta.noIndex);
 
   const titles: Record<string, string> = {
     Home: 'Trường Thành Stationery — Dụng Cụ Học Tập & Văn Phòng Phẩm Chính Hãng',
@@ -205,9 +204,14 @@ router.afterEach((to) => {
     AdminCombos: 'Quản Lý Combo — Trường Thành Admin',
     AdminLandingPages: 'Landing Page — Trường Thành Admin',
     AdminBanners: 'Banner & Popup — Trường Thành Admin',
+    DealHot: 'Deal Sốc Giờ Vàng — Trường Thành Stationery',
+    Info: 'Thông Tin & Chính Sách — Trường Thành Stationery',
+    LandingPageDetail: 'Trường Thành Stationery',
+    GuestOrderDetail: 'Tra Cứu Đơn Hàng — Trường Thành Stationery',
     NotFound: '404 - Không Tìm Thấy Trang — Trường Thành Stationery',
   };
   const pageTitle = titles[to.name as string] || 'Trường Thành Stationery';
+  resetSeoForRoute(pageTitle, noIndex);
   document.title = pageTitle;
 });
 

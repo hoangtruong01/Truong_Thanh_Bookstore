@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -13,7 +14,11 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PromotionsService } from './promotions.service';
-import { CreatePromotionDto, ApplyPromotionDto } from './dto/promotion.dto';
+import {
+  CreatePromotionDto,
+  UpdatePromotionDto,
+  ApplyPromotionDto,
+} from './dto/promotion.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt.guard';
@@ -71,7 +76,17 @@ export class PromotionsController {
   @Permissions(StaffPermission.MANAGE_PROMOTIONS)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a promotion' })
-  update(@Param('id') id: string, @Body() dto: Partial<CreatePromotionDto>) {
+  update(@Param('id') id: string, @Body() dto: UpdatePromotionDto) {
+    // PartialType gắn @IsOptional() cho mọi trường nên giá trị null lọt qua
+    // validator và sẽ ghi đè null vào DB (vd: endDate/discountValue/usageLimit).
+    const nullField = Object.keys(dto).find(
+      (key) => (dto as Record<string, unknown>)[key] === null,
+    );
+    if (nullField) {
+      throw new BadRequestException(
+        `Trường ${nullField} không được để null khi cập nhật`,
+      );
+    }
     return this.promotionsService.update(id, dto);
   }
 

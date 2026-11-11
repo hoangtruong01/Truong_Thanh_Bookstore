@@ -9,6 +9,10 @@ import {
   BannerFrequency,
 } from './schemas/banner.schema';
 import { CloudinaryService } from '../users/cloudinary.service';
+import { Mongoose } from 'mongoose';
+import { BannerSchema } from './schemas/banner.schema';
+
+const realBannerModel = new Mongoose().model(Banner.name, BannerSchema);
 
 describe('BannersService', () => {
   let service: BannersService;
@@ -27,6 +31,9 @@ describe('BannersService', () => {
     mockBannerModel.findByIdAndUpdate = jest.fn();
     mockBannerModel.findByIdAndDelete = jest.fn();
     mockBannerModel.updateMany = jest.fn();
+    // Dùng applyDefaults thật của schema (static, không cần kết nối DB) để test shape sau lean.
+    mockBannerModel.applyDefaults = (doc: object) =>
+      realBannerModel.applyDefaults(doc);
 
     mockCloudinaryService = {
       isConfigured: jest.fn().mockReturnValue(true),
@@ -190,7 +197,9 @@ describe('BannersService', () => {
 
       mockBannerModel.findOne.mockReturnValue({
         sort: jest.fn().mockReturnValue({
-          exec: jest.fn().mockResolvedValue(activePopup),
+          lean: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue(activePopup),
+          }),
         }),
       });
 
@@ -208,7 +217,9 @@ describe('BannersService', () => {
     it('should return null when no popup is active', async () => {
       mockBannerModel.findOne.mockReturnValue({
         sort: jest.fn().mockReturnValue({
-          exec: jest.fn().mockResolvedValue(null),
+          lean: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue(null),
+          }),
         }),
       });
 
@@ -227,7 +238,9 @@ describe('BannersService', () => {
 
       mockBannerModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
-          exec: jest.fn().mockResolvedValue(banners),
+          lean: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue(banners),
+          }),
         }),
       });
 
@@ -240,6 +253,91 @@ describe('BannersService', () => {
       expect(result[BannerPosition.MAIN_SLIDER]).toHaveLength(1);
       expect(result[BannerPosition.SIDEBAR_LEFT]).toHaveLength(1);
       expect(result[BannerPosition.ENTRY_POPUP]).toBeUndefined();
+    });
+  });
+
+  describe('lean read queries keep the response shape', () => {
+    const leanChain = (result: unknown) => {
+      const lean = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(result),
+      });
+      return { chain: { sort: jest.fn().mockReturnValue({ lean }) }, lean };
+    };
+
+    it('findAll/findActive/findActivePopup use lean() and still expose stored + schema-default fields', async () => {
+      // Bản ghi "cũ" thiếu các trường popup thêm sau (frequency, ctaLabel, closeable...)
+      const legacy = () => ({
+        _id: 'b1',
+        title: 'Banner cũ',
+        imageUrl: 'https://example.com/b.png',
+        position: BannerPosition.MAIN_SLIDER,
+        sortOrder: 2,
+        isActive: true,
+      });
+
+      const all = leanChain([legacy()]);
+      mockBannerModel.find.mockReturnValueOnce(all.chain);
+      const [listed] = await service.findAll();
+      expect(all.lean).toHaveBeenCalledTimes(1);
+
+      const active = leanChain([legacy()]);
+      mockBannerModel.find.mockReturnValueOnce(active.chain);
+      const grouped = await service.findActive();
+      expect(active.lean).toHaveBeenCalledTimes(1);
+
+      const popup = leanChain({
+        ...legacy(),
+        position: BannerPosition.ENTRY_POPUP,
+      });
+      mockBannerModel.findOne.mockReturnValueOnce(popup.chain);
+      const popupResult = await service.findActivePopup();
+      expect(popup.lean).toHaveBeenCalledTimes(1);
+
+      for (const banner of [
+        listed,
+        grouped[BannerPosition.MAIN_SLIDER][0],
+        popupResult,
+      ]) {
+        expect(banner).toMatchObject({
+          _id: 'b1',
+          title: 'Banner cũ',
+          imageUrl: 'https://example.com/b.png',
+          sortOrder: 2,
+          isActive: true,
+          // default của schema — giống hệt document Mongoose khi chưa dùng lean
+          linkUrl: '',
+          frequency: BannerFrequency.EVERY_VISIT,
+          startAt: null,
+          endAt: null,
+          ctaLabel: 'Mở',
+          closeable: true,
+          impressionCount: 0,
+          clickCount: 0,
+        });
+        expect(banner).not.toHaveProperty('save');
+      }
+    });
+
+    it('does not override values that are stored on the banner', async () => {
+      const stored = {
+        _id: 'p1',
+        title: 'Popup',
+        imageUrl: 'x',
+        position: BannerPosition.ENTRY_POPUP,
+        isActive: true,
+        closeable: false,
+        ctaLabel: 'Mua ngay',
+        frequency: BannerFrequency.ONCE_PER_DAY,
+      };
+      mockBannerModel.findOne.mockReturnValueOnce(leanChain(stored).chain);
+
+      const result = await service.findActivePopup();
+
+      expect(result).toMatchObject({
+        closeable: false,
+        ctaLabel: 'Mua ngay',
+        frequency: BannerFrequency.ONCE_PER_DAY,
+      });
     });
   });
 

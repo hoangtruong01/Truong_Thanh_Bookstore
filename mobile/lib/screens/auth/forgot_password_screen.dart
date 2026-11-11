@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../providers/auth_provider.dart';
+import 'auth_validators.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -16,43 +17,38 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   final _otpController = TextEditingController();
   final _newPasswordController = TextEditingController();
-  
+  final _confirmController = TextEditingController();
+
   int _step = 1;
   bool _isLoading = false;
-  String _devOtp = '';
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
     _emailController.dispose();
     _otpController.dispose();
     _newPasswordController.dispose();
+    _confirmController.dispose();
     super.dispose();
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _handleRequestOtp() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
-    
+
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final res = await authProvider.forgotPassword(_emailController.text.trim());
-      
+      await Provider.of<AuthProvider>(context, listen: false)
+          .forgotPassword(_emailController.text.trim());
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Yêu cầu gửi mã OTP thành công!')),
-        );
-        setState(() {
-          // Dev-only helper: never surface an OTP from the API in release builds
-          _devOtp = kDebugMode ? (res['otp'] ?? '') : '';
-          _step = 2;
-        });
+        _showMessage('Nếu email đã đăng ký, mã OTP sẽ được gửi tới hộp thư của bạn');
+        setState(() => _step = 2);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: ${e.toString().replaceAll('Exception: ', '')}')),
-        );
-      }
+      if (mounted) _showMessage(e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -63,146 +59,139 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final success = await authProvider.resetPassword(
+      final success = await Provider.of<AuthProvider>(context, listen: false).resetPassword(
         _emailController.text.trim(),
         _otpController.text.trim(),
-        _newPasswordController.text.trim(),
+        _newPasswordController.text,
       );
 
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đặt lại mật khẩu thành công! Hãy đăng nhập lại.')),
-        );
+        _showMessage('Đặt lại mật khẩu thành công. Hãy đăng nhập lại.');
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: ${e.toString().replaceAll('Exception: ', '')}')),
-        );
-      }
+      if (mounted) _showMessage(e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  Widget _submitButton({required String label, required VoidCallback onPressed}) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : onPressed,
+        child: _isLoading
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(color: context.palette.onPrimary, strokeWidth: 2),
+              )
+            : Text(label),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('QUÊN MẬT KHẨU'),
+        title: const Text('Quên mật khẩu'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xl),
               Center(
                 child: Column(
                   children: [
-                    const Icon(Icons.lock_reset, size: 64, color: AppTheme.primaryRed),
-                    const SizedBox(height: 12),
+                    Icon(Icons.lock_reset, size: 64, color: palette.primaryText),
+                    const SizedBox(height: AppSpacing.md),
                     Text(
-                      _step == 1 ? 'Nhập email để nhận OTP' : 'Xác thực mã OTP & Đặt mật khẩu',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                      _step == 1 ? 'Nhập email để nhận mã OTP' : 'Xác thực OTP và đặt mật khẩu mới',
+                      style: textTheme.titleMedium,
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
-                      _step == 1 
-                          ? 'Chúng tôi sẽ gửi mã OTP gồm 6 chữ số'
-                          : 'Vui lòng nhập OTP và mật khẩu mới',
-                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                      _step == 1
+                          ? 'Chúng tôi sẽ gửi mã OTP gồm 6 chữ số qua email'
+                          : 'Nhập mã OTP trong email và mật khẩu mới',
+                      style: textTheme.bodySmall,
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xxxl),
 
               if (_step == 1) ...[
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Vui lòng nhập email';
-                    if (!v.contains('@')) return 'Email không hợp lệ';
-                    return null;
-                  },
+                  validator: AuthValidators.email,
                   decoration: const InputDecoration(
-                    labelText: 'Địa chỉ Email',
+                    labelText: 'Địa chỉ email',
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
                 ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleRequestOtp,
-                    child: _isLoading
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text('GỬI MÃ OTP'),
-                  ),
-                ),
+                const SizedBox(height: AppSpacing.xxl),
+                _submitButton(label: 'Gửi mã OTP', onPressed: _handleRequestOtp),
               ] else ...[
-                if (kDebugMode && _devOtp.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryRed.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.primaryRed.withOpacity(0.2)),
-                    ),
-                    child: Text(
-                      'Development OTP: $_devOtp',
-                      style: const TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 13),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
                 TextFormField(
                   controller: _otpController,
                   keyboardType: TextInputType.number,
                   maxLength: 6,
-                  validator: (v) => (v == null || v.trim().length != 6) ? 'Vui lòng nhập OTP 6 số' : null,
+                  validator: AuthValidators.otp,
                   decoration: const InputDecoration(
                     labelText: 'Mã xác thực OTP',
                     prefixIcon: Icon(Icons.security),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 TextFormField(
                   controller: _newPasswordController,
-                  obscureText: true,
-                  validator: (v) => (v == null || v.trim().length < 6) ? 'Mật khẩu phải tối thiểu 6 ký tự' : null,
-                  decoration: const InputDecoration(
+                  obscureText: _obscurePassword,
+                  validator: AuthValidators.newPassword,
+                  decoration: InputDecoration(
                     labelText: 'Mật khẩu mới',
+                    helperText: AuthValidators.passwordHint,
+                    helperMaxLines: 2,
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                      tooltip: _obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                TextFormField(
+                  controller: _confirmController,
+                  obscureText: _obscurePassword,
+                  validator: (v) => AuthValidators.confirmPassword(v, _newPasswordController.text),
+                  decoration: const InputDecoration(
+                    labelText: 'Nhập lại mật khẩu mới',
                     prefixIcon: Icon(Icons.lock_outline),
                   ),
                 ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleResetPassword,
-                    child: _isLoading
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text('ĐỔI MẬT KHẨU'),
-                  ),
-                ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.xxl),
+                _submitButton(label: 'Đổi mật khẩu', onPressed: _handleResetPassword),
+                const SizedBox(height: AppSpacing.md),
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: OutlinedButton(
-                    onPressed: () => setState(() => _step = 1),
-                    child: const Text('QUAY LẠI'),
+                    onPressed: _isLoading ? null : () => setState(() => _step = 1),
+                    child: const Text('Quay lại'),
                   ),
                 ),
               ],

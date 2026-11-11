@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_tokens.dart';
 
+/// Trạng thái lỗi kèm nút "Thử lại". Màu lấy từ `context.palette`
+/// (dangerSoft / danger) nên đọc được ở cả Sáng / Tối.
 class ErrorRetryWidget extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
@@ -15,55 +18,40 @@ class ErrorRetryWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+    final textTheme = Theme.of(context).textTheme;
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(AppSpacing.xxxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: 56,
-                color: Colors.red.shade600,
-              ),
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              decoration: BoxDecoration(color: palette.dangerSoft, shape: BoxShape.circle),
+              child: Icon(icon, size: 56, color: palette.danger),
             ),
-            const SizedBox(height: 18),
-            const Text(
+            const SizedBox(height: AppSpacing.lg),
+            Text(
               'Có lỗi xảy ra',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
+              textAlign: TextAlign.center,
+              style: textTheme.titleLarge?.copyWith(color: palette.textPrimary),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-                height: 1.4,
-              ),
+              style: textTheme.bodyLarge?.copyWith(color: palette.textSecondary),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.xl),
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded, size: 20),
               label: const Text('Thử lại'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.primaryColor,
-                side: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
+                foregroundColor: palette.primaryText,
+                side: BorderSide(color: palette.primaryText, width: 1.5),
               ),
             ),
           ],

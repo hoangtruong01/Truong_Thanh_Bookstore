@@ -5,6 +5,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { LandingPageService } from './landing-page.service';
+import { LandingPageController } from './landing-page.controller';
 import { LandingPage } from './schemas/landing-page.schema';
 import { Order } from '../orders/schemas/order.schema';
 import { OrdersService } from '../orders/orders.service';
@@ -37,6 +38,7 @@ describe('LandingPageService (BE-03)', () => {
     _id: new Types.ObjectId(mockLandingPageId),
     title: 'Landing Page Sách Hay',
     slug: 'sach-hay-giam-gia',
+    status: true,
     price: 80000,
     originalPrice: 100000,
     productId: new Types.ObjectId(mockProductId),
@@ -239,6 +241,54 @@ describe('LandingPageService (BE-03)', () => {
       expect(mockProductsService.findById).not.toHaveBeenCalled();
       expect(mockProductsService.findBySlug).not.toHaveBeenCalled();
       expect(mockProductsService.findAll).not.toHaveBeenCalled();
+    });
+
+    it('SEC-021: should reject orders for an inactive (unpublished) landing page', async () => {
+      mockLandingPageModel.findById.mockReturnValue({
+        exec: jest
+          .fn()
+          .mockResolvedValue({ ...mockLandingPage, status: false }),
+      });
+
+      await expect(
+        service.submitOrder({
+          landingPageId: mockLandingPageId,
+          fullName: 'Test User',
+          phone: '0901234567',
+          address: 'Ha Noi',
+          packageName: 'Combo Tiết Kiệm',
+        }),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockProductsService.findById).not.toHaveBeenCalled();
+      expect(mockOrdersService.create).not.toHaveBeenCalled();
+    });
+
+    it('SEC-021: should use the server-side configured package price, not client data', async () => {
+      mockLandingPageModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockLandingPage),
+      });
+      mockProductsService.findById.mockResolvedValue(mockProduct);
+      mockOrdersService.create.mockResolvedValue({ _id: 'o1' });
+
+      await service.submitOrder({
+        landingPageId: mockLandingPageId,
+        fullName: 'Test User',
+        phone: '0901234567',
+        address: 'Ha Noi',
+        packageName: 'Combo Tiết Kiệm',
+        price: 1,
+      } as any);
+
+      expect(mockOrdersService.create.mock.calls[0][0].items[0].price).toBe(
+        75000,
+      );
+    });
+
+    it('SEC-021: submit-order endpoint should be throttled to 10 req / 60s', () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const handler = LandingPageController.prototype.submitOrder;
+      expect(Reflect.getMetadata('THROTTLER:LIMITdefault', handler)).toBe(10);
+      expect(Reflect.getMetadata('THROTTLER:TTLdefault', handler)).toBe(60000);
     });
 
     it('should reject a package name that is not configured on the page', async () => {

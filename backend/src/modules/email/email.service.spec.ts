@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from './email.service';
@@ -75,6 +76,69 @@ describe('EmailService (BE-05)', () => {
         '<p>Hello</p>',
       );
       expect(result).toBe(false);
+    });
+  });
+
+  describe('SEC-011: HTML escaping of user-controlled fields', () => {
+    let secService: EmailService;
+    const payload = '<a href="https://evil.example/phish">Bấm vào đây</a>';
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          EmailService,
+          {
+            provide: ConfigService,
+            useValue: {
+              get: jest.fn((key: string) => {
+                const config: Record<string, any> = {
+                  EMAIL_HOST: 'smtp.example.com',
+                  EMAIL_PORT: 587,
+                  EMAIL_USER: 'test@example.com',
+                  EMAIL_PASS: 'password123',
+                  NODE_ENV: 'production',
+                };
+                return config[key];
+              }),
+            },
+          },
+        ],
+      }).compile();
+      secService = module.get<EmailService>(EmailService);
+      mockSendMail.mockResolvedValue({ messageId: 'msg-1' });
+    });
+
+    it('escapes name, phone, address and product names in order confirmation email', async () => {
+      await secService.sendOrderConfirmationEmail('guest@example.com', {
+        orderCode: 'TT001',
+        customerName: payload,
+        phone: payload,
+        shippingAddress: payload,
+        items: [{ name: payload, quantity: 1, price: 10000 }],
+        subtotal: 10000,
+        shippingFee: 0,
+        discount: 0,
+        total: 10000,
+      });
+
+      const html: string = mockSendMail.mock.calls[0][0].html;
+      expect(html).not.toContain('<a href="https://evil.example/phish">');
+      expect(html).toContain(
+        '&lt;a href=&quot;https://evil.example/phish&quot;&gt;Bấm vào đây&lt;/a&gt;',
+      );
+    });
+
+    it('escapes customerName and statusText in order status email', async () => {
+      await secService.sendOrderStatusEmail(
+        'guest@example.com',
+        { orderCode: 'TT001', customerName: payload },
+        '<script>alert(1)</script>',
+      );
+
+      const html: string = mockSendMail.mock.calls[0][0].html;
+      expect(html).not.toContain('<a href="https://evil.example/phish">');
+      expect(html).not.toContain('<script>');
+      expect(html).toContain('&lt;script&gt;');
     });
   });
 

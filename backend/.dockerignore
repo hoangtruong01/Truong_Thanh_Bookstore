@@ -12,3 +12,16 @@ yarn-error.log*
 *.md
 !README.md
 scratch_*.js
+
+# Secrets / keys (SEC-030)
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+key.properties

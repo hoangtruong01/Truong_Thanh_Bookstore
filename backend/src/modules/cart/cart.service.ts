@@ -37,6 +37,18 @@ export interface CartValidationResult {
   isValidForCheckout: boolean;
 }
 
+/** Các trường sản phẩm cần cho việc làm sạch/đồng bộ giỏ hàng. */
+type CartProductSnapshot = Pick<
+  Product,
+  | 'name'
+  | 'price'
+  | 'discountPrice'
+  | 'stock'
+  | 'status'
+  | 'isDeleted'
+  | 'images'
+> & { _id: Types.ObjectId };
+
 @Injectable()
 export class CartService {
   constructor(
@@ -52,6 +64,45 @@ export class CartService {
       throw new BadRequestException(`ID không hợp lệ: ${id}`);
     }
     return new Types.ObjectId(id);
+  }
+
+  /** Chuẩn hóa id (ObjectId | chuỗi hợp lệ) về dạng hex để tra cứu Map; id không hợp lệ → null. */
+  private toProductKey(id: unknown): string | null {
+    if (id instanceof Types.ObjectId) return id.toHexString();
+    if (typeof id === 'string' && Types.ObjectId.isValid(id)) {
+      return new Types.ObjectId(id).toHexString();
+    }
+    return null;
+  }
+
+  /**
+   * Nạp các sản phẩm của giỏ hàng bằng MỘT truy vấn duy nhất (tránh N+1),
+   * chỉ lấy các trường cần cho kiểm kho/giá. Trả về Map theo id hex.
+   */
+  private async loadCartProducts(
+    ids: unknown[],
+  ): Promise<Map<string, CartProductSnapshot>> {
+    const keys = [
+      ...new Set(
+        ids
+          .map((id) => this.toProductKey(id))
+          .filter((key): key is string => key !== null),
+      ),
+    ];
+    const byId = new Map<string, CartProductSnapshot>();
+    if (keys.length === 0) return byId;
+
+    const products = await this.productModel
+      .find({ _id: { $in: keys.map((key) => new Types.ObjectId(key)) } })
+      .select('name price discountPrice stock status isDeleted images')
+      .lean<CartProductSnapshot[]>()
+      .exec();
+    for (const product of products) {
+      const key = this.toProductKey(product._id);
+      // lean() bỏ qua default của schema: bản ghi cũ thiếu `stock` phải được coi là 0 như khi hydrate
+      if (key) byId.set(key, { ...product, stock: Number(product.stock) || 0 });
+    }
+    return byId;
   }
 
   /**
@@ -115,12 +166,17 @@ export class CartService {
     let hasChanges = false;
     const sanitizedItems = [];
 
+    const prodIdOf = (item: (typeof cart.items)[number]): unknown =>
+      typeof item.product === 'object' && item.product
+        ? (item.product as any)._id
+        : item.product;
+    const productsById = await this.loadCartProducts(
+      cart.items.map((item) => prodIdOf(item)),
+    );
+
     for (const item of cart.items) {
-      const prodId =
-        typeof item.product === 'object' && item.product
-          ? (item.product as any)._id
-          : item.product;
-      const product = await this.productModel.findById(prodId).exec();
+      const prodKey = this.toProductKey(prodIdOf(item));
+      const product = prodKey ? productsById.get(prodKey) : undefined;
 
       if (
         !product ||
@@ -419,9 +475,14 @@ export class CartService {
       );
     }
 
+    const productsById = await this.loadCartProducts(
+      dto.items.map((item) => item.productId),
+    );
+
     for (const item of dto.items) {
       if (!Types.ObjectId.isValid(item.productId)) continue;
-      const product = await this.productModel.findById(item.productId).exec();
+      const productKey = this.toProductKey(item.productId);
+      const product = productKey ? productsById.get(productKey) : undefined;
       if (
         !product ||
         product.isDeleted ||

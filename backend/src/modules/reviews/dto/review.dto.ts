@@ -8,9 +8,21 @@ import {
   IsBoolean,
   IsInt,
   MinLength,
+  MaxLength,
+  ArrayMaxSize,
+  IsUrl,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+// SEC-002: ảnh đánh giá chỉ chấp nhận URL http/https (chặn javascript:, data:, ...)
+export const REVIEW_IMAGE_URL_OPTIONS = {
+  protocols: ['http', 'https'],
+  require_protocol: true,
+  require_tld: false,
+};
+export const REVIEW_IMAGE_MAX_COUNT = 5;
+export const REVIEW_IMAGE_MAX_LENGTH = 2048;
 
 export class CreateReviewDto {
   @ApiProperty({ example: 5, description: 'Đánh giá từ 1 đến 5 sao' })
@@ -34,7 +46,15 @@ export class CreateReviewDto {
   })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(REVIEW_IMAGE_MAX_COUNT, {
+    message: `Tối đa ${REVIEW_IMAGE_MAX_COUNT} ảnh cho mỗi đánh giá`,
+  })
   @IsString({ each: true })
+  @MaxLength(REVIEW_IMAGE_MAX_LENGTH, { each: true })
+  @IsUrl(REVIEW_IMAGE_URL_OPTIONS, {
+    each: true,
+    message: 'Ảnh đánh giá phải là URL http/https hợp lệ',
+  })
   images?: string[];
 }
 
@@ -60,7 +80,15 @@ export class UpdateReviewDto {
   })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(REVIEW_IMAGE_MAX_COUNT, {
+    message: `Tối đa ${REVIEW_IMAGE_MAX_COUNT} ảnh cho mỗi đánh giá`,
+  })
   @IsString({ each: true })
+  @MaxLength(REVIEW_IMAGE_MAX_LENGTH, { each: true })
+  @IsUrl(REVIEW_IMAGE_URL_OPTIONS, {
+    each: true,
+    message: 'Ảnh đánh giá phải là URL http/https hợp lệ',
+  })
   images?: string[];
 }
 

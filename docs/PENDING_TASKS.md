@@ -468,3 +468,37 @@ git push origin feature/FE-08-image-uploader-admin
 ---
 
 *Tài liệu này cập nhật theo tiến độ dự án. Khi hoàn thành task, đánh dấu ✅ tại đây.*
+
+## 🔎 SEO (từ SEO_AUDIT_AND_OPTIMIZATION.md — 2026-11-10)
+
+> Đã xong SEO-TASK-001 → 010 (canonical, robots, soft-404, JSON-LD Product/Book/Breadcrumb, metadata danh mục, slug links, alt). Chi tiết: `SEO_AUDIT_AND_OPTIMIZATION.md` mục 11.
+
+| ID | Ưu tiên | Việc | Ghi chú |
+| :--- | :--- | :--- | :--- |
+| ~~SEO-TASK-011~~ ✅ | P1 | Sitemap động `GET /api/seo/sitemap.xml` + rewrite `/sitemap.xml` | Xong 2026-11-10. Khi deploy: đặt `SITE_URL` trên Render, deploy backend trước frontend |
+| SEO-TASK-009b | P1 | Phân trang `?page=` + link danh mục dạng `<router-link>` | Làm sau khi tách component storefront |
+| SEO-TASK-012 | P1 | Xác minh `TRUST_PROXY` trên production (đã có ở 99b4309) | Kiểm tra số hop qua Vercel `/api` rewrite |
+| SEO-TASK-013 | P1 | Ảnh sản phẩm base64 → lưu file/CDN | Cần duyệt, có migration |
+| SEO-TASK-014 | P2 | Prerender/edge meta cho bot mạng xã hội | Cần duyệt |
+| SEO-TASK-017 | P2 | shippingDetails / return policy trong Offer | Cần dữ liệu chính sách thật |
+| SEO-TASK-015/016 | P3 | Slug danh mục, trailing slash 301, favicon/manifest, hreflang, tên thương hiệu | |
+
+## 🔐 SECURITY AUDIT 2026-11 — Việc còn lại
+
+> Báo cáo đầy đủ: [`SECURITY_AUDIT_AND_FIX_REPORT.md`](../SECURITY_AUDIT_AND_FIX_REPORT.md). Danh sách việc chưa xong, đủ chi tiết để người khác nhận việc: [`SECURITY_REMAINING_TASKS.md`](../SECURITY_REMAINING_TASKS.md).
+> Kết quả: 85 mục SEC (3 High, 16 Medium, 66 Low); 29 mục đã FIXED (26 FIXED – VERIFIED, 3 FIXED – NOT VERIFIED), 5 PARTIAL, 2 BLOCKED, 49 OPEN. Backend 90 suites / 1183 test, frontend 37 files / 254 test đều PASS; **toàn bộ bản vá chưa commit**.
+
+| ID | Ưu tiên | Việc | Ghi chú |
+| :--- | :--- | :--- | :--- |
+| R-001 (SEC-003) | P0 | Xoay credential MongoDB Atlas và Gemini/Google API key đã lộ trong lịch sử git (đã push GitHub và GitLab) | **BLOCKED**: chủ sở hữu thực hiện; xóa lịch sử git là tùy chọn, xoay credential là bắt buộc |
+| R-002 (SEC-056) | P0 | Thu hồi GitLab PAT nằm trong URL remote của `.git/config` | **BLOCKED**: chủ sở hữu thực hiện |
+| R-025 (SEC-034) | P1 | Review và commit các thay đổi bảo mật trong working tree (guard deny-by-default, 11 cụm fix C1 đến C11) | Developer; AI không commit |
+| R-024 | P1 | Chạy lại dynamic test TEST-SEC-001..010, backend `test:e2e`, Playwright, `flutter test` trên bản build đã vá | Dynamic test chỉ chạy trước bản vá |
+| R-003 (SEC-001) | P1 | Method trusted cho landing page; POST /orders công khai bỏ qua `item.price` và `orderSource=LANDING_PAGE` | Cần sửa `landing-page.service.ts` |
+| R-007 (SEC-042) | P1 | `vercel.json` (gốc và `frontend/vercel.json`): thêm `frame-src` cho Google Maps, bỏ `unsafe-inline`, thu hẹp `connect-src` | nginx.conf đã sửa, vercel.json chưa |
+| R-031 (SEC-044) | P1 | Khóa/throttle theo tài khoản cho login, OTP, reset; xác minh số hop `TRUST_PROXY` trên production | Trùng SEO-TASK-012; cần quyết định ngưỡng khóa |
+| R-046 (SEC-051) | P1 | docker-compose: `NODE_ENV` mặc định production cho image production, bỏ mật khẩu Mongo mặc định, Redis có mật khẩu, không publish cổng 3000 ra mọi interface | Hạ tầng |
+| R-052, R-053, R-059 (SEC-058, 059, 065) | P1 | Loyalty clawback khi trả hàng, `perUserLimit` với khách vãng lai, giữ tồn kho bằng đơn COD PENDING | Cần quyết định nghiệp vụ |
+| R-066 (SEC-072) | P1 | Maker-checker cho PO, báo giá NCC, chứng từ, phiếu thu/chi | Cần quyết định nghiệp vụ |
+
+Các việc P2/P3 (dependency production `sanitize-html`/`nodemailer`, CSP, client storage, ERP, tài liệu...) xem `SECURITY_REMAINING_TASKS.md`.

@@ -8,7 +8,13 @@
       <p class="text-xs text-slate-500 leading-relaxed">
         Rất tiếc, đã có sự cố xảy ra khi tải phần giao diện này. Vui lòng thử tải lại trang hoặc quay về trang chủ.
       </p>
-      <div v-if="errorMessage" class="text-left bg-red-50 text-red-700 p-3 rounded-xl text-xs font-mono break-all max-h-32 overflow-y-auto border border-red-200">
+      <!-- UX-01: customers can still order by phone when a page fails -->
+      <p class="text-xs text-slate-600">
+        Cần đặt hàng ngay? Gọi
+        <a :href="hotlineHref" class="font-bold text-[#dc2626] hover:underline">{{ hotline }}</a>
+      </p>
+      <!-- UX-01: technical details are for developers only, never shown to customers -->
+      <div v-if="isDev && errorMessage" class="text-left bg-red-50 text-red-700 p-3 rounded-xl text-xs font-mono break-all max-h-32 overflow-y-auto border border-red-200">
         {{ errorMessage }}
       </div>
       <div class="flex items-center justify-center gap-3 pt-2">
@@ -33,9 +39,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onErrorCaptured } from 'vue'
+import { getStoreInfo } from '@/services/store-info.service'
 
 const error = ref<Error | null>(null)
 const errorMessage = computed(() => error.value?.message || '')
+const isDev = import.meta.env.DEV
+const hotline = getStoreInfo().hotline
+const hotlineHref = `tel:${hotline.replace(/[^\d+]/g, '')}`
 
 onErrorCaptured((err, instance, info) => {
   error.value = err as Error

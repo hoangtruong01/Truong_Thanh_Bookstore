@@ -371,6 +371,19 @@ describe('Comprehensive BA SRS Business Flows (UAT-E2E-01 -> UAT-E2E-13)', () =>
           exec: jest.fn().mockResolvedValue(mockPayable),
         }),
       });
+      // SEC-009: service cập nhật nguyên tử bằng findOneAndUpdate -> mô phỏng $inc/$set/$push
+      mockPayableModel.findOneAndUpdate = jest
+        .fn()
+        .mockImplementation((_filter: any, update: any) => ({
+          session: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockImplementation(() => {
+            mockPayable.paidAmount += update.$inc.paidAmount;
+            mockPayable.remainingAmount += update.$inc.remainingAmount;
+            mockPayable.status = update.$set.status;
+            mockPayable.paymentHistory.push(update.$push.paymentHistory);
+            return Promise.resolve(mockPayable);
+          }),
+        }));
 
       mockAccountModel.findOne.mockReturnValue({
         exec: jest.fn().mockResolvedValue({
@@ -572,6 +585,19 @@ describe('Comprehensive BA SRS Business Flows (UAT-E2E-01 -> UAT-E2E-13)', () =>
       };
 
       mockReceivableModel.findOne.mockReturnValue(arDoc);
+      // SEC-009: service cập nhật nguyên tử bằng findOneAndUpdate -> mô phỏng $inc/$set/$push
+      mockReceivableModel.findOneAndUpdate = jest
+        .fn()
+        .mockImplementation((_filter: any, update: any) => ({
+          session: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockImplementation(() => {
+            arDoc.paidAmount += update.$inc.paidAmount;
+            arDoc.remainingAmount += update.$inc.remainingAmount;
+            arDoc.status = update.$set.status;
+            arDoc.collectionHistory.push(update.$push.collectionHistory);
+            return Promise.resolve(arDoc);
+          }),
+        }));
       mockAccountModel.findOne.mockReturnValue({
         exec: jest.fn().mockResolvedValue({
           _id: new Types.ObjectId(accountId),

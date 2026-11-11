@@ -5,7 +5,7 @@ import {
 } from './security.sanitizer';
 import { SecuritySanitizerMiddleware } from '../middleware/security-sanitizer.middleware';
 import { HttpExceptionFilter } from '../filters/http-exception.filter';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { ErrorCode } from '../enums/error-code.enum';
 
 describe('Security Sanitizer & Middleware Spec', () => {
@@ -190,6 +190,33 @@ describe('Security Sanitizer & Middleware Spec', () => {
       expect(cleaned.inStock).toBe(true);
       expect(cleaned.price).toBe(15000.5);
       expect(cleaned.createdDate).toEqual(now);
+    });
+
+    it('SEC-026: should reject payloads nested deeper than maxDepth instead of passing them through', () => {
+      const build = (
+        levels: number,
+        leaf: unknown,
+      ): Record<string, unknown> => {
+        let node: Record<string, unknown> = { leaf };
+        for (let i = 0; i < levels; i++) node = { child: node };
+        return node;
+      };
+
+      // NoSQL operator key ở độ sâu 20 phải bị từ chối, không được lọt qua.
+      expect(() => sanitizePayload(build(20, { $gt: '' }))).toThrow(
+        BadRequestException,
+      );
+      // Chuỗi XSS ở độ sâu 20 cũng không được trả nguyên.
+      expect(() =>
+        sanitizePayload(build(20, '<script>alert(1)</script>x')),
+      ).toThrow(BadRequestException);
+      // Mảng lồng sâu
+      let arr: unknown = [{ $ne: 1 }];
+      for (let i = 0; i < 20; i++) arr = [arr];
+      expect(() => sanitizePayload(arr)).toThrow(BadRequestException);
+      // Payload trong giới hạn vẫn được lọc bình thường.
+      const ok = sanitizePayload(build(5, { $gt: '', a: 1 })) as any;
+      expect(ok.child.child.child.child.child.leaf).toEqual({ a: 1 });
     });
   });
 

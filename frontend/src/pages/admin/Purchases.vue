@@ -559,6 +559,7 @@ import { purchaseService } from '@/services/purchase.service'
 import { supplierService } from '@/services/supplier.service'
 import { productService } from '@/services/product.service'
 import { useToast } from 'vue-toastification'
+import { formatCurrency } from '@/utils/helpers'
 
 const toast = useToast()
 
@@ -838,10 +839,6 @@ function getPOStatusLabel(status: string) {
     case 'CANCELLED': return 'Đã hủy'
     default: return status
   }
-}
-
-function formatCurrency(val: number) {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)
 }
 
 function formatDate(val: string | Date | undefined) {

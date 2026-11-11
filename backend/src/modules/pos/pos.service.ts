@@ -104,6 +104,90 @@ export class PosService {
   ) {}
 
   /**
+   * SEC-006: Bộ đếm số lần xác thực phê duyệt thất bại (theo thu ngân và theo người duyệt).
+   * Lưu in-memory theo từng tiến trình: đủ để chặn dò mật khẩu tại quầy; throttler của
+   * controller (Redis) bổ sung giới hạn tần suất giữa các instance.
+   */
+  private readonly approvalFailures = new Map<
+    string,
+    { count: number; windowStart: number; lockedUntil: number }
+  >();
+  private static readonly APPROVAL_MAX_FAILURES = 5;
+  private static readonly APPROVAL_WINDOW_MS = 15 * 60 * 1000;
+  private static readonly APPROVAL_LOCK_MS = 15 * 60 * 1000;
+
+  private assertApprovalNotLocked(keys: string[]): void {
+    const now = Date.now();
+    for (const key of keys) {
+      const rec = this.approvalFailures.get(key);
+      if (rec && rec.lockedUntil > now) {
+        throw new ForbiddenException(
+          'Xác thực phê duyệt tạm thời bị khóa do nhập sai nhiều lần. Vui lòng thử lại sau.',
+        );
+      }
+    }
+  }
+
+  /** Ghi nhận 1 lần xác thực phê duyệt sai và trả về lỗi chung (không lộ nguyên nhân). */
+  private approvalDenied(keys: string[]): ForbiddenException {
+    const now = Date.now();
+    // Dọn các bản ghi đã hết hạn để Map không phình vô hạn (key theo approvedById do client gửi)
+    if (this.approvalFailures.size > 1000) {
+      for (const [k, r] of this.approvalFailures) {
+        if (
+          r.lockedUntil <= now &&
+          now - r.windowStart > PosService.APPROVAL_WINDOW_MS
+        ) {
+          this.approvalFailures.delete(k);
+        }
+      }
+    }
+    for (const key of keys) {
+      let rec = this.approvalFailures.get(key);
+      if (!rec || now - rec.windowStart > PosService.APPROVAL_WINDOW_MS) {
+        rec = { count: 0, windowStart: now, lockedUntil: 0 };
+      }
+      rec.count += 1;
+      if (rec.count >= PosService.APPROVAL_MAX_FAILURES) {
+        rec.lockedUntil = now + PosService.APPROVAL_LOCK_MS;
+        rec.count = 0;
+        rec.windowStart = now;
+      }
+      this.approvalFailures.set(key, rec);
+    }
+    return new ForbiddenException('Xác thực phê duyệt không hợp lệ.');
+  }
+
+  private clearApprovalFailures(keys: string[]): void {
+    for (const key of keys) {
+      this.approvalFailures.delete(key);
+    }
+  }
+
+  /**
+   * SEC-024: Che dữ liệu giá vốn/biên lợi nhuận khỏi phản hồi của thu ngân.
+   * Chỉ ADMIN/SUPER_ADMIN mới thấy costPrice, grossMarginPercent, markupPercent.
+   */
+  private sanitizeOrderForActor(order: any, actor?: { role?: string }): any {
+    const isManager =
+      actor?.role === UserRole.ADMIN || actor?.role === UserRole.SUPER_ADMIN;
+    if (isManager || !order) return order;
+
+    const obj: any =
+      typeof order.toObject === 'function' ? order.toObject() : { ...order };
+    if (Array.isArray(obj.items)) {
+      obj.items = obj.items.map((it: any) => {
+        const copy = { ...it };
+        delete copy.costPrice;
+        delete copy.grossMarginPercent;
+        delete copy.markupPercent;
+        return copy;
+      });
+    }
+    return obj;
+  }
+
+  /**
    * Tính SHA-256 fingerprint chuẩn hóa của đơn hàng POS để đối soát Idempotency Key (NEW-005)
    */
   private computeOrderPayloadHash(dto: CreatePOSOrderDto): string {
@@ -219,7 +303,7 @@ export class PosService {
       role?: string;
       permissions?: string[];
     },
-  ): Promise<POSOrderDocument> {
+  ): Promise<any> {
     const cashierId = new Types.ObjectId(cashier._id);
     const cashierName =
       cashier.fullName || cashier.name || 'Nhân viên thu ngân';
@@ -240,7 +324,7 @@ export class PosService {
         this.logger.log(
           `Idempotent POS order replay for key: ${dto.idempotencyKey}`,
         );
-        return existing;
+        return this.sanitizeOrderForActor(existing, cashier);
       }
     }
 
@@ -445,6 +529,20 @@ export class PosService {
       let grossMarginPercent = 0;
       let markupPercent = 0;
 
+      // SEC-007: Đơn giá do client gửi không bao giờ được tin. Giá thực tế của dòng
+      // luôn lấy từ CSDL (unitPrice). Nếu client gửi giá cao hơn mức giá niêm yết/giá
+      // đang áp dụng thì từ chối (dấu hiệu né kiểm tra sàn biên lợi nhuận); nếu thấp hơn
+      // thì bỏ qua (muốn giảm giá phải dùng trường discount + quy trình phê duyệt).
+      if (
+        itemDto.unitPrice !== undefined &&
+        itemDto.unitPrice !== null &&
+        Number(itemDto.unitPrice) > Math.max(unitPrice, baseSellingPrice)
+      ) {
+        throw new BadRequestException(
+          `Đơn giá gửi lên của sản phẩm "${product.name}" vượt quá giá niêm yết trong hệ thống. Giá bán được tính hoàn toàn từ hệ thống.`,
+        );
+      }
+
       if (this.pricingService) {
         try {
           const priceCalc = await this.pricingService.calculateItemPrice({
@@ -457,7 +555,8 @@ export class PosService {
               dto.customerType === POSCustomerType.WHOLESALE
                 ? 'WHOLESALE'
                 : 'RETAIL',
-            requestedUnitPrice: itemDto.unitPrice,
+            // SEC-007: kiểm tra sàn biên lợi nhuận/chiết khấu trên đúng giá thực tế sẽ thu (từ CSDL)
+            requestedUnitPrice: unitPrice,
             requestedDiscount: itemDiscount,
           });
 
@@ -580,14 +679,20 @@ export class PosService {
           );
         }
 
+        // SEC-006: Chặn dò mật khẩu/token Quản lý theo từng thu ngân và từng người duyệt
+        const approvalKeys = [
+          `cashier:${String(cashierId)}`,
+          `approver:${String(dto.approvedById)}`,
+        ];
+        this.assertApprovalNotLocked(approvalKeys);
+
         const approver = await this.usersService.findByIdWithPassword(
           dto.approvedById,
         );
 
+        // Thông báo lỗi chung để không lộ tài khoản nào tồn tại / là Quản lý (chống oracle)
         if (!approver || approver.status === false) {
-          throw new ForbiddenException(
-            'Người phê duyệt không hợp lệ hoặc tài khoản Quản lý đã bị khóa.',
-          );
+          throw this.approvalDenied(approvalKeys);
         }
 
         const isApproverAuthorized =
@@ -600,21 +705,19 @@ export class PosService {
               approver.permissions.includes(StaffPermission.MANAGE_PRICING)));
 
         if (!isApproverAuthorized) {
-          throw new ForbiddenException(
-            'Người phê duyệt không hợp lệ hoặc không có quyền phê duyệt biên lợi nhuận/chiết khấu.',
-          );
+          throw this.approvalDenied(approvalKeys);
         }
 
         if (dto.managerPassword) {
+          // SEC-006: Chỉ so sánh bằng bcrypt, tuyệt đối không so sánh plaintext
           const isPasswordValid =
-            approver.password === dto.managerPassword ||
+            typeof approver.password === 'string' &&
+            approver.password.length > 0 &&
             (await bcrypt
               .compare(dto.managerPassword, approver.password)
               .catch(() => false));
           if (!isPasswordValid) {
-            throw new ForbiddenException(
-              'Mật khẩu xác thực của Quản lý phê duyệt không chính xác.',
-            );
+            throw this.approvalDenied(approvalKeys);
           }
         } else if (dto.approvalToken) {
           // PRC-T11: Xác thực approvalToken gắn với orderPayloadHash để chống replay đơn khác
@@ -640,12 +743,11 @@ export class PosService {
             dto.approvalToken !== hmacBound &&
             dto.approvalToken !== hmacLegacy
           ) {
-            throw new ForbiddenException(
-              'Mã token phê duyệt không hợp lệ hoặc không khớp với nội dung đơn hàng này (PRC-T11).',
-            );
+            throw this.approvalDenied(approvalKeys);
           }
         }
 
+        this.clearApprovalFailures(approvalKeys);
         approvedBy = approver._id;
         approvedByName = approver.fullName || 'Quản lý cửa hàng';
       }
@@ -1073,7 +1175,7 @@ export class PosService {
       this.logger.log(
         `POS Order created successfully: ${invoiceCode} - Total: ${finalAmount}đ`,
       );
-      return savedOrder;
+      return this.sanitizeOrderForActor(savedOrder, cashier);
     } catch (err: any) {
       await session.abortTransaction();
       // Xử lý race condition nếu 2 request cùng idempotencyKey đến đồng thời
@@ -1094,7 +1196,7 @@ export class PosService {
               `Idempotency key "${dto.idempotencyKey}" đã được sử dụng với nội dung đơn hàng khác biệt.`,
             );
           }
-          return existing;
+          return this.sanitizeOrderForActor(existing, cashier);
         }
       }
       this.logger.error(
@@ -1126,7 +1228,7 @@ export class PosService {
       role?: string;
       permissions?: string[];
     },
-  ): Promise<POSOrderDocument> {
+  ): Promise<any> {
     const actorId = new Types.ObjectId(actor._id);
     const actorName = actor.fullName || actor.name || 'Quản lý quầy';
 
@@ -1185,7 +1287,7 @@ export class PosService {
           this.logger.log(
             `Idempotent POS refund replay for key: ${dto.idempotencyKey}`,
           );
-          return order;
+          return this.sanitizeOrderForActor(order, actor);
         }
       }
 
@@ -1201,6 +1303,31 @@ export class PosService {
         condition: POSItemCondition;
         refundAmount: number;
       }> = [];
+
+      // SEC-023: Gộp số lượng theo từng dòng hóa đơn trước khi kiểm tra, để việc tách
+      // cùng một sản phẩm thành nhiều dòng trong yêu cầu không thể vượt số lượng đã bán.
+      const requestedQtyPerLine = new Map<any, number>();
+      for (const refItem of dto.items) {
+        const line = order.items.find(
+          (it) =>
+            it.product.toString() === refItem.productId &&
+            (!refItem.unit ||
+              it.unit.toLowerCase() === refItem.unit.trim().toLowerCase()),
+        );
+        if (!line) continue; // báo lỗi "không có trong hóa đơn" ở vòng xử lý bên dưới
+        requestedQtyPerLine.set(
+          line,
+          (requestedQtyPerLine.get(line) || 0) + Number(refItem.quantity),
+        );
+      }
+      for (const [line, totalQty] of requestedQtyPerLine) {
+        const remaining = line.quantity - (line.returnedQuantity || 0);
+        if (totalQty > remaining) {
+          throw new BadRequestException(
+            `Sản phẩm "${line.name}" chỉ còn có thể trả tối đa ${remaining} ${line.unit}`,
+          );
+        }
+      }
 
       for (const refItem of dto.items) {
         const targetItem = order.items.find(
@@ -1244,6 +1371,15 @@ export class PosService {
             ) {
               alreadyRefundedForItem += it.refundAmount || 0;
             }
+          }
+        }
+        // SEC-023: Cộng cả số tiền đã tính cho cùng dòng hàng ở các dòng trước trong CÙNG yêu cầu
+        for (const pr of processedRefundItems) {
+          if (
+            pr.product.toString() === targetItem.product.toString() &&
+            pr.unit.toLowerCase() === targetItem.unit.toLowerCase()
+          ) {
+            alreadyRefundedForItem += pr.refundAmount || 0;
           }
         }
 
@@ -1451,7 +1587,7 @@ export class PosService {
       this.logger.log(
         `POS Order ${order.invoiceCode} refunded ${totalRefundAmount}đ. Status: ${order.status}`,
       );
-      return order;
+      return this.sanitizeOrderForActor(order, actor);
     } catch (err) {
       await session.abortTransaction();
       this.logger.error('Failed to process POS refund:', err);

@@ -9,6 +9,7 @@ import { ProductStatus, DiscountType } from '../../common/enums';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { SyncCartDto } from './dto/cart.dto';
+import { Types } from 'mongoose';
 
 interface MockCartItem {
   product?: string;
@@ -90,6 +91,25 @@ describe('CartService Unit Tests', () => {
 
   const mockProductModel = {
     findById: jest.fn(),
+    find: jest.fn(),
+  };
+
+  /** Giả lập productModel.find({_id:{$in}}).select().lean().exec() trên một bảng sản phẩm. */
+  const mockProductFind = (
+    table: Record<string, Record<string, unknown> | null>,
+  ) => {
+    mockProductModel.find.mockImplementation(
+      (filter: { _id: { $in: Array<{ toString(): string }> } }) => {
+        const found = filter._id.$in
+          .map((id) => table[id.toString()])
+          .filter((p): p is Record<string, unknown> => !!p);
+        return {
+          select: jest.fn().mockReturnThis(),
+          lean: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValue(found),
+        };
+      },
+    );
   };
 
   const mockPromotionModel = {
@@ -417,6 +437,121 @@ describe('CartService Unit Tests', () => {
     });
   });
 
+  describe('getCart (batched product lookup)', () => {
+    it('validates N items with ONE product query and keeps order, stock caps and snapshots', async () => {
+      const deletedId = '507f1f77bcf86cd799439016';
+      const missingId = '507f1f77bcf86cd799439017';
+      const outOfStockId = '507f1f77bcf86cd799439018';
+      mockProductFind({
+        [validProductId]: { ...mockProduct, name: 'Bút gel (tên mới)' },
+        [validProductId2]: {
+          ...mockProduct,
+          _id: validProductId2,
+          name: 'Vở Campus',
+          price: 20000,
+          discountPrice: 0,
+          stock: 3,
+          images: [],
+        },
+        [deletedId]: { ...mockProduct, _id: deletedId, isDeleted: true },
+        [outOfStockId]: { ...mockProduct, _id: outOfStockId, stock: 0 },
+      });
+
+      const cart = {
+        _id: '507f1f77bcf86cd799439099',
+        user: validUserId,
+        items: [
+          // populated product object (đường đi thật sau populate)
+          {
+            product: { _id: new Types.ObjectId(validProductId) },
+            name: 'Bút gel xóa được Pilot',
+            price: 35000,
+            discountPrice: 30000,
+            image: 'old.jpg',
+            quantity: 2,
+          },
+          // populate trả null vì sản phẩm đã bị xóa cứng
+          { product: null, name: 'X', price: 1, quantity: 1 },
+          { product: new Types.ObjectId(deletedId), price: 1, quantity: 1 },
+          { product: new Types.ObjectId(missingId), price: 1, quantity: 1 },
+          { product: new Types.ObjectId(outOfStockId), price: 1, quantity: 1 },
+          {
+            product: new Types.ObjectId(validProductId2),
+            name: 'Vở Campus',
+            price: 20000,
+            discountPrice: 0,
+            image: 'keep.jpg',
+            quantity: 10,
+          },
+        ],
+        subtotal: 0,
+        shippingFee: 0,
+        discountAmount: 0,
+        totalPrice: 0,
+        appliedVoucher: null,
+        isModified: jest.fn().mockReturnValue(false),
+        save: jest.fn().mockResolvedValue(undefined),
+      };
+      mockCartModel.findOne.mockReturnValue(createMockQuery(cart));
+      mockCartModel.findById.mockReturnValue(createMockQuery(cart));
+
+      const result = await cartService.getCart(validUserId);
+
+      expect(mockProductModel.find).toHaveBeenCalledTimes(1);
+      expect(mockProductModel.findById).not.toHaveBeenCalled();
+      expect(result).toBe(cart);
+      expect(
+        cart.items.map((i) => ({
+          product: (i.product as Types.ObjectId | null)?.toString(),
+          name: i.name,
+          price: i.price,
+          discountPrice: i.discountPrice,
+          image: (i as { image?: string }).image,
+          quantity: i.quantity,
+        })),
+      ).toEqual([
+        {
+          product: validProductId,
+          name: 'Bút gel (tên mới)',
+          price: 35000,
+          discountPrice: 30000,
+          image: 'https://example.com/pen.jpg',
+          quantity: 2,
+        },
+        {
+          product: validProductId2,
+          name: 'Vở Campus',
+          price: 20000,
+          discountPrice: 0,
+          image: 'keep.jpg',
+          quantity: 3,
+        },
+      ]);
+      expect(cart.subtotal).toBe(2 * 30000 + 3 * 20000);
+      expect(cart.save).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not query products at all for an empty cart', async () => {
+      const cart = {
+        _id: '507f1f77bcf86cd799439099',
+        items: [],
+        subtotal: 0,
+        shippingFee: 0,
+        discountAmount: 0,
+        totalPrice: 0,
+        isModified: jest.fn().mockReturnValue(false),
+        save: jest.fn(),
+      };
+      mockCartModel.findOne.mockReturnValue(createMockQuery(cart));
+      mockCartModel.findById.mockReturnValue(createMockQuery(cart));
+
+      await cartService.getCart(validUserId);
+
+      expect(mockProductModel.find).not.toHaveBeenCalled();
+      expect(cart.save).not.toHaveBeenCalled();
+    });
+  });
+
   describe('syncCart', () => {
     const products: Record<string, Record<string, unknown> | null> = {
       [validProductId]: mockProduct,
@@ -451,9 +586,53 @@ describe('CartService Unit Tests', () => {
     };
 
     beforeEach(() => {
-      mockProductModel.findById.mockImplementation((id: string) => ({
-        exec: jest.fn().mockResolvedValue(products[id] ?? null),
-      }));
+      mockProductFind(products);
+    });
+
+    it('loads all payload products with ONE query (no N+1) and never calls findById', async () => {
+      const cart = buildCart([]);
+      useCart(cart);
+      const missingId = '507f1f77bcf86cd799439015';
+
+      await cartService.syncCart(validUserId, {
+        items: [
+          { productId: validProductId, quantity: 1 },
+          { productId: missingId, quantity: 1 },
+          { productId: validProductId2, quantity: 2 },
+        ],
+        mode: 'replace',
+      });
+
+      expect(mockProductModel.find).toHaveBeenCalledTimes(1);
+      expect(mockProductModel.findById).not.toHaveBeenCalled();
+      // Thứ tự dòng giữ nguyên theo payload, sản phẩm không tồn tại bị bỏ qua.
+      expect(cart.items.map((i) => String(i.product))).toEqual([
+        validProductId,
+        validProductId2,
+      ]);
+      expect(cart.items.map((i) => i.quantity)).toEqual([1, 2]);
+    });
+
+    it('treats a legacy product with no stored stock as stock 0 (lean skips schema defaults)', async () => {
+      const legacyId = '507f1f77bcf86cd799439016';
+      const legacy: Record<string, unknown> = { ...mockProduct, _id: legacyId };
+      delete legacy.stock;
+      mockProductFind({ ...products, [legacyId]: legacy });
+      const cart = buildCart([]);
+      useCart(cart);
+
+      await cartService.syncCart(validUserId, {
+        items: [
+          { productId: legacyId, quantity: 2 },
+          { productId: validProductId2, quantity: 1 },
+        ],
+        mode: 'replace',
+      });
+
+      expect(cart.items.some((i) => String(i.product) === legacyId)).toBe(
+        false,
+      );
+      expect(cart.items.every((i) => Number.isFinite(i.quantity))).toBe(true);
     });
 
     it('merge (default, backward compatible): adds quantities and keeps server-only items', async () => {

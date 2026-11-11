@@ -8,3 +8,16 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 *.md
+
+# Secrets / keys (SEC-030)
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+key.properties

@@ -719,6 +719,14 @@ export class FinanceService {
   /**
    * CASH-01: Shared query filter builder cho cả findAllEntries và exportCashEntriesToExcel
    */
+  /**
+   * SEC-014: Escape ký tự đặc biệt của RegExp để input người dùng không bị
+   * hiểu là pattern (chống ReDoS / regex injection).
+   */
+  private escapeRegex(input: string): string {
+    return String(input).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   public buildCashEntryFilter(query: CashEntryQueryDto): Record<string, any> {
     const filter: Record<string, any> = { isDeleted: false };
 
@@ -731,7 +739,10 @@ export class FinanceService {
     if (query.status) filter.status = query.status;
 
     if (query.search && query.search.trim()) {
-      const searchRegex = new RegExp(query.search.trim(), 'i');
+      const searchRegex = new RegExp(
+        this.escapeRegex(query.search.trim()),
+        'i',
+      );
       filter.$or = [
         { entryCode: searchRegex },
         { partnerName: searchRegex },
@@ -1015,7 +1026,6 @@ export class FinanceService {
 
       // 4. Ghi nhận lịch sử thanh toán và cập nhật công nợ có conditional check
       const nextRemaining = Math.max(0, payable.remainingAmount - dto.amount);
-      const nextPaid = payable.paidAmount + dto.amount;
       const nextStatus =
         nextRemaining === 0
           ? SupplierPayableStatus.PAID
@@ -1030,45 +1040,64 @@ export class FinanceService {
         note: dto.note,
       };
 
-      let updatedPayable: SupplierPayableDocument | null = null;
+      // SEC-009: Cập nhật nguyên tử có điều kiện (guard số nợ còn lại).
+      // Tuyệt đối KHÔNG fallback sang payable.save() vì doc có thể đã cũ
+      // (stale) do request đồng thời -> ghi đè gây thanh toán vượt số nợ.
+      const payableQuery = this.payableModel.findOneAndUpdate(
+        {
+          _id: payable._id,
+          remainingAmount: { $gte: dto.amount },
+          status: { $ne: SupplierPayableStatus.PAID },
+          isDeleted: false,
+        },
+        {
+          $inc: { paidAmount: dto.amount, remainingAmount: -dto.amount },
+          $set: { status: nextStatus },
+          $push: { paymentHistory: paymentRecord },
+        },
+        { new: true },
+      );
+      if (session && typeof payableQuery?.session === 'function') {
+        payableQuery.session(session);
+      }
+      let updatedPayable: SupplierPayableDocument | null =
+        await payableQuery.exec();
 
-      if (typeof this.payableModel.findOneAndUpdate === 'function') {
-        const payableQuery = this.payableModel.findOneAndUpdate(
+      if (!updatedPayable) {
+        // Đã có request khác thanh toán trước -> số nợ còn lại không đủ nữa.
+        // Throw để catch bên dưới abort transaction (hoàn tác phiếu chi + quỹ).
+        throw new ConflictException(
+          'Khoản công nợ vừa được cập nhật bởi thao tác khác hoặc số nợ còn lại không đủ. Vui lòng tải lại và thử lại.',
+        );
+      }
+
+      // Status tính từ snapshot đọc trước đó có thể cũ khi có thanh toán đồng
+      // thời: đồng bộ lại thành PAID nếu số nợ thực tế đã về 0.
+      if (
+        updatedPayable.remainingAmount === 0 &&
+        updatedPayable.status !== SupplierPayableStatus.PAID
+      ) {
+        const statusQuery = this.payableModel.findOneAndUpdate(
           {
             _id: payable._id,
-            remainingAmount: { $gte: dto.amount },
+            remainingAmount: 0,
             status: { $ne: SupplierPayableStatus.PAID },
             isDeleted: false,
           },
-          {
-            $inc: { paidAmount: dto.amount, remainingAmount: -dto.amount },
-            $set: { status: nextStatus },
-            $push: { paymentHistory: paymentRecord },
-          },
+          { $set: { status: SupplierPayableStatus.PAID } },
           { new: true },
         );
-        if (session && typeof payableQuery?.session === 'function') {
-          payableQuery.session(session);
+        if (session && typeof statusQuery?.session === 'function') {
+          statusQuery.session(session);
         }
-        updatedPayable = await payableQuery.exec();
-      }
-
-      if (!updatedPayable) {
-        payable.paidAmount = nextPaid;
-        payable.remainingAmount = nextRemaining;
-        payable.status = nextStatus;
-        payable.paymentHistory.push(paymentRecord);
-        updatedPayable = session
-          ? await payable.save({ session })
-          : await payable.save();
+        updatedPayable = (await statusQuery.exec()) || updatedPayable;
       }
 
       if (isTransactionActive && session) {
         await session.commitTransaction();
       }
 
-      const finalPayable: SupplierPayableDocument = updatedPayable || payable;
-      return { payable: finalPayable, cashEntry };
+      return { payable: updatedPayable, cashEntry };
     } catch (err: any) {
       if (isTransactionActive && session) {
         await session.abortTransaction();
@@ -1130,7 +1159,7 @@ export class FinanceService {
     if (status) filter.status = status;
 
     if (search && search.trim()) {
-      filter.invoiceCode = new RegExp(search.trim(), 'i');
+      filter.invoiceCode = new RegExp(this.escapeRegex(search.trim()), 'i');
     }
 
     if (dueDateFrom || dueDateTo) {
@@ -1561,7 +1590,6 @@ export class FinanceService {
         0,
         receivable.remainingAmount - dto.amount,
       );
-      const nextPaid = receivable.paidAmount + dto.amount;
       const nextStatus =
         nextRemaining === 0
           ? CustomerReceivableStatus.PAID
@@ -1576,37 +1604,57 @@ export class FinanceService {
         note: dto.note,
       };
 
-      let updatedReceivable: CustomerReceivableDocument | null = null;
+      // SEC-009: Cập nhật nguyên tử có điều kiện (guard số nợ còn lại).
+      // Không fallback sang receivable.save() vì doc có thể đã cũ (stale) do
+      // request đồng thời -> ghi đè gây thu vượt số nợ / sai exposure.
+      const receivableQuery = this.receivableModel.findOneAndUpdate(
+        {
+          _id: receivable._id,
+          remainingAmount: { $gte: dto.amount },
+          status: { $ne: CustomerReceivableStatus.PAID },
+          isDeleted: false,
+        },
+        {
+          $inc: { paidAmount: dto.amount, remainingAmount: -dto.amount },
+          $set: { status: nextStatus },
+          $push: { collectionHistory: collectionRecord },
+        },
+        { new: true },
+      );
+      if (session && typeof receivableQuery?.session === 'function') {
+        receivableQuery.session(session);
+      }
+      let updatedReceivable: CustomerReceivableDocument | null =
+        await receivableQuery.exec();
 
-      if (typeof this.receivableModel.findOneAndUpdate === 'function') {
-        const receivableQuery = this.receivableModel.findOneAndUpdate(
+      if (!updatedReceivable) {
+        // Đã có request khác thu trước -> số nợ còn lại không đủ nữa.
+        // Throw để catch bên dưới abort transaction (hoàn tác phiếu thu + quỹ).
+        throw new ConflictException(
+          'Khoản công nợ vừa được cập nhật bởi thao tác khác hoặc số nợ còn lại không đủ. Vui lòng tải lại và thử lại.',
+        );
+      }
+
+      // Status tính từ snapshot cũ có thể sai khi thu đồng thời: đồng bộ lại
+      // thành PAID nếu số nợ thực tế đã về 0.
+      if (
+        updatedReceivable.remainingAmount === 0 &&
+        updatedReceivable.status !== CustomerReceivableStatus.PAID
+      ) {
+        const statusQuery = this.receivableModel.findOneAndUpdate(
           {
             _id: receivable._id,
-            remainingAmount: { $gte: dto.amount },
+            remainingAmount: 0,
             status: { $ne: CustomerReceivableStatus.PAID },
             isDeleted: false,
           },
-          {
-            $inc: { paidAmount: dto.amount, remainingAmount: -dto.amount },
-            $set: { status: nextStatus },
-            $push: { collectionHistory: collectionRecord },
-          },
+          { $set: { status: CustomerReceivableStatus.PAID } },
           { new: true },
         );
-        if (session && typeof receivableQuery?.session === 'function') {
-          receivableQuery.session(session);
+        if (session && typeof statusQuery?.session === 'function') {
+          statusQuery.session(session);
         }
-        updatedReceivable = await receivableQuery.exec();
-      }
-
-      if (!updatedReceivable) {
-        receivable.paidAmount = nextPaid;
-        receivable.remainingAmount = nextRemaining;
-        receivable.status = nextStatus;
-        receivable.collectionHistory.push(collectionRecord as any);
-        updatedReceivable = session
-          ? await receivable.save({ session })
-          : await receivable.save();
+        updatedReceivable = (await statusQuery.exec()) || updatedReceivable;
       }
 
       // AR-01: Giảm exposure trên hồ sơ tín dụng khách hàng trong cùng transaction (AR-T06)
@@ -1623,9 +1671,7 @@ export class FinanceService {
         await session.commitTransaction();
       }
 
-      const finalReceivable: CustomerReceivableDocument =
-        updatedReceivable || receivable;
-      return { receivable: finalReceivable, cashEntry };
+      return { receivable: updatedReceivable, cashEntry };
     } catch (err: any) {
       if (isTransactionActive && session) {
         await session.abortTransaction();
@@ -1812,9 +1858,10 @@ export class FinanceService {
     if (status) filter.status = status;
 
     if (search && search.trim()) {
+      const searchRegex = new RegExp(this.escapeRegex(search.trim()), 'i');
       filter.$or = [
-        { invoiceCode: new RegExp(search.trim(), 'i') },
-        { customerName: new RegExp(search.trim(), 'i') },
+        { invoiceCode: searchRegex },
+        { customerName: searchRegex },
       ];
     }
 

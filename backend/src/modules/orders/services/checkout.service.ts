@@ -63,6 +63,55 @@ export interface CheckoutPreviewLoyalty {
   error: string | null;
 }
 
+/** SEC-032: trường nội bộ của đơn hàng, không bao giờ được trả cho client. */
+const ORDER_INTERNAL_FIELDS = [
+  'guestAccessTokenHash',
+  'idempotencyKeyHash',
+  'idempotencyPayloadHash',
+  'guestPhoneKey',
+  'guestPendingSlot',
+] as const;
+
+/** SEC-004: dữ liệu giá vốn/biên lợi nhuận/phê duyệt trên từng dòng hàng. */
+const ORDER_ITEM_COST_FIELDS = [
+  'costPrice',
+  'baseSellingPrice',
+  'appliedPolicy',
+  'appliedPolicyName',
+  'grossMarginPercent',
+  'markupPercent',
+  'approver',
+  'approvalReason',
+] as const;
+
+/**
+ * Chuyển đơn hàng thành object thuần để trả cho khách (customer/guest):
+ * loại bỏ hash nội bộ (SEC-032) và giá vốn/biên lợi nhuận/thông tin phê
+ * duyệt trên từng dòng hàng (SEC-004). Không mutate đối tượng đầu vào.
+ * Endpoint dành cho staff/admin không dùng hàm này.
+ */
+export function toCustomerOrderView<T = any>(order: any): T {
+  if (!order || typeof order !== 'object') return order as T;
+  // Luôn copy nông để không mutate đối tượng gốc (kể cả khi toObject trả
+  // về cùng tham chiếu).
+  const plain: Record<string, any> = {
+    ...(typeof order.toObject === 'function' ? order.toObject() : order),
+  };
+  for (const field of ORDER_INTERNAL_FIELDS) delete plain[field];
+  if (Array.isArray(plain.items)) {
+    plain.items = plain.items.map((rawItem: any) => {
+      if (!rawItem || typeof rawItem !== 'object') return rawItem;
+      const item: Record<string, any> =
+        typeof rawItem.toObject === 'function'
+          ? rawItem.toObject()
+          : { ...rawItem };
+      for (const field of ORDER_ITEM_COST_FIELDS) delete item[field];
+      return item;
+    });
+  }
+  return plain as T;
+}
+
 @Injectable()
 export class CheckoutService {
   private readonly logger = new Logger(CheckoutService.name);
@@ -144,6 +193,52 @@ export class CheckoutService {
     );
   }
 
+  /**
+   * SEC-001: giá landing page chỉ được chấp nhận khi trang đang bật VÀ giá
+   * client gửi khớp đúng giá do admin cấu hình cho CHÍNH sản phẩm đó (gói có
+   * productId riêng, hoặc giá trang gắn với productId của trang). Trang không
+   * gắn sản phẩm không được áp giá cho sản phẩm bất kỳ. Mọi trường hợp khác
+   * trả null để caller dùng giá DB.
+   */
+  private resolveLandingPrice(
+    landingPage: any,
+    product: any,
+    item: { price?: number; name?: string },
+  ): { price: number; name: string } | null {
+    if (!landingPage || !landingPage.status) return null;
+    if (typeof item.price !== 'number' || !Number.isFinite(item.price)) {
+      return null;
+    }
+    const productId = product._id.toString();
+    const pageProductId = landingPage.productId?.toString();
+
+    const matchingPkg = landingPage.packages?.find((pkg: any) => {
+      const boundProductId = (
+        pkg.productId ?? landingPage.productId
+      )?.toString();
+      return (
+        boundProductId === productId &&
+        typeof pkg.price === 'number' &&
+        pkg.price === item.price
+      );
+    });
+    if (matchingPkg) {
+      return {
+        price: matchingPkg.price,
+        name: item.name || `${product.name} (${matchingPkg.name})`,
+      };
+    }
+
+    if (
+      landingPage.price > 0 &&
+      pageProductId === productId &&
+      landingPage.price === item.price
+    ) {
+      return { price: landingPage.price, name: item.name || product.name };
+    }
+    return null;
+  }
+
   async checkoutPreview(dto: CheckoutPreviewDto, userId?: string) {
     let landingPage: any = null;
     if (dto.landingPageId && this.landingPageModel) {
@@ -214,28 +309,10 @@ export class CheckoutService {
           : (product as any).price;
       let effectiveName = product.name;
 
-      if (landingPage && landingPage.status) {
-        const matchingPkg = landingPage.packages?.find(
-          (pkg: any) =>
-            (pkg.productId?.toString() === product._id.toString() ||
-              landingPage.productId?.toString() === product._id.toString()) &&
-            item.price !== undefined &&
-            pkg.price === item.price,
-        );
-
-        if (matchingPkg) {
-          effectivePrice = matchingPkg.price;
-          effectiveName = item.name || `${product.name} (${matchingPkg.name})`;
-        } else if (
-          landingPage.price > 0 &&
-          item.price !== undefined &&
-          landingPage.price === item.price &&
-          (!landingPage.productId ||
-            landingPage.productId.toString() === product._id.toString())
-        ) {
-          effectivePrice = landingPage.price;
-          effectiveName = item.name || product.name;
-        }
+      const landingMatch = this.resolveLandingPrice(landingPage, product, item);
+      if (landingMatch) {
+        effectivePrice = landingMatch.price;
+        effectiveName = landingMatch.name;
       }
 
       if (item.price && item.price !== effectivePrice) {
@@ -454,9 +531,9 @@ export class CheckoutService {
           }
         }
 
-        const payload = existingOrder.toObject
-          ? existingOrder.toObject()
-          : existingOrder;
+        // SEC-032: bản replay được select +hash để so khớp, nhưng không được
+        // trả các hash đó (cũng như giá vốn) ra response.
+        const payload = toCustomerOrderView(existingOrder);
 
         // BE-03: Return guest credential that matches existing order's stored hash
         let replayGuestToken: string | undefined;
@@ -501,6 +578,19 @@ export class CheckoutService {
         .exec();
     }
 
+    // SEC-001: nguồn đơn do client gửi không được tin. LANDING_PAGE chỉ được
+    // ghi nhận khi landing page tồn tại và đang bật; POS không thể tạo từ
+    // endpoint công khai. Các trường hợp còn lại quy về WEB.
+    const landingPageVerified = Boolean(landingPage && landingPage.status);
+    const effectiveOrderSource: OrderSource =
+      dto.orderSource === OrderSource.LANDING_PAGE
+        ? landingPageVerified
+          ? OrderSource.LANDING_PAGE
+          : OrderSource.WEB
+        : dto.orderSource === OrderSource.MOBILE
+          ? OrderSource.MOBILE
+          : OrderSource.WEB;
+
     const products = await this.productsService.findByIds(uniqueProductIds);
     const productMap = new Map(products.map((p: any) => [p._id.toString(), p]));
     const costMap =
@@ -544,28 +634,10 @@ export class CheckoutService {
         product.discountPrice > 0 ? product.discountPrice : product.price;
       let effectiveName = product.name;
 
-      if (landingPage && landingPage.status) {
-        const matchingPkg = landingPage.packages?.find(
-          (pkg: any) =>
-            (pkg.productId?.toString() === product._id.toString() ||
-              landingPage.productId?.toString() === product._id.toString()) &&
-            item.price !== undefined &&
-            pkg.price === item.price,
-        );
-
-        if (matchingPkg) {
-          effectivePrice = matchingPkg.price;
-          effectiveName = item.name || `${product.name} (${matchingPkg.name})`;
-        } else if (
-          landingPage.price > 0 &&
-          item.price !== undefined &&
-          landingPage.price === item.price &&
-          (!landingPage.productId ||
-            landingPage.productId.toString() === product._id.toString())
-        ) {
-          effectivePrice = landingPage.price;
-          effectiveName = item.name || product.name;
-        }
+      const landingMatch = this.resolveLandingPrice(landingPage, product, item);
+      if (landingMatch) {
+        effectivePrice = landingMatch.price;
+        effectiveName = landingMatch.name;
       }
 
       const itemCostPrice =
@@ -714,13 +786,16 @@ export class CheckoutService {
             subtotal + shippingFee - discount - loyaltyDiscount,
           ),
           promotionCode: dto.promotionCode?.toUpperCase(),
-          orderSource: dto.orderSource || OrderSource.WEB,
-          landingPageId: dto.landingPageId || undefined,
+          orderSource: effectiveOrderSource,
+          landingPageId:
+            effectiveOrderSource === OrderSource.LANDING_PAGE
+              ? dto.landingPageId
+              : undefined,
           timeline: [
             {
               status: OrderStatus.PENDING,
               note:
-                dto.orderSource === OrderSource.LANDING_PAGE
+                effectiveOrderSource === OrderSource.LANDING_PAGE
                   ? 'Đơn hàng được tạo từ Landing Page, chờ xác nhận.'
                   : 'Đơn hàng được tạo thành công, chờ xác nhận.',
               createdAt: new Date(),
@@ -820,7 +895,8 @@ export class CheckoutService {
       .syncToGoogleSheet(savedOrder)
       .catch((err) => this.logger.error('Sheet sync failed', err));
 
-    const result = savedOrder.toObject ? savedOrder.toObject() : savedOrder;
+    // SEC-004/SEC-032: không trả hash nội bộ và dữ liệu giá vốn cho khách.
+    const result = toCustomerOrderView(savedOrder);
     return {
       ...result,
       guestAccessToken,

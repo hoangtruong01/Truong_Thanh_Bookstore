@@ -12,6 +12,20 @@ import 'profile/profile_screen.dart';
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
+  /// Chỉ số tab Sản phẩm (khớp thứ tự `_screens`).
+  static const int productsTab = 1;
+
+  static _MainNavigationScreenState? _active;
+
+  /// Cho màn hình con (đang đẩy trên Navigator) chuyển tab chính.
+  /// Trả về false khi không có MainNavigationScreen nào đang hiển thị.
+  static bool switchToTab(int index) {
+    final state = _active;
+    if (state == null || !state.mounted) return false;
+    state._selectTab(index);
+    return true;
+  }
+
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
@@ -19,6 +33,26 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
   bool _isNavVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    MainNavigationScreen._active = this;
+  }
+
+  @override
+  void dispose() {
+    if (identical(MainNavigationScreen._active, this)) MainNavigationScreen._active = null;
+    super.dispose();
+  }
+
+  void _selectTab(int index) {
+    if (index < 0 || index >= _screens.length) return;
+    setState(() {
+      _currentIndex = index;
+      _isNavVisible = true; // Luôn hiển thị lại thanh nav khi đổi tab
+    });
+  }
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -106,12 +140,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           opacity: _isNavVisible ? 1.0 : 0.0,
           child: LiquidGlassBottomNav(
             currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-                _isNavVisible = true; // Luôn hiển thị lại thanh nav khi đổi tab
-              });
-            },
+            onTap: _selectTab,
             items: _navItems,
             badgeCount: cartCount,
           ),

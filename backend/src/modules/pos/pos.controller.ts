@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PosService } from './pos.service';
 import {
@@ -30,6 +31,8 @@ export class PosController {
   constructor(private readonly posService: PosService) {}
 
   @Post('orders')
+  // SEC-006: giới hạn tần suất (kèm bộ đếm sai theo thu ngân trong service) để chặn dò mật khẩu Quản lý
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Permissions(StaffPermission.POS_ACCESS)
   @ApiOperation({
     summary:

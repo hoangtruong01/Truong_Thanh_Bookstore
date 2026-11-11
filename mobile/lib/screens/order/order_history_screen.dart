@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/constants/order_status.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/empty_state_widget.dart';
+import '../../core/widgets/error_retry_widget.dart';
+import '../../core/widgets/shimmer_loading.dart';
+import '../../models/order_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
+import '../auth/login_screen.dart';
 import 'order_detail_screen.dart';
+import 'widgets/order_widgets.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -14,190 +22,335 @@ class OrderHistoryScreen extends StatefulWidget {
 }
 
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
+  /// Below this many matching orders we keep paging so a filter tab is not empty
+  /// just because its orders sit on a later page (backend ignores `status`).
+  static const int _minVisibleBeforeAutoLoad = 6;
+
+  final _scrollController = ScrollController();
+  OrderStatusFilter _filter = OrderStatusFilter.all;
+  bool? _loadedAsAuthenticated;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      if (auth.isAuthenticated && auth.token != null) {
-        Provider.of<OrderProvider>(context, listen: false).fetchMyOrders(auth.token!);
-      } else {
-        Provider.of<OrderProvider>(context, listen: false).fetchGuestOrders();
-      }
-    });
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    if (!mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final orderProv = Provider.of<OrderProvider>(context, listen: false);
+    final token = auth.token;
+    if (auth.isAuthenticated && token != null && token.isNotEmpty) {
+      await orderProv.fetchMyOrders(token);
+    } else {
+      await orderProv.fetchGuestOrders();
+    }
+  }
+
+  void _loadMore() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (!auth.isAuthenticated || token == null || token.isEmpty) return;
+    Provider.of<OrderProvider>(context, listen: false).loadMoreMyOrders(token);
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 300) _loadMore();
+  }
+
+  void _openLogin() {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final orderProv = Provider.of<OrderProvider>(context);
-    final orders = auth.isAuthenticated ? orderProv.myOrders : orderProv.guestOrders;
+    final isAuth = auth.isAuthenticated;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('ĐƠN HÀNG CỦA TÔI'),
-        actions: [IconButton(
-          tooltip: 'Tải lại đơn hàng',
-          icon: const Icon(Icons.refresh),
-          onPressed: orderProv.isLoading ? null : () {
-            if (auth.token != null) {
-              orderProv.fetchMyOrders(auth.token!);
-            } else {
-              orderProv.fetchGuestOrders();
-            }
-          },
-        )],
+    // First build and every login/logout: (re)load the matching list.
+    if (_loadedAsAuthenticated != isAuth) {
+      _loadedAsAuthenticated = isAuth;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
+
+    final all = isAuth ? orderProv.myOrders : orderProv.guestOrders;
+    final orders = all.where((o) => _filter.matches(o.orderStatus)).toList();
+    final hasMore = isAuth && orderProv.myOrdersHasMore;
+
+    if (isAuth &&
+        hasMore &&
+        orders.length < _minVisibleBeforeAutoLoad &&
+        !orderProv.isLoading &&
+        !orderProv.isLoadingMoreMyOrders &&
+        orderProv.loadMoreMyOrdersError == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadMore();
+      });
+    }
+
+    return DefaultTabController(
+      length: OrderStatusFilter.values.length,
+      initialIndex: _filter.index,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Đơn hàng của tôi'),
+          actions: [
+            IconButton(
+              tooltip: 'Tải lại đơn hàng',
+              icon: const Icon(Icons.refresh),
+              onPressed: orderProv.isLoading ? null : _load,
+            ),
+          ],
+          bottom: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            labelColor: context.palette.primaryText,
+            unselectedLabelColor: context.palette.textSecondary,
+            indicatorColor: context.palette.primary,
+            labelStyle: Theme.of(context).textTheme.labelLarge,
+            unselectedLabelStyle: Theme.of(context).textTheme.bodyLarge,
+            onTap: (index) => setState(() => _filter = OrderStatusFilter.values[index]),
+            tabs: [for (final f in OrderStatusFilter.values) Tab(text: f.label)],
+          ),
+        ),
+        body: RefreshIndicator(
+          onRefresh: _load,
+          child: _buildBody(context, orderProv, isAuth, all, orders, hasMore),
+        ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          if (auth.token != null) {
-            await orderProv.fetchMyOrders(auth.token!);
-          } else {
-            await orderProv.fetchGuestOrders();
-          }
-        },
-        child: orderProv.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : !auth.isAuthenticated && orderProv.guestOrdersError != null
-                ? Center(child: Text(orderProv.guestOrdersError!))
-                : orders.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.receipt_long_outlined, size: 70, color: Color(0xFFCBD5E1)),
-                        SizedBox(height: 16),
-                        Text('Bạn chưa có đơn hàng nào', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      ],
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-                    itemCount: orders.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+    );
+  }
 
-                    itemBuilder: (context, index) {
-                      final order = orders[index];
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '#${order.orderCode}',
-                                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, fontFamily: 'monospace'),
-                                ),
-                                _StatusBadge(status: order.orderStatus),
-                              ],
-                            ),
-                            const Divider(height: 20),
-                            Text(
-                              'Ngày đặt: ${Formatters.formatDate(order.createdAt)}',
-                              style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Sản phẩm: ${order.items.length} món',
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  Formatters.formatCurrency(order.total),
-                                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.primaryRed),
-                                ),
-                                OutlinedButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => OrderDetailScreen(order: order),
-                                      ),
-                                    );
-                                  },
-                                  style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(color: Color(0xFFCBD5E1)),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                  child: const Text('Xem chi tiết', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+  Widget _buildBody(
+    BuildContext context,
+    OrderProvider orderProv,
+    bool isAuth,
+    List<OrderModel> all,
+    List<OrderModel> orders,
+    bool hasMore,
+  ) {
+    if (orderProv.isLoading && all.isEmpty) {
+      return ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        itemCount: 4,
+        itemBuilder: (context, index) => const OrderItemSkeleton(),
+      );
+    }
+
+    final error = isAuth ? orderProv.myOrdersError : orderProv.guestOrdersError;
+    if (error != null && all.isEmpty) {
+      return _Scrollable(child: ErrorRetryWidget(message: error, onRetry: _load));
+    }
+
+    if (orders.isEmpty) {
+      if (hasMore || orderProv.isLoadingMoreMyOrders) {
+        return const _Scrollable(child: Center(child: CircularProgressIndicator()));
+      }
+      if (!isAuth && all.isEmpty) {
+        return _Scrollable(
+          child: EmptyStateWidget(
+            icon: Icons.receipt_long_outlined,
+            title: 'Chưa có đơn hàng trên thiết bị này',
+            message: 'Đăng nhập để xem toàn bộ đơn hàng đã đặt bằng tài khoản của bạn.',
+            buttonText: 'Đăng nhập ngay',
+            onButtonPressed: _openLogin,
+          ),
+        );
+      }
+      return _Scrollable(
+        child: EmptyStateWidget(
+          icon: Icons.receipt_long_outlined,
+          title: _filter == OrderStatusFilter.all
+              ? 'Bạn chưa có đơn hàng nào'
+              : 'Không có đơn hàng ${_filter.label.toLowerCase()}',
+          message: _filter == OrderStatusFilter.all
+              ? 'Khám phá sách và văn phòng phẩm tại Trường Thành Bookstore.'
+              : 'Các đơn hàng phù hợp sẽ hiển thị tại đây.',
+        ),
+      );
+    }
+
+    final footer = _buildFooter(context, orderProv, isAuth, hasMore, error);
+    return ListView.separated(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 96),
+      itemCount: orders.length + (footer == null ? 0 : 1),
+      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
+      itemBuilder: (context, index) {
+        if (index >= orders.length) return footer!;
+        final order = orders[index];
+        return _OrderCard(
+          order: order,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => OrderDetailScreen(order: order)),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget? _buildFooter(BuildContext context, OrderProvider orderProv, bool isAuth, bool hasMore, String? error) {
+    final text = Theme.of(context).textTheme;
+    if (!isAuth && error != null) {
+      return Text(error, textAlign: TextAlign.center, style: text.bodySmall);
+    }
+    if (!isAuth) return null;
+    if (orderProv.isLoadingMoreMyOrders) {
+      return const Padding(
+        padding: EdgeInsets.all(AppSpacing.lg),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    final loadMoreError = orderProv.loadMoreMyOrdersError ?? error;
+    if (loadMoreError != null) {
+      return Column(
+        children: [
+          Text(loadMoreError, textAlign: TextAlign.center, style: text.bodySmall),
+          TextButton(
+            onPressed: hasMore ? _loadMore : _load,
+            child: const Text('Thử lại'),
+          ),
+        ],
+      );
+    }
+    if (!hasMore) return null;
+    return Center(
+      child: TextButton(onPressed: _loadMore, child: const Text('Xem thêm đơn hàng')),
+    );
+  }
+}
+
+/// Cho phép kéo để tải lại cả khi màn đang trống / lỗi.
+class _Scrollable extends StatelessWidget {
+  final Widget child;
+
+  const _Scrollable({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
+        ),
       ),
     );
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  final String status;
+class _OrderCard extends StatelessWidget {
+  final OrderModel order;
+  final VoidCallback onTap;
 
-  const _StatusBadge({required this.status});
+  const _OrderCard({required this.order, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    Color bg = const Color(0xFFF1F5F9);
-    Color fg = const Color(0xFF475569);
-    String label = status;
+    final palette = context.palette;
+    final text = Theme.of(context).textTheme;
+    final first = order.items.isNotEmpty ? order.items.first : null;
+    final more = order.items.length - 1;
 
-    switch (status) {
-      case 'PENDING':
-        bg = const Color(0xFFFEF3C7);
-        fg = const Color(0xFF92400E);
-        label = 'Chờ xác nhận';
-        break;
-      case 'CONFIRMED':
-        bg = const Color(0xFFDBEAFE);
-        fg = const Color(0xFF1E40AF);
-        label = 'Đã xác nhận';
-        break;
-      case 'PROCESSING':
-        bg = const Color(0xFFFFEDD5);
-        fg = const Color(0xFF9A3412);
-        label = 'Đang đóng gói';
-        break;
-      case 'SHIPPING':
-        bg = const Color(0xFFF3E8FF);
-        fg = const Color(0xFF6B21A8);
-        label = 'Đang giao hàng';
-        break;
-      case 'DELIVERED':
-      case 'COMPLETED':
-        bg = const Color(0xFFDCFCE7);
-        fg = const Color(0xFF166534);
-        label = 'Hoàn thành';
-        break;
-      case 'RETURNED':
-        bg = const Color(0xFFFAE8FF);
-        fg = const Color(0xFF86198F);
-        label = 'Đã hoàn trả';
-        break;
-      case 'CANCELLED':
-        bg = const Color(0xFFFEE2E2);
-        fg = const Color(0xFF991B1B);
-        label = 'Đã hủy';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-      child: Text(label, style: TextStyle(color: fg, fontSize: 10, fontWeight: FontWeight.bold)),
+    return Material(
+      color: palette.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadii.card,
+        side: BorderSide(color: palette.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '#${order.orderCode}',
+                      style: text.titleSmall,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  OrderStatusBadge(
+                    label: OrderStatusMeta.orderLabel(order.orderStatus),
+                    tone: OrderStatusMeta.orderTone(palette, order.orderStatus),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text('Ngày đặt: ${Formatters.formatDate(order.createdAt)}', style: text.labelSmall),
+              if (first != null) ...[
+                const Divider(height: AppSpacing.xxl),
+                Row(
+                  children: [
+                    OrderItemThumbnail(imageUrl: first.image),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(first.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: text.labelMedium),
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            more > 0 ? 'x${first.quantity} · và $more sản phẩm khác' : 'x${first.quantity}',
+                            style: text.labelSmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const Divider(height: AppSpacing.xxl),
+              Text(
+                '${OrderStatusMeta.paymentMethodLabel(order.paymentMethod)} · '
+                '${OrderStatusMeta.paymentLabel(order.paymentStatus)}',
+                style: text.labelSmall,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: 'Tổng tiền: ', style: text.bodySmall),
+                        TextSpan(
+                          text: Formatters.formatCurrency(order.total),
+                          style: text.titleMedium?.copyWith(
+                            color: palette.primaryText,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ),
+                  Text('Xem chi tiết', style: text.labelMedium?.copyWith(color: palette.primaryText)),
+                  Icon(Icons.chevron_right_rounded, size: 18, color: palette.primaryText),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -14,6 +14,7 @@ import 'providers/order_provider.dart';
 import 'providers/wishlist_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/review_provider.dart';
+import 'providers/banner_provider.dart';
 import 'screens/main_navigation_screen.dart';
 import 'firebase_options.dart';
 import 'services/fcm_notification_service.dart';
@@ -59,11 +60,24 @@ class TruongThanhApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (ctx) => AuthProvider(apiClient: _api(ctx))),
         ChangeNotifierProvider(create: (ctx) => ProductProvider(apiClient: _api(ctx))),
-        ChangeNotifierProvider(create: (ctx) => CartProvider(apiClient: _api(ctx))),
-        ChangeNotifierProvider(create: (ctx) => OrderProvider(apiClient: _api(ctx))),
+        // Cart follows the session: sign-in / restored session syncs it with the account cart.
+        ChangeNotifierProxyProvider<AuthProvider, CartProvider>(
+          create: (ctx) => CartProvider(apiClient: _api(ctx)),
+          update: (_, auth, cart) => cart!..bindAuth(isAuthenticated: auth.isAuthenticated),
+        ),
+        // Per-user lists (orders, notifications) are dropped when the session ends.
+        ChangeNotifierProxyProvider<AuthProvider, OrderProvider>(
+          create: (ctx) => OrderProvider(apiClient: _api(ctx)),
+          update: (_, auth, orders) => orders!..bindAuth(isAuthenticated: auth.isAuthenticated),
+        ),
         ChangeNotifierProvider(create: (ctx) => WishlistProvider(apiClient: _api(ctx))),
-        ChangeNotifierProvider(create: (ctx) => NotificationProvider(apiClient: _api(ctx))),
+        ChangeNotifierProxyProvider<AuthProvider, NotificationProvider>(
+          create: (ctx) => NotificationProvider(apiClient: _api(ctx)),
+          update: (_, auth, notifications) =>
+              notifications!..bindAuth(isAuthenticated: auth.isAuthenticated),
+        ),
         ChangeNotifierProvider(create: (ctx) => ReviewProvider(apiClient: _api(ctx))),
+        ChangeNotifierProvider(create: (ctx) => BannerProvider(apiClient: _api(ctx))),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {

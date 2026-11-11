@@ -5,8 +5,9 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { TokenBlacklistService } from '../auth/token-blacklist.service';
 import { StaffPermission, UserRole } from '../../common/enums';
@@ -51,18 +52,52 @@ export class NotificationsGateway
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
     private readonly tokenBlacklistService: TokenBlacklistService,
+    @Optional() private readonly configService?: ConfigService,
   ) {}
 
   @WebSocketServer()
   server: Server;
 
-  private extractToken(client: Socket): string | undefined {
+  /**
+   * SEC-020: danh sách origin được phép — cùng nguồn với CORS HTTP trong main.ts
+   * (FRONTEND_URL qua ConfigService, mặc định http://localhost:5173).
+   */
+  private getAllowedOrigins(): string[] {
+    const configured =
+      this.configService?.get<string>('FRONTEND_URL') ??
+      process.env.FRONTEND_URL;
+    return (configured || 'http://localhost:5173')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
+  }
+
+  private isOriginAllowed(origin: string | undefined): boolean {
+    // Giống CORS HTTP: không có Origin (client ngoài trình duyệt) thì cho qua.
+    if (!origin) return true;
+    if (this.getAllowedOrigins().includes(origin)) return true;
+    const nodeEnv =
+      this.configService?.get<string>('NODE_ENV') ?? process.env.NODE_ENV;
+    return (
+      nodeEnv !== 'production' &&
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+    );
+  }
+
+  private extractToken(
+    client: Socket,
+  ): { token: string; fromCookie: boolean } | undefined {
     const authToken = client.handshake.auth?.token;
-    if (typeof authToken === 'string' && authToken) return authToken;
+    if (typeof authToken === 'string' && authToken) {
+      return { token: authToken, fromCookie: false };
+    }
 
     const authorization = client.handshake.headers.authorization;
     if (authorization?.startsWith('Bearer ')) {
-      return authorization.substring('Bearer '.length);
+      return {
+        token: authorization.substring('Bearer '.length),
+        fromCookie: false,
+      };
     }
 
     const cookieHeader = client.handshake.headers.cookie;
@@ -71,7 +106,12 @@ export class NotificationsGateway
       .map((part) => part.trim())
       .find((part) => part.startsWith('access_token='));
     return tokenCookie
-      ? decodeURIComponent(tokenCookie.substring('access_token='.length))
+      ? {
+          token: decodeURIComponent(
+            tokenCookie.substring('access_token='.length),
+          ),
+          fromCookie: true,
+        }
       : undefined;
   }
 
@@ -108,8 +148,20 @@ export class NotificationsGateway
 
   async handleConnection(client: Socket) {
     try {
-      const token = this.extractToken(client);
-      if (!token) throw new Error('Missing token');
+      const extracted = this.extractToken(client);
+      if (!extracted) throw new Error('Missing token');
+      const { token, fromCookie } = extracted;
+      // SEC-020: xác thực bằng cookie là ambient credential -> chống Cross-Site
+      // WebSocket Hijacking bằng cách kiểm tra Origin. Token tường minh
+      // (auth.token / Authorization, vd. mobile) không bị ảnh hưởng.
+      if (fromCookie) {
+        const origin = client.handshake.headers.origin;
+        if (
+          !this.isOriginAllowed(typeof origin === 'string' ? origin : undefined)
+        ) {
+          throw new Error('Origin not allowed');
+        }
+      }
       const user = await this.authenticate(token);
 
       const userId = user._id.toString();

@@ -367,3 +367,56 @@ export function optimizeCloudinaryUrl(
   }
   return url
 }
+
+// ─── Product image placeholder ───────────────────────────────────────────────
+
+export type ProductPlaceholderIcon =
+  | 'pencil'
+  | 'document'
+  | 'calculator'
+  | 'folder'
+  | 'briefcase'
+  | 'academic'
+  | 'tag'
+
+export interface ProductPlaceholder {
+  /** Tailwind gradient classes for the placeholder background. */
+  gradient: string
+  /** Icon key; templates draw the generic tag icon for 'tag' (their v-else branch). */
+  icon: ProductPlaceholderIcon
+}
+
+// Order matters: the first rule whose keyword appears in the lower-cased name wins.
+// Class strings are written out in full so Tailwind can detect them.
+const PRODUCT_PLACEHOLDER_RULES: ReadonlyArray<{ keywords: readonly string[]; placeholder: ProductPlaceholder }> = [
+  { keywords: ['bút', 'viết', 'chì'], placeholder: { gradient: 'bg-gradient-to-br from-red-400 to-rose-500', icon: 'pencil' } },
+  {
+    keywords: ['giấy', 'sổ', 'vở', 'tập', 'note'],
+    placeholder: { gradient: 'bg-gradient-to-br from-emerald-400 to-teal-500', icon: 'document' },
+  },
+  { keywords: ['máy tính', 'casio'], placeholder: { gradient: 'bg-gradient-to-br from-indigo-400 to-purple-500', icon: 'calculator' } },
+  {
+    keywords: ['hồ sơ', 'bìa', 'kẹp', 'keo', 'thước'],
+    placeholder: { gradient: 'bg-gradient-to-br from-blue-400 to-sky-500', icon: 'folder' },
+  },
+  { keywords: ['combo', 'văn phòng'], placeholder: { gradient: 'bg-gradient-to-br from-blue-500 to-indigo-600', icon: 'briefcase' } },
+  {
+    keywords: ['học sinh', 'tiểu học', 'bộ dụng cụ'],
+    placeholder: { gradient: 'bg-gradient-to-br from-amber-400 to-orange-500', icon: 'academic' },
+  },
+]
+
+const DEFAULT_PRODUCT_PLACEHOLDER: ProductPlaceholder = {
+  gradient: 'bg-gradient-to-br from-pink-400 to-rose-500',
+  icon: 'tag',
+}
+
+/**
+ * Gradient + icon shown when a product has no usable image, picked from keywords in its name.
+ * Always returns a fresh object so callers may not mutate the shared table.
+ */
+export function getProductPlaceholder(name?: string | null): ProductPlaceholder {
+  const lower = (name || '').toLowerCase()
+  const rule = PRODUCT_PLACEHOLDER_RULES.find((r) => r.keywords.some((k) => lower.includes(k)))
+  return { ...(rule ? rule.placeholder : DEFAULT_PRODUCT_PLACEHOLDER) }
+}

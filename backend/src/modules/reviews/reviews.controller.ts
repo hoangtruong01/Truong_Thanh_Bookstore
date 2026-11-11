@@ -101,6 +101,7 @@ export class ReviewsController {
       reviewId,
       req.user._id,
       req.user.role,
+      req.user.permissions || [],
     );
   }
 

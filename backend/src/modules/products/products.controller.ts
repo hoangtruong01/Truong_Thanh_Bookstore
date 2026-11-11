@@ -24,7 +24,11 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
-import { ProductsService } from './products.service';
+import {
+  ProductsService,
+  isStaffViewer,
+  stripPrivateProductFields,
+} from './products.service';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -34,6 +38,7 @@ import { SubscribeStockAlertDto } from './dto/stock-alert.dto';
 import { CreateReviewDto, UpdateReviewDto } from '../reviews/dto/review.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { StaffPermission } from '../../common/enums';
 
@@ -42,10 +47,25 @@ import { StaffPermission } from '../../common/enums';
 export class ProductsController {
   constructor(private productsService: ProductsService) {}
 
+  /**
+   * SEC-016: Các GET công khai dùng OptionalJwtAuthGuard để nhận diện nhân sự nội bộ.
+   * Khách / CUSTOMER chỉ thấy sản phẩm ACTIVE và không nhận giá sỉ / giá vốn.
+   */
+  private forViewer<T>(data: T, user?: { role?: string } | null): T {
+    return isStaffViewer(user) ? data : stripPrivateProductFields(data);
+  }
+
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get all products with filters and pagination' })
-  findAll(@Query() query: ProductQueryDto) {
-    return this.productsService.findAll(query);
+  async findAll(
+    @Query() query: ProductQueryDto,
+    @CurrentUser() user?: { role?: string } | null,
+  ) {
+    return this.forViewer(
+      await this.productsService.findAll(query, user),
+      user,
+    );
   }
 
   @Get('export/template')
@@ -113,67 +133,118 @@ export class ProductsController {
         'Chỉ chấp nhận file Excel định dạng .xlsx hoặc .xls',
       );
     }
-    return this.productsService.importFromExcel(file.buffer, userId);
+    return this.productsService.importFromExcel(
+      file.buffer,
+      userId,
+      file.originalname,
+    );
   }
 
   @Get('featured')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get featured products' })
-  getFeatured() {
-    return this.productsService.getFeatured();
+  async getFeatured(@CurrentUser() user?: { role?: string } | null) {
+    return this.forViewer(await this.productsService.getFeatured(), user);
   }
 
   @Get('best-selling')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get best selling products' })
-  getBestSelling(@Query('limit') limit?: number) {
-    return this.productsService.getBestSelling(limit);
+  async getBestSelling(
+    @Query('limit') limit?: number,
+    @CurrentUser() user?: { role?: string } | null,
+  ) {
+    return this.forViewer(
+      await this.productsService.getBestSelling(limit),
+      user,
+    );
   }
 
   @Get('discounted')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get discounted products' })
-  getDiscounted(@Query('limit') limit?: number) {
-    return this.productsService.getDiscounted(limit);
+  async getDiscounted(
+    @Query('limit') limit?: number,
+    @CurrentUser() user?: { role?: string } | null,
+  ) {
+    return this.forViewer(
+      await this.productsService.getDiscounted(limit),
+      user,
+    );
   }
 
   @Get('new')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get newest products' })
-  getNew(@Query('limit') limit?: number) {
-    return this.productsService.getNew(limit);
+  async getNew(
+    @Query('limit') limit?: number,
+    @CurrentUser() user?: { role?: string } | null,
+  ) {
+    return this.forViewer(await this.productsService.getNew(limit), user);
   }
 
   @Get('search')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Search products' })
-  search(@Query('q') q: string) {
-    return this.productsService.search(q || '');
+  async search(
+    @Query('q') q: string,
+    @CurrentUser() user?: { role?: string } | null,
+  ) {
+    return this.forViewer(await this.productsService.search(q || ''), user);
   }
 
   @Get('suggestions')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({
     summary:
       'Get search autocomplete suggestions (keywords, categories, products)',
   })
-  getSuggestions(@Query('q') q?: string, @Query('limit') limit?: number) {
-    return this.productsService.getSuggestions(
-      q || '',
-      limit ? Number(limit) : 6,
+  async getSuggestions(
+    @Query('q') q?: string,
+    @Query('limit') limit?: number,
+    @CurrentUser() user?: { role?: string } | null,
+  ) {
+    return this.forViewer(
+      await this.productsService.getSuggestions(q || '', limit),
+      user,
     );
   }
 
   @Get('slug/:slug')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get product detail by SEO slug' })
-  findBySlug(@Param('slug') slug: string) {
-    return this.productsService.findBySlug(slug);
+  async findBySlug(
+    @Param('slug') slug: string,
+    @CurrentUser() user?: { role?: string } | null,
+  ) {
+    return this.forViewer(await this.productsService.findBySlug(slug), user);
   }
 
   @Get(':id/related')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get related / similar products' })
-  getRelated(@Param('id') id: string, @Query('limit') limit?: number) {
-    return this.productsService.getRelated(id, limit ? Number(limit) : 8);
+  async getRelated(
+    @Param('id') id: string,
+    @Query('limit') limit?: number,
+    @CurrentUser() user?: { role?: string } | null,
+  ) {
+    return this.forViewer(
+      await this.productsService.getRelated(id, limit),
+      user,
+    );
   }
 
   @Get(':id')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get product by ID or Slug' })
-  findById(@Param('id') id: string) {
-    return this.productsService.findById(id);
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser() user?: { role?: string } | null,
+  ) {
+    return this.forViewer(
+      await this.productsService.findByIdForViewer(id, user),
+      user,
+    );
   }
 
   @Post()

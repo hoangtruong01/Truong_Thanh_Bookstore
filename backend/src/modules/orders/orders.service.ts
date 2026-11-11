@@ -39,6 +39,7 @@ import { EmailService } from '../email/email.service';
 import { UsersService } from '../users/users.service';
 import { CartService } from '../cart/cart.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { toCustomerOrderView } from './services/checkout.service';
 import {
   CheckoutService,
   OrderLifecycleService,
@@ -282,7 +283,8 @@ export class OrdersService {
         'Bạn không có quyền xem thông tin đơn hàng này',
       );
     }
-    return order;
+    // SEC-004: chủ đơn (customer) không được thấy giá vốn/biên lợi nhuận.
+    return toCustomerOrderView<OrderDocument>(order);
   }
 
   async findGuestById(
@@ -307,8 +309,8 @@ export class OrdersService {
     ) {
       throw new ForbiddenException('Mã truy cập đơn hàng không hợp lệ');
     }
-    order.guestAccessTokenHash = undefined;
-    return order;
+    // SEC-004/SEC-032: khách vãng lai không được thấy hash nội bộ & giá vốn.
+    return toCustomerOrderView<OrderDocument>(order);
   }
 
   async findByUser(
@@ -329,7 +331,13 @@ export class OrdersService {
       this.orderModel.countDocuments(filter).exec(),
     ]);
 
-    return paginate(data, total, page, limit);
+    // SEC-004: danh sách "đơn của tôi" không chứa giá vốn/biên lợi nhuận.
+    return paginate(
+      data.map((order) => toCustomerOrderView<OrderDocument>(order)),
+      total,
+      page,
+      limit,
+    );
   }
 
   // --- Delegation to OrderLifecycleService ---
@@ -367,7 +375,29 @@ export class OrdersService {
     actor: { _id: string; role?: string; permissions?: string[] },
     reasonOrDto?: string | CancelOrderDto,
   ): Promise<OrderDocument> {
-    return this.orderLifecycleService.cancelForActor(id, actor, reasonOrDto);
+    const order = await this.orderLifecycleService.cancelForActor(
+      id,
+      actor,
+      reasonOrDto,
+    );
+    // SEC-004: người hủy là khách hàng thì không được thấy giá vốn/biên.
+    return this.isCostViewer(actor)
+      ? order
+      : toCustomerOrderView<OrderDocument>(order);
+  }
+
+  /** Admin/staff có quyền quản lý đơn được xem giá vốn; actor khác chỉ thấy bản khách. */
+  private isCostViewer(actor?: {
+    role?: string;
+    permissions?: string[];
+  }): boolean {
+    const role = (actor?.role || '').toUpperCase();
+    return (
+      role === 'SUPER_ADMIN' ||
+      role === 'ADMIN' ||
+      (role === 'STAFF' &&
+        Boolean(actor?.permissions?.includes(StaffPermission.MANAGE_ORDERS)))
+    );
   }
 
   async cancelGuest(
@@ -375,19 +405,29 @@ export class OrdersService {
     guestAccessToken?: string,
     reasonOrDto?: string | CancelOrderDto,
   ): Promise<OrderDocument> {
-    return this.orderLifecycleService.cancelGuest(
+    const order = await this.orderLifecycleService.cancelGuest(
       id,
       guestAccessToken,
       reasonOrDto,
     );
+    // SEC-004/SEC-032: khách vãng lai không được thấy giá vốn/hash nội bộ.
+    return toCustomerOrderView<OrderDocument>(order);
   }
 
   async requestReturn(
     id: string,
-    actor: { _id: string; role?: string },
+    actor: { _id: string; role?: string; permissions?: string[] },
     dto: { reason: string },
   ): Promise<OrderDocument> {
-    return this.orderLifecycleService.requestReturn(id, actor, dto);
+    const order = await this.orderLifecycleService.requestReturn(
+      id,
+      actor,
+      dto,
+    );
+    // SEC-004: người gửi yêu cầu hoàn trả là khách hàng, ẩn giá vốn/biên.
+    return this.isCostViewer(actor)
+      ? order
+      : toCustomerOrderView<OrderDocument>(order);
   }
 
   async approveReturn(
@@ -789,6 +829,12 @@ export class OrdersService {
 
   async generateInvoicePdf(order: any): Promise<any> {
     const doc = new PDFDocument({ margin: 50 });
+    // ADMOPS-B1: không để lỗi stream PDF thành unhandled 'error' (làm chết process)
+    doc.on('error', (err: Error) =>
+      this.logger.error(
+        `Invoice PDF stream error for #${order?.orderCode}: ${err?.message}`,
+      ),
+    );
     const winFont = 'C:\\Windows\\Fonts\\Arial.ttf';
     let fontName = 'Helvetica';
     if (fs.existsSync(winFont)) {

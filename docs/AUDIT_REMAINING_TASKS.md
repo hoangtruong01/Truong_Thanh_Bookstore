@@ -1,25 +1,42 @@
 # Việc còn lại sau audit — Trường Thành Bookstore
 
-> **Cập nhật:** 03/11/2026 · **Nguồn:** `PROJECT_AUDIT_AND_OPTIMIZATION.md` (audit 03/11/2026) + kiểm thử production cùng ngày
-> **Nhánh làm việc:** `refactor/web-mobile-sync` (chưa commit, chưa deploy)
+> **Cập nhật:** 10/11/2026 · **Nguồn:** `PROJECT_AUDIT_AND_OPTIMIZATION.md` (audit 03/11/2026) + kiểm thử production 03/11 và 10/11
+> **Code:** đã merge vào `main` (PR #58, #59 — commit `d8e6dfa`, CI xanh) · **Production: CHƯA deploy được**
 > Mã `TASK-xxx`, `BUG-xxx`, `FEAT-xxx` giữ nguyên theo tài liệu audit.
 
 ---
 
-## 1. Tình trạng hiện tại (đã kiểm chứng trên production 03/11)
+## 0. Làm gì tiếp — theo thứ tự (chốt 22h45 ngày 10/11)
+
+**Vì sao chưa xong hôm nay:** các bản sửa bảo mật đã nằm trên `main` nhưng backend production không deploy được (lỗi cấu hình Render — chỉ chủ dự án xem được log). Các việc lập trình còn lại hoặc cần quyết định nghiệp vụ, hoặc nằm trong file mà 5 phiên AI khác đang sửa dở cùng lúc, nên không làm tiếp để tránh ghi đè.
+
+| Bước | Việc | Ai | Mất bao lâu | Xong khi |
+|---|---|---|---|---|
+| 1 | Đổi mật khẩu 4 tài khoản `superadmin@ / admin@ / staff@ / customer@truongthanh.vn` (≥16 ký tự) | Chủ dự án | 5 phút | Mật khẩu `Admin@123456` không đăng nhập được nữa |
+| 2 | Render → service backend → **Logs** của lần deploy lỗi gần nhất → tìm dòng `Error:` lúc khởi động. Sửa biến môi trường tương ứng (bảng mục 3, việc #2) → **Manual Deploy** | Chủ dự án | 15–30 phút | `https://truong-thanh-bookstore.onrender.com/api/health` trả `release` khác `2bc840b…` |
+| 3 | Báo AI kiểm tra lại production: khách gọi `/api/documents` phải nhận 403; mật khẩu cũ bị từ chối | AI | 5 phút | Cả hai đạt |
+| 4 | Thu hồi GitLab token trong git remote `gitlab` trên máy dev, đặt lại remote không kèm token | Chủ dự án | 5 phút | Token cũ bị revoke |
+| 5 | Commit các thay đổi đang dở của các phiên AI khác (mỗi phiên tự commit file của mình), rồi chạy lại full test | Các phiên AI | — | `npm test` backend/frontend xanh |
+| 6 | Trả lời 6 câu quyết định ở mục 4 (số kho, combo, định nghĩa doanh thu, mockup nhân viên, Cloudinary, staging) | Chủ cửa hàng | — | Có câu trả lời → AI làm tiếp mục 5 |
+
+**Nếu bước 2 khó:** gửi AI đoạn log lỗi của Render (xóa mọi giá trị bí mật trước khi gửi), AI sẽ chỉ đúng biến cần sửa.
+
+---
+
+## 1. Tình trạng hiện tại (kiểm chứng lại trên production 10/11)
 
 | Hạng mục | Kết quả |
 |---|---|
-| Backend production | Vẫn chạy commit cũ `2bc840b`. CD Deploy fail ở cả 4 commit sau đó (bước smoke test backend) |
-| BUG-002 `/documents` | **Còn mở trên production:** tài khoản khách gọi `GET /api/documents` nhận 200. Hiện 0 chứng từ nên chưa lộ dữ liệu |
-| BUG-003 mật khẩu mặc định | **Còn mở:** `admin@truongthanh.vn` đăng nhập được bằng mật khẩu công khai trong repo |
+| Backend production | Vẫn chạy commit cũ `2bc840b`. CD Deploy fail ở mọi commit sau đó, gần nhất `d8e6dfa` (bước smoke test backend) |
+| BUG-002 `/documents` | **Vẫn mở (10/11):** tài khoản khách gọi `GET /api/documents` nhận 200. Ngày 03/11 có 0 chứng từ nên chưa lộ dữ liệu |
+| BUG-003 mật khẩu mặc định | **Vẫn mở (10/11):** `admin@truongthanh.vn` vẫn đăng nhập được bằng mật khẩu công khai trong repo |
 | Dấu hiệu bị xâm nhập | Chưa thấy: chỉ 5 tài khoản (đều do seed tạo 10/09), không có admin lạ, 0 chứng từ |
 | Đơn hàng thật | 0 (chỉ 3 đơn mẫu) — khớp với việc Checkout đang crash |
 | Tài khoản kiểm thử đã tạo | `qa-audit-20261103@example.com` (CUSTOMER) — xóa khi không cần nữa |
 
 ---
 
-## 2. ✅ Đã làm trong code (chờ commit + deploy)
+## 2. ✅ Đã làm trong code (đã merge `main`, chờ deploy)
 
 | Mã | Nội dung | Test |
 |---|---|---|
@@ -28,8 +45,9 @@
 | TASK-006 | Seed demo / `--reset` chỉ chạy trên DB local hoặc DB có tên chứa từ `staging`/`e2e`/`demo`/`test` (so theo từ, DB tên đúng `test` bị từ chối). Mật khẩu mặc định chỉ cho DB local. Không in mật khẩu. `AUTO_SEED` trên DB thật ⇒ ghi log và bỏ qua, không crash app | `seed-safety.spec.ts`, `seed.service.spec.ts` |
 | TASK-004 (một phần) | CD: frontend chỉ deploy khi backend pass smoke test; smoke test chấp nhận commit mới nhất hoặc commit gần nhất có đổi `backend/` | `scripts/smoke-test.test.mjs` |
 | BUG-012 | Báo cáo doanh thu lọc kênh WEB/MOBILE ra số liệu riêng (sửa trong `reports/`) | `reports.service.spec.ts` |
-| BUG-011 | _Đang hoàn thiện_ — xem mục 6 | |
-| FEAT-001 (backend) | _Đang hoàn thiện_ — xem mục 6 | |
+| BUG-011 | Giới hạn tần suất theo IP thật sau proxy: `TRUST_PROXY` (mặc định 1 trên Render, cấm `true` vì client tự giả được IP); log dùng `req.ip` thay header `x-forwarded-for` | `trust-proxy.spec.ts`, `env.validation.spec.ts` |
+| FEAT-001 (backend) | Gia cố API nhân viên: ghi nhật ký khi đổi quyền/tạo/xóa tài khoản, cấm tự đổi quyền của chính mình, giới hạn tần suất cho đổi quyền/xóa, mật khẩu tối đa 72 ký tự, sửa lỗi `status: "false"` bị hiểu thành `true` | `users.service.spec.ts`, `user.dto.spec.ts` |
+| UX-01 (một phần TASK-010) | Trang lỗi (`ErrorBoundary`) không còn hiện chuỗi lỗi kỹ thuật cho khách (chỉ hiện khi chạy dev) và có link gọi hotline để khách vẫn đặt được hàng. **Chưa commit** (làm 10/11). Còn lại của TASK-010: Sentry, widget dashboard có trạng thái lỗi riêng | `ErrorBoundary.spec.ts` |
 | BUG-020 | Không gạch giá khi `discountPrice == price` ở `ProductCard` | `ProductCardPrice.spec.ts` |
 | BUG-023 | Sửa chính tả "Trường Thanh" → "Trường Thành" (`ProductDetail.vue`) | — |
 | BUG-024 | Bổ sung 9 tiêu đề tab trang Admin | — |
@@ -108,18 +126,12 @@
 
 ---
 
-## 6. Đợt sửa đang hoàn thiện
+## 6. Kiểm tra lại sau khi merge (10/11)
 
-⚠️ **Bị dừng giữa chừng (hết token) — code đã có trong working tree nhưng CHƯA rà soát, CHƯA chạy full test. Phải kiểm tra trước khi commit.**
-
-| Việc | File đã bị sửa | Cần làm tiếp |
-|---|---|---|
-| BUG-011 trust proxy (`TRUST_PROXY`, mặc định 1 trên Render, cấm `true`; log dùng `req.ip` thay header `x-forwarded-for`) | `backend/src/main.ts`, `config/env.validation.ts` (+spec), `config/trust-proxy.ts` (+spec, mới), `.env.example`, `common/interceptors/logging.interceptor.ts`, `common/filters/http-exception.filter.ts` (+spec) | Đọc diff, chạy `npx jest src/config src/common`, sửa nếu đỏ |
-| Gia cố API nhân viên (ghi nhật ký khi đổi quyền/tạo/xóa user, `@Throttle` cho permissions/delete, `@MaxLength(72)` mật khẩu, kiểm tra ép kiểu `status: "false"`) | `backend/src/modules/users/{users.service.ts,users.controller.ts,dto/user.dto.ts,dto/user.dto.spec.ts}`, `common/audit/security-audit.service.ts` | Đọc diff, chạy `npx jest src/modules/users src/common/audit src/common/guards` |
-
-Sau đó chạy đủ bộ kiểm tra AGENTS.md: backend `npm test`, `npm run lint`, `npm run build`; frontend `npm run test:unit`, `typecheck`, `lint`, `build`. Phiên refactor web↔mobile cũng dừng dở (xem `docs/WEB_MOBILE_SYNC_PLAN.md`), nên test đỏ ở `orders/cart/promotions/auth`, `pages/customer`, `mobile` là phần dở của phiên đó.
-
-Lần kiểm tra full gần nhất (trước đợt này): backend 913/913 test, lint 0 lỗi, build OK; frontend 124/124 test, typecheck/lint/build sạch.
+- BUG-011 và gia cố API nhân viên (bị ngắt giữa chừng hôm 03/11) đã được đọc lại code và chạy test: **24/24 suite, 329/329 test PASS** cho `common`, `config`, `seeds`, `users`, `reports`; smoke test script 7/7.
+- CI GitHub trên `main` (`d8e6dfa`): lint, test, build **xanh**.
+- Working tree hiện có thay đổi chưa commit của các phiên khác (`orders/`, `landing-pages/`, `reviews/`…), làm 1 test `sales-return.spec.ts` và 1 lỗi prettier đỏ cục bộ. Đó là phần đang dở của phiên khác, không phải code đã merge.
+- `route-coverage.spec.ts` nạp mọi controller, nên có thể đỏ tạm khi một controller đang được sửa dở; chạy lại khi file đó xong.
 
 ---
 

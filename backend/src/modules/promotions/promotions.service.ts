@@ -13,10 +13,17 @@ import {
   PromotionUsage,
   PromotionUsageDocument,
 } from './schemas/promotion.schema';
-import { CreatePromotionDto, ApplyPromotionDto } from './dto/promotion.dto';
+import {
+  CreatePromotionDto,
+  ApplyPromotionDto,
+  UpdatePromotionDto,
+} from './dto/promotion.dto';
 import { DiscountType, OrderStatus } from '../../common/enums';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
 import { NotificationsService } from '../notifications/notifications.service';
+
+const PROMOTION_NOT_FOUND = 'Không tìm thấy chương trình khuyến mãi';
+const PROMOTION_USAGE_LIMIT_REACHED = 'Mã khuyến mãi đã hết lượt sử dụng';
 
 @Injectable()
 export class PromotionsService {
@@ -49,7 +56,38 @@ export class PromotionsService {
       : undefined;
   }
 
+  /**
+   * Ràng buộc chéo giữa các trường (không diễn đạt được bằng decorator đơn lẻ):
+   * - PERCENT: giá trị ≤ 100
+   * - Ngày kết thúc phải sau ngày bắt đầu
+   */
+  private assertPromotionRules(data: {
+    discountType?: DiscountType;
+    discountValue?: number;
+    startDate?: string | Date;
+    endDate?: string | Date;
+  }): void {
+    if (
+      data.discountType === DiscountType.PERCENT &&
+      data.discountValue !== undefined &&
+      data.discountValue !== null &&
+      Number(data.discountValue) > 100
+    ) {
+      throw new BadRequestException(
+        'Giảm theo phần trăm không được vượt quá 100%',
+      );
+    }
+    if (data.startDate && data.endDate) {
+      const start = new Date(data.startDate).getTime();
+      const end = new Date(data.endDate).getTime();
+      if (!Number.isNaN(start) && !Number.isNaN(end) && end <= start) {
+        throw new BadRequestException('Ngày kết thúc phải sau ngày bắt đầu');
+      }
+    }
+  }
+
   async create(dto: CreatePromotionDto): Promise<PromotionDocument> {
+    this.assertPromotionRules(dto);
     const promotion = new this.promotionModel(dto);
     const savedPromo = await promotion.save();
 
@@ -87,21 +125,29 @@ export class PromotionsService {
 
   async findById(id: string): Promise<PromotionDocument> {
     const promo = await this.promotionModel.findById(id).exec();
-    if (!promo) throw new NotFoundException('Promotion not found');
+    if (!promo) throw new NotFoundException(PROMOTION_NOT_FOUND);
     return promo;
   }
 
   async update(
     id: string,
-    dto: Partial<CreatePromotionDto>,
+    dto: UpdatePromotionDto,
   ): Promise<PromotionDocument> {
     const oldPromo = await this.promotionModel.findById(id).exec();
-    if (!oldPromo) throw new NotFoundException('Promotion not found');
+    if (!oldPromo) throw new NotFoundException(PROMOTION_NOT_FOUND);
+
+    // Kiểm tra trên dữ liệu sau khi gộp để PATCH từng phần cũng không vượt luật
+    this.assertPromotionRules({
+      discountType: dto.discountType ?? oldPromo.discountType,
+      discountValue: dto.discountValue ?? oldPromo.discountValue,
+      startDate: dto.startDate ?? oldPromo.startDate,
+      endDate: dto.endDate ?? oldPromo.endDate,
+    });
 
     const promo = await this.promotionModel
       .findByIdAndUpdate(id, dto, { returnDocument: 'after' })
       .exec();
-    if (!promo) throw new NotFoundException('Promotion not found');
+    if (!promo) throw new NotFoundException(PROMOTION_NOT_FOUND);
 
     // Trigger notification if promotion was disabled and is now enabled
     if (promo.status && !oldPromo.status) {
@@ -120,7 +166,7 @@ export class PromotionsService {
 
   async delete(id: string): Promise<void> {
     const result = await this.promotionModel.findByIdAndDelete(id).exec();
-    if (!result) throw new NotFoundException('Promotion not found');
+    if (!result) throw new NotFoundException(PROMOTION_NOT_FOUND);
   }
 
   async apply(
@@ -138,20 +184,27 @@ export class PromotionsService {
     if (session) promoQuery.session(session);
     let promo = await promoQuery.exec();
 
-    if (!promo) throw new NotFoundException('Promotion code not found');
+    if (!promo) {
+      throw new NotFoundException(
+        'Mã khuyến mãi không tồn tại hoặc đã ngừng áp dụng',
+      );
+    }
 
     const now = new Date();
-    if (now < promo.startDate || now > promo.endDate) {
-      throw new BadRequestException('Promotion has expired');
+    if (now < promo.startDate) {
+      throw new BadRequestException('Mã khuyến mãi chưa đến thời gian áp dụng');
+    }
+    if (now > promo.endDate) {
+      throw new BadRequestException('Mã khuyến mãi đã hết hạn');
     }
 
     if (promo.usedCount >= promo.usageLimit) {
-      throw new BadRequestException('Promotion usage limit reached');
+      throw new BadRequestException(PROMOTION_USAGE_LIMIT_REACHED);
     }
 
     if (dto.orderTotal < promo.minOrderValue) {
       throw new BadRequestException(
-        `Order total must be at least ${promo.minOrderValue.toLocaleString('vi-VN')}đ`,
+        `Đơn hàng cần tối thiểu ${promo.minOrderValue.toLocaleString('vi-VN')}đ để áp dụng mã này`,
       );
     }
 
@@ -203,6 +256,11 @@ export class PromotionsService {
     } else {
       discount = promo.discountValue;
     }
+    // Không bao giờ giảm âm hoặc giảm vượt giá trị đơn (kể cả dữ liệu cũ sai luật)
+    discount = Math.min(
+      Math.max(0, discount || 0),
+      Math.max(0, dto.orderTotal),
+    );
 
     if (incrementUsage) {
       const consumed = await this.promotionModel
@@ -217,7 +275,7 @@ export class PromotionsService {
         )
         .exec();
       if (!consumed) {
-        throw new BadRequestException('Promotion usage limit reached');
+        throw new BadRequestException(PROMOTION_USAGE_LIMIT_REACHED);
       }
       promo = consumed;
 

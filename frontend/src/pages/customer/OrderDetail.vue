@@ -187,7 +187,9 @@
             <img 
               :src="`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(trackingUrl)}`" 
               class="w-20 h-20 bg-white border border-slate-200 rounded-xl p-1 flex-shrink-0"
-              alt="Order QR Code" 
+              alt="Order QR Code"
+              loading="lazy"
+              decoding="async"
             />
             <div class="space-y-1">
               <h5 class="text-xs font-black text-slate-800 uppercase">Mã QR đơn hàng</h5>
@@ -243,7 +245,7 @@
           <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider">Danh sách sản phẩm ({{ order.items.length }})</h4>
           <div class="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100">
             <div v-for="item in order.items" :key="item.product" class="p-4 flex items-center gap-4 hover:bg-slate-50/50">
-              <img :src="item.image || 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400'" class="w-14 h-14 object-cover rounded-xl border border-slate-100 bg-white" />
+              <img :src="item.image || 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400'" loading="lazy" decoding="async" class="w-14 h-14 object-cover rounded-xl border border-slate-100 bg-white" />
               <div class="flex-grow min-w-0">
                 <h5 class="text-xs font-bold text-slate-800 truncate">{{ item.name }}</h5>
                 <p class="text-[11px] text-slate-400 mt-0.5">{{ formatCurrency(item.price) }} × {{ item.quantity }}</p>
