@@ -47,6 +47,7 @@ const AdminReviews = () => import('@/pages/admin/Reviews.vue');
 const AdminWarehouses = () => import('@/pages/admin/Warehouses.vue');
 const AdminDocuments = () => import('@/pages/admin/Documents.vue');
 const AdminQuotations = () => import('@/pages/admin/SupplierQuotations.vue');
+const AdminUsers = () => import('@/pages/admin/Users.vue');
 
 // 404 Page (UX-04)
 const NotFound = () => import('@/pages/NotFound.vue');
@@ -108,6 +109,7 @@ const routes = [
       { path: 'reports', name: 'AdminReports', component: AdminReports, meta: { permission: 'VIEW_REPORTS' } },
       { path: 'landing-pages', name: 'AdminLandingPages', component: AdminLandingPages, meta: { permission: 'MANAGE_LANDING_PAGES' } },
       { path: 'banners', name: 'AdminBanners', component: AdminBanners, meta: { permission: 'MANAGE_BANNERS' } },
+      { path: 'users', name: 'AdminUsers', component: AdminUsers, meta: { requiresSuperAdminOrAdmin: true } },
     ],
   },
   // UX-04: Proper 404 page instead of silent redirect
@@ -144,6 +146,12 @@ router.beforeEach(async (to, _from, next) => {
       next({ name: 'Login', query: { redirect: to.fullPath } });
     } else {
       const user = authStore.user;
+      if (to.matched.some((record) => record.meta.requiresSuperAdminOrAdmin)) {
+        if (!authStore.isAdmin) {
+          next({ name: 'AdminDashboard' });
+          return;
+        }
+      }
       if (user && user.role === 'STAFF') {
         const requiredPermission = to.meta.permission as string | undefined;
         if (requiredPermission && !(user.permissions || []).includes(requiredPermission)) {
@@ -204,6 +212,7 @@ router.afterEach((to, from) => {
     AdminCombos: 'Quản Lý Combo — Trường Thành Admin',
     AdminLandingPages: 'Landing Page — Trường Thành Admin',
     AdminBanners: 'Banner & Popup — Trường Thành Admin',
+    AdminUsers: 'Quản Lý Nhân Viên & Phân Quyền — Trường Thành Admin',
     DealHot: 'Deal Sốc Giờ Vàng — Trường Thành Stationery',
     Info: 'Thông Tin & Chính Sách — Trường Thành Stationery',
     LandingPageDetail: 'Trường Thành Stationery',

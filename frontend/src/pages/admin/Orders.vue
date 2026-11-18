@@ -21,13 +21,18 @@
       <div class="xl:col-span-2">
         <DataTable
           :columns="columns"
-          :items="filteredOrders"
+          :items="orders"
           :loading="loading"
+          :pagination="true"
+          :current-page="currentPage"
+          :total-items="totalOrders"
+          :page-size="pageSize"
           clickable
           :selected-row-key="selectedOrder?._id"
           empty-text="Chưa có đơn hàng nào."
           empty-subtext="Không tìm thấy đơn hàng nào phù hợp với bộ lọc hiện tại."
           @row-click="selectOrder"
+          @page-change="onPageChange"
         >
           <!-- Order Code -->
           <template #cell(orderCode)="{ row }">
@@ -82,7 +87,19 @@
 
       <!-- Order Detail / Edit Panel -->
       <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
-        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-3">Chi tiết đơn hàng</h3>
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Chi tiết đơn hàng</h3>
+          <button
+            v-if="selectedOrder"
+            type="button"
+            :disabled="downloadingInvoice"
+            class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            @click="downloadInvoice(selectedOrder._id, selectedOrder.orderCode)"
+          >
+            <span>📄</span>
+            <span>{{ downloadingInvoice ? 'Đang tải...' : 'Tải hóa đơn PDF' }}</span>
+          </button>
+        </div>
 
         <div v-if="!selectedOrder" class="text-center py-12 text-slate-400 text-xs font-bold uppercase tracking-wider">
           Chọn một đơn hàng để xem chi tiết và cập nhật trạng thái.
@@ -223,35 +240,49 @@
 
           <!-- Status Update Action -->
           <div class="border-t border-slate-100 pt-4 space-y-3">
-            <label class="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">Cập nhật trạng thái</label>
-            <div class="flex gap-2">
-              <select
-                v-model="newStatus"
-                class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
-              >
-                <option value="PENDING">Chờ xác nhận</option>
-                <option value="CONFIRMED">Đã xác nhận</option>
-                <option value="PROCESSING">Đang đóng gói</option>
-                <option value="SHIPPING">Đang giao hàng</option>
-                <option value="DELIVERED">Đã giao thành công</option>
-                <option value="RETURN_REQUESTED">Yêu cầu trả hàng</option>
-                <option value="RETURN_APPROVED">Đã duyệt trả hàng</option>
-                <option value="RETURNED">Đã nhận hoàn trả & hoàn kho</option>
-                <option value="COMPLETED">Hoàn thành đơn</option>
-                <option value="CANCELLED">Hủy đơn hàng</option>
-              </select>
-              <button
-                type="button"
-                :disabled="updatingStatus || newStatus === selectedOrder.orderStatus"
-                class="bg-[#dc2626] hover:bg-red-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-                @click="updateStatus"
-              >
-                <svg v-if="updatingStatus" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>{{ updatingStatus ? 'Đang lưu...' : 'Lưu' }}</span>
-              </button>
+            <div class="flex items-center justify-between">
+              <label class="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">Cập nhật trạng thái</label>
+              <span v-if="selectedOrder.shippingProvider === 'GHN' && selectedOrder.trackingCode" class="text-[10px] text-amber-600 font-semibold">
+                Đồng bộ tự động qua GHN
+              </span>
+            </div>
+
+            <div v-if="availableStatuses.length > 1" class="space-y-2">
+              <div class="flex gap-2">
+                <select
+                  v-model="newStatus"
+                  class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#dc2626]"
+                >
+                  <option v-for="st in availableStatuses" :key="st.value" :value="st.value">
+                    {{ st.label }}
+                  </option>
+                </select>
+                <button
+                  type="button"
+                  :disabled="updatingStatus || newStatus === selectedOrder.orderStatus"
+                  class="bg-[#dc2626] hover:bg-red-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  @click="updateStatus"
+                >
+                  <svg v-if="updatingStatus" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>{{ updatingStatus ? 'Đang lưu...' : 'Lưu' }}</span>
+                </button>
+              </div>
+
+              <div v-if="newStatus === 'CANCELLED' && selectedOrder.orderStatus !== 'CANCELLED'" class="space-y-1">
+                <label class="text-[10px] font-bold text-rose-700 uppercase">Lý do hủy đơn *</label>
+                <input
+                  v-model="cancelReason"
+                  type="text"
+                  placeholder="Nhập lý do hủy đơn (bắt buộc)..."
+                  class="w-full bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                />
+              </div>
+            </div>
+            <div v-else class="text-[11px] text-slate-400 italic bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              Đơn hàng đang ở trạng thái cuối ({{ getStatusLabel(selectedOrder.orderStatus) }}), không thể chuyển đổi trạng thái thêm.
             </div>
           </div>
         </div>
@@ -312,7 +343,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { orderService } from '@/services/order.service'
 import { formatCurrency, formatDate, getStatusLabel } from '@/utils/helpers'
@@ -332,7 +363,12 @@ const updatingStatus = ref(false)
 const orderQuery = ref('')
 const showRejectReturnModal = ref(false)
 const rejectReturnReason = ref('')
+const cancelReason = ref('')
+const downloadingInvoice = ref(false)
 
+const currentPage = ref(1)
+const pageSize = ref(10)
+const totalOrders = ref(0)
 const currentTab = ref('ALL')
 
 const tabs: FilterTab[] = [
@@ -358,15 +394,67 @@ const columns: TableColumn[] = [
   { key: 'actions', label: 'HÀNH ĐỘNG', align: 'right' },
 ]
 
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Chờ xác nhận',
+  CONFIRMED: 'Đã xác nhận',
+  PROCESSING: 'Đang đóng gói',
+  SHIPPING: 'Đang giao hàng',
+  DELIVERED: 'Đã giao thành công',
+  RETURN_REQUESTED: 'Yêu cầu trả hàng',
+  RETURN_APPROVED: 'Đã duyệt trả hàng',
+  RETURNED: 'Đã nhận hoàn trả & hoàn kho',
+  COMPLETED: 'Hoàn thành đơn',
+  CANCELLED: 'Hủy đơn hàng',
+}
+
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  PENDING: ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED: ['PROCESSING', 'CANCELLED'],
+  PROCESSING: ['SHIPPING', 'CANCELLED'],
+  SHIPPING: ['DELIVERED', 'RETURNED'],
+  DELIVERED: ['COMPLETED', 'RETURN_REQUESTED', 'RETURNED'],
+  RETURN_REQUESTED: ['RETURN_APPROVED', 'DELIVERED'],
+  RETURN_APPROVED: ['RETURNED'],
+  COMPLETED: ['RETURN_REQUESTED', 'RETURNED'],
+  RETURNED: [],
+  CANCELLED: [],
+}
+
+const availableStatuses = computed(() => {
+  if (!selectedOrder.value) return []
+  const current = selectedOrder.value.orderStatus
+  const next = ALLOWED_TRANSITIONS[current] || []
+  return [
+    { value: current, label: `${STATUS_LABELS[current] || current} (Hiện tại)` },
+    ...next.map(s => ({ value: s, label: STATUS_LABELS[s] || s })),
+  ]
+})
+
 onMounted(fetchOrders)
 
 async function fetchOrders() {
   loading.value = true
   try {
-    const res: any = await orderService.getAll()
-    orders.value = Array.isArray(res.data) ? res.data : (res.data?.data || [])
-    if (orders.value.length > 0 && !selectedOrder.value) {
-      selectOrder(orders.value[0])
+    const params: any = {
+      page: currentPage.value,
+      limit: pageSize.value,
+    }
+    if (currentTab.value !== 'ALL') {
+      params.status = currentTab.value
+    }
+    if (orderQuery.value.trim()) {
+      params.search = orderQuery.value.trim()
+    }
+    const res: any = await orderService.getAll(params)
+    const data = res?.data?.data || (Array.isArray(res?.data) ? res.data : [])
+    orders.value = data
+    totalOrders.value = res?.data?.total !== undefined ? res.data.total : data.length
+    if (orders.value.length > 0) {
+      if (!selectedOrder.value || !orders.value.some(o => o._id === selectedOrder.value?._id)) {
+        selectOrder(orders.value[0])
+      }
+    } else {
+      selectedOrder.value = null
     }
   } catch {
     toast.error('Lỗi khi tải danh sách đơn hàng')
@@ -375,42 +463,70 @@ async function fetchOrders() {
   }
 }
 
-const filteredOrders = computed(() => {
-  let list = orders.value
-  if (currentTab.value !== 'ALL') {
-    list = list.filter(o => o.orderStatus === currentTab.value)
-  }
-  if (!orderQuery.value) return list
-  const q = orderQuery.value.toLowerCase().trim()
-  return list.filter(o => {
-    const code = (o.orderCode || '').toLowerCase()
-    const name = (o.customerName || '').toLowerCase()
-    const phone = (o.phone || '').toLowerCase()
-    return code.includes(q) || name.includes(q) || phone.includes(q)
-  })
+let searchTimeout: any = null
+watch(orderQuery, () => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    currentPage.value = 1
+    fetchOrders()
+  }, 350)
 })
+
+function onPageChange(page: number) {
+  currentPage.value = page
+  fetchOrders()
+}
 
 function onTabChange(tabVal: string) {
   currentTab.value = tabVal
-  if (filteredOrders.value.length > 0) {
-    selectOrder(filteredOrders.value[0])
-  } else {
-    selectedOrder.value = null
-  }
+  currentPage.value = 1
+  fetchOrders()
 }
 
 function selectOrder(order: Order) {
   selectedOrder.value = order
   newStatus.value = order.orderStatus
+  cancelReason.value = ''
+}
+
+async function downloadInvoice(orderId: string, orderCode: string) {
+  if (downloadingInvoice.value) return
+  downloadingInvoice.value = true
+  try {
+    const res: any = await orderService.getInvoice(orderId)
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `Hoa_don_${orderCode}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+    toast.success('Đã tải hóa đơn thành công')
+  } catch {
+    toast.error('Lỗi khi tải hóa đơn PDF')
+  } finally {
+    downloadingInvoice.value = false
+  }
 }
 
 async function updateStatus() {
   if (updatingStatus.value || !selectedOrder.value) return
+  if (newStatus.value === 'CANCELLED' && !cancelReason.value.trim()) {
+    toast.warning('Vui lòng nhập lý do hủy đơn')
+    return
+  }
   updatingStatus.value = true
   try {
-    await orderService.updateStatus(selectedOrder.value._id, newStatus.value)
+    await orderService.updateStatus(
+      selectedOrder.value._id,
+      newStatus.value,
+      newStatus.value === 'CANCELLED' ? cancelReason.value.trim() : undefined
+    )
     toast.success('Cập nhật trạng thái đơn hàng thành công')
     selectedOrder.value.orderStatus = newStatus.value as any
+    cancelReason.value = ''
     fetchOrders()
   } catch (err: any) {
     toast.error(err.message || 'Cập nhật trạng thái thất bại')

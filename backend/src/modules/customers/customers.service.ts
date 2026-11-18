@@ -131,6 +131,26 @@ export class CustomersService {
       orderStatus: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
     };
 
+    // ADMOPS-B5: Chi tiêu chỉ tính các đơn đã thanh toán (PAID) hoặc giao thành công (DELIVERED/COMPLETED), loại bỏ PENDING chưa thanh toán
+    const validSpentConditions = {
+      customer: cId,
+      orderStatus: {
+        $nin: [
+          OrderStatus.CANCELLED,
+          OrderStatus.RETURNED,
+          OrderStatus.PENDING,
+        ],
+      },
+      $or: [
+        { paymentStatus: PaymentStatus.PAID },
+        {
+          orderStatus: {
+            $in: [OrderStatus.DELIVERED, OrderStatus.COMPLETED],
+          },
+        },
+      ],
+    };
+
     const [statsResult, stats30d, stats90d, stats365d] = await Promise.all([
       this.orderModel.aggregate([
         { $match: validOrderConditions },
@@ -161,15 +181,15 @@ export class CustomersService {
         },
       ]),
       this.orderModel.aggregate([
-        { $match: { ...validOrderConditions, createdAt: { $gte: d30 } } },
+        { $match: { ...validSpentConditions, createdAt: { $gte: d30 } } },
         { $group: { _id: null, spent: { $sum: '$total' } } },
       ]),
       this.orderModel.aggregate([
-        { $match: { ...validOrderConditions, createdAt: { $gte: d90 } } },
+        { $match: { ...validSpentConditions, createdAt: { $gte: d90 } } },
         { $group: { _id: null, spent: { $sum: '$total' } } },
       ]),
       this.orderModel.aggregate([
-        { $match: { ...validOrderConditions, createdAt: { $gte: d365 } } },
+        { $match: { ...validSpentConditions, createdAt: { $gte: d365 } } },
         { $group: { _id: null, spent: { $sum: '$total' } } },
       ]),
     ]);

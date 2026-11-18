@@ -7,6 +7,16 @@
       </div>
     </div>
 
+    <div v-else-if="!canViewReports" class="bg-white border border-slate-200 rounded-3xl p-12 text-center max-w-lg mx-auto space-y-4">
+      <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-3xl">
+        🔒
+      </div>
+      <div>
+        <h3 class="text-base font-bold text-slate-800">Không có quyền xem báo cáo</h3>
+        <p class="text-xs text-slate-500 mt-1">Tài khoản nhân viên của bạn chưa được cấp quyền "Xem báo cáo doanh số" (VIEW_REPORTS). Vui lòng liên hệ Quản trị viên để được cấp quyền.</p>
+      </div>
+    </div>
+
     <div v-else-if="stats" class="space-y-6">
       <!-- Header with Quick Store Info Config Button (TT-019) -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
@@ -411,13 +421,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { reportService } from '@/services/report.service'
 import { inventoryService } from '@/services/inventory.service'
 import { getStoreInfo, saveStoreInfo, type StoreInfo } from '@/services/store-info.service'
+import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 import { formatCurrency, getStatusLabel } from '@/utils/helpers'
 import type { DashboardStats, Order, Product } from '@/types'
+
+const authStore = useAuthStore()
+const toast = useToast()
+
+const canViewReports = computed(() => {
+  if (!authStore.user) return false
+  if (authStore.user.role === 'SUPER_ADMIN' || authStore.user.role === 'ADMIN') return true
+  return authStore.user.permissions?.includes('VIEW_REPORTS') ?? false
+})
+
+const canManageInventory = computed(() => {
+  if (!authStore.user) return false
+  if (authStore.user.role === 'SUPER_ADMIN' || authStore.user.role === 'ADMIN') return true
+  return authStore.user.permissions?.includes('MANAGE_INVENTORY') ?? false
+})
 
 const showStoreConfigModal = ref(false)
 const storeConfigForm = ref<StoreInfo>(getStoreInfo())
@@ -441,7 +467,6 @@ const chartData = ref<{ dateLabel: string; value: number; heightPercent: number 
 const advancedStats = ref<any>(null)
 const advancedLoading = ref(true)
 const loading = ref(true)
-const toast = useToast()
 
 function getStatusWidthPercent(count: number) {
   if (!advancedStats.value?.statusDistribution) return 0
@@ -450,8 +475,12 @@ function getStatusWidthPercent(count: number) {
 }
 
 async function loadAdvancedStats() {
+  if (!canViewReports.value) {
+    advancedLoading.value = false
+    return
+  }
   try {
-    const res = await reportService.getAdvancedDashboard()
+    const res = await reportService.getAdvancedDashboard({ skipGlobalToast: true })
     advancedStats.value = res.data.data || res.data
   } catch (err) {
     console.error('Failed to load advanced reports', err)
@@ -461,6 +490,7 @@ async function loadAdvancedStats() {
 }
 
 async function loadChartData() {
+  if (!canViewReports.value) return
   try {
     const today = new Date()
     const start = new Date()
@@ -476,7 +506,7 @@ async function loadChartData() {
     const startStr = formatDate(start)
     const endStr = formatDate(today)
     
-    const res = await reportService.getRevenue(startStr, endStr)
+    const res = await reportService.getRevenue(startStr, endStr, undefined, { skipGlobalToast: true })
     const dbData = res.data || []
     
     const days: { dateLabel: string; value: number; heightPercent: number }[] = []
@@ -512,22 +542,28 @@ async function loadChartData() {
 
 onMounted(async () => {
   try {
-    const res = await reportService.getDashboard()
-    stats.value = res.data.stats
-    recentOrders.value = res.data.recentOrders
-    bestSelling.value = res.data.bestSellingProducts
-    
-    // Load low stock items for dashboard notifications (Low Stock Alert)
-    const lowStockRes = await inventoryService.getLowStock()
-    lowStockItems.value = lowStockRes.data
-    if (lowStockItems.value.length > 0) {
-      toast.warning(`Cảnh báo: Có ${lowStockItems.value.length} sản phẩm sắp hết hàng (tồn kho < minStock)!`, {
-        timeout: 6000
-      })
+    if (canViewReports.value) {
+      const res = await reportService.getDashboard({ skipGlobalToast: true })
+      stats.value = res.data.stats
+      recentOrders.value = res.data.recentOrders
+      bestSelling.value = res.data.bestSellingProducts
     }
     
-    await loadChartData()
-    await loadAdvancedStats()
+    // Load low stock items for dashboard notifications (Low Stock Alert)
+    if (canManageInventory.value) {
+      const lowStockRes = await inventoryService.getLowStock({ skipGlobalToast: true })
+      lowStockItems.value = lowStockRes.data
+      if (lowStockItems.value.length > 0) {
+        toast.warning(`Cảnh báo: Có ${lowStockItems.value.length} sản phẩm sắp hết hàng (tồn kho < minStock)!`, {
+          timeout: 6000
+        })
+      }
+    }
+    
+    if (canViewReports.value) {
+      await loadChartData()
+      await loadAdvancedStats()
+    }
   } catch (err) {
     console.error('Error fetching dashboard stats or low stock items', err)
   } finally {

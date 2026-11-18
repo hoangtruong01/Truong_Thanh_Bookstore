@@ -19,6 +19,7 @@ import {
   SupplierQueryDto,
 } from './dto/supplier.dto';
 import { paginate, PaginatedResult } from '../../common/dto/pagination.dto';
+import { escapeRegex } from '../../common/security/security.sanitizer';
 
 @Injectable()
 export class SuppliersService {
@@ -118,7 +119,7 @@ export class SuppliersService {
     }
 
     if (search && search.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i');
+      const searchRegex = new RegExp(escapeRegex(search.trim()), 'i');
       filter.$or = [
         { name: searchRegex },
         { code: searchRegex },
@@ -335,7 +336,7 @@ export class SuppliersService {
     const filter: Record<string, any> = { isDeleted: false };
     if (query?.status) filter.status = query.status;
     if (query?.search && query.search.trim()) {
-      const searchRegex = new RegExp(query.search.trim(), 'i');
+      const searchRegex = new RegExp(escapeRegex(query.search.trim()), 'i');
       filter.$or = [
         { code: searchRegex },
         { name: searchRegex },

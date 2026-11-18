@@ -378,8 +378,17 @@ export class InventoryService {
   }
 
   async getLowStock(): Promise<InventoryDocument[]> {
-    return this.inventoryModel
+    const productModel = this.inventoryModel.db.model('Product');
+    const deletedProducts = await productModel
+      .find({ isDeleted: true })
+      .select('_id')
+      .lean()
+      .exec();
+    const deletedIds = deletedProducts.map((p) => p._id);
+
+    const items = await this.inventoryModel
       .find({
+        product: { $nin: deletedIds },
         $or: [
           { status: InventoryStatus.LOW_STOCK },
           { status: InventoryStatus.OUT_OF_STOCK },
@@ -387,6 +396,8 @@ export class InventoryService {
       })
       .populate('product', 'name sku images price unit')
       .exec();
+
+    return items.filter((item) => item.product !== null);
   }
 
   async importStock(

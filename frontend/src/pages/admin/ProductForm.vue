@@ -1042,6 +1042,7 @@ onMounted(() => {
 })
 
 async function handleSubmit() {
+  if (submitting.value) return
   // TT-011: Minimum price rules
   if (form.price < 0) {
     toast.error('Giá bán không được âm (cho phép 0đ cho hàng khuyến mãi/quà tặng)')

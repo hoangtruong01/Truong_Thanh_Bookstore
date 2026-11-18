@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Address, AddressDocument } from './schemas/address.schema';
@@ -45,6 +49,9 @@ export class AddressesService {
   }
 
   async findById(id: string, userId: string): Promise<AddressDocument> {
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('ID địa chỉ không hợp lệ');
+    }
     const address = await this.addressModel
       .findOne({
         _id: new Types.ObjectId(id),
@@ -72,7 +79,12 @@ export class AddressesService {
       );
     }
 
-    Object.assign(address, data);
+    // SEC-B7: Only update defined properties to prevent overwriting required fields with undefined
+    for (const [key, val] of Object.entries(data)) {
+      if (val !== undefined) {
+        (address as any)[key] = val;
+      }
+    }
     return address.save();
   }
 

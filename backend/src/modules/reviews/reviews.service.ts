@@ -51,6 +51,9 @@ export class ReviewsService {
   }
 
   async findByProduct(productId: string): Promise<ReviewDocument[]> {
+    if (!Types.ObjectId.isValid(productId)) {
+      throw new BadRequestException('Mã sản phẩm không hợp lệ');
+    }
     return this.reviewModel
       .find({
         product: new Types.ObjectId(productId),
@@ -62,6 +65,9 @@ export class ReviewsService {
   }
 
   async getRatingBreakdown(productId: string) {
+    if (!Types.ObjectId.isValid(productId)) {
+      throw new BadRequestException('Mã sản phẩm không hợp lệ');
+    }
     const reviews = await this.reviewModel
       .find({
         product: new Types.ObjectId(productId),
@@ -205,7 +211,7 @@ export class ReviewsService {
       throw new NotFoundException('Không tìm thấy đánh giá cho sản phẩm này');
     }
 
-    if (review.user.toString() !== userId) {
+    if (review.user.toString() !== userId.toString()) {
       throw new ForbiddenException('Bạn không có quyền sửa đánh giá này');
     }
 
@@ -246,7 +252,7 @@ export class ReviewsService {
       Array.isArray(userPermissions) &&
       userPermissions.includes(StaffPermission.MANAGE_PRODUCTS);
     if (
-      review.user.toString() !== userId &&
+      review.user.toString() !== userId.toString() &&
       !isPrivileged &&
       !isModeratingStaff
     ) {

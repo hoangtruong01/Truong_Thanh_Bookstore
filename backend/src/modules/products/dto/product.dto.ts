@@ -8,6 +8,7 @@ import {
   IsEnum,
   Min,
   Max,
+  MaxLength,
   IsMongoId,
   ValidateNested,
 } from 'class-validator';
@@ -43,6 +44,7 @@ export class CreateProductDto {
   @ApiProperty({ example: 'Bút bi Thiên Long TL-027' })
   @IsNotEmpty({ message: 'Tên sản phẩm không được để trống' })
   @IsString()
+  @MaxLength(500, { message: 'Tên sản phẩm không được vượt quá 500 ký tự' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name: string;
 

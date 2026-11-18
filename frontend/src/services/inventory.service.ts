@@ -1,8 +1,8 @@
 import api from '@/utils/api'
 
 export const inventoryService = {
-  getAll: (params?: Record<string, any>) => api.get('/inventory', { params }),
-  getLowStock: () => api.get('/inventory/low-stock'),
+  getAll: (params?: Record<string, any>, config?: any) => api.get('/inventory', { params, ...config }),
+  getLowStock: (config?: any) => api.get('/inventory/low-stock', config),
   getTransactions: (params?: Record<string, any> | string) => {
     const configParams = typeof params === 'string' ? { productId: params } : params
     return api.get('/inventory/transactions', { params: configParams })

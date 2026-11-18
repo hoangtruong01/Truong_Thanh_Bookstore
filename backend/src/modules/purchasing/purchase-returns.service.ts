@@ -26,6 +26,7 @@ import {
 import { InventoryService } from '../inventory/inventory.service';
 import { FinanceService } from '../finance/finance.service';
 import { paginate, PaginatedResult } from '../../common/dto/pagination.dto';
+import { escapeRegex } from '../../common/security/security.sanitizer';
 
 @Injectable()
 export class PurchaseReturnsService {
@@ -532,9 +533,10 @@ export class PurchaseReturnsService {
     }
 
     if (search && search.trim()) {
+      const safeSearch = escapeRegex(search.trim());
       filter.$or = [
-        { returnCode: new RegExp(search.trim(), 'i') },
-        { note: new RegExp(search.trim(), 'i') },
+        { returnCode: new RegExp(safeSearch, 'i') },
+        { note: new RegExp(safeSearch, 'i') },
       ];
     }
 

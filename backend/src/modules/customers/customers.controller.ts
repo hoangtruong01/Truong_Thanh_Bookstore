@@ -7,6 +7,7 @@ import {
   Param,
   Query,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
@@ -46,8 +47,12 @@ export class CustomersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get customer details with order history' })
-  findById(@Param('id') id: string) {
-    return this.customersService.findById(id);
+  async findById(@Param('id') id: string) {
+    const customer = await this.customersService.findById(id);
+    if (!customer) {
+      throw new NotFoundException(`Không tìm thấy khách hàng với ID: ${id}`);
+    }
+    return customer;
   }
 
   @Patch(':id/crm')

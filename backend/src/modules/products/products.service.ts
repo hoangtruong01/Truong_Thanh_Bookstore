@@ -312,6 +312,31 @@ export class ProductsService {
     dto: CreateProductDto,
     userId?: string,
   ): Promise<ProductDocument> {
+    // ADMCAT-B8: Kiểm tra danh mục tồn tại
+    if (
+      dto.category &&
+      this.categoryModel &&
+      (typeof this.categoryModel.findById === 'function' ||
+        typeof this.categoryModel.findOne === 'function')
+    ) {
+      let cat: any = null;
+      if (typeof this.categoryModel.findById === 'function') {
+        const q = this.categoryModel.findById(dto.category);
+        cat = typeof q?.exec === 'function' ? await q.exec() : await q;
+      } else if (typeof this.categoryModel.findOne === 'function') {
+        const q = this.categoryModel.findOne({ _id: dto.category });
+        cat =
+          typeof q?.exec === 'function'
+            ? await q.exec()
+            : typeof q?.lean === 'function'
+              ? await q.lean()
+              : await q;
+      }
+      if (cat === null || cat === undefined) {
+        throw new BadRequestException('Danh mục không tồn tại');
+      }
+    }
+
     // TT-011: Kiểm tra giá bán và giá khuyến mãi
     if (dto.price < 0) {
       throw new BadRequestException('Giá sản phẩm không được âm');
@@ -777,6 +802,31 @@ export class ProductsService {
   async update(id: string, dto: UpdateProductDto): Promise<ProductDocument> {
     const existing = await this.productModel.findById(id).exec();
     if (!existing) throw new NotFoundException('Product not found');
+
+    // ADMCAT-B8: Kiểm tra danh mục tồn tại
+    if (
+      dto.category &&
+      this.categoryModel &&
+      (typeof this.categoryModel.findById === 'function' ||
+        typeof this.categoryModel.findOne === 'function')
+    ) {
+      let cat: any = null;
+      if (typeof this.categoryModel.findById === 'function') {
+        const q = this.categoryModel.findById(dto.category);
+        cat = typeof q?.exec === 'function' ? await q.exec() : await q;
+      } else if (typeof this.categoryModel.findOne === 'function') {
+        const q = this.categoryModel.findOne({ _id: dto.category });
+        cat =
+          typeof q?.exec === 'function'
+            ? await q.exec()
+            : typeof q?.lean === 'function'
+              ? await q.lean()
+              : await q;
+      }
+      if (cat === null || cat === undefined) {
+        throw new BadRequestException('Danh mục không tồn tại');
+      }
+    }
 
     // TT-011: Kiểm tra giá bán và giá khuyến mãi
     const effectivePrice = dto.price !== undefined ? dto.price : existing.price;

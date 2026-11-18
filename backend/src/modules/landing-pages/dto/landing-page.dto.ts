@@ -31,6 +31,7 @@ export class LandingPagePackageDto {
   name: string;
 
   @IsNumber()
+  @Min(1, { message: 'Giá gói sản phẩm phải lớn hơn 0' })
   price: number;
 
   @IsOptional()

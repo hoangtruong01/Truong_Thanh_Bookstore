@@ -30,40 +30,40 @@ Mỗi bug dưới đây đã được **tái hiện 2 lần trên dữ liệu s�
 | Mã | Mức | Module | Mô tả | Trạng thái |
 |---|---|---|---|---|
 | ADMOPS-B1 | **P0** | Đơn hàng / Hóa đơn | **Tải hóa đơn PDF làm sập cả backend.** `GET /orders/:id/invoice` và hóa đơn khách vãng lai gọi `end()` hai lần trên stream PDF (`orders.service.ts` + `orders.controller.ts`) → `ERR_STREAM_PUSH_AFTER_EOF` → tiến trình chết. Bất kỳ khách nào có đơn cũng kích hoạt được. | ✅ Đã sửa & test PASS (`orders-invoice.controller.spec.ts`) |
-| ADMOPS-B2 | **P1** | Admin: Khách hàng, Nhà cung cấp, Mua hàng, Báo cáo | Các trang Khách hàng, Nhà cung cấp, Mua hàng (đơn mua + phiếu nhập) và tab Nhập Xuất Tồn **luôn hiện danh sách rỗng** dù API có dữ liệu (frontend bóc lớp `data` của phản hồi hai lần) | ⏳ Chờ |
-| ADMOPS-B3 | **P1** | Admin: Đơn hàng | Trang Đơn hàng **chỉ tải 10 đơn mới nhất**, không phân trang; tìm kiếm và lọc chạy trên 10 đơn đó nên không tìm được đơn cũ | ⏳ Chờ |
-| ADMOPS-B4 | P2 | Tìm kiếm admin | Tìm kiếm có ký tự `(` hoặc `[` trả 500 ở khách hàng, nhà cung cấp, đơn mua, phiếu nhập, sổ quỹ, công nợ (cùng nguyên nhân với SEC-B3) | ⏳ Chờ |
-| ADMOPS-B5 | P2 | CRM / Hạng khách | Xếp hạng khách tính cả **đơn PENDING chưa thanh toán** vào chi tiêu 30/90/365 ngày (1.935.000đ so với chi tiêu thật 280.000đ) | ⏳ Chờ |
-| ADMOPS-B6 | P3 | Khách hàng | `GET /customers/:id` trả hồ sơ của tài khoản ADMIN và tự tạo hồ sơ CRM cho nó; id không tồn tại trả 200 với `null` | ⏳ Chờ |
+| ADMOPS-B2 | **P1** | Admin: Khách hàng, Nhà cung cấp, Mua hàng, Báo cáo | Các trang Khách hàng, Nhà cung cấp, Mua hàng (đơn mua + phiếu nhập) và tab Nhập Xuất Tồn **luôn hiện danh sách rỗng** dù API có dữ liệu (frontend bóc lớp `data` của phản hồi hai lần) | ✅ Đã sửa (bóc unwrapping phòng thủ cho cả 2 định dạng) |
+| ADMOPS-B3 | **P1** | Admin: Đơn hàng | Trang Đơn hàng **chỉ tải 10 đơn mới nhất**, không phân trang; tìm kiếm và lọc chạy trên 10 đơn đó nên không tìm được đơn cũ | ✅ Đã sửa (server-side pagination, query params search & status) |
+| ADMOPS-B4 | P2 | Tìm kiếm admin | Tìm kiếm có ký tự `(` hoặc `[` trả 500 ở khách hàng, nhà cung cấp, đơn mua, phiếu nhập, sổ quỹ, công nợ (cùng nguyên nhân với SEC-B3) | ✅ Đã sửa (escapeRegex cho toàn bộ module tìm kiếm) |
+| ADMOPS-B5 | P2 | CRM / Hạng khách | Xếp hạng khách tính cả **đơn PENDING chưa thanh toán** vào chi tiêu 30/90/365 ngày (1.935.000đ so với chi tiêu thật 280.000đ) | ✅ Đã sửa (validSpentConditions chỉ tính đơn đã trả tiền/hoàn thành) |
+| ADMOPS-B6 | P3 | Khách hàng | `GET /customers/:id` trả hồ sơ của tài khoản ADMIN và tự tạo hồ sơ CRM cho nó; id không tồn tại trả 200 với `null` | ✅ Đã sửa (Controller ném 404 NotFoundException chuẩn HTTP REST) |
 | ADMOPS-B7 | P3 | Báo cáo / Sổ quỹ | Ngày bắt đầu sau ngày kết thúc được chấp nhận im lặng ở doanh thu theo danh mục, nhập xuất tồn, đối soát POS, xuất sổ quỹ (chỉ `/reports/revenue` trả 400) | ⏳ Chờ |
 | ADMCAT-B1 | **P1** | Khuyến mãi | Cho tạo voucher giảm theo % **trên 100%**; khi áp dụng, số tiền giảm lớn hơn tổng đơn (đơn về 0đ) | ✅ Đã sửa & test PASS (`promotions.service.spec.ts`) |
 | ADMCAT-B2 | **P1** | Khuyến mãi | `PATCH /promotions/:id` bỏ qua validation, lưu được giá trị giảm **âm** và số lượt dùng âm | ✅ Đã sửa & test PASS (`promotions.service.spec.ts`) |
-| ADMCAT-B4 | **P1** | Kiểm kê kho | Duyệt phiếu kiểm kê lỗi 409 giữa chừng nhưng các dòng trước **đã bị điều chỉnh tồn kho**; từ chối phiếu vẫn giữ thay đổi đó | ⏳ Chờ |
-| ADMCAT-B5 | **P1** | Landing page | Gói sản phẩm nhận **giá âm**; đặt hàng tạo đơn **0đ** kèm miễn phí vận chuyển | ⏳ Chờ |
+| ADMCAT-B4 | **P1** | Kiểm kê kho | Duyệt phiếu kiểm kê lỗi 409 giữa chừng nhưng các dòng trước **đã bị điều chỉnh tồn kho**; từ chối phiếu vẫn giữ thay đổi đó | ✅ Đã sửa (ClientSession MongoDB transaction + rollback an toàn) |
+| ADMCAT-B5 | **P1** | Landing page | Gói sản phẩm nhận **giá âm**; đặt hàng tạo đơn **0đ** kèm miễn phí vận chuyển | ✅ Đã sửa (@Min(1), cleanLandingPageDto, validate giá đơn hàng) |
 | ADMCAT-B6 | P2 | Giá vốn | Giá vốn bình quân bị kéo xuống bởi tồn đầu kỳ giá 0 (13.333đ thay vì 80.000đ) → biên lãi sai, chặn biên lãi tối thiểu không kích hoạt | ⏳ Cần quyết định nghiệp vụ |
 | ADMCAT-B7 | P2 | Sản phẩm | Không tạo được sản phẩm trùng tên/SKU với sản phẩm **đã xóa mềm** (409) | ⏳ Cần quyết định nghiệp vụ (có thể phải đổi index) |
-| ADMCAT-B8 | P2 | Sản phẩm | Tạo được sản phẩm với **danh mục không tồn tại** | ⏳ Chờ |
+| ADMCAT-B8 | P2 | Sản phẩm | Tạo được sản phẩm với **danh mục không tồn tại** | ✅ Đã sửa (validate category id trong create & update) |
 | ADMCAT-B9 | P2 | Nhập Excel | Nhập Excel qua UI (`/products/import/excel`) lưu **giá khuyến mãi cao hơn giá bán** | ⏳ Chờ |
 | ADMCAT-B10 | P2 | Nhập Excel | Data-exchange tạo **sản phẩm trùng SKU** chỉ khác hoa/thường | ⏳ Chờ |
 | ADMCAT-B12 | P2 | Sản phẩm / POS | Hai sản phẩm **trùng mã vạch** (quét POS không xác định được sản phẩm) | ⏳ Chờ |
-| ADMCAT-B16 | P2 | Đánh giá | Chuỗi `"false"` bị hiểu thành `true` khi duyệt đánh giá (do chuyển kiểu ngầm toàn cục) | ⏳ Chờ |
+| ADMCAT-B16 | P2 | Đánh giá | Chuỗi `"false"` bị hiểu thành `true` khi duyệt đánh giá (do chuyển kiểu ngầm toàn cục) | ✅ Đã sửa (@Transform string 'false' sang boolean) |
 | ADMCAT-B3 | P3 | Khuyến mãi | Tạo được voucher có **ngày kết thúc trước ngày bắt đầu** | ✅ Đã sửa & test PASS (`promotions.service.spec.ts`) |
 | ADMCAT-B11 | P3 | Nhập Excel | Bước xem trước báo dòng hợp lệ nhưng bước thực thi lại lỗi (thiếu danh mục) | ⏳ Chờ |
-| ADMCAT-B13 | P3 | Sản phẩm | Tên sản phẩm **không giới hạn độ dài** (5.000 ký tự, slug 5.000 ký tự) | ⏳ Chờ |
+| ADMCAT-B13 | P3 | Sản phẩm | Tên sản phẩm **không giới hạn độ dài** (5.000 ký tự, slug 5.000 ký tự) | ✅ Đã sửa (@MaxLength(500) trên name) |
 | ADMCAT-B14 | P3 | Storefront | Sản phẩm **đã tắt (INACTIVE)** vẫn mở được bằng id, vẫn có nút mua | ⏳ Chờ |
-| ADMCAT-B15 | P3 | Dashboard | Cảnh báo sắp hết hàng vẫn liệt kê **sản phẩm đã xóa mềm** | ⏳ Chờ |
+| ADMCAT-B15 | P3 | Dashboard | Cảnh báo sắp hết hàng vẫn liệt kê **sản phẩm đã xóa mềm** | ✅ Đã sửa (getLowStock lọc loại trừ isDeleted: true) |
 | ADMCAT-B17 | P3 | Landing page | Landing page **đã tắt** vẫn nhận đặt hàng | ⏳ Chờ |
-| ADMCAT-B18 | P3 | Form sản phẩm | Bấm Lưu nhanh liên tục gửi **3 lần POST**, hiện toast lỗi 409 sau toast thành công | ⏳ Chờ |
-| ADMCAT-B19 | P3 | Dashboard | Nhân viên không có quyền kho bị toast **"Bạn không có quyền"** ngay khi mở Dashboard | ⏳ Chờ |
+| ADMCAT-B18 | P3 | Form sản phẩm | Bấm Lưu nhanh liên tục gửi **3 lần POST**, hiện toast lỗi 409 sau toast thành công | ✅ Đã sửa (nút submit lock khi đang lưu) |
+| ADMCAT-B19 | P3 | Dashboard | Nhân viên không có quyền kho bị toast **"Bạn không có quyền"** ngay khi mở Dashboard | ✅ Đã sửa (kiểm tra quyền trước khi fetch + skipGlobalToast) |
 | E2E-B1 | P3 | Đơn hàng (Admin + khách) | Đổi/hủy đơn thất bại hiện **2 toast lỗi trùng nhau**; ô chọn trạng thái không quay về trạng thái thật | ⏳ Chờ |
 | E2E-B2 | P3 | Khuyến mãi / Checkout | Lỗi voucher hiện **tiếng Anh** cho khách ("Promotion code not found", "Promotion usage limit reached"...) | ✅ Đã sửa (Việt hóa thông báo lỗi) |
-| SEC-B1 | P2 | Admin UI / Báo cáo | Nhân viên không có quyền xem báo cáo bị **403 kèm toast lỗi trên mọi trang admin**, Dashboard trống (cùng nhóm với ADMCAT-B19) | ⏳ Chờ |
-| SEC-B2 | P2 | Đánh giá | Khách **không sửa/xóa được đánh giá của chính mình** (luôn 403) | ⏳ Chờ |
-| SEC-B3 | P2 | Khách hàng / Tài chính / Giá | Ô tìm kiếm admin đưa chuỗi thô vào RegExp: gõ `(` gây **lỗi 500 kèm stack trace**, cho phép regex injection | ⏳ Chờ |
-| SEC-B4 | P3 | Sổ địa chỉ / Đánh giá | ObjectId sai trả 500 thay vì 400 (`GET /addresses/:id`, `GET /reviews/product/:productId`) | ⏳ Chờ |
+| SEC-B1 | P2 | Admin UI / Báo cáo | Nhân viên không có quyền xem báo cáo bị **403 kèm toast lỗi trên mọi trang admin**, Dashboard trống (cùng nhóm với ADMCAT-B19) | ✅ Đã sửa (kiểm tra quyền trước khi fetch + skipGlobalToast) |
+| SEC-B2 | P2 | Đánh giá | Khách **không sửa/xóa được đánh giá của chính mình** (luôn 403) | ✅ Đã sửa (so sánh toString() đúng kiểu) |
+| SEC-B3 | P2 | Khách hàng / Tài chính / Giá | Ô tìm kiếm admin đưa chuỗi thô vào RegExp: gõ `(` gây **lỗi 500 kèm stack trace**, cho phép regex injection | ✅ Đã sửa (escapeRegex cho regex patterns) |
+| SEC-B4 | P3 | Sổ địa chỉ / Đánh giá | ObjectId sai trả 500 thay vì 400 (`GET /addresses/:id`, `GET /reviews/product/:productId`) | ✅ Đã sửa (kiểm tra Types.ObjectId.isValid) |
 | SEC-B5 | P3 | Hạ tầng API | Payload trên 1 MB trả 500 thay vì 413 | ⏳ Chờ |
 | SEC-B6 | P3 | CORS | Origin không nằm trong whitelist làm API trả 500 kèm stack | ⏳ Chờ |
-| SEC-B7 | P3 | Sổ địa chỉ | Cập nhật một phần địa chỉ (`PUT /addresses/:id`) bị 400 `ERR_DB_VALIDATION` | ⏳ Chờ |
+| SEC-B7 | P3 | Sổ địa chỉ | Cập nhật một phần địa chỉ (`PUT /addresses/:id`) bị 400 `ERR_DB_VALIDATION` | ✅ Đã sửa (chỉ cập nhật trường được truyền) |
 
 ### Rủi ro / lệch tài liệu / môi trường (chưa phải bug đã tái hiện)
 
@@ -81,8 +81,8 @@ Mỗi bug dưới đây đã được **tái hiện 2 lần trên dữ liệu s�
 | SEC-R1 | P2 | Việc che stack trace lỗi 5xx chỉ dựa vào `NODE_ENV`, trong khi `main.ts` coi RENDER/VERCEL là production → có thể lộ stack nếu deploy thiếu `NODE_ENV=production` | Dùng chung một hàm xác định production |
 | SEC-D1 | P3 | Ma trận phân quyền ở mục 6.2 lệch code (`GET /users`, `PATCH /users/:id/role`) | Cập nhật docs |
 | ADMOPS-B14 | P2 (rủi ro) | Duyệt của quản lý ở POS so sánh mật khẩu dạng thô với hash và có secret HMAC dự phòng viết cứng trong code (mới đọc code, chưa chạy được vì POS bị chặn trên standalone) | Kiểm lại trên replica set; nếu đúng thì đây là lỗi bảo mật cần sửa |
-| ADMOPS-B10 | P2 (chưa có tính năng) | Admin không có màn hình quản lý nhân viên / phân quyền (`/admin/users` trả 404). API thì có | Quyết định có làm màn hình này không |
-| ADMOPS-B11 | P2 (chưa có tính năng) | Chi tiết đơn ở admin không có nút tải hóa đơn, thao tác hoàn tiền, ô lý do hủy; ô chọn trạng thái liệt kê mọi trạng thái thay vì chỉ các bước hợp lệ | Đưa vào backlog |
+| ADMOPS-B10 | P2 (chưa có tính năng) | Admin không có màn hình quản lý nhân viên / phân quyền (`/admin/users` trả 404). API thì có | ✅ Đã triển khai trang `Users.vue` & route `/admin/users` với đầy đủ phân quyền, đổi role, khóa/mở khóa |
+| ADMOPS-B11 | P2 (chưa có tính năng) | Chi tiết đơn ở admin không có nút tải hóa đơn, thao tác hoàn tiền, ô lý do hủy; ô chọn trạng thái liệt kê mọi trạng thái thay vì chỉ các bước hợp lệ | ✅ Đã bổ sung nút tải PDF hóa đơn, ô nhập lý do hủy đơn, và giới hạn dropdown trạng thái theo máy trạng thái nghiệp vụ |
 | ADMOPS-B13 | ENV | Trên standalone, phiếu thu/chi, POS, phiếu nhập, đối soát COD trả lỗi 500 chung thay vì 503 rõ ràng; nhánh dự phòng cho standalone trong code tài chính không bao giờ chạy | Trả 503 thống nhất như đơn hàng |
 | ADMOPS-B15 | P3 | Không giới hạn kích thước trang (`limit=100000` được chấp nhận) | Thêm `@Max` vào `PaginationDto` |
 | ADMOPS-B8, B9 | P3 (tài liệu) | Máy trạng thái đơn ở mục 7.2 lệch code (trùng E2E-B4); tài liệu nói chỉ SUPER_ADMIN đổi vai trò nhưng ADMIN đổi được STAFF↔CUSTOMER (code cố ý) | Cập nhật docs |
