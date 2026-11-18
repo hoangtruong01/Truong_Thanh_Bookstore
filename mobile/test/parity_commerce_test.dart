@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -94,6 +95,11 @@ class _MemoryCartStorage implements CartStorage {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/shared_preferences'), (call) async {
+      if (call.method == 'getAll') return <String, dynamic>{};
+      return true;
+    });
     SharedPreferences.setMockInitialValues({});
     FlutterSecureStorage.setMockInitialValues({});
   });
@@ -503,14 +509,17 @@ void main() {
   });
 
   group('Checkout screen (guest)', () {
-    Future<({CartProvider cart, List<Completer<http.Response>> previews})> pumpCheckout(
+    Future<({CartProvider cart, AuthProvider auth, OrderProvider orders, List<Completer<http.Response>> previews})> pumpCheckout(
       WidgetTester tester, {
       Brightness brightness = Brightness.light,
     }) async {
       // Tall viewport so the whole checkout list (summary + CTA) is built.
       tester.view.physicalSize = const Size(900, 6000);
       tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
       final previews = <Completer<http.Response>>[];
       final client = MockClient((request) {
         if (request.url.path == '/api/payments/methods') {
@@ -521,15 +530,18 @@ void main() {
         return completer.future;
       });
       final api = ApiClient(httpClient: client);
+      final auth = AuthProvider(apiClient: api);
+      await tester.runAsync(() => auth.sessionReady);
+      final orders = OrderProvider(apiClient: api);
       final cart = CartProvider(apiClient: api, storage: _MemoryCartStorage(), pricingDebounce: Duration.zero,
           restoreFromStorage: false)
         ..addToCart(_product('a'), quantity: 2);
       await tester.pumpWidget(MultiProvider(
         providers: [
           Provider<ApiClient>.value(value: api),
-          ChangeNotifierProvider(create: (_) => AuthProvider(apiClient: api)),
+          ChangeNotifierProvider<AuthProvider>.value(value: auth),
           ChangeNotifierProvider<CartProvider>.value(value: cart),
-          ChangeNotifierProvider(create: (_) => OrderProvider(apiClient: api)),
+          ChangeNotifierProvider<OrderProvider>.value(value: orders),
         ],
         child: MaterialApp(
           theme: AppTheme.lightTheme,
@@ -540,7 +552,7 @@ void main() {
       ));
       await tester.pump();
       await tester.pump();
-      return (cart: cart, previews: previews);
+      return (cart: cart, auth: auth, orders: orders, previews: previews);
     }
 
     Future<Completer<http.Response>> nextPreview(WidgetTester tester, List<Completer<http.Response>> previews) async {
@@ -552,7 +564,7 @@ void main() {
 
     /// Unmounts the screen (which re-prices the cart for the cart tab) and answers
     /// every outstanding request so no client timeout timer outlives the test.
-    Future<void> finish(WidgetTester tester, CartProvider cart, List<Completer<http.Response>> previews) async {
+    Future<void> finish(WidgetTester tester, CartProvider cart, AuthProvider auth, OrderProvider orders, List<Completer<http.Response>> previews) async {
       await tester.pumpWidget(const SizedBox());
       for (var i = 0; i < 5; i++) {
         await tester.pump();
@@ -561,6 +573,8 @@ void main() {
         }
       }
       cart.dispose();
+      auth.dispose();
+      orders.dispose();
     }
 
     testWidgets('skeleton while pricing, then server totals and the fixed CTA copy', (tester) async {
@@ -583,7 +597,7 @@ void main() {
       expect(find.text('Ví điện tử MoMo'), findsNothing);
       expect(find.textContaining('Đăng nhập để thanh toán trực tuyến'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      await finish(tester, setup.cart, setup.previews);
+      await finish(tester, setup.cart, setup.auth, setup.orders, setup.previews);
     });
 
     testWidgets('pricing error shows a retry that re-runs the preview (dark mode)', (tester) async {
@@ -602,14 +616,17 @@ void main() {
       expect(find.text(CartProvider.pricingErrorMessage), findsNothing);
       expect(find.text('Xác nhận đặt hàng'), findsOneWidget);
       expect(tester.takeException(), isNull);
-      await finish(tester, setup.cart, setup.previews);
+      await finish(tester, setup.cart, setup.auth, setup.orders, setup.previews);
     });
   });
 
   testWidgets('order success screen renders bank transfer instructions with copyable fields', (tester) async {
     tester.view.physicalSize = const Size(900, 3000);
     tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
     await tester.pumpWidget(MaterialApp(
       theme: AppTheme.lightTheme,
       home: const OrderSuccessScreen(
@@ -632,5 +649,6 @@ void main() {
     expect(find.text('Sao chép'), findsWidgets);
     expect(find.text('Chuyển khoản ngân hàng'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
+    await tester.pump();
   });
 }
