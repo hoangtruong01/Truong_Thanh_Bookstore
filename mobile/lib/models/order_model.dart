@@ -76,6 +76,13 @@ class OrderModel {
   final String? shippingProvider;
   final String? trackingCode;
   final String? shippingStatus;
+  final String? returnReason;
+  final String? returnRequestedAt;
+  final String? returnApprovedAt;
+  final String? refundStatus;
+  final String? refundReason;
+  final num? refundAmount;
+  final String? deliveredAt;
   final String createdAt;
   final List<OrderTimelineModel> timeline;
 
@@ -101,6 +108,13 @@ class OrderModel {
     this.shippingProvider,
     this.trackingCode,
     this.shippingStatus,
+    this.returnReason,
+    this.returnRequestedAt,
+    this.returnApprovedAt,
+    this.refundStatus,
+    this.refundReason,
+    this.refundAmount,
+    this.deliveredAt,
     required this.createdAt,
     required this.timeline,
   });
@@ -138,6 +152,13 @@ class OrderModel {
       shippingProvider: json['shippingProvider'],
       trackingCode: json['trackingCode'],
       shippingStatus: json['shippingStatus'],
+      returnReason: json['returnReason'],
+      returnRequestedAt: json['returnRequestedAt']?.toString(),
+      returnApprovedAt: json['returnApprovedAt']?.toString(),
+      refundStatus: json['refundStatus'],
+      refundReason: json['refundReason'],
+      refundAmount: json['refundAmount'],
+      deliveredAt: json['deliveredAt']?.toString(),
       createdAt: json['createdAt'] ?? '',
       timeline: timelineList,
     );

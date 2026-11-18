@@ -91,23 +91,77 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _cancelOrder(OrderModel order) async {
-    final confirm = await showDialog<bool>(
+    String selectedReason = 'Muốn thay đổi sản phẩm/số lượng';
+    final controller = TextEditingController();
+    final reasons = [
+      'Muốn thay đổi sản phẩm/số lượng',
+      'Muốn đổi phương thức thanh toán',
+      'Đổi địa chỉ giao hàng',
+      'Tìm thấy nơi khác giá tốt hơn',
+      'Không còn nhu cầu mua nữa',
+      'Lý do khác',
+    ];
+
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hủy đơn hàng?'),
-        content: const Text('Bạn có chắc chắn muốn hủy đơn hàng này không?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Không')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hủy đơn')),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(AppRadii.lg))),
+          title: const Text('Xác nhận hủy đơn hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Vui lòng chọn lý do bạn muốn hủy đơn:', style: TextStyle(fontSize: 13)),
+                const SizedBox(height: AppSpacing.sm),
+                for (final r in reasons)
+                  RadioListTile<String>(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(r, style: const TextStyle(fontSize: 12.5)),
+                    value: r,
+                    groupValue: selectedReason,
+                    onChanged: (val) {
+                      if (val != null) setDialogState(() => selectedReason = val);
+                    },
+                  ),
+                if (selectedReason == 'Lý do khác') ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  TextField(
+                    controller: controller,
+                    style: const TextStyle(fontSize: 12.5),
+                    decoration: const InputDecoration(
+                      hintText: 'Nhập lý do cụ thể...',
+                      isDense: true,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Giữ đơn')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Xác nhận hủy'),
+            ),
+          ],
+        ),
       ),
     );
-    if (confirm != true || !mounted) return;
+
+    if (confirmed != true || !mounted) return;
+
+    final reasonText = selectedReason == 'Lý do khác' && controller.text.trim().isNotEmpty
+        ? controller.text.trim()
+        : selectedReason;
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     setState(() => _isCancelling = true);
-    final success = await orderProvider.cancelOrder(order.id, auth.token);
+    final success = await orderProvider.cancelOrder(order.id, auth.token, reason: reasonText);
     if (!mounted) return;
     setState(() => _isCancelling = false);
     if (success) {
@@ -200,6 +254,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xxxl),
           children: [
             _buildHeader(context, order),
+            if (order.returnReason != null && order.returnReason!.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              _Notice(
+                tone: order.orderStatus == 'RETURN_APPROVED'
+                    ? palette.statusConfirmed
+                    : order.orderStatus == 'RETURNED'
+                        ? palette.statusCompleted
+                        : palette.statusPending,
+                message: order.orderStatus == 'RETURN_APPROVED'
+                    ? 'Yêu cầu trả hàng đã được duyệt. Cửa hàng sẽ sớm liên hệ thu hồi kiện hàng và hoàn tất.'
+                    : order.orderStatus == 'RETURNED'
+                        ? 'Đơn hàng đã được hoàn trả thành công về kho.'
+                        : 'Yêu cầu trả hàng của bạn đang được xử lý:\n"${order.returnReason}"',
+              ),
+            ],
+            if (order.refundStatus != null && order.refundStatus != 'NONE' && order.refundStatus!.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              _Notice(
+                tone: OrderStatusMeta.refundTone(palette, order.refundStatus),
+                message: 'Trạng thái hoàn tiền: ${OrderStatusMeta.refundLabel(order.refundStatus)}'
+                    '${order.refundAmount != null && order.refundAmount! > 0 ? ' (${Formatters.formatCurrency(order.refundAmount!)})' : ''}'
+                    '${order.refundReason != null && order.refundReason!.isNotEmpty ? '\nLý do: ${order.refundReason}' : ''}',
+              ),
+            ],
             if (showGuestReturnHint) ...[
               const SizedBox(height: AppSpacing.md),
               _Notice(

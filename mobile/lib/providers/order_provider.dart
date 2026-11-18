@@ -363,16 +363,17 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> cancelOrder(String orderId, String? token) async {
+  Future<bool> cancelOrder(String orderId, String? token, {String? reason}) async {
     try {
       final guestToken = await _storage.read(key: _guestTokenKey(orderId));
       if ((guestToken == null || guestToken.isEmpty) && (token == null || token.isEmpty)) return false;
       final isGuest = guestToken != null && guestToken.isNotEmpty;
+      final body = reason != null && reason.trim().isNotEmpty ? {'reason': reason.trim()} : null;
       // Guest capability and account bearer are never sent together.
       final response = isGuest
           ? await _api.delete(ApiConstants.guestOrder(orderId),
-              headers: {'x-guest-order-token': guestToken})
-          : await _api.delete(ApiConstants.order(orderId), token: token);
+              headers: {'x-guest-order-token': guestToken}, body: body)
+          : await _api.delete(ApiConstants.order(orderId), token: token, body: body);
 
       if (response.statusCode == 200) {
         if (isGuest) {

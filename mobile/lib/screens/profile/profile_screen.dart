@@ -15,6 +15,7 @@ import 'address_book_screen.dart';
 import 'change_password_dialog.dart';
 import 'edit_profile_screen.dart';
 import 'store_contact.dart';
+import 'store_policies_screen.dart';
 import 'theme_mode_selector.dart';
 import 'wishlist_screen.dart';
 
@@ -148,6 +149,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   trailingIcon: Icons.call_outlined,
                   onTap: _callHotline,
                 ),
+                _MenuTile(
+                  icon: Icons.policy_outlined,
+                  title: 'Thông tin & Chính sách',
+                  subtitle: 'Đổi trả, giao hàng, bảo mật',
+                  onTap: () => _push(const StorePoliciesScreen()),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -210,6 +217,14 @@ class _GuestView extends StatelessWidget {
                 subtitle: 'Hotline: ${StoreContact.hotlineDisplay}',
                 trailingIcon: Icons.call_outlined,
                 onTap: onCallHotline,
+              ),
+              _MenuTile(
+                icon: Icons.policy_outlined,
+                title: 'Thông tin & Chính sách',
+                subtitle: 'Đổi trả, giao hàng, bảo mật',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const StorePoliciesScreen()),
+                ),
               ),
             ],
           ),
@@ -302,12 +317,26 @@ class _LoyaltyCard extends StatelessWidget {
     }
   }
 
+  String _tierIcon(String tier) {
+    switch (tier) {
+      case 'DIAMOND':
+        return '💎';
+      case 'GOLD':
+        return '🥇';
+      case 'SILVER':
+        return '🥈';
+      default:
+        return '🥉';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
     final textTheme = Theme.of(context).textTheme;
     final tone = _tierTone(palette);
     final points = NumberFormat.decimalPattern('vi_VN').format(user.loyaltyPoints);
+    final cashValue = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(user.loyaltyPoints * 100);
 
     return _SectionCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -322,9 +351,16 @@ class _LoyaltyCard extends StatelessWidget {
                 color: tone.background,
                 borderRadius: const BorderRadius.all(Radius.circular(AppRadii.pill)),
               ),
-              child: Text(
-                user.loyaltyTierLabel,
-                style: textTheme.labelMedium?.copyWith(color: tone.foreground, fontWeight: FontWeight.w800),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_tierIcon(user.loyaltyTier), style: const TextStyle(fontSize: 12)),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    user.loyaltyTierLabel,
+                    style: textTheme.labelMedium?.copyWith(color: tone.foreground, fontWeight: FontWeight.w800),
+                  ),
+                ],
               ),
             ),
           ],
@@ -342,13 +378,19 @@ class _LoyaltyCard extends StatelessWidget {
                 TextSpan(
                   text: points,
                   style: textTheme.headlineSmall?.copyWith(color: palette.accent),
-                  children: [TextSpan(text: ' điểm', style: textTheme.labelSmall)],
+                  children: [
+                    TextSpan(text: ' điểm ', style: textTheme.labelSmall),
+                    TextSpan(
+                      text: '(≈ $cashValue)',
+                      style: textTheme.labelSmall?.copyWith(color: palette.primary, fontWeight: FontWeight.w700),
+                    ),
+                  ],
                 ),
               ),
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        Text('Điểm được cộng khi đơn hàng hoàn tất.', style: textTheme.labelSmall),
+        Text('Điểm cộng khi hoàn tất đơn • 1 điểm = 100đ khi thanh toán.', style: textTheme.labelSmall),
         if (syncFailed) ...[
           const SizedBox(height: AppSpacing.sm),
           Row(

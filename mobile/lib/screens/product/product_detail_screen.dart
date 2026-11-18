@@ -47,12 +47,21 @@ List<MapEntry<String, String>> productSpecRows(ProductModel product) {
   }
 
   add('Tác giả', product.author);
+  add('Dịch giả', product.translator);
   add('Nhà xuất bản', product.publisher);
   add('Năm xuất bản', product.publicationYear?.toString());
   add('Mã ISBN', product.isbn);
+  add('Ngôn ngữ', product.language);
+  add('Số trang', product.pages != null && product.pages! > 0 ? '${product.pages} trang' : null);
+  add('Hình thức bìa', product.coverType);
+  add('Kích thước bao bì', product.bookSize);
   add('Thương hiệu', product.brand);
+  add('Xuất xứ', product.origin);
+  add('Chất liệu', product.material);
+  add('Quy cách', product.packaging);
   add('Mã SKU', product.sku);
-  rows.add(MapEntry('Tình trạng', product.isInStock ? 'Còn hàng (${product.stock})' : 'Tạm hết hàng'));
+  final unitStr = product.unit?.trim().isNotEmpty == true ? ' ${product.unit}' : '';
+  rows.add(MapEntry('Tình trạng', product.isInStock ? 'Còn hàng (${product.stock}$unitStr)' : 'Tạm hết hàng'));
   return rows;
 }
 
