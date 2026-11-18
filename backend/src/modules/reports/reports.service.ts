@@ -40,6 +40,7 @@ import {
   ReorderSuggestionQueryDto,
 } from './dto/inventory-ledger.dto';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
+import { escapeRegex } from '../../common/security/security.sanitizer';
 
 interface LowStockReportItem {
   _id: { toString(): string } | string;
@@ -740,7 +741,7 @@ export class ReportsService {
       productFilter.category = new Types.ObjectId(query.categoryId);
     }
     if (query.search && query.search.trim()) {
-      const regex = new RegExp(query.search.trim(), 'i');
+      const regex = new RegExp(escapeRegex(query.search.trim()), 'i');
       productFilter.$or = [{ name: regex }, { sku: regex }];
     }
 
@@ -1111,7 +1112,7 @@ export class ReportsService {
       filter.category = new Types.ObjectId(query.categoryId);
     }
     if (query.search && query.search.trim()) {
-      const regex = new RegExp(query.search.trim(), 'i');
+      const regex = new RegExp(escapeRegex(query.search.trim()), 'i');
       filter.$or = [{ name: regex }, { sku: regex }];
     }
 

@@ -24,6 +24,7 @@ import {
 } from '../suppliers/schemas/supplier.schema';
 import { Product, ProductDocument } from '../products/schemas/product.schema';
 import { paginate, PaginatedResult } from '../../common/dto/pagination.dto';
+import { escapeRegex } from '../../common/security/security.sanitizer';
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -221,7 +222,7 @@ export class PurchaseOrdersService {
     }
 
     if (search && search.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i');
+      const searchRegex = new RegExp(escapeRegex(search.trim()), 'i');
       filter.$or = [{ poCode: searchRegex }, { note: searchRegex }];
     }
 

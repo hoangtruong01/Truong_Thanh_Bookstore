@@ -26,6 +26,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { SuppliersService } from '../suppliers/suppliers.service';
 import { FinanceService } from '../finance/finance.service';
 import { paginate, PaginatedResult } from '../../common/dto/pagination.dto';
+import { escapeRegex } from '../../common/security/security.sanitizer';
 
 @Injectable()
 export class GoodsReceiptsService {
@@ -371,7 +372,7 @@ export class GoodsReceiptsService {
     }
 
     if (search && search.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i');
+      const searchRegex = new RegExp(escapeRegex(search.trim()), 'i');
       filter.$or = [{ receiptCode: searchRegex }, { note: searchRegex }];
     }
 

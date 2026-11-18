@@ -84,7 +84,8 @@ export class ReviewsController {
     @Body() dto: UpdateReviewDto,
     @Request() req: any,
   ) {
-    return this.reviewsService.update(productId, reviewId, req.user._id, dto);
+    const userId = req.user?.id || req.user?._id?.toString() || '';
+    return this.reviewsService.update(productId, reviewId, userId, dto);
   }
 
   @Delete(':id/product/:productId')
@@ -96,10 +97,11 @@ export class ReviewsController {
     @Param('id') reviewId: string,
     @Request() req: any,
   ) {
+    const userId = req.user?.id || req.user?._id?.toString() || '';
     return this.reviewsService.delete(
       productId,
       reviewId,
-      req.user._id,
+      userId,
       req.user.role,
       req.user.permissions || [],
     );

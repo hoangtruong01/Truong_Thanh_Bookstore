@@ -187,6 +187,13 @@ export class LandingPageService {
 
     if (cleaned.status) {
       if (cleaned.packages.length > 0) {
+        for (const pkg of cleaned.packages) {
+          if (pkg.price <= 0) {
+            throw new BadRequestException(
+              `Giá của gói "${pkg.name}" phải lớn hơn 0`,
+            );
+          }
+        }
         const unboundPackage = cleaned.packages.find(
           (pkg) => !pkg.productId && !cleaned.productId,
         );
@@ -333,6 +340,12 @@ export class LandingPageService {
         : product.discountPrice > 0
           ? product.discountPrice
           : product.price;
+
+    if (orderPrice <= 0) {
+      throw new BadRequestException(
+        'Giá sản phẩm không hợp lệ (phải lớn hơn 0đ)',
+      );
+    }
 
     const createOrderDto = {
       items: [

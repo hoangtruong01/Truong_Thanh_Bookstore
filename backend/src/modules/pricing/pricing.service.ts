@@ -28,6 +28,7 @@ import {
   CheckMarginDto,
 } from './dto/price-policy.dto';
 import { PaginatedResult, paginate } from '../../common/dto/pagination.dto';
+import { escapeRegex } from '../../common/security/security.sanitizer';
 import { StaffPermission, UserRole, ProductStatus } from '../../common/enums';
 
 export interface PriceCalculationResult {
@@ -755,7 +756,7 @@ export class PricingService {
     }
 
     if (search && search.trim()) {
-      filter.name = new RegExp(search.trim(), 'i');
+      filter.name = new RegExp(escapeRegex(search.trim()), 'i');
     }
 
     const [items, total] = await Promise.all([

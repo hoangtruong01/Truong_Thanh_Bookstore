@@ -747,6 +747,15 @@ const navGroups = computed<NavGroup[]>(() => {
         { name: 'AdminLandingPages', label: isEn ? 'Quick Pages' : 'Trang đích (Landing Page)', to: '/admin/landing-pages', icon: 'landingPages', color: 'amber', permission: 'MANAGE_LANDING_PAGES' },
       ],
     },
+    {
+      key: 'system',
+      label: isEn ? 'System & Users' : 'Hệ thống & Nhân sự',
+      icon: 'customers',
+      color: 'indigo',
+      items: [
+        { name: 'AdminUsers', label: isEn ? 'Staff & Roles' : 'Nhân viên & Phân quyền', to: '/admin/users', icon: 'customers', color: 'indigo' },
+      ],
+    },
   ]
 
   const user = authStore.user
@@ -772,6 +781,7 @@ const openGroups = ref<Record<string, boolean>>({
   inventory: true,
   finance: true,
   marketing: true,
+  system: true,
 })
 
 function toggleGroup(key: string) {

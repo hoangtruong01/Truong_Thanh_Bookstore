@@ -26,6 +26,7 @@ import {
 } from '../inventory/schemas/inventory.schema';
 import { InventoryService } from '../inventory/inventory.service';
 import { paginate, PaginatedResult } from '../../common/dto/pagination.dto';
+import { escapeRegex } from '../../common/security/security.sanitizer';
 
 @Injectable()
 export class StockAuditsService {
@@ -254,40 +255,80 @@ export class StockAuditsService {
       );
     }
 
-    // Áp dụng điều chỉnh kho cho các mặt hàng có chênh lệch
-    for (const item of audit.items) {
-      if (item.discrepancy !== 0) {
-        try {
-          await this.inventoryService.adjustStock(
-            {
+    let session: ClientSession | null = null;
+    let isTransactionActive = false;
+
+    try {
+      session = await this.auditModel.db.startSession();
+      session.startTransaction();
+      isTransactionActive = true;
+    } catch (sessionErr: any) {
+      this.logger.warn(
+        `Session/Transaction not supported (${sessionErr?.message || sessionErr}). Falling back to multi-step execution.`,
+      );
+      session = null;
+      isTransactionActive = false;
+    }
+
+    try {
+      // Áp dụng điều chỉnh kho cho các mặt hàng có chênh lệch
+      for (const item of audit.items) {
+        if (item.discrepancy !== 0) {
+          try {
+            const adjustDto = {
               product: item.product.toString(),
               newStock: item.actualStock,
               expectedCurrentStock: item.systemStock, // NEW-011: Optimistic lock kiểm tra tồn thực tế
               reference: audit.auditCode,
               note: `Điều chỉnh sau kiểm kê ${audit.auditCode}: Lệch ${item.discrepancy > 0 ? '+' : ''}${item.discrepancy} ${item.unit}. Lý do: ${item.reason || 'Kiểm kê định kỳ'}`,
-            },
-            userId,
-          );
-        } catch (err: any) {
-          if (err instanceof ConflictException) {
-            throw new ConflictException(
-              `Xung đột tồn kho tại sản phẩm "${item.productName}": Tồn kho thực tế trong hệ thống đã thay đổi so với số lúc bắt đầu kiểm kê (${item.systemStock}). Vui lòng kiểm đếm lại hoặc đối soát giao dịch phát sinh.`,
-            );
+            };
+            if (session) {
+              await this.inventoryService.adjustStock(
+                adjustDto,
+                userId,
+                session,
+              );
+            } else {
+              await this.inventoryService.adjustStock(adjustDto, userId);
+            }
+          } catch (err: any) {
+            if (err instanceof ConflictException) {
+              throw new ConflictException(
+                `Xung đột tồn kho tại sản phẩm "${item.productName}": Tồn kho thực tế trong hệ thống đã thay đổi so với số lúc bắt đầu kiểm kê (${item.systemStock}). Vui lòng kiểm đếm lại hoặc đối soát giao dịch phát sinh.`,
+              );
+            }
+            throw err;
           }
-          throw err;
         }
       }
-    }
 
-    audit.status = StockAuditStatus.APPROVED;
-    audit.approvedBy = new Types.ObjectId(userId);
-    audit.approvedAt = new Date();
-    audit.appliedAt = new Date();
-    if (dto?.note) {
-      audit.note = audit.note ? `${audit.note} | ${dto.note}` : dto.note;
-    }
+      audit.status = StockAuditStatus.APPROVED;
+      audit.approvedBy = new Types.ObjectId(userId);
+      audit.approvedAt = new Date();
+      audit.appliedAt = new Date();
+      if (dto?.note) {
+        audit.note = audit.note ? `${audit.note} | ${dto.note}` : dto.note;
+      }
 
-    return audit.save();
+      const savedAudit = session
+        ? await audit.save({ session })
+        : await audit.save();
+
+      if (isTransactionActive && session) {
+        await session.commitTransaction();
+      }
+
+      return savedAudit;
+    } catch (err) {
+      if (isTransactionActive && session) {
+        await session.abortTransaction();
+      }
+      throw err;
+    } finally {
+      if (session) {
+        await session.endSession();
+      }
+    }
   }
 
   /**
@@ -330,7 +371,7 @@ export class StockAuditsService {
     }
 
     if (search && search.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i');
+      const searchRegex = new RegExp(escapeRegex(search.trim()), 'i');
       filter.$or = [{ auditCode: searchRegex }, { title: searchRegex }];
     }
 

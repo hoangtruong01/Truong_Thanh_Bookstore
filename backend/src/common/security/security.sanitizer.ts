@@ -5,6 +5,14 @@
 
 import { BadRequestException } from '@nestjs/common';
 
+/**
+ * Escape special characters in string for safe use in RegExp (chống RegExp Injection / ReDoS - SEC-B3).
+ */
+export function escapeRegex(pattern: string): string {
+  if (typeof pattern !== 'string') return '';
+  return pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // sanitize-html exposes a CommonJS callable; this import keeps Jest and Node aligned.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import sanitizeHtml = require('sanitize-html');
