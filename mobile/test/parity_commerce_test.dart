@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -95,11 +94,6 @@ class _MemoryCartStorage implements CartStorage {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/shared_preferences'), (call) async {
-      if (call.method == 'getAll') return <String, dynamic>{};
-      return true;
-    });
     SharedPreferences.setMockInitialValues({});
     FlutterSecureStorage.setMockInitialValues({});
   });
@@ -516,10 +510,7 @@ void main() {
       // Tall viewport so the whole checkout list (summary + CTA) is built.
       tester.view.physicalSize = const Size(900, 6000);
       tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
+      addTearDown(tester.view.reset);
       final previews = <Completer<http.Response>>[];
       final client = MockClient((request) {
         if (request.url.path == '/api/payments/methods') {
@@ -623,10 +614,7 @@ void main() {
   testWidgets('order success screen renders bank transfer instructions with copyable fields', (tester) async {
     tester.view.physicalSize = const Size(900, 3000);
     tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(
       theme: AppTheme.lightTheme,
       home: const OrderSuccessScreen(
