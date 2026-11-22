@@ -13,15 +13,17 @@ class CommerceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    return Container(
-      width: double.infinity,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: palette.surface,
+    return Material(
+      color: palette.surface,
+      shape: RoundedRectangleBorder(
         borderRadius: AppRadii.card,
-        border: Border.all(color: palette.border),
+        side: BorderSide(color: palette.border),
       ),
-      child: child,
+      child: Container(
+        width: double.infinity,
+        padding: padding,
+        child: child,
+      ),
     );
   }
 }

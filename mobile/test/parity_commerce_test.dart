@@ -512,6 +512,11 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
       final previews = <Completer<http.Response>>[];
+      addTearDown(() {
+        for (final c in previews.where((c) => !c.isCompleted)) {
+          c.complete(_json({'data': _preview()}));
+        }
+      });
       final client = MockClient((request) {
         if (request.url.path == '/api/payments/methods') {
           return Future.value(_json({'data': {'methods': ['COD', 'VNPAY', 'MOMO', 'BANK_TRANSFER']}}));
