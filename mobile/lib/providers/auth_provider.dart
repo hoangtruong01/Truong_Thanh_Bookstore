@@ -17,7 +17,19 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _isRefreshingProfile = false;
   bool _isSavingProfile = false;
+  bool _disposed = false;
   late final Future<void> sessionReady;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 
   UserModel? get user => _user;
   String? get token => _token;
@@ -71,6 +83,7 @@ class AuthProvider with ChangeNotifier {
         _user = UserModel.fromJson(jsonDecode(userJsonStr));
       } catch (_) {}
     }
+    if (_disposed) return;
     notifyListeners();
     if (_token != null && _token!.isNotEmpty) {
       unawaited(FcmNotificationService.instance.registerForAuthenticatedUser(_token!));

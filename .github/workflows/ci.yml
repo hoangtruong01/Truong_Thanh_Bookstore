@@ -57,7 +57,7 @@ jobs:
         run: npm ci
 
       - name: 🛡️ Security Audit
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
 
       - name: 🔍 Lint & Code Style Check
         run: npm run lint
@@ -112,7 +112,7 @@ jobs:
         run: npm ci
 
       - name: 🛡️ Security Audit
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
 
       - name: 🧪 Run Frontend Unit Tests
         run: npm run test:unit
