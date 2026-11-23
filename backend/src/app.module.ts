@@ -1,4 +1,5 @@
 import { Module, Logger, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import * as os from 'os';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import type { Connection } from 'mongoose';
@@ -61,6 +62,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('MONGODB_URI'),
+        runtimeAdapters: { os },
         connectionFactory: (connection: Connection): Connection => {
           const logger = new Logger('Database');
           connection.on('error', (err: unknown) => {

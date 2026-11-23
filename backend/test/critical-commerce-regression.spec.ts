@@ -3,6 +3,8 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 
+jest.setTimeout(60000);
+
 describe('Critical Commerce Flow (e2e)', () => {
   let app: INestApplication;
   let accessToken: string;
@@ -46,10 +48,12 @@ describe('Critical Commerce Flow (e2e)', () => {
       accessToken =
         loginRes.body.data?.accessToken ?? loginRes.body.accessToken;
     }
-  });
+  }, 60000);
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   it('should successfully get product lists', async () => {

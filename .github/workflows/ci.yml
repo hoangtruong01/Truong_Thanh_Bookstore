@@ -17,6 +17,7 @@ jobs:
   gitleaks:
     name: 🛡️ Secret Scan (Gitleaks)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: read # gitleaks-action cần đọc commit của PR
@@ -38,6 +39,7 @@ jobs:
   backend-ci:
     name: 🚀 Backend CI (NestJS + Jest)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: backend
@@ -76,6 +78,7 @@ jobs:
           npx jest --rootDir . test/all-fixes.spec.ts test/e2e-flow.spec.ts test/critical-commerce-regression.spec.ts test/security-p0-audit.spec.ts --runInBand --detectOpenHandles
           npm run test:e2e -- --runInBand --detectOpenHandles
         env:
+          NODE_OPTIONS: '--experimental-vm-modules'
           MONGODB_URI: mongodb://127.0.0.1:27017/truongthanh_e2e?replicaSet=rs0&directConnection=true
           JWT_SECRET: ci-only-jwt-secret-at-least-32-characters
           JWT_REFRESH_SECRET: ci-only-jwt-refresh-secret-at-least-32-chars
@@ -93,6 +96,7 @@ jobs:
   frontend-ci:
     name: 🌐 Frontend CI (Vue 3 + Vite + Playwright)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend
@@ -143,6 +147,7 @@ jobs:
   mobile-ci:
     name: 📱 Mobile CI (Flutter + Dart Tests)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: mobile
