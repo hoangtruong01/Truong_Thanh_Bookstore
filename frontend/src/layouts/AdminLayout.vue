@@ -1,211 +1,398 @@
 <template>
-  <div class="h-screen w-screen overflow-hidden flex bg-slate-50 dark:bg-slate-950 font-sans relative">
-    <!-- Backdrop for mobile -->
-    <div v-if="sidebarOpen" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 md:hidden" @click="sidebarOpen = false"></div>
+  <div class="h-screen w-screen overflow-hidden flex bg-slate-50 dark:bg-slate-950 font-sans relative antialiased">
+    <!-- Backdrop for mobile drawer -->
+    <div
+      v-if="sidebarOpen"
+      class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden transition-opacity"
+      @click="sidebarOpen = false"
+    ></div>
 
-    <!-- Sidebar (Matches Screenshot: light background) -->
-    <aside 
-      class="fixed inset-y-0 left-0 w-64 h-full md:h-screen md:max-h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xs flex-shrink-0 z-40 transition-transform duration-300 md:translate-x-0 md:static"
-      :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full']"
+    <!-- Sidebar (Modern Minimal ERP: White/Soft Gray background, Blue Brand Accent) -->
+    <aside
+      class="fixed inset-y-0 left-0 h-full md:h-screen md:max-h-screen bg-white dark:bg-slate-900 border-r border-slate-200/90 dark:border-slate-800 flex flex-col shadow-xs flex-shrink-0 z-40 transition-[width,transform] duration-300 ease-in-out md:translate-x-0 md:static select-none"
+      :class="[
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        isCollapsed ? 'w-[70px]' : 'w-[268px]'
+      ]"
     >
-      <!-- Sidebar Header / Logo -->
-      <div class="h-18 flex-shrink-0 flex items-center px-4.5 border-b border-slate-200/80 dark:border-slate-800 gap-3 bg-white dark:bg-slate-900">
-        <!-- Logo Emblem -->
-        <div class="relative flex-shrink-0">
-          <img src="@/assets/logo.jpg" class="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-2xs" alt="Trường Thành Logo" />
-          <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" title="Online"></span>
-        </div>
-        <div class="flex flex-col min-w-0">
-          <div class="flex items-center gap-1.5">
-            <span class="text-xs font-black text-slate-900 dark:text-white tracking-tight uppercase truncate">TRƯỜNG THÀNH</span>
-            <span class="px-1 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400 border border-red-200/60 dark:border-red-900/40">ERP</span>
+      <!-- 1. Header: Logo, Brand & Collapse Toggle -->
+      <div
+        class="h-16 flex-shrink-0 flex items-center border-b border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-200"
+        :class="[isCollapsed ? 'px-3 justify-center' : 'px-4.5 justify-between']"
+      >
+        <!-- Logo Emblem & Brand Text -->
+        <router-link
+          to="/admin/dashboard"
+          class="flex items-center gap-3 min-w-0 group"
+          :title="isCollapsed ? 'Trường Thành ERP - Bookstore & Office Supplies' : undefined"
+        >
+          <div class="relative flex-shrink-0">
+            <img
+              src="@/assets/logo.jpg"
+              class="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-2xs group-hover:scale-105 transition-transform"
+              alt="Trường Thành Logo"
+            />
+            <span
+              class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900"
+              title="Online"
+            ></span>
           </div>
-          <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 truncate">Quản trị & Điều hành</span>
+
+          <!-- Text branding (hidden when collapsed) -->
+          <div v-if="!isCollapsed" class="flex flex-col min-w-0 transition-opacity duration-200">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-black text-slate-900 dark:text-white tracking-tight uppercase truncate">TRƯỜNG THÀNH</span>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400 border border-red-200/70 dark:border-red-900/50">ERP</span>
+            </div>
+            <span class="text-[10.5px] font-medium text-slate-400 dark:text-slate-500 truncate">Bookstore & Office Supplies</span>
+          </div>
+        </router-link>
+
+        <!-- Toggle Collapse Button (Desktop) -->
+        <button
+          v-if="!isCollapsed"
+          type="button"
+          class="hidden md:flex w-7 h-7 rounded-lg items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          :title="isCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'"
+          @click="toggleCollapse"
+        >
+          <div class="w-4 h-4">
+            <AdminNavIcon name="panel-left-close" />
+          </div>
+        </button>
+      </div>
+
+      <!-- 2. Expand Toggle button when Collapsed -->
+      <div v-if="isCollapsed" class="hidden md:flex justify-center py-2 border-b border-slate-150 dark:border-slate-800/80">
+        <button
+          type="button"
+          class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors cursor-pointer"
+          title="Mở rộng menu (Ctrl+K)"
+          @click="toggleCollapse"
+        >
+          <div class="w-4 h-4">
+            <AdminNavIcon name="panel-left-open" />
+          </div>
+        </button>
+      </div>
+
+      <!-- 3. Quick Search Box (Shown when expanded) -->
+      <div v-if="!isCollapsed" class="px-3.5 pt-3 pb-1">
+        <div class="relative">
+          <input
+            ref="searchInputRef"
+            v-model="searchQuery"
+            type="text"
+            placeholder="Tìm chức năng... (Ctrl+K)"
+            class="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/70 border border-slate-200/90 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 transition-colors"
+          />
+          <div class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none">
+            <AdminNavIcon name="search" />
+          </div>
+          <button
+            v-if="searchQuery"
+            type="button"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs p-0.5 cursor-pointer"
+            @click="searchQuery = ''"
+          >
+            ✕
+          </button>
         </div>
       </div>
 
-      <!-- Navigation links (Collapsible Accordion Style with Independent Scroll) -->
-      <nav class="flex-1 min-h-0 px-3 py-3 space-y-2.5 overflow-y-auto overscroll-contain custom-scrollbar">
-        <!-- Top Standalone Quick Links (Dashboard) -->
-        <div class="space-y-1">
+      <!-- 4. Navigation Menu (Collapsible Accordion Style with Independent Scroll) -->
+      <nav class="flex-1 min-h-0 px-2.5 py-2 space-y-2 overflow-y-auto overscroll-contain custom-scrollbar">
+        <!-- 4.A: SEARCH RESULTS (Active when user types in search box) -->
+        <div v-if="isSearching && !isCollapsed" class="space-y-1">
+          <div class="px-2 py-1 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span>Kết quả tìm kiếm ({{ filteredItems.length }})</span>
+            <button class="text-blue-600 hover:underline cursor-pointer lowercase font-medium" @click="searchQuery = ''">Xóa</button>
+          </div>
+
+          <div v-if="filteredItems.length === 0" class="py-6 px-3 text-center text-xs text-slate-400 font-medium">
+            Không tìm thấy chức năng phù hợp.
+          </div>
+
           <router-link
-            v-for="item in topNavItems"
+            v-for="item in filteredItems"
             :key="item.name"
             :to="item.to"
-            class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 group relative"
+            class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all duration-150 group relative"
             :class="[
               isItemActive(item)
-                ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-xs border border-slate-200/90 dark:border-slate-700/80'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-bold shadow-2xs'
+                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white font-medium'
             ]"
+            @click="sidebarOpen = false"
           >
-            <!-- Left Accent indicator when active -->
-            <span
-              v-if="isItemActive(item)"
-              class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
-              :class="colorThemes[item.color]?.accentBar || 'bg-indigo-600'"
-            ></span>
-
-            <!-- Uniform Icon Container with Vibrant Color -->
             <div
-              class="w-6.5 h-6.5 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-150 group-hover:scale-105"
-              :class="[
-                isItemActive(item)
-                  ? colorThemes[item.color]?.activeBadge
-                  : colorThemes[item.color]?.inactiveBadge
-              ]"
+              class="w-4.5 h-4.5 flex-shrink-0 transition-colors"
+              :class="isItemActive(item) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'"
             >
-              <div class="w-3.5 h-3.5">
-                <AdminNavIcon :name="item.icon" />
-              </div>
+              <AdminNavIcon :name="item.icon" />
             </div>
-
-            <span class="truncate">{{ item.label }}</span>
+            <span class="truncate leading-normal">{{ item.label }}</span>
           </router-link>
         </div>
 
-        <!-- Section Divider -->
-        <div class="border-t border-slate-200/70 dark:border-slate-800/80 my-1"></div>
-
-        <!-- Collapsible Groups -->
-        <div
-          v-for="group in navGroups"
-          :key="group.key"
-          class="space-y-1"
-        >
-          <!-- Group Header Button (Refined, Subtle, Balanced with Color Badge) -->
-          <button
-            type="button"
-            class="w-full flex items-center justify-between px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/60 dark:hover:bg-slate-800/40 rounded-lg transition-colors cursor-pointer select-none group/hdr"
-            @click="toggleGroup(group.key)"
-          >
-            <div class="flex items-center gap-2 truncate">
-              <!-- Small Category Vector Icon Badge -->
-              <div
-                class="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-transform group-hover/hdr:scale-105"
-                :class="colorThemes[group.color]?.headerBadge || 'bg-slate-100 text-slate-500 border border-slate-200/60'"
-              >
-                <div class="w-3 h-3">
-                  <AdminNavIcon :name="group.icon" />
-                </div>
-              </div>
-              <span class="truncate">{{ group.label }}</span>
-            </div>
-
-            <!-- Sleek Rotating Chevron -->
-            <div class="w-4 h-4 rounded-md flex items-center justify-center text-slate-400 group-hover/hdr:text-slate-600 dark:text-slate-500 transition-colors">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="2.2"
-                stroke="currentColor"
-                class="w-3 h-3 transition-transform duration-200"
-                :class="[isGroupOpen(group.key) ? 'rotate-180' : '']"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-              </svg>
-            </div>
-          </button>
-
-          <!-- Group Submenu with Left Guide Line -->
-          <transition
-            enter-active-class="transition-all duration-200 ease-out overflow-hidden"
-            leave-active-class="transition-all duration-150 ease-in overflow-hidden"
-            enter-from-class="max-h-0 opacity-0"
-            enter-to-class="max-h-96 opacity-100"
-            leave-from-class="max-h-96 opacity-100"
-            leave-to-class="max-h-0 opacity-0"
-          >
+        <!-- 4.B: STANDARD MENU (When NOT searching) -->
+        <template v-else>
+          <!-- Top Standalone Quick Links (Trang chủ & Báo cáo) -->
+          <div class="space-y-1">
             <div
-              v-show="isGroupOpen(group.key)"
-              class="relative ml-3.5 pl-2.5 my-1 space-y-0.5 border-l border-slate-200/80 dark:border-slate-800"
+              v-for="item in topNavItems"
+              :key="item.name"
+              class="relative group/tip"
             >
               <router-link
-                v-for="item in group.items"
-                :key="item.name"
                 :to="item.to"
-                class="flex items-center gap-2.5 px-2.5 py-1.8 rounded-xl text-xs transition-all duration-150 group relative"
+                class="flex items-center rounded-xl text-xs transition-all duration-150 relative group"
                 :class="[
+                  isCollapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.2',
                   isItemActive(item)
-                    ? 'bg-slate-100/90 dark:bg-slate-800/80 text-slate-900 dark:text-white font-bold shadow-xs border border-slate-200/80 dark:border-slate-700/70'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/60 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white font-medium'
+                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-bold shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white font-medium'
                 ]"
+                :title="!isCollapsed ? item.label : undefined"
+                @click="sidebarOpen = false"
               >
-                <!-- Left Accent indicator when active -->
+                <!-- Active Indicator Bar -->
                 <span
-                  v-if="isItemActive(item)"
-                  class="absolute -left-2.5 top-1.5 bottom-1.5 w-0.75 rounded-r-full"
-                  :class="colorThemes[item.color]?.accentBar || 'bg-red-600'"
+                  v-if="isItemActive(item) && !isCollapsed"
+                  class="absolute left-0 top-2 bottom-2 w-1 bg-blue-600 dark:bg-blue-500 rounded-r-full"
                 ></span>
 
-                <!-- Fixed 26x26px Icon container with dedicated colorful theme -->
+                <!-- Clean Unified Monochromatic Icon -->
                 <div
-                  class="w-6.5 h-6.5 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-150 group-hover:scale-105"
-                  :class="[
-                    isItemActive(item)
-                      ? colorThemes[item.color]?.activeBadge
-                      : colorThemes[item.color]?.inactiveBadge
-                  ]"
+                  class="w-4.5 h-4.5 flex-shrink-0 transition-colors"
+                  :class="isItemActive(item) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'"
                 >
-                  <div class="w-3.5 h-3.5">
-                    <AdminNavIcon :name="item.icon" />
-                  </div>
+                  <AdminNavIcon :name="item.icon" />
                 </div>
 
-                <span class="truncate leading-normal">{{ item.label }}</span>
+                <span v-if="!isCollapsed" class="truncate leading-normal">{{ item.label }}</span>
               </router-link>
+
+              <!-- Collapsed Tooltip -->
+              <div
+                v-if="isCollapsed"
+                class="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 flex items-center"
+              >
+                <span>{{ item.label }}</span>
+                <span class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900 dark:border-r-slate-100"></span>
+              </div>
             </div>
-          </transition>
-        </div>
+          </div>
+
+          <!-- Section Divider -->
+          <div class="border-t border-slate-200/70 dark:border-slate-800/80 my-2"></div>
+
+          <!-- Collapsible Groups -->
+          <div
+            v-for="group in navGroups"
+            :key="group.key"
+            class="space-y-1"
+          >
+            <!-- Group Header (Expanded mode) -->
+            <button
+              v-if="!isCollapsed"
+              type="button"
+              class="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-800/30 rounded-lg transition-colors cursor-pointer select-none group/hdr"
+              @click="toggleGroup(group.key)"
+            >
+              <span class="truncate">{{ group.label }}</span>
+
+              <!-- Rotating Chevron -->
+              <div class="w-3.5 h-3.5 text-slate-400 group-hover/hdr:text-slate-600 dark:text-slate-500 transition-transform duration-200" :class="[isGroupOpen(group.key) ? 'rotate-0' : '-rotate-90']">
+                <AdminNavIcon name="chevron-down" />
+              </div>
+            </button>
+
+            <!-- Collapsed Group Divider with label indicator -->
+            <div v-else class="py-1">
+              <div class="h-px bg-slate-200/80 dark:bg-slate-800 mx-2" :title="group.label"></div>
+            </div>
+
+            <!-- Group Submenu Items -->
+            <transition
+              enter-active-class="transition-all duration-200 ease-out overflow-hidden"
+              leave-active-class="transition-all duration-150 ease-in overflow-hidden"
+              enter-from-class="max-h-0 opacity-0"
+              enter-to-class="max-h-96 opacity-100"
+              leave-from-class="max-h-96 opacity-100"
+              leave-to-class="max-h-0 opacity-0"
+            >
+              <div
+                v-show="isCollapsed || isGroupOpen(group.key)"
+                class="space-y-0.5"
+                :class="[isCollapsed ? '' : 'pl-1']"
+              >
+                <div
+                  v-for="item in group.items"
+                  :key="item.name"
+                  class="relative group/tip"
+                >
+                  <router-link
+                    :to="item.to"
+                    class="flex items-center rounded-xl text-xs transition-all duration-150 relative group"
+                    :class="[
+                      isCollapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2',
+                      isItemActive(item)
+                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-bold shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white font-medium'
+                    ]"
+                    :title="!isCollapsed ? item.label : undefined"
+                    @click="sidebarOpen = false"
+                  >
+                    <!-- Left Accent Bar when active -->
+                    <span
+                      v-if="isItemActive(item) && !isCollapsed"
+                      class="absolute left-0 top-1.5 bottom-1.5 w-1 bg-blue-600 dark:bg-blue-500 rounded-r-full"
+                    ></span>
+
+                    <!-- Unified Icon -->
+                    <div
+                      class="w-4.5 h-4.5 flex-shrink-0 transition-colors"
+                      :class="isItemActive(item) ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'"
+                    >
+                      <AdminNavIcon :name="item.icon" />
+                    </div>
+
+                    <span v-if="!isCollapsed" class="truncate leading-normal">{{ item.label }}</span>
+                  </router-link>
+
+                  <!-- Collapsed Tooltip -->
+                  <div
+                    v-if="isCollapsed"
+                    class="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 flex items-center"
+                  >
+                    <span>{{ item.label }}</span>
+                    <span class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900 dark:border-r-slate-100"></span>
+                  </div>
+                </div>
+              </div>
+            </transition>
+          </div>
+        </template>
       </nav>
 
-      <!-- Sidebar Footer -->
-      <div class="flex-shrink-0 p-3 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col gap-1.5">
-        <router-link
-          to="/"
-          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/80 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/80 transition-all shadow-2xs group"
-        >
-          <div class="w-5 h-5 rounded-md flex items-center justify-center bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/40">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-3.5 h-3.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.25A2.25 2.25 0 0 1 0 18.75V10.5m13.5 10.5h6.75A2.25 2.25 0 0 0 22.5 18.75V10.5M12 3l10.5 7.5M12 3 1.5 10.5" />
-            </svg>
-          </div>
-          <span>Về trang bán hàng</span>
-        </router-link>
+      <!-- 5. Fixed Footer (Help, Storefront, Logout) -->
+      <div
+        class="flex-shrink-0 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col gap-1.5 transition-all"
+        :class="[isCollapsed ? 'p-2 items-center' : 'p-3']"
+      >
+        <!-- Hỗ trợ & Hướng dẫn -->
+        <div class="w-full relative group/tip">
+          <button
+            type="button"
+            class="flex items-center rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-50/80 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/80 dark:border-slate-700/80 transition-all cursor-pointer shadow-2xs group"
+            :class="[isCollapsed ? 'justify-center w-full p-2.5' : 'gap-2.5 w-full py-2 px-3']"
+            @click="showHelp = true"
+          >
+            <div class="w-4.5 h-4.5 text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex-shrink-0">
+              <AdminNavIcon name="help" />
+            </div>
+            <span v-if="!isCollapsed" class="truncate">Hỗ trợ & Hướng dẫn</span>
+          </button>
 
-        <button
-          class="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-100/90 dark:border-rose-900/40 transition-all cursor-pointer group"
-          @click="handleLogout"
-        >
-          <div class="w-5 h-5 rounded-md flex items-center justify-center bg-rose-100/80 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-3.5 h-3.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
-            </svg>
+          <!-- Collapsed Tooltip -->
+          <div
+            v-if="isCollapsed"
+            class="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 flex items-center"
+          >
+            <span>Hỗ trợ & Hướng dẫn</span>
+            <span class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900 dark:border-r-slate-100"></span>
           </div>
-          <span>Đăng xuất</span>
-        </button>
+        </div>
+
+        <!-- Về trang bán hàng -->
+        <div class="w-full relative group/tip">
+          <router-link
+            to="/"
+            class="flex items-center rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-50/80 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/80 dark:border-slate-700/80 transition-all shadow-2xs group"
+            :class="[isCollapsed ? 'justify-center w-full p-2.5' : 'gap-2.5 w-full py-2 px-3']"
+          >
+            <div class="w-4.5 h-4.5 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex-shrink-0">
+              <AdminNavIcon name="store" />
+            </div>
+            <span v-if="!isCollapsed" class="truncate">Về trang bán hàng</span>
+          </router-link>
+
+          <!-- Collapsed Tooltip -->
+          <div
+            v-if="isCollapsed"
+            class="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 flex items-center"
+          >
+            <span>Về trang bán hàng</span>
+            <span class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900 dark:border-r-slate-100"></span>
+          </div>
+        </div>
+
+        <!-- Đăng xuất -->
+        <div class="w-full relative group/tip">
+          <button
+            type="button"
+            class="flex items-center rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/25 hover:bg-rose-100 dark:hover:bg-rose-900/40 border border-rose-100 dark:border-rose-900/40 transition-all cursor-pointer group"
+            :class="[isCollapsed ? 'justify-center w-full p-2.5' : 'gap-2.5 w-full py-2 px-3']"
+            @click="handleLogout"
+          >
+            <div class="w-4.5 h-4.5 text-rose-500 flex-shrink-0">
+              <AdminNavIcon name="logout" />
+            </div>
+            <span v-if="!isCollapsed" class="truncate">Đăng xuất</span>
+          </button>
+
+          <!-- Collapsed Tooltip -->
+          <div
+            v-if="isCollapsed"
+            class="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold whitespace-nowrap shadow-xl opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 flex items-center"
+          >
+            <span>Đăng xuất</span>
+            <span class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900 dark:border-r-slate-100"></span>
+          </div>
+        </div>
       </div>
     </aside>
 
-    <!-- Main Workspace -->
-    <div class="flex-1 h-screen max-h-screen flex flex-col overflow-hidden min-w-0">
-      <!-- Top Bar (Matches Screenshot) -->
-      <header class="h-20 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between md:justify-end px-8">
-        <!-- Mobile hamburger menu button -->
-        <button 
-          class="md:hidden text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg hover:bg-slate-100 cursor-pointer" 
-          @click="sidebarOpen = !sidebarOpen"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-          </svg>
-        </button>
+    <!-- Main Workspace (Smoothly expands and auto-adjusts width) -->
+    <div class="flex-1 h-screen max-h-screen flex flex-col overflow-hidden min-w-0 transition-all duration-300">
+      <!-- Top Header Bar -->
+      <header class="h-16 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 flex items-center justify-between px-6 lg:px-8 shadow-2xs">
+        <!-- Left: Mobile menu toggle + Page Context -->
+        <div class="flex items-center gap-3">
+          <!-- Mobile hamburger menu button -->
+          <button
+            class="md:hidden text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            title="Menu"
+            @click="sidebarOpen = !sidebarOpen"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
 
-        <!-- Right User details -->
-        <div class="flex items-center gap-5">
+          <!-- Desktop toggle button in top bar -->
+          <button
+            type="button"
+            class="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            :title="isCollapsed ? 'Mở rộng sidebar (Ctrl+K)' : 'Thu gọn sidebar'"
+            @click="toggleCollapse"
+          >
+            <div class="w-4 h-4">
+              <AdminNavIcon :name="isCollapsed ? 'panel-left-open' : 'panel-left-close'" />
+            </div>
+            <span class="text-[11px] text-slate-400">{{ isCollapsed ? 'Mở rộng' : 'Thu gọn' }}</span>
+          </button>
+        </div>
+
+        <!-- Right User details & actions -->
+        <div class="flex items-center gap-4 sm:gap-5">
           <!-- Dark Mode Toggle -->
-          <button class="text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200 transition-colors p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" :title="isDarkMode ? 'Bật chế độ sáng' : 'Bật chế độ tối'" @click="toggleDarkMode">
+          <button
+            class="text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200 transition-colors p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            :title="isDarkMode ? 'Bật chế độ sáng' : 'Bật chế độ tối'"
+            @click="toggleDarkMode"
+          >
             <span v-if="isDarkMode">☀️</span>
             <span v-else>🌙</span>
           </button>
@@ -232,34 +419,34 @@
 
           <!-- Notification bell -->
           <div id="notification-dropdown-container" class="relative">
-            <button 
+            <button
               class="relative text-slate-500 hover:text-slate-800 transition-colors cursor-pointer p-1.5 rounded-full hover:bg-slate-100"
-              title="Thông báo hệ thống" 
+              title="Thông báo hệ thống"
               @click="toggleNotifications"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
               </svg>
               <!-- Unread badge -->
-              <span 
-                v-if="unreadCount > 0" 
+              <span
+                v-if="unreadCount > 0"
                 class="absolute top-0.5 right-0.5 w-4 h-4 bg-red-600 text-[9px] font-black text-white rounded-full flex items-center justify-center border border-white"
               >
                 {{ unreadCount }}
               </span>
             </button>
 
-            <!-- Dropdown menu -->
-            <div 
-              v-if="showNotifications" 
+            <!-- Notification Dropdown menu -->
+            <div
+              v-if="showNotifications"
               class="absolute right-0 mt-2.5 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden"
             >
               <!-- Header -->
               <div class="px-4 py-3 bg-slate-50 border-b border-slate-150 flex items-center justify-between">
                 <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Thông báo hệ thống</span>
-                <button 
-                  v-if="unreadCount > 0" 
-                  class="text-[10px] font-extrabold text-[#dc2626] hover:underline cursor-pointer" 
+                <button
+                  v-if="unreadCount > 0"
+                  class="text-[10px] font-extrabold text-[#dc2626] hover:underline cursor-pointer"
                   @click="markAllAsRead"
                 >
                   Đọc tất cả
@@ -271,23 +458,25 @@
                 <div v-if="notifications.length === 0" class="p-6 text-center text-xs text-slate-400 font-medium">
                   Không có thông báo nào.
                 </div>
-                <div 
-                  v-for="item in notifications" 
-                  :key="item.id" 
+                <div
+                  v-for="item in notifications"
+                  :key="item.id"
                   class="p-3.5 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                   :class="{'bg-red-50/5 font-semibold': !readIds.includes(item.id)}"
                   @click="handleNotificationClick(item)"
                 >
                   <!-- Icon indicator -->
                   <div
-class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-xs" :class="{
-                    'bg-red-100 text-red-600 border border-red-200': item.type === 'out_of_stock',
-                    'bg-amber-50 text-amber-600 border border-amber-100': item.type === 'stock',
-                    'bg-rose-100 text-rose-600 border border-rose-200': item.type === 'high_value_order',
-                    'bg-orange-50 text-orange-600 border border-orange-100': item.type === 'pending_delay',
-                    'bg-emerald-50 text-emerald-600 border border-emerald-100': item.type === 'order',
-                    'bg-blue-50 text-blue-600 border border-blue-100': item.type === 'customer'
-                  }">
+                    class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-xs"
+                    :class="{
+                      'bg-red-100 text-red-600 border border-red-200': item.type === 'out_of_stock',
+                      'bg-amber-50 text-amber-600 border border-amber-100': item.type === 'stock',
+                      'bg-rose-100 text-rose-600 border border-rose-200': item.type === 'high_value_order',
+                      'bg-orange-50 text-orange-600 border border-orange-100': item.type === 'pending_delay',
+                      'bg-emerald-50 text-emerald-600 border border-emerald-100': item.type === 'order',
+                      'bg-blue-50 text-blue-600 border border-blue-100': item.type === 'customer'
+                    }"
+                  >
                     <span v-if="item.type === 'out_of_stock'">🔴</span>
                     <span v-else-if="item.type === 'stock'">⚠️</span>
                     <span v-else-if="item.type === 'high_value_order'">🚨</span>
@@ -307,7 +496,7 @@ class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-
                       {{ item.message }}
                     </p>
                   </div>
-                  
+
                   <!-- Read indicator dot -->
                   <div v-if="!readIds.includes(item.id)" class="flex-shrink-0 self-center">
                     <div class="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
@@ -318,13 +507,17 @@ class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-
           </div>
 
           <!-- Profile -->
-          <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-all select-none" title="Thông tin tài khoản" @click="showProfile = true">
-            <div class="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white font-extrabold text-xs shadow-xs border border-slate-200 bg-[#f97316]">
+          <div
+            class="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-all select-none"
+            title="Thông tin tài khoản"
+            @click="showProfile = true"
+          >
+            <div class="w-8.5 h-8.5 rounded-full overflow-hidden flex items-center justify-center text-white font-extrabold text-xs shadow-xs border border-slate-200 bg-[#f97316]">
               <img v-if="authStore.user?.avatar" :src="authStore.user.avatar" class="w-full h-full object-cover" />
               <span v-else>{{ adminInitials }}</span>
             </div>
             <div class="text-left leading-tight hidden sm:block">
-              <p class="text-xs font-extrabold text-slate-800">{{ adminName }}</p>
+              <p class="text-xs font-extrabold text-slate-800 dark:text-slate-100">{{ adminName }}</p>
               <p class="text-[9px] text-slate-400 font-semibold uppercase">{{ adminRole }}</p>
             </div>
           </div>
@@ -332,13 +525,16 @@ class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-
       </header>
 
       <!-- Main Content Container (Scrolls Independently from Left Sidebar) -->
-      <main class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-8 custom-scrollbar">
+      <main class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6 lg:p-8 custom-scrollbar">
         <router-view />
       </main>
     </div>
 
     <!-- Profile Modal -->
     <ProfileModal :is-open="showProfile" @close="showProfile = false" />
+
+    <!-- Help & Guide Modal -->
+    <AdminHelpModal :is-open="showHelp" @close="showHelp = false" />
   </div>
 </template>
 
@@ -348,6 +544,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { reportService } from '@/services/report.service'
 import ProfileModal from '@/components/ProfileModal.vue'
+import AdminHelpModal from '@/components/AdminHelpModal.vue'
 import AdminNavIcon from '@/components/AdminNavIcon.vue'
 import { useI18n } from 'vue-i18n'
 
@@ -356,7 +553,21 @@ const router = useRouter()
 const route = useRoute()
 
 const showProfile = ref(false)
+const showHelp = ref(false)
 const sidebarOpen = ref(false)
+
+// Collapsed state persisted in localStorage
+const isCollapsed = ref(localStorage.getItem('admin_sidebar_collapsed') === 'true')
+
+function toggleCollapse() {
+  isCollapsed.value = !isCollapsed.value
+  localStorage.setItem('admin_sidebar_collapsed', String(isCollapsed.value))
+}
+
+// Quick Search State & Logic
+const searchQuery = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
+const isSearching = computed(() => searchQuery.value.trim().length > 0)
 
 watch(() => route.path, () => {
   sidebarOpen.value = false
@@ -373,7 +584,6 @@ const adminInitials = computed(() => {
 })
 const adminRole = computed(() => {
   const role = authStore.user?.role
-  // BUG-027: labels were swapped (ADMIN showed "Super Admin", SUPER_ADMIN showed "Admin")
   if (role === 'SUPER_ADMIN') return 'Super Admin'
   if (role === 'ADMIN') return 'Quản trị viên'
   if (role === 'STAFF') return 'Nhân viên'
@@ -391,15 +601,15 @@ function changeLocale(lang: 'vi' | 'en') {
 }
 
 // Dark Mode logic
-const isDarkMode = ref(localStorage.getItem("theme") === "dark")
+const isDarkMode = ref(localStorage.getItem('theme') === 'dark')
 function toggleDarkMode() {
   isDarkMode.value = !isDarkMode.value
   if (isDarkMode.value) {
-    document.documentElement.classList.add("dark")
-    localStorage.setItem("theme", "dark")
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('theme', 'dark')
   } else {
-    document.documentElement.classList.remove("dark")
-    localStorage.setItem("theme", "light")
+    document.documentElement.classList.remove('dark')
+    localStorage.setItem('theme', 'light')
   }
 }
 
@@ -413,6 +623,30 @@ function handleStorageChange(event: StorageEvent) {
     const newLang = (event.newValue || 'vi') as 'vi' | 'en'
     locale.value = newLang
     document.documentElement.setAttribute('lang', newLang)
+  } else if (event.key === 'admin_sidebar_collapsed') {
+    isCollapsed.value = event.newValue === 'true'
+  }
+}
+
+// Global Keyboard Shortcuts (Ctrl+K for search, Esc to clear/close)
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault()
+    if (isCollapsed.value) {
+      isCollapsed.value = false
+      localStorage.setItem('admin_sidebar_collapsed', 'false')
+    }
+    setTimeout(() => {
+      searchInputRef.value?.focus()
+    }, 60)
+  } else if (e.key === 'Escape') {
+    if (searchQuery.value) {
+      searchQuery.value = ''
+    } else if (showHelp.value) {
+      showHelp.value = false
+    } else if (showProfile.value) {
+      showProfile.value = false
+    }
   }
 }
 
@@ -476,7 +710,7 @@ function handleNotificationClick(item: any) {
     saveReadIds()
   }
   showNotifications.value = false
-  
+
   if (item.type === 'order' || item.type === 'high_value_order' || item.type === 'pending_delay') {
     router.push('/admin/orders')
   } else if (item.type === 'stock' || item.type === 'out_of_stock') {
@@ -501,39 +735,40 @@ function formatTimeAgo(dateStr: string) {
   const now = new Date()
   const date = new Date(dateStr)
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-  
+
   if (seconds < 60) return 'Vừa xong'
-  
+
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes} phút trước`
-  
+
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return `${hours} giờ trước`
-  
+
   const days = Math.floor(hours / 24)
   if (days === 1) return 'Hôm qua'
   return `${days} ngày trước`
 }
 
 onMounted(() => {
-  // Initialize theme & language states from localStorage on mount
-  isDarkMode.value = localStorage.getItem("theme") === "dark"
-  document.documentElement.classList.toggle("dark", isDarkMode.value)
+  isDarkMode.value = localStorage.getItem('theme') === 'dark'
+  document.documentElement.classList.toggle('dark', isDarkMode.value)
 
-  locale.value = (localStorage.getItem("lang") || "vi") as "vi" | "en"
-  document.documentElement.setAttribute("lang", locale.value)
+  locale.value = (localStorage.getItem('lang') || 'vi') as 'vi' | 'en'
+  document.documentElement.setAttribute('lang', locale.value)
 
   loadReadIds()
   fetchNotifications()
-  
+
   const interval = setInterval(fetchNotifications, 30000)
   window.addEventListener('click', handleClickOutside)
   window.addEventListener('storage', handleStorageChange)
-  
+  window.addEventListener('keydown', handleGlobalKeydown)
+
   onUnmounted(() => {
     clearInterval(interval)
     window.removeEventListener('click', handleClickOutside)
     window.removeEventListener('storage', handleStorageChange)
+    window.removeEventListener('keydown', handleGlobalKeydown)
   })
 })
 
@@ -542,7 +777,6 @@ interface NavItem {
   label: string
   to: string
   icon: string
-  color: string
   permission?: string
 }
 
@@ -550,131 +784,22 @@ interface NavGroup {
   key: string
   label: string
   icon: string
-  color: string
   items: NavItem[]
-}
-
-interface ColorTheme {
-  inactiveBadge: string
-  activeBadge: string
-  headerBadge: string
-  headerIcon: string
-  accentBar: string
-}
-
-const colorThemes: Record<string, ColorTheme> = {
-  indigo: {
-    inactiveBadge: 'bg-indigo-50 text-indigo-600 border border-indigo-200/70 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-800/50',
-    activeBadge: 'bg-indigo-600 text-white shadow-xs dark:bg-indigo-500 dark:text-white',
-    headerBadge: 'bg-indigo-50 text-indigo-600 border border-indigo-200/70 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-800/50',
-    headerIcon: 'text-indigo-600 dark:text-indigo-400',
-    accentBar: 'bg-indigo-600 dark:bg-indigo-500',
-  },
-  blue: {
-    inactiveBadge: 'bg-blue-50 text-blue-600 border border-blue-200/70 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800/50',
-    activeBadge: 'bg-blue-600 text-white shadow-xs dark:bg-blue-500 dark:text-white',
-    headerBadge: 'bg-blue-50 text-blue-600 border border-blue-200/70 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800/50',
-    headerIcon: 'text-blue-600 dark:text-blue-400',
-    accentBar: 'bg-blue-600 dark:bg-blue-500',
-  },
-  amber: {
-    inactiveBadge: 'bg-amber-50 text-amber-600 border border-amber-200/70 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/50',
-    activeBadge: 'bg-amber-500 text-white shadow-xs dark:bg-amber-500 dark:text-white',
-    headerBadge: 'bg-amber-50 text-amber-600 border border-amber-200/70 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/50',
-    headerIcon: 'text-amber-600 dark:text-amber-400',
-    accentBar: 'bg-amber-500 dark:bg-amber-400',
-  },
-  purple: {
-    inactiveBadge: 'bg-purple-50 text-purple-600 border border-purple-200/70 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-800/50',
-    activeBadge: 'bg-purple-600 text-white shadow-xs dark:bg-purple-500 dark:text-white',
-    headerBadge: 'bg-purple-50 text-purple-600 border border-purple-200/70 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-800/50',
-    headerIcon: 'text-purple-600 dark:text-purple-400',
-    accentBar: 'bg-purple-600 dark:bg-purple-500',
-  },
-  sky: {
-    inactiveBadge: 'bg-sky-50 text-sky-600 border border-sky-200/70 dark:bg-sky-950/50 dark:text-sky-400 dark:border-sky-800/50',
-    activeBadge: 'bg-sky-600 text-white shadow-xs dark:bg-sky-500 dark:text-white',
-    headerBadge: 'bg-sky-50 text-sky-600 border border-sky-200/70 dark:bg-sky-950/50 dark:text-sky-400 dark:border-sky-800/50',
-    headerIcon: 'text-sky-600 dark:text-sky-400',
-    accentBar: 'bg-sky-600 dark:bg-sky-500',
-  },
-  pink: {
-    inactiveBadge: 'bg-pink-50 text-pink-600 border border-pink-200/70 dark:bg-pink-950/50 dark:text-pink-400 dark:border-pink-800/50',
-    activeBadge: 'bg-pink-600 text-white shadow-xs dark:bg-pink-500 dark:text-white',
-    headerBadge: 'bg-pink-50 text-pink-600 border border-pink-200/70 dark:bg-pink-950/50 dark:text-pink-400 dark:border-pink-800/50',
-    headerIcon: 'text-pink-600 dark:text-pink-400',
-    accentBar: 'bg-pink-600 dark:bg-pink-500',
-  },
-  teal: {
-    inactiveBadge: 'bg-teal-50 text-teal-600 border border-teal-200/70 dark:bg-teal-950/50 dark:text-teal-400 dark:border-teal-800/50',
-    activeBadge: 'bg-teal-600 text-white shadow-xs dark:bg-teal-500 dark:text-white',
-    headerBadge: 'bg-teal-50 text-teal-600 border border-teal-200/70 dark:bg-teal-950/50 dark:text-teal-400 dark:border-teal-800/50',
-    headerIcon: 'text-teal-600 dark:text-teal-400',
-    accentBar: 'bg-teal-600 dark:bg-teal-500',
-  },
-  orange: {
-    inactiveBadge: 'bg-orange-50 text-orange-600 border border-orange-200/70 dark:bg-orange-950/50 dark:text-orange-400 dark:border-orange-800/50',
-    activeBadge: 'bg-orange-600 text-white shadow-xs dark:bg-orange-500 dark:text-white',
-    headerBadge: 'bg-orange-50 text-orange-600 border border-orange-200/70 dark:bg-orange-950/50 dark:text-orange-400 dark:border-orange-800/50',
-    headerIcon: 'text-orange-600 dark:text-orange-400',
-    accentBar: 'bg-orange-600 dark:bg-orange-500',
-  },
-  cyan: {
-    inactiveBadge: 'bg-cyan-50 text-cyan-600 border border-cyan-200/70 dark:bg-cyan-950/50 dark:text-cyan-400 dark:border-cyan-800/50',
-    activeBadge: 'bg-cyan-600 text-white shadow-xs dark:bg-cyan-500 dark:text-white',
-    headerBadge: 'bg-cyan-50 text-cyan-600 border border-cyan-200/70 dark:bg-cyan-950/50 dark:text-cyan-400 dark:border-cyan-800/50',
-    headerIcon: 'text-cyan-600 dark:text-cyan-400',
-    accentBar: 'bg-cyan-600 dark:bg-cyan-500',
-  },
-  emerald: {
-    inactiveBadge: 'bg-emerald-50 text-emerald-600 border border-emerald-200/70 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/50',
-    activeBadge: 'bg-emerald-600 text-white shadow-xs dark:bg-emerald-500 dark:text-white',
-    headerBadge: 'bg-emerald-50 text-emerald-600 border border-emerald-200/70 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/50',
-    headerIcon: 'text-emerald-600 dark:text-emerald-400',
-    accentBar: 'bg-emerald-600 dark:bg-emerald-500',
-  },
-  violet: {
-    inactiveBadge: 'bg-violet-50 text-violet-600 border border-violet-200/70 dark:bg-violet-950/50 dark:text-violet-400 dark:border-violet-800/50',
-    activeBadge: 'bg-violet-600 text-white shadow-xs dark:bg-violet-500 dark:text-white',
-    headerBadge: 'bg-violet-50 text-violet-600 border border-violet-200/70 dark:bg-violet-950/50 dark:text-violet-400 dark:border-violet-800/50',
-    headerIcon: 'text-violet-600 dark:text-violet-400',
-    accentBar: 'bg-violet-600 dark:bg-violet-500',
-  },
-  red: {
-    inactiveBadge: 'bg-red-50 text-red-600 border border-red-200/70 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800/50',
-    activeBadge: 'bg-red-600 text-white shadow-xs dark:bg-red-500 dark:text-white',
-    headerBadge: 'bg-red-50 text-red-600 border border-red-200/70 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800/50',
-    headerIcon: 'text-red-600 dark:text-red-400',
-    accentBar: 'bg-red-600 dark:bg-red-500',
-  },
-  rose: {
-    inactiveBadge: 'bg-rose-50 text-rose-600 border border-rose-200/70 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/50',
-    activeBadge: 'bg-rose-600 text-white shadow-xs dark:bg-rose-500 dark:text-white',
-    headerBadge: 'bg-rose-50 text-rose-600 border border-rose-200/70 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/50',
-    headerIcon: 'text-rose-600 dark:text-rose-400',
-    accentBar: 'bg-rose-600 dark:bg-rose-500',
-  },
-  fuchsia: {
-    inactiveBadge: 'bg-fuchsia-50 text-fuchsia-600 border border-fuchsia-200/70 dark:bg-fuchsia-950/50 dark:text-fuchsia-400 dark:border-fuchsia-800/50',
-    activeBadge: 'bg-fuchsia-600 text-white shadow-xs dark:bg-fuchsia-500 dark:text-white',
-    headerBadge: 'bg-fuchsia-50 text-fuchsia-600 border border-fuchsia-200/70 dark:bg-fuchsia-950/50 dark:text-fuchsia-400 dark:border-fuchsia-800/50',
-    headerIcon: 'text-fuchsia-600 dark:text-fuchsia-400',
-    accentBar: 'bg-fuchsia-600 dark:bg-fuchsia-500',
-  },
 }
 
 function isItemActive(item: NavItem): boolean {
   if (item.name === 'AdminDashboard') {
-    return route.name === item.name || route.path === item.to
+    return route.name === item.name || route.path === item.to || route.path === '/admin'
   }
   return route.name === item.name || route.path.startsWith(item.to)
 }
 
-// Top Standalone Quick Links (Dashboard)
+// 1. Top Standalone Quick Links (Trang chủ & Báo cáo & Thống kê theo mockup)
 const topNavItems = computed<NavItem[]>(() => {
   const isEn = locale.value === 'en'
   const rawItems: NavItem[] = [
-    { name: 'AdminDashboard', label: isEn ? 'Dashboard' : 'Bàn làm việc (Dashboard)', to: '/admin/dashboard', icon: 'dashboard', color: 'indigo' },
+    { name: 'AdminDashboard', label: isEn ? 'Dashboard' : 'Trang chủ', to: '/admin/dashboard', icon: 'home' },
+    { name: 'AdminReports', label: isEn ? 'Reports & Analytics' : 'Báo cáo & Thống kê', to: '/admin/reports', icon: 'reports', permission: 'VIEW_REPORTS' },
   ]
   const user = authStore.user
   if (!user) return []
@@ -684,76 +809,63 @@ const topNavItems = computed<NavItem[]>(() => {
   return rawItems.filter(item => !item.permission || userPermissions.includes(item.permission))
 })
 
+// 2. Business Groups (Bán hàng, Kho & Hàng hóa, Tài chính, Marketing, Hệ thống)
 const navGroups = computed<NavGroup[]>(() => {
   const isEn = locale.value === 'en'
 
   const rawGroups: NavGroup[] = [
     {
       key: 'sales',
-      label: isEn ? 'Sales & Orders' : 'Bán hàng & Đơn hàng',
+      label: isEn ? 'Sales' : 'Bán hàng',
       icon: 'sales',
-      color: 'blue',
       items: [
-        { name: 'AdminPOS', label: isEn ? 'POS Counter' : 'Bán hàng tại quầy', to: '/admin/pos', icon: 'pos', color: 'amber', permission: 'POS_ACCESS' },
-        { name: 'AdminOrders', label: isEn ? 'Orders' : 'Quản lý đơn hàng', to: '/admin/orders', icon: 'orders', color: 'blue', permission: 'MANAGE_ORDERS' },
-        { name: 'AdminCustomers', label: isEn ? 'Customers' : 'Khách hàng & Hạng sỉ', to: '/admin/customers', icon: 'customers', color: 'purple', permission: 'MANAGE_CUSTOMERS' },
-      ],
-    },
-    {
-      key: 'catalog',
-      label: isEn ? 'Products & Pricing' : 'Sản phẩm & Giá bán',
-      icon: 'catalog',
-      color: 'sky',
-      items: [
-        { name: 'AdminProducts', label: isEn ? 'Products' : 'Danh mục sản phẩm', to: '/admin/products', icon: 'products', color: 'sky', permission: 'MANAGE_PRODUCTS' },
-        { name: 'AdminCombos', label: isEn ? 'Combos' : 'Gói quà & Combo', to: '/admin/combos', icon: 'combos', color: 'pink', permission: 'MANAGE_PRODUCTS' },
-        { name: 'AdminPricing', label: isEn ? 'Pricing & Margin' : 'Chính sách giá & Lợi nhuận', to: '/admin/pricing', icon: 'pricing', color: 'teal', permission: 'MANAGE_PRICING' },
-        { name: 'AdminReviews', label: isEn ? 'Reviews' : 'Đánh giá từ khách', to: '/admin/reviews', icon: 'reviews', color: 'amber', permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminOrders', label: isEn ? 'Orders' : 'Đơn hàng', to: '/admin/orders', icon: 'orders', permission: 'MANAGE_ORDERS' },
+        { name: 'AdminPOS', label: isEn ? 'POS Counter' : 'Bán hàng tại quầy (POS)', to: '/admin/pos', icon: 'pos', permission: 'POS_ACCESS' },
+        { name: 'AdminCustomers', label: isEn ? 'Customers' : 'Khách hàng', to: '/admin/customers', icon: 'customers', permission: 'MANAGE_CUSTOMERS' },
+        { name: 'AdminPromotions', label: isEn ? 'Promotions & Discounts' : 'Khuyến mãi & Giảm giá', to: '/admin/promotions', icon: 'promotions', permission: 'MANAGE_PROMOTIONS' },
       ],
     },
     {
       key: 'inventory',
-      label: isEn ? 'Inventory & Procurement' : 'Kho & Thu mua hàng',
+      label: isEn ? 'Inventory & Goods' : 'Kho & Hàng hóa',
       icon: 'inventory',
-      color: 'orange',
       items: [
-        { name: 'AdminInventory', label: isEn ? 'Inventory' : 'Quản lý kho hàng', to: '/admin/inventory', icon: 'inventory', color: 'orange', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminWarehouses', label: isEn ? 'Warehouses & Transfer' : 'Kho & Điều chuyển', to: '/admin/warehouses', icon: 'inventory', color: 'amber', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminPurchases', label: isEn ? 'Purchases & PO' : 'Mua hàng & Đặt NCC', to: '/admin/purchases', icon: 'purchases', color: 'cyan', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminQuotations', label: isEn ? 'Quotations & RFQ' : 'Báo giá NCC & So sánh', to: '/admin/quotations', icon: 'purchases', color: 'sky', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: 'stockAudits', color: 'emerald', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminSuppliers', label: isEn ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: 'suppliers', color: 'indigo', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminProducts', label: isEn ? 'Products & Categories' : 'Hàng hóa & Danh mục', to: '/admin/products', icon: 'products', permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminCombos', label: isEn ? 'Combo Bundles' : 'Gói quà & Combo', to: '/admin/combos', icon: 'combos', permission: 'MANAGE_PRODUCTS' },
+        { name: 'AdminPricing', label: isEn ? 'Pricing Policies' : 'Chính sách giá & Lợi nhuận', to: '/admin/pricing', icon: 'pricing', permission: 'MANAGE_PRICING' },
+        { name: 'AdminInventory', label: isEn ? 'Inventory Stock' : 'Quản lý kho', to: '/admin/inventory', icon: 'inventory', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminWarehouses', label: isEn ? 'Warehouses & Transfer' : 'Kho & Điều chuyển', to: '/admin/warehouses', icon: 'warehouses', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminPurchases', label: isEn ? 'Procurement & PO' : 'Mua hàng & Nhập kho', to: '/admin/purchases', icon: 'purchases', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminQuotations', label: isEn ? 'Supplier RFQ' : 'Báo giá NCC & So sánh', to: '/admin/quotations', icon: 'quotations', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: 'stockAudits', permission: 'MANAGE_INVENTORY' },
+        { name: 'AdminSuppliers', label: isEn ? 'Suppliers' : 'Nhà cung cấp', to: '/admin/suppliers', icon: 'suppliers', permission: 'MANAGE_INVENTORY' },
       ],
     },
     {
       key: 'finance',
-      label: isEn ? 'Finance & Reports' : 'Tài chính & Báo cáo',
+      label: isEn ? 'Finance' : 'Tài chính',
       icon: 'finance',
-      color: 'emerald',
       items: [
-        { name: 'AdminReports', label: isEn ? 'Reports' : 'Báo cáo doanh thu & Lãi', to: '/admin/reports', icon: 'reports', color: 'emerald', permission: 'VIEW_REPORTS' },
-        { name: 'AdminCashbook', label: isEn ? 'Cashbook & Finance' : 'Sổ quỹ & Dòng tiền', to: '/admin/cashbook', icon: 'cashbook', color: 'violet', permission: 'MANAGE_FINANCE' },
-        { name: 'AdminDocuments', label: isEn ? 'Document Center' : 'Chứng từ kế toán (ERP)', to: '/admin/documents', icon: 'reports', color: 'blue', permission: 'MANAGE_FINANCE' },
+        { name: 'AdminCashbook', label: isEn ? 'Cashbook & Cashflow' : 'Sổ quỹ & Thu chi', to: '/admin/cashbook', icon: 'cashbook', permission: 'MANAGE_FINANCE' },
+        { name: 'AdminDocuments', label: isEn ? 'Documents & Invoices' : 'Hóa đơn & Chứng từ ERP', to: '/admin/documents', icon: 'documents', permission: 'MANAGE_FINANCE' },
       ],
     },
     {
       key: 'marketing',
-      label: isEn ? 'Marketing & Growth' : 'Truyền thông & Tiếp thị',
+      label: isEn ? 'Marketing & Media' : 'Marketing & Truyền thông',
       icon: 'marketing',
-      color: 'rose',
       items: [
-        { name: 'AdminPromotions', label: isEn ? 'Promotions' : 'Khuyến mãi & Voucher', to: '/admin/promotions', icon: 'promotions', color: 'red', permission: 'MANAGE_PROMOTIONS' },
-        { name: 'AdminBanners', label: isEn ? 'Banners' : 'Banner trang chủ', to: '/admin/banners', icon: 'banners', color: 'fuchsia', permission: 'MANAGE_BANNERS' },
-        { name: 'AdminLandingPages', label: isEn ? 'Quick Pages' : 'Trang đích (Landing Page)', to: '/admin/landing-pages', icon: 'landingPages', color: 'amber', permission: 'MANAGE_LANDING_PAGES' },
+        { name: 'AdminBanners', label: isEn ? 'Homepage Banners' : 'Banner trang chủ', to: '/admin/banners', icon: 'banners', permission: 'MANAGE_BANNERS' },
+        { name: 'AdminLandingPages', label: isEn ? 'Quick Landing Pages' : 'Trang đích (Landing Page)', to: '/admin/landing-pages', icon: 'landingPages', permission: 'MANAGE_LANDING_PAGES' },
+        { name: 'AdminReviews', label: isEn ? 'Customer Reviews' : 'Đánh giá từ khách', to: '/admin/reviews', icon: 'reviews', permission: 'MANAGE_PRODUCTS' },
       ],
     },
     {
       key: 'system',
-      label: isEn ? 'System & Users' : 'Hệ thống & Nhân sự',
-      icon: 'customers',
-      color: 'indigo',
+      label: isEn ? 'System' : 'Hệ thống',
+      icon: 'users',
       items: [
-        { name: 'AdminUsers', label: isEn ? 'Staff & Roles' : 'Nhân viên & Phân quyền', to: '/admin/users', icon: 'customers', color: 'indigo' },
+        { name: 'AdminUsers', label: isEn ? 'Users & Permissions' : 'Người dùng & Phân quyền', to: '/admin/users', icon: 'users' },
       ],
     },
   ]
@@ -774,10 +886,25 @@ const navGroups = computed<NavGroup[]>(() => {
     .filter((group) => group.items.length > 0)
 })
 
+// Search filter across all available items
+const filteredItems = computed<NavItem[]>(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return []
+
+  const allItems: NavItem[] = [
+    ...topNavItems.value,
+    ...navGroups.value.flatMap(g => g.items),
+  ]
+
+  return allItems.filter(item =>
+    item.label.toLowerCase().includes(query) ||
+    item.name.toLowerCase().includes(query),
+  )
+})
+
 // Collapsible group state
 const openGroups = ref<Record<string, boolean>>({
   sales: true,
-  catalog: true,
   inventory: true,
   finance: true,
   marketing: true,
@@ -795,9 +922,7 @@ function isGroupOpen(key: string): boolean {
 function autoExpandActiveGroup() {
   if (!navGroups.value) return
   for (const group of navGroups.value) {
-    const hasActiveItem = group.items.some(
-      item => route.name === item.name || route.path.startsWith(item.to)
-    )
+    const hasActiveItem = group.items.some(item => isItemActive(item))
     if (hasActiveItem) {
       openGroups.value[group.key] = true
     }
@@ -817,12 +942,12 @@ function handleLogout() {
 <style scoped>
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -830,23 +955,23 @@ function handleLogout() {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.3);
   border-radius: 9999px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.65);
+  background: rgba(148, 163, 184, 0.6);
 }
 
 :global(.dark) .custom-scrollbar {
-  scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
 }
 
 :global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.35);
+  background: rgba(100, 116, 139, 0.3);
 }
 
 :global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.65);
+  background: rgba(100, 116, 139, 0.6);
 }
 </style>
