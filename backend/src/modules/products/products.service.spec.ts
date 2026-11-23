@@ -433,6 +433,14 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       const sheet = workbook.getWorksheet('DanhSachSanPham');
       expect(sheet?.getRow(1).getCell(1).text).toContain('Tên sản phẩm');
       expect(sheet?.getRow(1).getCell(2).text).toContain('Mã SKU');
+      // Sheet 1 must NOT contain demo rows (only row 1 is header)
+      expect(sheet?.rowCount).toBe(1);
+      // SKU column (column 2) must be formatted as Text (@) to preserve leading zeros
+      expect(sheet?.getColumn(2).numFmt).toBe('@');
+      // Sheet 3 contains user guide and reference sample rows
+      const guideSheet = workbook.getWorksheet('HuongDanSuDung');
+      expect(guideSheet).toBeDefined();
+      expect(guideSheet?.rowCount).toBeGreaterThan(5);
     });
 
     it('should export products to Excel file (.xlsx)', async () => {
@@ -452,6 +460,118 @@ describe('ProductsService (TASK 10: Product Management & Excel)', () => {
       await expect(service.importFromExcel(invalidBuffer)).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it('should reject legacy binary .xls (BIFF8) files with clear guidance to save as .xlsx', async () => {
+      // Magic bytes for OLE2 compound document (.xls): 0xD0, 0xCF, 0x11, 0xE0
+      const xlsBuffer = Buffer.from([
+        0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
+      ]);
+      await expect(service.importFromExcel(xlsBuffer)).rejects.toThrow(
+        /Hệ thống chỉ hỗ trợ định dạng Excel chuẩn OpenXML \(\.xlsx\)/,
+      );
+    });
+
+    it('should detect and reject export report files uploaded to import with clear guidance', async () => {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('DanhSachSanPham');
+      sheet.columns = [
+        { header: 'STT', key: 'stt' },
+        { header: 'Mã SKU', key: 'sku' },
+        { header: 'Tên sản phẩm', key: 'name' },
+        { header: 'Danh mục', key: 'category' },
+        { header: 'Giá bán (VNĐ)', key: 'price' },
+        { header: 'Đã bán', key: 'sold' },
+        { header: 'Ngày tạo', key: 'createdAt' },
+      ];
+      sheet.addRow({
+        stt: 1,
+        sku: 'TL-027',
+        name: 'Bút bi Thiên Long',
+        category: 'Văn phòng phẩm',
+        price: 5000,
+        sold: 25,
+        createdAt: '2026-11-23',
+      });
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      await expect(
+        service.importFromExcel(Buffer.from(buffer)),
+      ).rejects.toThrow(/Báo cáo danh sách sản phẩm/);
+    });
+
+    it('should dynamically map columns regardless of column order (e.g. SKU before Name) and preserve leading zeros', async () => {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('DanhSachSanPham');
+      // Column order swapped: SKU is column 1, Name is column 2!
+      sheet.columns = [
+        { header: 'Mã SKU (*)', key: 'sku', width: 20 },
+        { header: 'Tên sản phẩm (*)', key: 'name', width: 30 },
+        { header: 'Tên danh mục (*)', key: 'category', width: 20 },
+        { header: 'Giá bán (*)', key: 'price', width: 15 },
+        { header: 'Số lượng kho', key: 'stock', width: 15 },
+      ];
+
+      sheet.addRow({
+        sku: '000125',
+        name: 'Bút dạ quang vàng',
+        category: 'Văn phòng phẩm',
+        price: 12000,
+        stock: 50,
+      });
+
+      const excelBuffer = await workbook.xlsx.writeBuffer();
+
+      mockProductModel.findOne = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const importResult = await service.importFromExcel(
+        Buffer.from(excelBuffer),
+      );
+      expect(importResult).toBeDefined();
+      expect(importResult.success).toBe(true);
+      expect(importResult.summary.createdCount).toBe(1);
+      // SKU must be '000125' with leading zeros preserved, not 'Bút dạ quang vàng'
+      expect(importResult.details.created[0].sku).toBe('000125');
+      expect(importResult.details.created[0].name).toBe('Bút dạ quang vàng');
+    });
+
+    it('should neutralize formula injection in static text fields (CWE-1236)', async () => {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('DanhSachSanPham');
+      sheet.columns = [
+        { header: 'Tên sản phẩm (*)', key: 'name', width: 30 },
+        { header: 'Mã SKU (*)', key: 'sku', width: 20 },
+        { header: 'Tên danh mục (*)', key: 'category', width: 20 },
+        { header: 'Giá bán (*)', key: 'price', width: 15 },
+      ];
+
+      sheet.addRow({
+        name: '+cmd| /C calc!A0',
+        sku: '=SUM(1+1)',
+        category: 'Văn phòng phẩm',
+        price: 15000,
+      });
+
+      const excelBuffer = await workbook.xlsx.writeBuffer();
+
+      mockProductModel.findOne = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const importResult = await service.importFromExcel(
+        Buffer.from(excelBuffer),
+      );
+      expect(importResult.success).toBe(true);
+      expect(importResult.summary.createdCount).toBe(1);
+      // Neutralized with single quote prefix
+      expect(importResult.details.created[0].sku).toBe("'=SUM(1+1)");
+      expect(importResult.details.created[0].name).toBe("'+cmd| /C calc!A0");
     });
 
     it('should successfully parse and import valid Excel worksheet', async () => {

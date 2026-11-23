@@ -128,9 +128,17 @@ export class ProductsController {
     if (!file) {
       throw new BadRequestException('Vui lòng chọn file Excel để tải lên');
     }
-    if (!file.originalname.match(/\.(xlsx|xls)$/i)) {
+    if (
+      file.originalname.match(/\.xls$/i) &&
+      !file.originalname.match(/\.xlsx$/i)
+    ) {
       throw new BadRequestException(
-        'Chỉ chấp nhận file Excel định dạng .xlsx hoặc .xls',
+        'Hệ thống chỉ hỗ trợ định dạng Excel chuẩn OpenXML (.xlsx). Vui lòng mở file .xls bằng Excel và Lưu dưới dạng (Save As) .xlsx rồi tải lên lại.',
+      );
+    }
+    if (!file.originalname.match(/\.xlsx$/i)) {
+      throw new BadRequestException(
+        'Chỉ chấp nhận file Excel định dạng .xlsx (OpenXML)',
       );
     }
     return this.productsService.importFromExcel(

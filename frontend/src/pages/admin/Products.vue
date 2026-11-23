@@ -24,12 +24,12 @@
         <button
           :disabled="exporting"
           class="border border-red-200 text-[#dc2626] bg-white hover:bg-red-50 font-bold py-2 px-3.5 rounded-xl text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-          title="Xuất toàn bộ danh sách sản phẩm hiện tại ra file Excel"
+          title="Xuất toàn bộ danh sách sản phẩm hiện tại ra file Excel báo cáo"
           @click="exportExcel"
         >
           <svg v-if="!exporting" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
           <svg v-else class="animate-spin w-4 h-4 text-[#dc2626]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-          <span>{{ exporting ? 'Đang xuất...' : 'Xuất Excel' }}</span>
+          <span>{{ exporting ? 'Đang xuất...' : 'Xuất báo cáo' }}</span>
         </button>
 
         <!-- Import Excel Button -->
@@ -285,7 +285,7 @@
               <input
                 ref="fileInputRef"
                 type="file"
-                accept=".xlsx, .xls"
+                accept=".xlsx"
                 class="hidden"
                 @change="handleFileChange"
               />
@@ -297,8 +297,8 @@
                   </svg>
                 </div>
                 <div>
-                  <p class="text-xs font-bold text-slate-700">Kéo & thả file Excel (.xlsx, .xls) vào đây hoặc <span class="text-[#dc2626] underline">duyệt từ máy tính</span></p>
-                  <p class="text-[11px] text-slate-400 mt-1">Dung lượng tối đa cho phép: 10MB</p>
+                  <p class="text-xs font-bold text-slate-700">Kéo & thả file Excel (.xlsx) vào đây hoặc <span class="text-[#dc2626] underline">duyệt từ máy tính</span></p>
+                  <p class="text-[11px] text-slate-400 mt-1">Chỉ chấp nhận file định dạng OpenXML (.xlsx) • Tối đa: 10MB</p>
                 </div>
               </template>
 
@@ -335,6 +335,7 @@
               <ul class="text-[11px] text-amber-800 space-y-1 pl-6 list-disc">
                 <li>Hệ thống đối chiếu theo <strong>Mã SKU</strong>. Những sản phẩm <strong>đã có sẵn trong kho</strong> sẽ <strong>TỰ ĐỘNG BỎ QUA / TỪ CHỐI</strong> tải lại để bảo vệ tính toàn vẹn dữ liệu.</li>
                 <li>Những sản phẩm <strong>chưa có trong kho</strong> sẽ được <strong>THÊM MỚI</strong> và tự động liên kết danh mục + tồn kho.</li>
+                <li><strong>Lưu ý quan trọng:</strong> Chỉ sử dụng file mẫu chuẩn tải từ hệ thống (.xlsx). Tuyệt đối <strong>KHÔNG</strong> tải file "Báo cáo danh sách sản phẩm" vào đây vì cấu trúc cột khác nhau.</li>
                 <li>Sau khi xử lý xong, hệ thống sẽ thống kê đầy đủ số lượng thêm mới, số lượng bị từ chối và các dòng lỗi.</li>
               </ul>
             </div>
@@ -808,8 +809,14 @@ function handleDrop(event: DragEvent) {
 }
 
 function validateAndSetFile(file: File) {
-  if (!file.name.match(/\.(xlsx|xls)$/i)) {
-    toast.error('Vui lòng chọn file Excel có đuôi .xlsx hoặc .xls')
+  if (file.name.match(/\.xls$/i) && !file.name.match(/\.xlsx$/i)) {
+    toast.error(
+      'Hệ thống chỉ hỗ trợ định dạng Excel chuẩn OpenXML (.xlsx). Vui lòng lưu file dưới dạng .xlsx và thử lại.',
+    )
+    return
+  }
+  if (!file.name.match(/\.xlsx$/i)) {
+    toast.error('Vui lòng chọn file Excel có đuôi .xlsx')
     return
   }
   if (file.size > 10 * 1024 * 1024) {

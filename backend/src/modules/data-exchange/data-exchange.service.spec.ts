@@ -113,6 +113,15 @@ describe('DataExchangeService (TASK XLS-01 & SEC-01)', () => {
         'File Excel có quá nhiều sheet',
       );
     });
+
+    it('SEC-01-T08: Từ chối file .xls nhị phân cũ (OLE2) với hướng dẫn rõ ràng', () => {
+      const xlsBuffer = Buffer.from([
+        0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
+      ]);
+      expect(() => service.validateFileSafety(xlsBuffer, 'data.xls')).toThrow(
+        /Hệ thống chỉ hỗ trợ định dạng Excel chuẩn OpenXML \(\.xlsx\)/,
+      );
+    });
   });
 
   describe('SEC-014: Escape regex khi tra cứu danh mục từ Excel', () => {
@@ -484,6 +493,71 @@ describe('DataExchangeService (TASK XLS-01 & SEC-01)', () => {
           e.message.includes('đã tồn tại trong hệ thống'),
         ),
       ).toBe(true);
+    });
+
+    it('XLS-T14: Từ chối file chỉ có sheet Huong_Dan hoặc không có sheet dữ liệu', async () => {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('Huong_Dan');
+      sheet.addRow(['Mục', 'Hướng dẫn']);
+      sheet.addRow(['Quy tắc', 'Vui lòng điền dữ liệu']);
+      const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+
+      await expect(service.parseWorkbook(buffer, 'products')).rejects.toThrow(
+        /Không tìm thấy sheet dữ liệu trong file Excel/,
+      );
+    });
+
+    it('XLS-T15: Từ chối khi tải nhầm file mẫu NCC vào nghiệp vụ Sản phẩm (mismatch type)', async () => {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('Du_Lieu');
+      sheet.addRow([
+        'Mã NCC (*)',
+        'Tên nhà cung cấp (*)',
+        'Người liên hệ',
+        'Số điện thoại (*)',
+      ]);
+      sheet.addRow(['NCC01', 'Công ty A', 'Nguyễn Văn A', '0901234567']);
+      const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+
+      await expect(service.parseWorkbook(buffer, 'products')).rejects.toThrow(
+        /File tải lên là mẫu Nhà cung cấp, không phải mẫu Sản phẩm/,
+      );
+    });
+
+    it('XLS-T16: Hỗ trợ ánh xạ cột linh hoạt qua headerMap khi thứ tự cột thay đổi', async () => {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('Du_Lieu');
+      // Tên sản phẩm before Mã SKU
+      sheet.addRow([
+        'Tên sản phẩm (*)',
+        'Mã SKU (*)',
+        'Danh mục (*)',
+        'Giá bán VND (*)',
+      ]);
+      sheet.addRow([
+        'Vở kẻ ngang 200 trang',
+        'VO-200-KN',
+        'Văn phòng phẩm',
+        18000,
+      ]);
+      const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+
+      const { rows, headerMap } = await service.parseWorkbook(
+        buffer,
+        'products',
+      );
+      expect(headerMap.name).toBe(1);
+      expect(headerMap.sku).toBe(2);
+
+      const norm = service.normalizeRow(
+        'products',
+        rows[0].cells,
+        2,
+        headerMap,
+      );
+      expect(norm.data.sku).toBe('VO-200-KN');
+      expect(norm.data.name).toBe('Vở kẻ ngang 200 trang');
+      expect(norm.data.price).toBe(18000);
     });
   });
 });

@@ -115,6 +115,17 @@ export class DataExchangeService {
       );
     }
 
+    // Phát hiện file Excel nhị phân cũ (.xls - OLE2 BIFF8)
+    if (
+      fileBuffer.length >= 2 &&
+      fileBuffer[0] === 0xd0 &&
+      fileBuffer[1] === 0xcf
+    ) {
+      throw new BadRequestException(
+        'Hệ thống chỉ hỗ trợ định dạng Excel chuẩn OpenXML (.xlsx). Vui lòng mở file .xls bằng Excel và Lưu dưới dạng (Save As) .xlsx rồi tải lên lại.',
+      );
+    }
+
     const isZip =
       fileBuffer[0] === 0x50 &&
       fileBuffer[1] === 0x4b &&
@@ -263,10 +274,11 @@ export class DataExchangeService {
    */
   public async parseWorkbook(
     fileBuffer: Buffer,
-    _type: string,
+    type: string,
   ): Promise<{
     rows: { rowNumber: number; cells: any[] }[];
     sheetName: string;
+    headerMap: Record<string, number>;
   }> {
     this.validateFileSafety(fileBuffer);
 
@@ -285,14 +297,32 @@ export class DataExchangeService {
       );
     }
 
-    const sheet =
+    let sheet =
       workbook.getWorksheet('Du_Lieu') ||
-      workbook.getWorksheet(1) ||
-      workbook.worksheets[0];
+      workbook.getWorksheet('du_lieu') ||
+      workbook.getWorksheet('Data') ||
+      workbook.getWorksheet('data') ||
+      workbook.getWorksheet('DanhSachSanPham');
+
+    if (!sheet) {
+      sheet = workbook.worksheets.find((w) => {
+        const norm = w.name
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '');
+        return ![
+          'huongdan',
+          'huong_dan',
+          'guide',
+          'instructions',
+          'readme',
+        ].includes(norm);
+      });
+    }
 
     if (!sheet) {
       throw new BadRequestException(
-        'Không tìm thấy sheet dữ liệu trong file Excel tải lên',
+        'Không tìm thấy sheet dữ liệu trong file Excel tải lên. Vui lòng đảm bảo file có sheet "Du_Lieu" chứa dữ liệu cần nhập (không chỉ có sheet "Huong_Dan").',
       );
     }
 
@@ -300,6 +330,163 @@ export class DataExchangeService {
       throw new BadRequestException(
         'File Excel vượt quá giới hạn tối đa 5000 dòng',
       );
+    }
+
+    const headerRow = sheet.getRow(1);
+    const headerTexts: { col: number; text: string }[] = [];
+    const maxCols = Math.min(sheet.columnCount || 30, 50);
+    for (let c = 1; c <= maxCols; c++) {
+      const cellVal = this.getCellText(headerRow.getCell(c).value);
+      if (cellVal) {
+        headerTexts.push({ col: c, text: cellVal.toLowerCase().trim() });
+      }
+    }
+
+    const normHeaders = headerTexts.map((h) => h.text);
+
+    // Kiểm tra lệch loại mẫu nhập liệu (Template type validation)
+    const hasSupplierHeaders = normHeaders.some(
+      (h) =>
+        h.includes('mã ncc') ||
+        h.includes('ma ncc') ||
+        h.includes('nhà cung cấp') ||
+        h.includes('nha cung cap'),
+    );
+    const hasProductHeaders = normHeaders.some(
+      (h) =>
+        (h.includes('mã sku') || h.includes('ma sku') || h.includes('sku')) &&
+        (h.includes('giá bán') ||
+          h.includes('gia ban') ||
+          h.includes('danh mục') ||
+          h.includes('danh muc')),
+    );
+    const hasOpeningStockHeaders = normHeaders.some(
+      (h) =>
+        h.includes('tồn đầu kỳ') ||
+        h.includes('ton dau ky') ||
+        h.includes('giá vốn nhập') ||
+        h.includes('gia von nhap'),
+    );
+
+    if (type === 'products' && hasSupplierHeaders && !hasProductHeaders) {
+      throw new BadRequestException(
+        'File tải lên là mẫu Nhà cung cấp, không phải mẫu Sản phẩm. Vui lòng chọn đúng file mẫu.',
+      );
+    }
+    if (type === 'suppliers' && hasProductHeaders && !hasSupplierHeaders) {
+      throw new BadRequestException(
+        'File tải lên là mẫu Sản phẩm, không phải mẫu Nhà cung cấp. Vui lòng chọn đúng file mẫu.',
+      );
+    }
+    if (
+      type === 'opening_stock' &&
+      hasSupplierHeaders &&
+      !hasOpeningStockHeaders
+    ) {
+      throw new BadRequestException(
+        'File tải lên là mẫu Nhà cung cấp, không phải mẫu Tồn đầu kỳ. Vui lòng chọn đúng file mẫu.',
+      );
+    }
+
+    // Dynamic header mapping
+    const headerMap: Record<string, number> = {};
+    for (const h of headerTexts) {
+      const clean = h.text
+        .replace(/\(\*\)/g, '')
+        .replace(/\(vnd\)/g, '')
+        .replace(/vnd/g, '')
+        .trim();
+
+      if (
+        clean.includes('sku') ||
+        clean.includes('mã sp') ||
+        clean.includes('ma sp')
+      ) {
+        headerMap['sku'] = h.col;
+      } else if (
+        clean.includes('tên sản phẩm') ||
+        clean.includes('ten san pham')
+      ) {
+        headerMap['name'] = h.col;
+        headerMap['productName'] = h.col;
+      } else if (clean.includes('danh mục') || clean.includes('danh muc')) {
+        headerMap['category'] = h.col;
+      } else if (clean.includes('giá bán') || clean.includes('gia ban')) {
+        headerMap['price'] = h.col;
+      } else if (
+        clean.includes('giá vốn') ||
+        clean.includes('gia von') ||
+        clean.includes('unit cost')
+      ) {
+        headerMap['costPrice'] = h.col;
+        headerMap['unitCost'] = h.col;
+      } else if (clean.includes('tồn đầu kỳ') || clean.includes('ton dau ky')) {
+        headerMap['openingStock'] = h.col;
+      } else if (
+        clean.includes('tồn kho') ||
+        clean.includes('ton kho') ||
+        clean.includes('stock')
+      ) {
+        headerMap['stock'] = h.col;
+      } else if (
+        clean.includes('đơn vị') ||
+        clean.includes('don vi') ||
+        clean.includes('unit')
+      ) {
+        headerMap['unit'] = h.col;
+      } else if (clean.includes('barcode')) {
+        headerMap['barcode'] = h.col;
+      } else if (
+        clean.includes('tác giả') ||
+        clean.includes('tac gia') ||
+        clean.includes('author') ||
+        clean.includes('thương hiệu')
+      ) {
+        headerMap['author'] = h.col;
+      } else if (
+        clean.includes('nhà xuất bản') ||
+        clean.includes('nha xuat ban') ||
+        clean.includes('publisher')
+      ) {
+        headerMap['publisher'] = h.col;
+      } else if (
+        clean.includes('mã ncc') ||
+        clean.includes('ma ncc') ||
+        clean.includes('code')
+      ) {
+        headerMap['code'] = h.col;
+      } else if (
+        clean.includes('nhà cung cấp') ||
+        clean.includes('nha cung cap')
+      ) {
+        headerMap['name'] = h.col;
+      } else if (
+        clean.includes('liên hệ') ||
+        clean.includes('lien he') ||
+        clean.includes('contact')
+      ) {
+        headerMap['contactPerson'] = h.col;
+      } else if (
+        clean.includes('thoại') ||
+        clean.includes('thoai') ||
+        clean.includes('phone')
+      ) {
+        headerMap['phone'] = h.col;
+      } else if (clean.includes('email')) {
+        headerMap['email'] = h.col;
+      } else if (
+        clean.includes('địa chỉ') ||
+        clean.includes('dia chi') ||
+        clean.includes('address')
+      ) {
+        headerMap['address'] = h.col;
+      } else if (
+        clean.includes('thuế') ||
+        clean.includes('thue') ||
+        clean.includes('tax')
+      ) {
+        headerMap['taxCode'] = h.col;
+      }
     }
 
     const rows: { rowNumber: number; cells: any[] }[] = [];
@@ -323,7 +510,7 @@ export class DataExchangeService {
       rows.push({ rowNumber: r, cells });
     }
 
-    return { rows, sheetName: sheet.name };
+    return { rows, sheetName: sheet.name, headerMap };
   }
 
   /**
@@ -333,22 +520,37 @@ export class DataExchangeService {
     type: 'products' | 'suppliers' | 'opening_stock',
     cells: any[],
     rowNumber: number,
+    headerMap?: Record<string, number>,
   ): NormalizedRow {
     const rawData: Record<string, any> = {};
     const errors: RowError[] = [];
     const warnings: string[] = [];
 
     if (type === 'products') {
-      const skuRaw = cells[1];
-      const nameRaw = cells[2];
-      const catRaw = cells[3];
-      const priceRaw = cells[4];
-      const costPriceRaw = cells[5];
-      const stockRaw = cells[6];
-      const unitRaw = cells[7];
-      const barcodeRaw = cells[8];
-      const authorRaw = cells[9];
-      const publisherRaw = cells[10];
+      const skuRaw = headerMap?.['sku'] ? cells[headerMap['sku']] : cells[1];
+      const nameRaw = headerMap?.['name'] ? cells[headerMap['name']] : cells[2];
+      const catRaw = headerMap?.['category']
+        ? cells[headerMap['category']]
+        : cells[3];
+      const priceRaw = headerMap?.['price']
+        ? cells[headerMap['price']]
+        : cells[4];
+      const costPriceRaw = headerMap?.['costPrice']
+        ? cells[headerMap['costPrice']]
+        : cells[5];
+      const stockRaw = headerMap?.['stock']
+        ? cells[headerMap['stock']]
+        : cells[6];
+      const unitRaw = headerMap?.['unit'] ? cells[headerMap['unit']] : cells[7];
+      const barcodeRaw = headerMap?.['barcode']
+        ? cells[headerMap['barcode']]
+        : cells[8];
+      const authorRaw = headerMap?.['author']
+        ? cells[headerMap['author']]
+        : cells[9];
+      const publisherRaw = headerMap?.['publisher']
+        ? cells[headerMap['publisher']]
+        : cells[10];
 
       const sku = this.getCellText(skuRaw);
       const name = this.getCellText(nameRaw);
@@ -400,13 +602,23 @@ export class DataExchangeService {
       rawData.author = author || undefined;
       rawData.publisher = publisher || undefined;
     } else if (type === 'suppliers') {
-      const codeRaw = cells[1];
-      const nameRaw = cells[2];
-      const contactPersonRaw = cells[3];
-      const phoneRaw = cells[4];
-      const emailRaw = cells[5];
-      const addressRaw = cells[6];
-      const taxCodeRaw = cells[7];
+      const codeRaw = headerMap?.['code'] ? cells[headerMap['code']] : cells[1];
+      const nameRaw = headerMap?.['name'] ? cells[headerMap['name']] : cells[2];
+      const contactPersonRaw = headerMap?.['contactPerson']
+        ? cells[headerMap['contactPerson']]
+        : cells[3];
+      const phoneRaw = headerMap?.['phone']
+        ? cells[headerMap['phone']]
+        : cells[4];
+      const emailRaw = headerMap?.['email']
+        ? cells[headerMap['email']]
+        : cells[5];
+      const addressRaw = headerMap?.['address']
+        ? cells[headerMap['address']]
+        : cells[6];
+      const taxCodeRaw = headerMap?.['taxCode']
+        ? cells[headerMap['taxCode']]
+        : cells[7];
 
       rawData.code = this.sanitizeCellValue(this.getCellText(codeRaw));
       rawData.name = this.sanitizeCellValue(this.getCellText(nameRaw));
@@ -420,11 +632,17 @@ export class DataExchangeService {
       rawData.taxCode =
         this.sanitizeCellValue(this.getCellText(taxCodeRaw)) || undefined;
     } else if (type === 'opening_stock') {
-      const skuRaw = cells[1];
-      const productNameRaw = cells[2];
-      const stockRaw = cells[3];
-      const costRaw = cells[4];
-      const unitRaw = cells[5];
+      const skuRaw = headerMap?.['sku'] ? cells[headerMap['sku']] : cells[1];
+      const productNameRaw = headerMap?.['productName']
+        ? cells[headerMap['productName']]
+        : cells[2];
+      const stockRaw = headerMap?.['openingStock']
+        ? cells[headerMap['openingStock']]
+        : cells[3];
+      const costRaw = headerMap?.['unitCost']
+        ? cells[headerMap['unitCost']]
+        : cells[4];
+      const unitRaw = headerMap?.['unit'] ? cells[headerMap['unit']] : cells[5];
 
       let openingStock: number | null = null;
       if (
@@ -693,7 +911,7 @@ export class DataExchangeService {
     fileBuffer: Buffer,
   ): Promise<PreviewResult> {
     const fileHash = this.computeFileHash(fileBuffer);
-    const { rows } = await this.parseWorkbook(fileBuffer, type);
+    const { rows, headerMap } = await this.parseWorkbook(fileBuffer, type);
 
     const existingBatch = await this.importBatchModel.findOne({
       fileHash,
@@ -716,7 +934,12 @@ export class DataExchangeService {
     let invalidCount = 0;
 
     for (const rowItem of rows) {
-      const norm = this.normalizeRow(type, rowItem.cells, rowItem.rowNumber);
+      const norm = this.normalizeRow(
+        type,
+        rowItem.cells,
+        rowItem.rowNumber,
+        headerMap,
+      );
       const validated = this.validateRow(type, norm, { seenCodes });
 
       if (validated.isValid) {
@@ -994,7 +1217,7 @@ export class DataExchangeService {
     }
 
     // Pipeline: 1. Parse workbook
-    const { rows } = await this.parseWorkbook(fileBuffer, type);
+    const { rows, headerMap } = await this.parseWorkbook(fileBuffer, type);
     const seenCodes = new Set<string>();
 
     const validatedRows: NormalizedRow[] = [];
@@ -1002,7 +1225,7 @@ export class DataExchangeService {
 
     // Pipeline: 2. Normalize & 3. Validate
     for (const r of rows) {
-      const norm = this.normalizeRow(type, r.cells, r.rowNumber);
+      const norm = this.normalizeRow(type, r.cells, r.rowNumber, headerMap);
       const validated = this.validateRow(type, norm, { seenCodes });
       validatedRows.push(validated);
       if (!validated.isValid) {
