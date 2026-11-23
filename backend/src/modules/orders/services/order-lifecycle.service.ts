@@ -359,6 +359,13 @@ export class OrderLifecycleService {
       }
     }
 
+    if (dto.isDefective !== undefined) {
+      order.isDefectiveReturn = dto.isDefective;
+    }
+    if (dto.returnReason) {
+      order.returnReason = dto.returnReason;
+    }
+
     order.timeline.push({
       status: dto.orderStatus,
       note: timelineNote,
@@ -385,8 +392,24 @@ export class OrderLifecycleService {
         dto.orderStatus === OrderStatus.RETURNED) &&
       !order.inventoryRestoredAt
     ) {
+      // T03 Invariant: Hàng lỗi/chờ kiểm không góp vào tồn bán
+      const isDefective = Boolean(
+        dto.isDefective ||
+        (order as any).isDefectiveReturn ||
+        (order.returnReason &&
+          /lỗi|hỏng|rách|hư|bể|vỡ|móp|mép/i.test(order.returnReason)),
+      );
+
+      const itemsToRestore = (order.items || []).map((it: any) => ({
+        product: it.product,
+        quantity: it.quantity,
+        isDefective: it.isDefective !== undefined ? it.isDefective : isDefective,
+        condition:
+          it.condition || (isDefective ? 'DAMAGED' : 'GOOD'),
+      }));
+
       await this.orderInventoryService.restoreOrderStock(
-        order.items,
+        itemsToRestore,
         order.orderCode || `${dto.orderStatus}:${order._id.toString()}`,
         order._id.toString(),
         session,
@@ -582,7 +605,7 @@ export class OrderLifecycleService {
   async requestReturn(
     id: string,
     actor: { _id: string; role?: string; permissions?: string[] },
-    dto: { reason: string; overrideToken?: string },
+    dto: { reason: string; overrideToken?: string; isDefective?: boolean },
   ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(id).exec();
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
@@ -632,9 +655,15 @@ export class OrderLifecycleService {
       overrideApplied = true;
     }
 
+    const isDefective = Boolean(
+      dto.isDefective ||
+      (dto.reason && /lỗi|hỏng|rách|hư|bể|vỡ|móp|mép/i.test(dto.reason)),
+    );
+
     return this.updateStatus(id, {
       orderStatus: OrderStatus.RETURN_REQUESTED,
       returnReason: dto.reason,
+      isDefective,
       note: `Khách yêu cầu trả hàng: ${dto.reason}${overrideApplied ? ' (Đặc cách phê duyệt quá hạn)' : ''}`,
     });
   }

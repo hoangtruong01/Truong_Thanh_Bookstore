@@ -850,7 +850,10 @@ export class InventoryService {
   /** Records a stock change already performed by the order workflow. */
   async recordExternalMovement(
     productId: string,
-    type: InventoryTransactionType.SALE | InventoryTransactionType.RETURN,
+    type:
+      | InventoryTransactionType.SALE
+      | InventoryTransactionType.RETURN
+      | InventoryTransactionType.DAMAGE,
     quantity: number,
     reference: string,
     orderId?: string,
@@ -868,19 +871,29 @@ export class InventoryService {
     if (session) inventoryQuery.session(session);
     const inventory = await inventoryQuery.exec();
     if (!inventory) throw new NotFoundException('Inventory record not found');
-    const delta = type === InventoryTransactionType.SALE ? -quantity : quantity;
+    const isDamage = type === InventoryTransactionType.DAMAGE;
+    const delta = isDamage
+      ? 0
+      : type === InventoryTransactionType.SALE
+        ? -quantity
+        : quantity;
+    const note =
+      type === InventoryTransactionType.SALE
+        ? 'Xuất kho theo đơn hàng'
+        : isDamage
+          ? 'Hàng hoàn bị lỗi/hỏng (nhập kho cách ly)'
+          : 'Hoàn kho từ đơn hàng';
     const payload = {
       product: new Types.ObjectId(productId),
       type,
       quantity,
       change: delta,
-      stockBefore: inventory.currentStock - delta,
+      stockBefore: isDamage
+        ? inventory.currentStock
+        : inventory.currentStock - delta,
       stockAfter: inventory.currentStock,
       costPrice: inventory.costPrice || 0,
-      note:
-        type === InventoryTransactionType.SALE
-          ? 'Xuất kho theo đơn hàng'
-          : 'Hoàn kho từ đơn hàng',
+      note,
       reference,
       order:
         orderId && Types.ObjectId.isValid(orderId)

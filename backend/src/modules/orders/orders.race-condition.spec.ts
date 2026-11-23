@@ -387,4 +387,57 @@ describe('QA-03: Inventory Race Condition & Concurrency Invariant Tests', () => 
     expect(bookStock).toBe(2);
     expect(createdOrders.length).toBe(0);
   });
+
+  // =========================================================================
+  // KỊCH BẢN 6: LỖI GIỮA HAI DÒNG MẶT HÀNG KHI TRỪ TỒN KHO THỰC TẾ (T02)
+  // =========================================================================
+  it('Kịch bản 6 (T02): Lỗi giữa hai dòng mặt hàng -> Bồi hoàn dòng 1, bảo toàn bất biến tồn kho & đơn hàng', async () => {
+    bookStock = 10;
+    const initialStock = bookStock;
+    const secondProductId = '507f1f77bcf86cd799439088';
+
+    // findByIds cho thấy cả 2 sản phẩm còn hàng lúc validate ban đầu
+    mockProductsService.findByIds.mockResolvedValueOnce([
+      { ...mockBookProduct, stock: bookStock },
+      {
+        _id: secondProductId,
+        name: 'Bút máy cao cấp',
+        price: 90000,
+        discountPrice: 90000,
+        stock: 5,
+        status: 'ACTIVE',
+        isDeleted: false,
+        images: ['https://example.com/pen.jpg'],
+      },
+    ]);
+
+    // Nhưng khi trừ kho thực tế: SP 1 trừ thành công, SP 2 bị race condition hết hàng
+    mockProductsService.deductStock
+      .mockImplementationOnce(async (id: string, qty: number) => {
+        bookStock -= qty; // SP 1 trừ thành công
+      })
+      .mockImplementationOnce(async () => {
+        throw new BadRequestException('Không đủ tồn kho cho sản phẩm SP 2');
+      });
+
+    const payload: any = {
+      customerName: 'Khách Test Hai Dòng Hàng',
+      phone: '0907777777',
+      shippingAddress: 'Hà Nội',
+      paymentMethod: PaymentMethod.COD,
+      items: [
+        { product: bookProductId, quantity: 2 },
+        { product: secondProductId, quantity: 3 },
+      ],
+    };
+
+    await expect(ordersService.create(payload)).rejects.toThrow(
+      BadRequestException,
+    );
+
+    // Xác minh: SP 1 đã được bồi hoàn rollback (updateStock +2), tồn kho không bị lệch âm thầm
+    expect(mockProductsService.updateStock).toHaveBeenCalledWith(bookProductId, 2);
+    expect(mockProductsService.incrementSold).toHaveBeenCalledWith(bookProductId, -2);
+    expect(createdOrders.length).toBe(0);
+  });
 });

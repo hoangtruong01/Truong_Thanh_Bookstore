@@ -182,6 +182,9 @@ export class Order {
   @Prop()
   returnReason?: string;
 
+  @Prop({ default: false })
+  isDefectiveReturn?: boolean;
+
   @Prop()
   returnRequestedAt?: Date;
 

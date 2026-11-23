@@ -74,7 +74,7 @@ describe('SALES-RET-01: Customer Sales Return & Refund Suite', () => {
       const requested = await orderLifecycleService.requestReturn(
         'order_ret_full_01',
         { _id: 'cust_123', role: UserRole.CUSTOMER },
-        { reason: 'Trang sách bị rách' },
+        { reason: 'Khách muốn đổi màu khác' },
       );
       expect(requested.orderStatus).toBe(OrderStatus.RETURN_REQUESTED);
       expect(
@@ -100,9 +100,80 @@ describe('SALES-RET-01: Customer Sales Return & Refund Suite', () => {
       );
       expect(returned.orderStatus).toBe(OrderStatus.RETURNED);
       expect(mockOrderInventoryService.restoreOrderStock).toHaveBeenCalledWith(
-        order.items,
+        [
+          expect.objectContaining({
+            product: 'prod_1',
+            quantity: 1,
+            isDefective: false,
+            condition: 'GOOD',
+          }),
+        ],
         expect.any(String),
         'order_ret_full_01',
+        undefined,
+      );
+    });
+
+    it('SALES-RET-T02: customer returns damaged/defective product -> marked defective for quarantine, does not increase sellable stock', async () => {
+      const order: any = {
+        _id: 'order_ret_damaged_02',
+        orderCode: 'ORD-2026-RET-02',
+        customer: 'cust_456',
+        orderStatus: OrderStatus.DELIVERED,
+        deliveredAt: new Date(),
+        total: 100000,
+        items: [
+          {
+            product: 'prod_damaged_1',
+            name: 'Vở vẽ A4',
+            quantity: 2,
+            price: 50000,
+          },
+        ],
+        timeline: [],
+        save: jest.fn().mockImplementation(function () {
+          return Promise.resolve(this);
+        }),
+      };
+
+      mockOrderModel.findById = jest.fn().mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(order),
+      });
+
+      // 1. Request return with defective reason: "Sách bị rách mép, lỗi in ấn"
+      const requested = await orderLifecycleService.requestReturn(
+        'order_ret_damaged_02',
+        { _id: 'cust_456', role: UserRole.CUSTOMER },
+        { reason: 'Sách bị rách mép, lỗi in ấn' },
+      );
+      expect(requested.orderStatus).toBe(OrderStatus.RETURN_REQUESTED);
+      expect((requested as any).isDefectiveReturn).toBe(true);
+
+      // 2. Approve return by staff
+      await orderLifecycleService.approveReturn(
+        'order_ret_damaged_02',
+        { _id: 'staff_1', role: UserRole.STAFF },
+      );
+
+      // 3. Confirm return received
+      const returned = await orderLifecycleService.confirmReturnReceived(
+        'order_ret_damaged_02',
+        { _id: 'staff_1', role: UserRole.STAFF },
+        'Đã nhận hàng lỗi nhập kho cách ly',
+      );
+      expect(returned.orderStatus).toBe(OrderStatus.RETURNED);
+      expect(mockOrderInventoryService.restoreOrderStock).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            product: 'prod_damaged_1',
+            quantity: 2,
+            isDefective: true,
+            condition: 'DAMAGED',
+          }),
+        ],
+        expect.any(String),
+        'order_ret_damaged_02',
         undefined,
       );
     });

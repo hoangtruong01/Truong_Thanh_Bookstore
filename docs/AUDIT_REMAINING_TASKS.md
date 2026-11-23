@@ -54,6 +54,7 @@
 | BUG-027 | Sửa nhãn vai trò bị đảo (`AdminLayout`, `ProfileModal`) | `ProfileModal.spec.ts` |
 | TASK-009 / T05 | Diễn tập sao lưu/phục hồi DB riêng, 4 tiêu chuẩn đối soát số dư (Count, Cash Ledger, Inventory, Orders) | `scripts/backup-restore-drill.test.mjs` (9/9 PASS) |
 | TASK-002, TASK-004 / T01 | Công cụ đối soát SHA release và kiểm tra parity triển khai (Backend Render & Frontend Vercel) | `scripts/verify-release-parity.mjs`, `scripts/smoke-test.test.mjs` (7/7 PASS) |
+| BUG-022 / T02, T03 | Atomic rollback đa dòng (không lệch đơn/tồn/ledger khi lỗi dòng N), Omnichannel Concurrency (POS/Web tranh món cuối chỉ 1 bên bán được), hàng hoàn lỗi cách ly kho kiểm/hỏng không tăng tồn bán khả dụng | `orders-inventory-invariants.spec.ts` (4/4 PASS), `order-inventory.service.spec.ts` (3/3 PASS), `sales-return.spec.ts` (7/7 PASS), `orders.race-condition.spec.ts` (6/6 PASS) |
 
 **Lưu ý:** các bản sửa backend (đặc biệt TASK-005) **chưa có tác dụng trên production** cho tới khi deploy được (mục 3, việc #2).
 

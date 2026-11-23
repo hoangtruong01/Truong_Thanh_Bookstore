@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsNumber,
   IsString,
+  IsBoolean,
   IsArray,
   IsEnum,
   IsEmail,
@@ -217,6 +218,20 @@ export class UpdateOrderStatusDto {
   @MaxLength(500)
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   note?: string;
+
+  @ApiPropertyOptional({
+    description: 'Đánh dấu hàng hoàn trả bị lỗi/hỏng (nhập kho cách ly, không tăng tồn bán)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isDefective?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Lý do hoàn trả hàng',
+  })
+  @IsOptional()
+  @IsString()
+  returnReason?: string;
 }
 
 export class OrderQueryDto extends PaginationDto {

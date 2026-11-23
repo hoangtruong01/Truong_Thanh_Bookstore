@@ -4,6 +4,13 @@ import { ProductsService } from '../../products/products.service';
 import { InventoryService } from '../../inventory/inventory.service';
 import { InventoryTransactionType } from '../../../common/enums';
 
+export interface RestoreOrderItem {
+  product: any;
+  quantity: number;
+  isDefective?: boolean;
+  condition?: string;
+}
+
 @Injectable()
 export class OrderInventoryService {
   private readonly logger = new Logger(OrderInventoryService.name);
@@ -15,6 +22,8 @@ export class OrderInventoryService {
 
   /**
    * Trừ tồn kho và cập nhật số lượng đã bán cho danh sách sản phẩm trong đơn hàng.
+   * T02: Bảo vệ bất biến giữa hai dòng hàng — nếu dòng sau lỗi và không có mongo session,
+   * tự động bồi hoàn (compensation rollback) toàn bộ các dòng đã trừ trước đó.
    */
   async deductOrderStock(
     items: Array<{ product: string; quantity: number }>,
@@ -23,40 +32,51 @@ export class OrderInventoryService {
   ): Promise<Array<{ product: string; quantity: number }>> {
     const deductedItems: Array<{ product: string; quantity: number }> = [];
 
-    for (const item of items) {
-      if (session) {
-        await this.productsService.deductStock(
-          item.product,
-          item.quantity,
-          session,
-        );
-        await this.productsService.incrementSold(
-          item.product,
-          item.quantity,
-          session,
-        );
-      } else {
-        await this.productsService.deductStock(item.product, item.quantity);
-        await this.productsService.incrementSold(item.product, item.quantity);
-      }
-      deductedItems.push({
-        product: item.product,
-        quantity: item.quantity,
-      });
+    try {
+      for (const item of items) {
+        if (session) {
+          await this.productsService.deductStock(
+            item.product,
+            item.quantity,
+            session,
+          );
+          await this.productsService.incrementSold(
+            item.product,
+            item.quantity,
+            session,
+          );
+        } else {
+          await this.productsService.deductStock(item.product, item.quantity);
+          await this.productsService.incrementSold(item.product, item.quantity);
+        }
+        deductedItems.push({
+          product: item.product,
+          quantity: item.quantity,
+        });
 
-      if (this.inventoryService && orderCode) {
-        await this.inventoryService.recordExternalMovement(
-          item.product,
-          InventoryTransactionType.SALE,
-          item.quantity,
-          orderCode,
-          undefined,
-          session,
+        if (this.inventoryService && orderCode) {
+          await this.inventoryService.recordExternalMovement(
+            item.product,
+            InventoryTransactionType.SALE,
+            item.quantity,
+            orderCode,
+            undefined,
+            session,
+          );
+        }
+      }
+      return deductedItems;
+    } catch (err) {
+      if (!session && deductedItems.length > 0) {
+        this.logger.warn(
+          `Deduct order stock failed on a subsequent line item for order ${orderCode || 'N/A'}. Initiating compensation rollback for ${deductedItems.length} items.`,
+        );
+        await this.rollbackStock(deductedItems, orderCode).catch((rbErr) =>
+          this.logger.error('Failed to rollback partial stock deduction', rbErr),
         );
       }
+      throw err;
     }
-
-    return deductedItems;
   }
 
   /**
@@ -99,9 +119,11 @@ export class OrderInventoryService {
 
   /**
    * Hoàn lại tồn kho khi đơn hàng bị hủy hoặc hoàn trả.
+   * T03: Hàng lỗi/hỏng (isDefective hoặc condition === DAMAGED) chuyển vào kho cách ly
+   * (InventoryTransactionType.DAMAGE), TUYỆT ĐỐI KHÔNG cộng vào tồn bán khả dụng (updateStock).
    */
   async restoreOrderStock(
-    items: Array<{ product: any; quantity: number }>,
+    items: Array<RestoreOrderItem>,
     reference: string,
     orderId?: string,
     session?: ClientSession,
@@ -112,31 +134,64 @@ export class OrderInventoryService {
           ? item.product._id.toString()
           : item.product.toString();
 
-      if (session) {
-        await this.productsService.updateStock(
-          productId,
-          item.quantity,
-          session,
-        );
-        await this.productsService.incrementSold(
-          productId,
-          -item.quantity,
-          session,
-        );
-      } else {
-        await this.productsService.updateStock(productId, item.quantity);
-        await this.productsService.incrementSold(productId, -item.quantity);
-      }
+      const isDamaged =
+        Boolean(item.isDefective) ||
+        item.condition === 'DAMAGED' ||
+        item.condition === 'DEFECTIVE';
 
-      if (this.inventoryService) {
-        await this.inventoryService.recordExternalMovement(
-          productId,
-          InventoryTransactionType.RETURN,
-          item.quantity,
-          reference,
-          orderId && Types.ObjectId.isValid(orderId) ? orderId : undefined,
-          session,
+      if (!isDamaged) {
+        // Hàng nguyên vẹn: khôi phục tồn bán khả dụng
+        if (session) {
+          await this.productsService.updateStock(
+            productId,
+            item.quantity,
+            session,
+          );
+          await this.productsService.incrementSold(
+            productId,
+            -item.quantity,
+            session,
+          );
+        } else {
+          await this.productsService.updateStock(productId, item.quantity);
+          await this.productsService.incrementSold(productId, -item.quantity);
+        }
+
+        if (this.inventoryService) {
+          await this.inventoryService.recordExternalMovement(
+            productId,
+            InventoryTransactionType.RETURN,
+            item.quantity,
+            reference,
+            orderId && Types.ObjectId.isValid(orderId) ? orderId : undefined,
+            session,
+          );
+        }
+      } else {
+        // T03: Hàng lỗi/chờ kiểm không góp vào tồn bán
+        this.logger.log(
+          `Sản phẩm ${productId} hoàn trả trong tình trạng lỗi/hỏng. Nhập kho cách ly (DAMAGE), không tăng tồn bán khả dụng.`,
         );
+        if (session) {
+          await this.productsService.incrementSold(
+            productId,
+            -item.quantity,
+            session,
+          );
+        } else {
+          await this.productsService.incrementSold(productId, -item.quantity);
+        }
+
+        if (this.inventoryService) {
+          await this.inventoryService.recordExternalMovement(
+            productId,
+            InventoryTransactionType.DAMAGE,
+            item.quantity,
+            `${reference}:QUARANTINE`,
+            orderId && Types.ObjectId.isValid(orderId) ? orderId : undefined,
+            session,
+          );
+        }
       }
     }
   }
