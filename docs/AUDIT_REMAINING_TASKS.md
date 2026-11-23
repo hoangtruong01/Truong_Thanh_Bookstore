@@ -52,6 +52,8 @@
 | BUG-023 | Sửa chính tả "Trường Thanh" → "Trường Thành" (`ProductDetail.vue`) | — |
 | BUG-024 | Bổ sung 9 tiêu đề tab trang Admin | — |
 | BUG-027 | Sửa nhãn vai trò bị đảo (`AdminLayout`, `ProfileModal`) | `ProfileModal.spec.ts` |
+| TASK-009 / T05 | Diễn tập sao lưu/phục hồi DB riêng, 4 tiêu chuẩn đối soát số dư (Count, Cash Ledger, Inventory, Orders) | `scripts/backup-restore-drill.test.mjs` (9/9 PASS) |
+| TASK-002, TASK-004 / T01 | Công cụ đối soát SHA release và kiểm tra parity triển khai (Backend Render & Frontend Vercel) | `scripts/verify-release-parity.mjs`, `scripts/smoke-test.test.mjs` (7/7 PASS) |
 
 **Lưu ý:** các bản sửa backend (đặc biệt TASK-005) **chưa có tác dụng trên production** cho tới khi deploy được (mục 3, việc #2).
 
@@ -92,7 +94,7 @@
 |---|---|---|---|
 | TASK-007 | E2E thao tác UI thật trong CI (bấm nút đặt hàng, assert không có ErrorBoundary) | — | Bộ e2e cũ gọi API bằng `fetch` nên không bắt được lỗi Checkout |
 | TASK-008 | Môi trường staging | D-6 | |
-| TASK-009 | Backup Atlas + diễn tập khôi phục, runbook | — | |
+| ~~TASK-009~~ ✅ | Backup Atlas + diễn tập khôi phục, runbook (T05) | — | Xong 24/11: tool `scripts/backup-restore-drill.mjs`, test 9/9 PASS, runbook `docs/DEPLOYMENT_AND_RECONCILIATION_RUNBOOK.md` |
 | TASK-010 | Sentry FE/BE + ErrorBoundary thân thiện (hotline/Zalo, không hiện lỗi kỹ thuật) | — | |
 | TASK-012 | Làm sạch dữ liệu demo trên production: 121/121 SP có sao ảo, "Đã bán" ngẫu nhiên, 32 ảnh dùng chung cho 121 SP, danh mục sai, slug mất chữ "đ" | Backup (TASK-009), TASK-021 | Chạy migration có backup, idempotent |
 | TASK-013 | Ẩn sao/"Đã bán" khi chưa có đánh giá thật | — | |
