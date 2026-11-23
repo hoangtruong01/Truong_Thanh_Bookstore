@@ -308,6 +308,21 @@ export class ProductsService {
     return this.safeString(cell);
   }
 
+  /**
+   * Bảo mật: Khử nguy cơ Formula Injection (CSV/Excel Formula Injection - CWE-1236)
+   */
+  public sanitizeCellValue(val: any): string {
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if (/^[=+\-@|\t\r]/.test(trimmed)) {
+        return `'${trimmed}`;
+      }
+      return trimmed;
+    }
+    if (val === null || val === undefined) return '';
+    return String(val).trim();
+  }
+
   async create(
     dto: CreateProductDto,
     userId?: string,
@@ -1350,6 +1365,20 @@ export class ProductsService {
       { header: 'Mô tả sản phẩm', key: 'description', width: 45 },
     ];
 
+    // Định dạng Text (@) cho các cột mã/chữ và Number cho cột giá/tồn
+    sheet.getColumn('name').numFmt = '@';
+    sheet.getColumn('sku').numFmt = '@';
+    sheet.getColumn('category').numFmt = '@';
+    sheet.getColumn('price').numFmt = '#,##0';
+    sheet.getColumn('discountPrice').numFmt = '#,##0';
+    sheet.getColumn('stock').numFmt = '#,##0';
+    sheet.getColumn('unit').numFmt = '@';
+    sheet.getColumn('brand').numFmt = '@';
+    sheet.getColumn('status').numFmt = '@';
+    sheet.getColumn('isFeatured').numFmt = '@';
+    sheet.getColumn('images').numFmt = '@';
+    sheet.getColumn('description').numFmt = '@';
+
     // Định dạng Header Sheet 1
     const headerRow = sheet.getRow(1);
     headerRow.height = 32;
@@ -1382,7 +1411,8 @@ export class ProductsService {
     const firstCat = await this.categoryModel.findOne({ status: true }).lean();
     const sampleCategoryName = firstCat ? firstCat.name : 'Văn phòng phẩm';
 
-    // Thêm các dòng mẫu thực tế
+    // Dòng dữ liệu mẫu để đưa sang Sheet 3 (Hướng dẫn sử dụng), KHÔNG thêm vào Sheet 1
+    // để tránh nhân viên nhập nhầm dòng mẫu vào kho thực tế
     const sampleRows = [
       {
         name: 'Bút bi Thiên Long TL-027 (Mực Xanh)',
@@ -1416,23 +1446,6 @@ export class ProductsService {
           'Cuốn sách nghệ thuật ứng xử kinh điển được hàng triệu độc giả yêu thích.',
       },
     ];
-
-    sampleRows.forEach((item) => {
-      const row = sheet.addRow(item);
-      row.height = 24;
-      row.getCell('price').numFmt = '#,##0';
-      row.getCell('discountPrice').numFmt = '#,##0';
-      row.getCell('stock').numFmt = '#,##0';
-      row.eachCell((cell) => {
-        cell.alignment = { vertical: 'middle', wrapText: true };
-        cell.border = {
-          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-        };
-      });
-    });
 
     // ====== SHEET 2: DANH MỤC CÓ SẴN TRONG CƠ SỞ DỮ LIỆU ======
     const catSheet = workbook.addWorksheet('DanhSachDanhMuc', {
@@ -1601,6 +1614,44 @@ export class ProductsService {
       });
     });
 
+    // Thêm phần ví dụ dữ liệu mẫu để nhân viên tham khảo (không đưa vào Sheet 1)
+    guideSheet.addRow({});
+    const exHeader = guideSheet.addRow({
+      column: 'VÍ DỤ DỮ LIỆU MẪU (THAM KHẢO)',
+      required: 'MÃ SKU',
+      type: 'GIÁ BÁN',
+      rule: 'THÔNG TIN BỔ SUNG',
+    });
+    exHeader.height = 26;
+    exHeader.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFCBD5E1' },
+      };
+      cell.font = { bold: true, name: 'Segoe UI', size: 10 };
+      cell.alignment = { vertical: 'middle' };
+    });
+
+    sampleRows.forEach((item) => {
+      const row = guideSheet.addRow({
+        column: item.name,
+        required: item.sku,
+        type: `${item.price.toLocaleString('vi-VN')} đ`,
+        rule: `Danh mục: ${item.category} | ĐVT: ${item.unit} | Tồn: ${item.stock} | Hãng: ${item.brand}`,
+      });
+      row.height = 22;
+      row.eachCell((cell) => {
+        cell.alignment = { vertical: 'middle', wrapText: true };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        };
+      });
+    });
+
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
   }
@@ -1749,6 +1800,12 @@ export class ProductsService {
         'File Excel vượt quá dung lượng tối đa 10MB',
       );
     }
+    // Phát hiện file Excel nhị phân cũ (.xls - OLE2 BIFF8)
+    if (buffer.length >= 2 && buffer[0] === 0xd0 && buffer[1] === 0xcf) {
+      throw new BadRequestException(
+        'Hệ thống chỉ hỗ trợ định dạng Excel chuẩn OpenXML (.xlsx). Vui lòng mở file .xls bằng Excel và Lưu dưới dạng (Save As) .xlsx rồi tải lên lại.',
+      );
+    }
     const isZip =
       buffer.length >= 4 &&
       buffer[0] === 0x50 &&
@@ -1797,12 +1854,29 @@ export class ProductsService {
 
     const sheet =
       workbook.getWorksheet('DanhSachSanPham') ||
+      workbook.getWorksheet('Du_Lieu') ||
+      workbook.getWorksheet('SanPham') ||
+      workbook.getWorksheet('Products') ||
       workbook.getWorksheet('Sheet1') ||
-      workbook.worksheets[0];
+      workbook.worksheets.find((w) => {
+        const norm = w.name
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '');
+        return ![
+          'huongdan',
+          'huongdansudung',
+          'huong_dan',
+          'guide',
+          'instructions',
+          'readme',
+          'danhsachdanhmuc',
+        ].includes(norm);
+      });
 
     if (!sheet) {
       throw new BadRequestException(
-        'Không tìm thấy Sheet dữ liệu trong file Excel.',
+        'Không tìm thấy Sheet dữ liệu trong file Excel. Vui lòng đảm bảo file có Sheet "DanhSachSanPham" hoặc "Du_Lieu".',
       );
     }
 
@@ -1810,6 +1884,218 @@ export class ProductsService {
     if (sheet.rowCount > PRODUCT_IMPORT_MAX_ROWS) {
       throw new BadRequestException(
         `File Excel vượt quá giới hạn tối đa ${PRODUCT_IMPORT_MAX_ROWS} dòng`,
+      );
+    }
+
+    // Duyệt qua từng dòng trong Excel (bắt đầu từ dòng 2 vì dòng 1 là Tiêu đề)
+    const rowCount = sheet.rowCount;
+    if (rowCount < 2) {
+      throw new BadRequestException(
+        'File Excel không có dòng dữ liệu sản phẩm nào.',
+      );
+    }
+
+    // 1. Kiểm tra và chặn file "Báo cáo danh sách sản phẩm" đưa vào màn hình Nhập
+    const headerRow = sheet.getRow(1);
+    const headerTexts: { col: number; text: string; raw: string }[] = [];
+    const maxCols = Math.min(sheet.columnCount || 30, 50);
+    for (let c = 1; c <= maxCols; c++) {
+      const cellVal = this.extractCellValue(headerRow.getCell(c).value);
+      if (cellVal) {
+        headerTexts.push({
+          col: c,
+          raw: cellVal,
+          text: cellVal.toLowerCase().trim(),
+        });
+      }
+    }
+
+    const normList = headerTexts.map((h) => h.text);
+    const hasSoldCol = normList.some(
+      (t) => t.includes('đã bán') || t.includes('da ban') || t === 'sold',
+    );
+    const hasSttCol = normList.some((t) => t === 'stt' || t.startsWith('stt '));
+    const hasCreatedAtCol = normList.some(
+      (t) =>
+        t.includes('ngày tạo') ||
+        t.includes('ngay tao') ||
+        t === 'createdat' ||
+        t === 'created_at',
+    );
+
+    if (hasSoldCol || (hasSttCol && hasCreatedAtCol)) {
+      throw new BadRequestException(
+        'File bạn vừa tải lên là "Báo cáo danh sách sản phẩm" (có cột Báo cáo như STT, Đã bán, Ngày tạo), không phải file mẫu nhập liệu. ' +
+          'Vui lòng bấm nút "Tải file mẫu" trên giao diện để sử dụng đúng mẫu nhập sản phẩm (.xlsx).',
+      );
+    }
+
+    // 2. Dynamic Column Mapping - Ánh xạ cột theo tiêu đề (chống nhầm thứ tự cột Tên và SKU)
+    type ProductField =
+      | 'name'
+      | 'sku'
+      | 'category'
+      | 'price'
+      | 'discountPrice'
+      | 'stock'
+      | 'unit'
+      | 'brand'
+      | 'status'
+      | 'isFeatured'
+      | 'images'
+      | 'description';
+
+    const normalizeHeader = (str: string): string => {
+      return str
+        .toLowerCase()
+        .replace(/\(\*\)/g, '')
+        .replace(/\(đang bán \/ ngừng bán\)/g, '')
+        .replace(/\(có \/ không\)/g, '')
+        .replace(/\(vnđ\)/g, '')
+        .replace(/\(vnd\)/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
+    const matchField = (clean: string): ProductField | null => {
+      // 1. Category check first so "tên danh mục" is never matched as "tên sản phẩm"
+      if (
+        clean === 'danh mục' ||
+        clean === 'tên danh mục' ||
+        clean.includes('danh mục') ||
+        clean === 'category' ||
+        clean === 'nhóm sản phẩm'
+      ) {
+        return 'category';
+      }
+      // 2. SKU check
+      if (
+        clean === 'mã sku' ||
+        clean === 'sku' ||
+        clean === 'mã sản phẩm' ||
+        clean === 'mã sp' ||
+        clean.includes('sku') ||
+        clean.includes('mã barcode')
+      ) {
+        return 'sku';
+      }
+      // 3. Name check
+      if (
+        clean === 'tên sản phẩm' ||
+        clean === 'tên sp' ||
+        clean === 'tên' ||
+        clean === 'product name' ||
+        clean === 'name' ||
+        clean.startsWith('tên sản phẩm') ||
+        clean.startsWith('tên sp')
+      ) {
+        return 'name';
+      }
+      // 4. Discount price before Price
+      if (
+        clean.includes('khuyến mãi') ||
+        clean.includes('khuyen mai') ||
+        clean.includes('giá km') ||
+        clean.includes('giá giảm') ||
+        clean.includes('discount')
+      ) {
+        return 'discountPrice';
+      }
+      // 5. Price
+      if (
+        clean === 'giá bán' ||
+        clean === 'giá' ||
+        clean === 'đơn giá' ||
+        clean.includes('giá bán') ||
+        clean === 'price'
+      ) {
+        return 'price';
+      }
+      // 6. Stock
+      if (
+        clean.includes('số lượng') ||
+        clean.includes('tồn kho') ||
+        clean.includes('kho') ||
+        clean.includes('stock') ||
+        clean === 'tồn'
+      ) {
+        return 'stock';
+      }
+      // 7. Unit
+      if (
+        clean === 'đơn vị tính' ||
+        clean === 'đơn vị' ||
+        clean === 'dvt' ||
+        clean === 'unit'
+      ) {
+        return 'unit';
+      }
+      // 8. Brand / Author
+      if (
+        clean.includes('thương hiệu') ||
+        clean.includes('tác giả') ||
+        clean.includes('brand') ||
+        clean.includes('author') ||
+        clean.includes('nhà sản xuất')
+      ) {
+        return 'brand';
+      }
+      // 9. Status
+      if (
+        clean.includes('trạng thái') ||
+        clean.includes('tình trạng') ||
+        clean === 'status'
+      ) {
+        return 'status';
+      }
+      // 10. Featured
+      if (clean.includes('nổi bật') || clean.includes('featured')) {
+        return 'isFeatured';
+      }
+      // 11. Images
+      if (
+        clean.includes('hình ảnh') ||
+        clean.includes('link ảnh') ||
+        clean.includes('ảnh') ||
+        clean.includes('images') ||
+        clean.includes('image')
+      ) {
+        return 'images';
+      }
+      // 12. Description
+      if (
+        clean.includes('mô tả') ||
+        clean.includes('description') ||
+        clean.includes('chi tiết')
+      ) {
+        return 'description';
+      }
+      return null;
+    };
+
+    const colMap: Partial<Record<ProductField, number>> = {};
+    for (const h of headerTexts) {
+      const cleanHeader = normalizeHeader(h.text);
+      const field = matchField(cleanHeader);
+      if (field) {
+        if (colMap[field] && colMap[field] !== h.col) {
+          throw new BadRequestException(
+            `Phát hiện cột trùng lặp trong file: Trường "${field}" xuất hiện ở cả cột ${colMap[field]} và cột ${h.col}.`,
+          );
+        }
+        colMap[field] = h.col;
+      }
+    }
+
+    const missingFields: string[] = [];
+    if (!colMap.name) missingFields.push('Tên sản phẩm');
+    if (!colMap.sku) missingFields.push('Mã SKU');
+    if (!colMap.category) missingFields.push('Tên danh mục');
+    if (!colMap.price) missingFields.push('Giá bán');
+
+    if (missingFields.length > 0) {
+      throw new BadRequestException(
+        `File Excel thiếu các cột bắt buộc: ${missingFields.join(', ')}. Vui lòng kiểm tra lại dòng tiêu đề hoặc tải file mẫu chuẩn.`,
       );
     }
 
@@ -1853,29 +2139,51 @@ export class ProductsService {
     // Lấy toàn bộ danh mục hiện có
     const existingCategories = await this.categoryModel.find().lean();
 
-    // Duyệt qua từng dòng trong Excel (bắt đầu từ dòng 2 vì dòng 1 là Tiêu đề)
-    const rowCount = sheet.rowCount;
-    if (rowCount < 2) {
-      throw new BadRequestException(
-        'File Excel không có dòng dữ liệu sản phẩm nào.',
-      );
-    }
-
     for (let r = 2; r <= rowCount; r++) {
       const row = sheet.getRow(r);
 
-      const name = this.extractCellValue(row.getCell(1).value);
-      const sku = this.extractCellValue(row.getCell(2).value);
-      const categoryName = this.extractCellValue(row.getCell(3).value);
-      const priceRaw = this.extractCellValue(row.getCell(4).value);
-      const discountPriceRaw = this.extractCellValue(row.getCell(5).value);
-      const stockRaw = this.extractCellValue(row.getCell(6).value);
-      const unit = this.extractCellValue(row.getCell(7).value);
-      const brand = this.extractCellValue(row.getCell(8).value);
-      const statusRaw = this.extractCellValue(row.getCell(9).value);
-      const isFeaturedRaw = this.extractCellValue(row.getCell(10).value);
-      const imagesRaw = this.extractCellValue(row.getCell(11).value);
-      const description = this.extractCellValue(row.getCell(12).value);
+      const name = this.sanitizeCellValue(
+        this.extractCellValue(row.getCell(colMap.name!).value),
+      );
+      const sku = this.sanitizeCellValue(
+        this.extractCellValue(row.getCell(colMap.sku!).value),
+      );
+      const categoryName = this.sanitizeCellValue(
+        this.extractCellValue(row.getCell(colMap.category!).value),
+      );
+      const priceRaw = this.extractCellValue(row.getCell(colMap.price!).value);
+      const discountPriceRaw = colMap.discountPrice
+        ? this.extractCellValue(row.getCell(colMap.discountPrice).value)
+        : '';
+      const stockRaw = colMap.stock
+        ? this.extractCellValue(row.getCell(colMap.stock).value)
+        : '';
+      const unit = colMap.unit
+        ? this.sanitizeCellValue(
+            this.extractCellValue(row.getCell(colMap.unit).value),
+          )
+        : '';
+      const brand = colMap.brand
+        ? this.sanitizeCellValue(
+            this.extractCellValue(row.getCell(colMap.brand).value),
+          )
+        : '';
+      const statusRaw = colMap.status
+        ? this.extractCellValue(row.getCell(colMap.status).value)
+        : '';
+      const isFeaturedRaw = colMap.isFeatured
+        ? this.extractCellValue(row.getCell(colMap.isFeatured).value)
+        : '';
+      const imagesRaw = colMap.images
+        ? this.sanitizeCellValue(
+            this.extractCellValue(row.getCell(colMap.images).value),
+          )
+        : '';
+      const description = colMap.description
+        ? this.sanitizeCellValue(
+            this.extractCellValue(row.getCell(colMap.description).value),
+          )
+        : '';
 
       // Nếu cả dòng trống hoàn toàn thì bỏ qua
       if (!name && !sku && !priceRaw && !categoryName) {
