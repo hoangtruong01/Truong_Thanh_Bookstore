@@ -44,6 +44,7 @@ const AdminCombos = () => import('@/pages/admin/Combos.vue');
 const AdminLandingPages = () => import('@/pages/admin/LandingPages.vue');
 const AdminBanners = () => import('@/pages/admin/Banners.vue');
 const AdminMarketingCampaigns = () => import('@/pages/admin/MarketingCampaigns.vue');
+const AdminSocialPosts = () => import('@/pages/admin/SocialPosts.vue');
 const AdminReviews = () => import('@/pages/admin/Reviews.vue');
 const AdminWarehouses = () => import('@/pages/admin/Warehouses.vue');
 const AdminDocuments = () => import('@/pages/admin/Documents.vue');
@@ -111,6 +112,7 @@ const routes = [
       { path: 'landing-pages', name: 'AdminLandingPages', component: AdminLandingPages, meta: { permission: 'MANAGE_LANDING_PAGES' } },
       { path: 'banners', name: 'AdminBanners', component: AdminBanners, meta: { permission: 'MANAGE_BANNERS' } },
       { path: 'marketing/campaigns', name: 'AdminCampaigns', component: AdminMarketingCampaigns, meta: { permission: 'MANAGE_BANNERS' } },
+      { path: 'marketing/social', name: 'AdminSocialPosts', component: AdminSocialPosts, meta: { permission: 'MANAGE_BANNERS' } },
       { path: 'users', name: 'AdminUsers', component: AdminUsers, meta: { requiresSuperAdminOrAdmin: true } },
     ],
   },
@@ -215,6 +217,7 @@ router.afterEach((to, from) => {
     AdminLandingPages: 'Landing Page — Trường Thành Admin',
     AdminBanners: 'Banner & Popup — Trường Thành Admin',
     AdminCampaigns: 'Chiến Dịch Marketing — Trường Thành Admin',
+    AdminSocialPosts: 'Mạng Xã Hội & Đo Lường Quảng Cáo — Trường Thành Admin',
     AdminUsers: 'Quản Lý Nhân Viên & Phân Quyền — Trường Thành Admin',
     DealHot: 'Deal Sốc Giờ Vàng — Trường Thành Stationery',
     Info: 'Thông Tin & Chính Sách — Trường Thành Stationery',

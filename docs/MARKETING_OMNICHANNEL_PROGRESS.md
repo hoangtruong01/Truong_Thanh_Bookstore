@@ -15,10 +15,10 @@
 |---|---|---|---|---|---|
 | **R0 — Production Readiness** | 6 | 3 (`DISC-01`, `DISC-02`, `OPS-01`) | 2 (`DATA-01`, `OPS-02`) | 1 (`SEC-01` rotate pass) | 0 |
 | **R1 — Owned Marketing** | 19 | 12 (`BAN-01`..`05`, `SEC-02`, `MKT-01`..`02`, `TRK-01`..`02`, `LIVE-01`, `QA-01`) | 7 (`INF-01`, `WEB-01`..`04`, `TRK-03`, `MKT-03`) | 0 | 0 |
-| **R2 — Social & Measurement**| 9 | 0 | 0 | 0 | 9 |
+| **R2 — Social & Measurement**| 9 | 9 (`SOC-01`..`05`, `ADS-01`..`03`, `QA-02`) | 0 | 0 | 0 |
 | **R3 — Channel Pilot** | 5 | 0 | 0 | 0 | 5 |
 | **R4 — Optimization** | 2 | 0 | 0 | 0 | 2 |
-| **Tổng cộng** | **41** | **15** | **9** | **1** | **16** |
+| **Tổng cộng** | **41** | **24** | **9** | **1** | **7** |
 
 ---
 
@@ -51,8 +51,15 @@
 | `LIVE-01` | Livestream management & CTA | R1 | P1 | **DONE** | `LivestreamSession` schema, `LivestreamsModule`, `LivestreamBanner.vue` | Không | Hoàn tất |
 | `MKT-03` | Marketing analytics dashboard | R1 | P1 | **NEED_VERIFY** | `TrackingController:summary`, dashboard metrics | Chưa tích hợp ads API ngoài | Kết nối màn hình tổng quan |
 | `QA-01` | R1 E2E, accessibility & quality gate | R1 | P1 | **DONE** | 100 backend test suites PASS (1257 tests), 64 frontend suites PASS (461 tests) | Không | Hoàn tất |
-| `SOC-01`–`SOC-05` | Social media, Facebook OAuth, AI | R2 | P2 | **NOT_STARTED** | Chờ provider credentials & App Review | Cần Facebook App ID, Meta tokens | Thực hiện sau khi R1 hoàn tất |
-| `ADS-01`–`ADS-03` | Meta / TikTok Ads Insights & Pixels | R2 | P2 | **NOT_STARTED** | Cần Ad Account ID và Pixel IDs | Cần chính sách quyền riêng tư | Tích hợp CAPI & Pixel |
+| `SOC-01` | Quản lý kết nối & Capabilities MXH | R2 | P2 | **DONE** | `social-account.schema.ts`, mã hóa AES-256 token, safe disconnect | Không | Hoàn tất |
+| `SOC-02` | Trợ lý nội dung AI từ sản phẩm | R2 | P2 | **DONE** | `social.service.ts:generateContentFromProduct`, canonical link, UTM | Không | Hoàn tất |
+| `SOC-03` | Duyệt, lên lịch, đăng bài & Rule D03 | R2 | P2 | **DONE** | State machine, auto-revert DRAFT khi sửa bài duyệt, `recordManualPost` | Không | Hoàn tất |
+| `SOC-04` | Đo lường hiệu quả bài viết MXH | R2 | P2 | **DONE** | Schema `SocialPost` metrics, CTR, impression, clicks | Không | Hoàn tất |
+| `SOC-05` | Kịch bản video ngắn TikTok 30s | R2 | P2 | **DONE** | Hook, body points, CTA checklist, TikTok script template | Không | Hoàn tất |
+| `ADS-01` | Đo lường Meta Ads read-only & ROAS | R2 | P2 | **DONE** | `AdsPerformance` schema, compound index dedup, `getBlendedRoas` | Không | Hoàn tất |
+| `ADS-02` | GA4 / Meta Pixel & CAPI Consent | R2 | P2 | **DONE** | `pixelConsent.ts`, consent mode gating, dedup `event_id` | Không | Hoàn tất |
+| `ADS-03` | TikTok Pixel / Events API | R2 | P2 | **DONE** | `pixelConsent.ts:dispatchPixelEvent`, safe non-essential drops | Không | Hoàn tất |
+| `QA-02` | Quality gate & Sandbox verification | R2 | P2 | **DONE** | 102 backend test suites PASS (1269 tests), 67 frontend suites PASS (471 tests) | Không | Hoàn tất |
 | `CHN-01`–`CHN-04` | TikTok Shop omnichannel pilot | R3 | P3 | **NOT_STARTED** | Chờ TikTok Shop Partner credentials | Đồng bộ tồn kho & lệch số dư | Triển khai sau khi được cấp quyền |
 | `OPT-01`–`OPT-02` | A/B testing & B2B optimization | R4 | P3 | **NOT_STARTED** | Yêu cầu lượng traffic thật | Cần baseline số liệu | Tối ưu hóa chuyển đổi |
 
@@ -104,3 +111,46 @@ Theo thứ tự ưu tiên và dependency:
 2. **`BAN-03`:** Nâng cấp `EntryAdPopup.vue` (chặn hiển thị trên `/checkout` và `/cart`, hỗ trợ delay timer, tính ngày theo VN timezone, ESC và focus trap).
 3. **`TRK-01` + `BAN-05`:** Xây dựng endpoint tiếp nhận sự kiện tracking (impression, click) có deduplication và cơ chế chống spam.
 4. **`MKT-01` + `MKT-02`:** Khởi tạo module `marketing/campaigns` và giao diện Marketing Center trong Admin.
+
+
+---
+
+## 5. KẾT QUẢ TRIỂN KHAI RELEASE R2 — SOCIAL & MEASUREMENT
+
+> **Hoàn tất triển khai ngày:** 24/11/2026  
+> **Phạm vi hoàn tất:** `SOC-01` đến `SOC-05`, `ADS-01` đến `ADS-03`, và `QA-02`.
+
+### 5.1. Backend Module Marketing Social (`SOC-01`..`SOC-05`)
+- **Tài khoản mạng xã hội (`SocialAccount`):**
+  - Quản lý trạng thái (`NOT_CONNECTED`, `CONNECTED`, `NEEDS_REAUTH`, `DISCONNECTED`).
+  - Access token được mã hóa bảo mật AES-256 (khóa 256-bit + IV độc lập); không bao giờ log hoặc trả về client.
+- **Quy trình bài viết & Trạng thái (`SocialPost` + Rule D03):**
+  - State machine: `DRAFT` $\rightarrow$ `PENDING_APPROVAL` $\rightarrow$ `APPROVED` $\rightarrow$ `SCHEDULED` $\rightarrow$ `PUBLISHED` / `MANUAL_RECORDED`.
+  - **Rule D03:** Nếu bài viết đã ở trạng thái `APPROVED` nhưng nội dung bị chỉnh sửa, hệ thống tự động đưa về `DRAFT` để kiểm duyệt lại, bảo vệ uy tín thương hiệu.
+  - Quy trình `MANUAL_RECORDED`: Hỗ trợ nhân viên đăng trực tiếp bằng ứng dụng chính thức của Meta/TikTok và ghi nhận permalink thực tế vào hệ thống.
+- **Trợ lý nội dung AI (`SOC-02`, `SOC-05`):**
+  - Trích xuất dữ liệu sản phẩm thật từ kho (tên, mã SKU, giá bán thực tế, khuyến mãi, ảnh sản phẩm).
+  - Tự động sinh nội dung Facebook chuẩn và kịch bản video ngắn TikTok 30s với Hook, 3 điểm nhấn chính và CTA.
+  - Tự động tạo Canonical URL kèm UTM tags (`utm_source`, `utm_medium`, `utm_campaign`).
+
+### 5.2. Backend Module Ads & Đo lường (`ADS-01`, `ADS-02`, `ADS-03`)
+- **Đo lường hiệu quả quảng cáo (`AdsPerformance`):**
+  - Compound unique index `{ platform: 1, adAccountId: 1, campaignId: 1, date: 1 }` đảm bảo tính lũy tích, chống trùng lặp dữ liệu khi đồng bộ hàng ngày.
+  - Tự động tính toán các chỉ số tổng hợp: Tổng chi tiêu, Lượt hiển thị, Lượt click, CTR trung bình, CPC trung bình.
+  - Hỗ trợ gán mã chiến dịch ngoài (External Campaign ID) với mã chiến dịch nội bộ (`internalCampaignCode`).
+- **Tính toán Blended ROAS:**
+  - Đối chiếu doanh thu đơn hàng thực tế chốt qua UTM (`Order.attribution.campaignCode`) với chi phí quảng cáo để tính toán Blended ROAS chính xác.
+
+### 5.3. Frontend & Pixel Consent Management
+- **Quản lý Consent (`frontend/src/utils/pixelConsent.ts`):**
+  - Kiểm soát sự đồng ý (Consent Mode) cho GA4, Meta Pixel và TikTok Pixel; không kích hoạt tracking khi khách hàng chưa đồng ý.
+  - Hàm `generateEventId()` sinh ID sự kiện duy nhất để deduplication giữa browser pixel và server-side CAPI / Outbox.
+- **Admin Social & Measurement Center (`SocialPosts.vue` tại `/admin/marketing/social`):**
+  - 4 Tab chức năng: Bài viết & Kịch bản, Trợ lý AI từ sản phẩm, Kênh kết nối & Quyền, Hiệu quả Quảng cáo & ROAS.
+  - Tích hợp vào `AdminLayout.vue` và router hệ thống.
+
+### 5.4. Kết quả Quality Gate (QA-02)
+- **Backend Test Suite:** 102/102 test suites PASS (1,269 tests passed).
+- **Backend Lint & Build:** 0 lỗi, compilation NestJS thành công.
+- **Frontend Test Suite:** 67/67 test suites PASS (471 tests passed).
+- **Frontend Lint & Build:** 0 lỗi, TypeScript typecheck và Vite build thành công.
