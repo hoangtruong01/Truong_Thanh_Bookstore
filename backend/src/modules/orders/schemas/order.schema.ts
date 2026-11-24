@@ -220,6 +220,12 @@ export class Order {
     capturedAt?: Date;
   };
 
+  @Prop({ trim: true, index: true })
+  externalOrderId?: string;
+
+  @Prop({ trim: true, index: true })
+  externalChannel?: string;
+
   @Prop({
     type: String,
     enum: Object.values(RefundStatus),

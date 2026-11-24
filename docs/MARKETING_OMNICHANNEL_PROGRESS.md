@@ -16,9 +16,9 @@
 | **R0 — Production Readiness** | 6 | 3 (`DISC-01`, `DISC-02`, `OPS-01`) | 2 (`DATA-01`, `OPS-02`) | 1 (`SEC-01` rotate pass) | 0 |
 | **R1 — Owned Marketing** | 19 | 12 (`BAN-01`..`05`, `SEC-02`, `MKT-01`..`02`, `TRK-01`..`02`, `LIVE-01`, `QA-01`) | 7 (`INF-01`, `WEB-01`..`04`, `TRK-03`, `MKT-03`) | 0 | 0 |
 | **R2 — Social & Measurement**| 9 | 9 (`SOC-01`..`05`, `ADS-01`..`03`, `QA-02`) | 0 | 0 | 0 |
-| **R3 — Channel Pilot** | 5 | 0 | 0 | 0 | 5 |
+| **R3 — Channel Pilot** | 5 | 5 (`CHN-01`..`04`, `QA-03`) | 0 | 0 | 0 |
 | **R4 — Optimization** | 2 | 0 | 0 | 0 | 2 |
-| **Tổng cộng** | **41** | **24** | **9** | **1** | **7** |
+| **Tổng cộng** | **41** | **29** | **9** | **1** | **2** |
 
 ---
 
@@ -60,7 +60,11 @@
 | `ADS-02` | GA4 / Meta Pixel & CAPI Consent | R2 | P2 | **DONE** | `pixelConsent.ts`, consent mode gating, dedup `event_id` | Không | Hoàn tất |
 | `ADS-03` | TikTok Pixel / Events API | R2 | P2 | **DONE** | `pixelConsent.ts:dispatchPixelEvent`, safe non-essential drops | Không | Hoàn tất |
 | `QA-02` | Quality gate & Sandbox verification | R2 | P2 | **DONE** | 102 backend test suites PASS (1269 tests), 67 frontend suites PASS (471 tests) | Không | Hoàn tất |
-| `CHN-01`–`CHN-04` | TikTok Shop omnichannel pilot | R3 | P3 | **NOT_STARTED** | Chờ TikTok Shop Partner credentials | Đồng bộ tồn kho & lệch số dư | Triển khai sau khi được cấp quyền |
+| `CHN-01` | Channel account model & credentials | R3 | P3 | **DONE** | `ChannelAccount` schema, AES-256 encrypted app secrets, unique `{provider, shopId}` index | Không | Hoàn tất |
+| `CHN-02` | SKU mapping & inventory sync | R3 | P3 | **DONE** | `ChannelSkuMapping` schema, packMultiplier, `Math.floor(stock/packMultiplier)`, outbox push | Không | Hoàn tất |
+| `CHN-03` | Webhook inbox & order import | R3 | P3 | **DONE** | `ChannelWebhookInbox` schema, HMAC-SHA256 verification, deduplication, `OrderSource.TIKTOK_SHOP`, quarantine queue | Không | Hoàn tất |
+| `CHN-04` | Settlement reconciliation | R3 | P3 | **DONE** | `ChannelSettlement` schema, gross/fee/net vs internal orders, discrepancy detection | Không | Hoàn tất |
+| `QA-03` | Omnichannel test suite & simulator | R3 | P3 | **DONE** | `sales-channels.service.spec.ts` (9 tests), `SalesChannelsContract.spec.ts` (4 tests), 103 backend / 68 frontend suites PASS | Không | Hoàn tất |
 | `OPT-01`–`OPT-02` | A/B testing & B2B optimization | R4 | P3 | **NOT_STARTED** | Yêu cầu lượng traffic thật | Cần baseline số liệu | Tối ưu hóa chuyển đổi |
 
 ---
@@ -154,3 +158,46 @@ Theo thứ tự ưu tiên và dependency:
 - **Backend Lint & Build:** 0 lỗi, compilation NestJS thành công.
 - **Frontend Test Suite:** 67/67 test suites PASS (471 tests passed).
 - **Frontend Lint & Build:** 0 lỗi, TypeScript typecheck và Vite build thành công.
+
+---
+
+## 6. KẾT QUẢ TRIỂN KHAI RELEASE R3 — CHANNEL PILOT: TIKTOK SHOP & OMNICHANNEL COMMERCE
+
+> **Hoàn tất triển khai ngày:** 24/11/2026  
+> **Phạm vi hoàn tất:** `CHN-01` đến `CHN-04` và `QA-03`.
+
+### 6.1. Backend Module Sales Channels (`CHN-01`..`CHN-04`)
+- **Mô hình tài khoản Kênh bán (`ChannelAccount` - CHN-01):**
+  - Quản lý kết nối kênh ngoài (`TIKTOK_SHOP`, `SHOPEE`, `LAZADA`).
+  - Index duy nhất compound `{ provider: 1, shopId: 1 }` đảm bảo tính toàn vẹn.
+  - Secret và Access Token được mã hóa AES-256 an toàn bằng thuật toán mã hóa đối xứng; cấu hình kho hàng liên kết (`warehouseId`).
+- **Ánh xạ SKU & Tỷ lệ đóng gói quy đổi (`ChannelSkuMapping` - CHN-02):**
+  - Index duy nhất `{ provider: 1, shopId: 1, externalSkuId: 1 }`.
+  - Hỗ trợ tỷ lệ đóng gói `packMultiplier`: Tồn kho sàn khả dụng = `Math.floor(internalStock / packMultiplier)`.
+  - Cơ chế đồng bộ tồn kho nguyên tử tự động ghi sự kiện Outbox `INVENTORY_SYNC_PUSHED`.
+- **Hộp thư Webhook & Tiếp nhận đơn hàng sàn (`ChannelWebhookInbox` - CHN-03):**
+  - Xác thực chữ ký HMAC-SHA256 (`x-tts-signature`) trước khi xử lý webhook.
+  - Deduplication chặt chẽ theo compound unique index `{ provider: 1, eventId: 1 }`: Webhook trùng lặp được phát hiện ngay lập tức trước khi ACK để đảm bảo tính Idempotent.
+  - Tự động tạo đơn hàng lõi với `orderSource: OrderSource.TIKTOK_SHOP`, liên kết `externalOrderId` và trừ kho nội bộ theo `packMultiplier`.
+  - Cơ chế cách ly lỗi (`ChannelException`): Nếu đơn sàn chứa SKU chưa ánh xạ (`UNKNOWN_SKU`) hoặc không đủ tồn kho (`INSUFFICIENT_STOCK`), hệ thống tự động cách ly vào hàng đợi ngoại lệ mà không làm crash luồng đơn.
+  - Tuân thủ bảo mật PII: Không ghi log thông tin khách hàng nhạy cảm (SĐT, địa chỉ chi tiết) ra file log.
+- **Đối soát Doanh thu & Bảng kê thanh toán Sàn (`ChannelSettlement` - CHN-04):**
+  - Quản lý kỳ đối soát: Doanh số sàn báo (Gross Sales), Phí sàn (Platform/Commission/Shipping Fees), Thực nhận ngân hàng (Net Settlement).
+  - Tự động đối chiếu với tổng doanh thu đơn hàng sàn nội bộ trong cùng kỳ.
+  - Tự động phát hiện sai lệch và gắn cờ `RECONCILED` (nếu chênh lệch bằng 0) hoặc `DISCREPANCY` (nếu lệch số liệu) để kế toán xử lý.
+
+### 6.2. Frontend Admin Sales Channels Management Center
+- **Giao diện Quản lý Kênh Bán Hàng (`SalesChannels.vue` tại `/admin/sales-channels`):**
+  - 4 Tab chức năng:
+    1. *Ánh xạ SKU & Tồn kho*: Quản lý danh sách SKU, xem tỷ lệ đóng gói, tồn khả dụng, kích hoạt đồng bộ tức thì.
+    2. *Hộp thư Webhook & Đơn hàng sàn*: Hàng đợi đơn hàng cách ly (`Quarantined Exceptions`) kèm nút xử lý xong, tích hợp Sandbox Simulator mô phỏng webhook `ORDER_CREATED` và `ORDER_CANCELLED`.
+    3. *Đối soát doanh thu sàn*: Bảng đối soát số liệu Gross/Fee/Net vs Đơn nội bộ kèm trạng thái so khớp.
+    4. *Cấu hình Kênh bán*: Quản lý tài khoản kết nối, trạng thái và kho hàng liên kết.
+  - Đã đăng ký route `/admin/sales-channels` và menu navigation trong `AdminLayout.vue`.
+
+### 6.3. Kết quả Quality Gate (QA-03)
+- **Backend Test Suite:** 103/103 test suites PASS (1,278 tests passed bao gồm 9 tests cho `sales-channels.service.spec.ts`).
+- **Backend Lint & Build:** 0 lỗi, compilation NestJS thành công.
+- **Frontend Test Suite:** 68/68 test suites PASS (475 tests passed bao gồm 4 tests cho `SalesChannelsContract.spec.ts`).
+- **Frontend Lint & Build:** 0 lỗi, TypeScript typecheck (`vue-tsc`) và Vite build thành công.
+

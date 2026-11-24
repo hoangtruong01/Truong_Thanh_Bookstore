@@ -24,6 +24,7 @@ export enum OrderSource {
   MOBILE = 'MOBILE',
   LANDING_PAGE = 'LANDING_PAGE',
   POS = 'POS',
+  TIKTOK_SHOP = 'TIKTOK_SHOP',
 }
 
 export enum PaymentMethod {

@@ -219,7 +219,7 @@ export class CreateOrderDto {
   @IsOptional()
   @IsEnum(OrderSource, {
     message:
-      'orderSource phải là một trong các giá trị: WEB, MOBILE, LANDING_PAGE',
+      'orderSource phải là một trong các giá trị hợp lệ: WEB, MOBILE, LANDING_PAGE, POS, TIKTOK_SHOP',
   })
   orderSource?: OrderSource;
 
