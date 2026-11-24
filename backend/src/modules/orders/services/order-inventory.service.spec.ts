@@ -43,12 +43,24 @@ describe('OrderInventoryService — Multi-line Invariants & Defective Quarantine
         { product: 'prod_2', quantity: 3 },
       ];
 
-      const deducted = await service.deductOrderStock(items, undefined, 'ORD-001');
+      const deducted = await service.deductOrderStock(
+        items,
+        undefined,
+        'ORD-001',
+      );
 
       expect(deducted).toHaveLength(2);
       expect(mockProductsService.deductStock).toHaveBeenCalledTimes(2);
-      expect(mockProductsService.deductStock).toHaveBeenNthCalledWith(1, 'prod_1', 2);
-      expect(mockProductsService.deductStock).toHaveBeenNthCalledWith(2, 'prod_2', 3);
+      expect(mockProductsService.deductStock).toHaveBeenNthCalledWith(
+        1,
+        'prod_1',
+        2,
+      );
+      expect(mockProductsService.deductStock).toHaveBeenNthCalledWith(
+        2,
+        'prod_2',
+        3,
+      );
     });
 
     it('automatically rolls back line 1 if line 2 fails when running without session (compensation rollback)', async () => {
@@ -56,7 +68,9 @@ describe('OrderInventoryService — Multi-line Invariants & Defective Quarantine
       mockProductsService.deductStock
         .mockResolvedValueOnce(undefined)
         // Line 2 throws insufficient stock
-        .mockRejectedValueOnce(new BadRequestException('Không đủ tồn kho cho sản phẩm (ID: prod_2)'));
+        .mockRejectedValueOnce(
+          new BadRequestException('Không đủ tồn kho cho sản phẩm (ID: prod_2)'),
+        );
 
       mockProductsService.updateStock.mockResolvedValue(undefined);
       mockProductsService.incrementSold.mockResolvedValue(undefined);
@@ -72,8 +86,13 @@ describe('OrderInventoryService — Multi-line Invariants & Defective Quarantine
 
       // Verify that line 1's deduction was compensated and rolled back!
       expect(mockProductsService.updateStock).toHaveBeenCalledWith('prod_1', 2);
-      expect(mockProductsService.incrementSold).toHaveBeenCalledWith('prod_1', -2);
-      expect(mockInventoryService.deleteTransactionsByReference).toHaveBeenCalledWith('ORD-002');
+      expect(mockProductsService.incrementSold).toHaveBeenCalledWith(
+        'prod_1',
+        -2,
+      );
+      expect(
+        mockInventoryService.deleteTransactionsByReference,
+      ).toHaveBeenCalledWith('ORD-002');
     });
   });
 
@@ -86,14 +105,22 @@ describe('OrderInventoryService — Multi-line Invariants & Defective Quarantine
       mockProductsService.incrementSold.mockResolvedValue(undefined);
 
       const items = [
-        { product: 'prod_1', quantity: 1, isDefective: false, condition: 'GOOD' },
+        {
+          product: 'prod_1',
+          quantity: 1,
+          isDefective: false,
+          condition: 'GOOD',
+        },
       ];
 
       await service.restoreOrderStock(items, 'RETURN:ORD-003', validOrderId1);
 
       // Sellable stock is updated
       expect(mockProductsService.updateStock).toHaveBeenCalledWith('prod_1', 1);
-      expect(mockProductsService.incrementSold).toHaveBeenCalledWith('prod_1', -1);
+      expect(mockProductsService.incrementSold).toHaveBeenCalledWith(
+        'prod_1',
+        -1,
+      );
       expect(mockInventoryService.recordExternalMovement).toHaveBeenCalledWith(
         'prod_1',
         InventoryTransactionType.RETURN,
@@ -109,7 +136,12 @@ describe('OrderInventoryService — Multi-line Invariants & Defective Quarantine
       mockProductsService.incrementSold.mockResolvedValue(undefined);
 
       const items = [
-        { product: 'prod_damaged_1', quantity: 3, isDefective: true, condition: 'DAMAGED' },
+        {
+          product: 'prod_damaged_1',
+          quantity: 3,
+          isDefective: true,
+          condition: 'DAMAGED',
+        },
       ];
 
       await service.restoreOrderStock(items, 'RETURN:ORD-004', validOrderId2);
@@ -117,7 +149,10 @@ describe('OrderInventoryService — Multi-line Invariants & Defective Quarantine
       // Sellable stock must NEVER be increased!
       expect(mockProductsService.updateStock).not.toHaveBeenCalled();
       // Sold count is adjusted
-      expect(mockProductsService.incrementSold).toHaveBeenCalledWith('prod_damaged_1', -3);
+      expect(mockProductsService.incrementSold).toHaveBeenCalledWith(
+        'prod_damaged_1',
+        -3,
+      );
       // Quarantine damage movement recorded
       expect(mockInventoryService.recordExternalMovement).toHaveBeenCalledWith(
         'prod_damaged_1',

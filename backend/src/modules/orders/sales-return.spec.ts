@@ -151,10 +151,10 @@ describe('SALES-RET-01: Customer Sales Return & Refund Suite', () => {
       expect((requested as any).isDefectiveReturn).toBe(true);
 
       // 2. Approve return by staff
-      await orderLifecycleService.approveReturn(
-        'order_ret_damaged_02',
-        { _id: 'staff_1', role: UserRole.STAFF },
-      );
+      await orderLifecycleService.approveReturn('order_ret_damaged_02', {
+        _id: 'staff_1',
+        role: UserRole.STAFF,
+      });
 
       // 3. Confirm return received
       const returned = await orderLifecycleService.confirmReturnReceived(

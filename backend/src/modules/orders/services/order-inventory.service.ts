@@ -72,7 +72,10 @@ export class OrderInventoryService {
           `Deduct order stock failed on a subsequent line item for order ${orderCode || 'N/A'}. Initiating compensation rollback for ${deductedItems.length} items.`,
         );
         await this.rollbackStock(deductedItems, orderCode).catch((rbErr) =>
-          this.logger.error('Failed to rollback partial stock deduction', rbErr),
+          this.logger.error(
+            'Failed to rollback partial stock deduction',
+            rbErr,
+          ),
         );
       }
       throw err;

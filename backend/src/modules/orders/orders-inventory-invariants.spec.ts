@@ -9,7 +9,10 @@ import { OrderLoyaltyService } from './services/order-loyalty.service';
 import { OrderNotificationService } from './services/order-notification.service';
 import { Order } from './schemas/order.schema';
 import { Product } from '../products/schemas/product.schema';
-import { Inventory, InventoryTransaction } from '../inventory/schemas/inventory.schema';
+import {
+  Inventory,
+  InventoryTransaction,
+} from '../inventory/schemas/inventory.schema';
 import { ProductsService } from '../products/products.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { PromotionsService } from '../promotions/promotions.service';
@@ -18,7 +21,12 @@ import { EmailService } from '../email/email.service';
 import { UsersService } from '../users/users.service';
 import { CartService } from '../cart/cart.service';
 import { ConfigService } from '@nestjs/config';
-import { OrderStatus, PaymentMethod, InventoryTransactionType, UserRole } from '../../common/enums';
+import {
+  OrderStatus,
+  PaymentMethod,
+  InventoryTransactionType,
+  UserRole,
+} from '../../common/enums';
 
 describe('GIAO VIỆC 3 (T02/T03) — Đơn hàng, kiểm kê và cô lập hàng lỗi', () => {
   let ordersService: OrdersService;
@@ -62,36 +70,48 @@ describe('GIAO VIỆC 3 (T02/T03) — Đơn hàng, kiểm kê và cô lập hàn
 
     mockProductsService = {
       findById: jest.fn().mockImplementation((id: string) => {
-        if (id === prodAId) return Promise.resolve({ ...mockProductA, stock: currentStockA });
-        if (id === prodBId) return Promise.resolve({ ...mockProductB, stock: currentStockB });
+        if (id === prodAId)
+          return Promise.resolve({ ...mockProductA, stock: currentStockA });
+        if (id === prodBId)
+          return Promise.resolve({ ...mockProductB, stock: currentStockB });
         return Promise.resolve(null);
       }),
       findByIds: jest.fn().mockImplementation((ids: string[]) => {
         const res: any[] = [];
-        if (ids.includes(prodAId)) res.push({ ...mockProductA, stock: currentStockA });
-        if (ids.includes(prodBId)) res.push({ ...mockProductB, stock: currentStockB });
+        if (ids.includes(prodAId))
+          res.push({ ...mockProductA, stock: currentStockA });
+        if (ids.includes(prodBId))
+          res.push({ ...mockProductB, stock: currentStockB });
         return Promise.resolve(res);
       }),
-      deductStock: jest.fn().mockImplementation(async (id: string, qty: number) => {
-        if (id === prodAId) {
-          if (currentStockA >= qty) {
-            currentStockA -= qty;
-            return;
+      deductStock: jest
+        .fn()
+        .mockImplementation(async (id: string, qty: number) => {
+          if (id === prodAId) {
+            if (currentStockA >= qty) {
+              currentStockA -= qty;
+              return;
+            }
+            throw new BadRequestException(
+              `Không đủ tồn kho cho sản phẩm ${prodAId}`,
+            );
           }
-          throw new BadRequestException(`Không đủ tồn kho cho sản phẩm ${prodAId}`);
-        }
-        if (id === prodBId) {
-          if (currentStockB >= qty) {
-            currentStockB -= qty;
-            return;
+          if (id === prodBId) {
+            if (currentStockB >= qty) {
+              currentStockB -= qty;
+              return;
+            }
+            throw new BadRequestException(
+              `Không đủ tồn kho cho sản phẩm ${prodBId}`,
+            );
           }
-          throw new BadRequestException(`Không đủ tồn kho cho sản phẩm ${prodBId}`);
-        }
-      }),
-      updateStock: jest.fn().mockImplementation(async (id: string, qty: number) => {
-        if (id === prodAId) currentStockA += qty;
-        if (id === prodBId) currentStockB += qty;
-      }),
+        }),
+      updateStock: jest
+        .fn()
+        .mockImplementation(async (id: string, qty: number) => {
+          if (id === prodAId) currentStockA += qty;
+          if (id === prodBId) currentStockB += qty;
+        }),
       incrementSold: jest.fn().mockResolvedValue(undefined),
     };
 
@@ -116,22 +136,24 @@ describe('GIAO VIỆC 3 (T02/T03) — Đơn hàng, kiểm kê và cô lập hàn
       return this;
     });
 
-    (mockOrderModel as any).findOne = jest.fn().mockReturnValue({
+    mockOrderModel.findOne = jest.fn().mockReturnValue({
       select: jest.fn().mockReturnThis(),
       exec: jest.fn().mockResolvedValue(null),
     });
-    (mockOrderModel as any).findById = jest.fn().mockImplementation((id: string) => ({
+    mockOrderModel.findById = jest.fn().mockImplementation((id: string) => ({
       session: jest.fn().mockReturnThis(),
-      exec: jest.fn().mockResolvedValue(createdOrders.find((o) => o._id === id) || null),
+      exec: jest
+        .fn()
+        .mockResolvedValue(createdOrders.find((o) => o._id === id) || null),
     }));
-    (mockOrderModel as any).countDocuments = jest.fn().mockReturnValue({
+    mockOrderModel.countDocuments = jest.fn().mockReturnValue({
       exec: jest.fn().mockResolvedValue(0),
     });
-    (mockOrderModel as any).distinct = jest.fn().mockImplementation(() => ({
+    mockOrderModel.distinct = jest.fn().mockImplementation(() => ({
       exec: jest.fn().mockResolvedValue([]),
       then: (resolve: any) => Promise.resolve([]).then(resolve),
     }));
-    (mockOrderModel as any).db = {
+    mockOrderModel.db = {
       startSession: undefined, // Non-transaction mode triggers compensation rollback
     };
 
@@ -148,27 +170,43 @@ describe('GIAO VIỆC 3 (T02/T03) — Đơn hàng, kiểm kê và cô lập hàn
         { provide: InventoryService, useValue: mockInventoryService },
         {
           provide: PromotionsService,
-          useValue: { apply: jest.fn().mockResolvedValue({ discount: 0 }), releaseUsage: jest.fn() },
+          useValue: {
+            apply: jest.fn().mockResolvedValue({ discount: 0 }),
+            releaseUsage: jest.fn(),
+          },
         },
-        { provide: NotificationsService, useValue: { create: jest.fn().mockResolvedValue({}) } },
+        {
+          provide: NotificationsService,
+          useValue: { create: jest.fn().mockResolvedValue({}) },
+        },
         {
           provide: EmailService,
-          useValue: { sendOrderConfirmationEmail: jest.fn(), sendOrderStatusEmail: jest.fn() },
+          useValue: {
+            sendOrderConfirmationEmail: jest.fn(),
+            sendOrderStatusEmail: jest.fn(),
+          },
         },
         {
           provide: UsersService,
           useValue: {
             findById: jest.fn().mockResolvedValue(null),
-            validateAndSpendPoints: jest.fn().mockResolvedValue({ pointsSpent: 0, discountAmount: 0 }),
+            validateAndSpendPoints: jest
+              .fn()
+              .mockResolvedValue({ pointsSpent: 0, discountAmount: 0 }),
             refundLoyaltyPoints: jest.fn(),
           },
         },
         { provide: CartService, useValue: { clearCart: jest.fn() } },
-        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue(null) } },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn().mockReturnValue(null) },
+        },
         {
           provide: OrderLoyaltyService,
           useValue: {
-            validateAndSpendPoints: jest.fn().mockResolvedValue({ pointsSpent: 0, discountAmount: 0 }),
+            validateAndSpendPoints: jest
+              .fn()
+              .mockResolvedValue({ pointsSpent: 0, discountAmount: 0 }),
             refundLoyaltyPoints: jest.fn().mockResolvedValue(undefined),
             deductAwardedPoints: jest.fn().mockResolvedValue(undefined),
             rollbackLoyaltyPoints: jest.fn().mockResolvedValue(undefined),
@@ -187,8 +225,12 @@ describe('GIAO VIỆC 3 (T02/T03) — Đơn hàng, kiểm kê và cô lập hàn
     }).compile();
 
     ordersService = module.get<OrdersService>(OrdersService);
-    orderLifecycleService = module.get<OrderLifecycleService>(OrderLifecycleService);
-    orderInventoryService = module.get<OrderInventoryService>(OrderInventoryService);
+    orderLifecycleService = module.get<OrderLifecycleService>(
+      OrderLifecycleService,
+    );
+    orderInventoryService = module.get<OrderInventoryService>(
+      OrderInventoryService,
+    );
   });
 
   // =========================================================================
@@ -210,7 +252,9 @@ describe('GIAO VIỆC 3 (T02/T03) — Đơn hàng, kiểm kê và cô lập hàn
         ],
       };
 
-      await expect(ordersService.create(payload)).rejects.toThrow(ConflictException);
+      await expect(ordersService.create(payload)).rejects.toThrow(
+        ConflictException,
+      );
 
       // Tồn kho sản phẩm A phải nguyên vẹn là 10 (không bị trừ 2)
       expect(currentStockA).toBe(10);
@@ -233,7 +277,9 @@ describe('GIAO VIỆC 3 (T02/T03) — Đơn hàng, kiểm kê và cô lập hàn
           currentStockA -= qty; // dòng 1 trừ
         })
         .mockImplementationOnce(async () => {
-          throw new BadRequestException('Lỗi cơ sở dữ liệu khi trừ tồn kho dòng 2');
+          throw new BadRequestException(
+            'Lỗi cơ sở dữ liệu khi trừ tồn kho dòng 2',
+          );
         });
 
       const payload: any = {
@@ -247,11 +293,16 @@ describe('GIAO VIỆC 3 (T02/T03) — Đơn hàng, kiểm kê và cô lập hàn
         ],
       };
 
-      await expect(ordersService.create(payload)).rejects.toThrow(BadRequestException);
+      await expect(ordersService.create(payload)).rejects.toThrow(
+        BadRequestException,
+      );
 
       // Verify bồi hoàn: updateStock được gọi để hoàn lại 3 sản phẩm A
       expect(mockProductsService.updateStock).toHaveBeenCalledWith(prodAId, 3);
-      expect(mockProductsService.incrementSold).toHaveBeenCalledWith(prodAId, -3);
+      expect(mockProductsService.incrementSold).toHaveBeenCalledWith(
+        prodAId,
+        -3,
+      );
       expect(createdOrders).toHaveLength(0);
     });
   });
@@ -283,10 +334,10 @@ describe('GIAO VIỆC 3 (T02/T03) — Đơn hàng, kiểm kê và cô lập hàn
       expect(orderDoc.isDefectiveReturn).toBe(true);
 
       // Nhân viên duyệt yêu cầu
-      await orderLifecycleService.approveReturn(
-        orderDoc._id,
-        { _id: 'staff_01', role: UserRole.STAFF },
-      );
+      await orderLifecycleService.approveReturn(orderDoc._id, {
+        _id: 'staff_01',
+        role: UserRole.STAFF,
+      });
 
       // Kho tiếp nhận hàng hoàn
       await orderLifecycleService.confirmReturnReceived(
@@ -333,7 +384,10 @@ describe('GIAO VIỆC 3 (T02/T03) — Đơn hàng, kiểm kê và cô lập hàn
       expect(orderDoc.isDefectiveReturn).toBe(false);
 
       // Duyệt và tiếp nhận
-      await orderLifecycleService.approveReturn(orderDoc._id, { _id: 'staff_01', role: UserRole.STAFF });
+      await orderLifecycleService.approveReturn(orderDoc._id, {
+        _id: 'staff_01',
+        role: UserRole.STAFF,
+      });
       await orderLifecycleService.confirmReturnReceived(
         orderDoc._id,
         { _id: 'staff_01', role: UserRole.STAFF },

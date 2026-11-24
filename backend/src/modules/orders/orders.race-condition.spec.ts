@@ -436,8 +436,14 @@ describe('QA-03: Inventory Race Condition & Concurrency Invariant Tests', () => 
     );
 
     // Xác minh: SP 1 đã được bồi hoàn rollback (updateStock +2), tồn kho không bị lệch âm thầm
-    expect(mockProductsService.updateStock).toHaveBeenCalledWith(bookProductId, 2);
-    expect(mockProductsService.incrementSold).toHaveBeenCalledWith(bookProductId, -2);
+    expect(mockProductsService.updateStock).toHaveBeenCalledWith(
+      bookProductId,
+      2,
+    );
+    expect(mockProductsService.incrementSold).toHaveBeenCalledWith(
+      bookProductId,
+      -2,
+    );
     expect(createdOrders.length).toBe(0);
   });
 });

@@ -403,9 +403,9 @@ export class OrderLifecycleService {
       const itemsToRestore = (order.items || []).map((it: any) => ({
         product: it.product,
         quantity: it.quantity,
-        isDefective: it.isDefective !== undefined ? it.isDefective : isDefective,
-        condition:
-          it.condition || (isDefective ? 'DAMAGED' : 'GOOD'),
+        isDefective:
+          it.isDefective !== undefined ? it.isDefective : isDefective,
+        condition: it.condition || (isDefective ? 'DAMAGED' : 'GOOD'),
       }));
 
       await this.orderInventoryService.restoreOrderStock(

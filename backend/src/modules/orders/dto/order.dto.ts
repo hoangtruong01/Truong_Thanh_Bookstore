@@ -220,7 +220,8 @@ export class UpdateOrderStatusDto {
   note?: string;
 
   @ApiPropertyOptional({
-    description: 'Đánh dấu hàng hoàn trả bị lỗi/hỏng (nhập kho cách ly, không tăng tồn bán)',
+    description:
+      'Đánh dấu hàng hoàn trả bị lỗi/hỏng (nhập kho cách ly, không tăng tồn bán)',
   })
   @IsOptional()
   @IsBoolean()
