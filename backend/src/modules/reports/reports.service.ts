@@ -41,6 +41,12 @@ import {
 } from './dto/inventory-ledger.dto';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
 import { escapeRegex } from '../../common/security/security.sanitizer';
+import {
+  CashEntry,
+  CashEntryDocument,
+  CashEntryDirection,
+  CashEntryStatus,
+} from '../finance/schemas/cash-entry.schema';
 
 interface LowStockReportItem {
   _id: { toString(): string } | string;
@@ -107,6 +113,9 @@ export class ReportsService {
     @Optional()
     @InjectModel(Supplier.name)
     private supplierModel?: Model<SupplierDocument>,
+    @Optional()
+    @InjectModel(CashEntry.name)
+    private entryModel?: Model<CashEntryDocument>,
   ) {}
 
   async getDashboard() {
@@ -1329,6 +1338,308 @@ export class ReportsService {
       page,
       limit,
       totalPages: Math.ceil(suggestions.length / limit),
+    };
+  }
+
+  /**
+   * T08: Báo cáo đối soát tài chính giữa Doanh thu theo đơn (Accrual / Order basis)
+   * và Dòng tiền thực tế theo ngày (Cash basis)
+   *
+   * Giải quyết yêu cầu đối soát chu kỳ:
+   * Ví dụ fixture: Khách mua 100.000 đ ngày 10, hoàn tiền 20.000 đ ngày 12
+   * - Ngày 10: Doanh thu theo đơn = 100k (hoặc net 80k theo vòng đời), Tiền thực thu = +100k
+   * - Ngày 12: Doanh thu mới = 0k, Giảm trừ hoàn tiền = -20k, Tiền thực chi hoàn = -20k
+   * - Toàn kỳ: Doanh thu thuần 80k = Dòng tiền thực tế thuần 80k (Đối chiếu cân bằng 100%).
+   */
+  async getFinancialReconciliation(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<{
+    fromDate: string;
+    toDate: string;
+    dailyBreakdown: Array<{
+      date: string;
+      orderBasis: {
+        orderCount: number;
+        grossRevenue: number;
+        refundDeductions: number;
+        netRevenue: number;
+      };
+      cashBasis: {
+        salesCashInflow: number;
+        refundCashOutflow: number;
+        netCashFlow: number;
+      };
+      timingDifference: number;
+      explanation: string;
+    }>;
+    cumulativeSummary: {
+      totalGrossRevenue: number;
+      totalRefundDeductions: number;
+      totalNetRevenue: number;
+      totalCashInflow: number;
+      totalCashOutflow: number;
+      totalNetCashFlow: number;
+      cumulativeDifference: number;
+      isBalanced: boolean;
+    };
+    reconciliationAuditNotes: string;
+  }> {
+    const vnOffset = 7 * 60 * 60 * 1000;
+    const nowVN = new Date(Date.now() + vnOffset);
+    const defaultEnd = nowVN.toISOString().slice(0, 10);
+    const thirtyDaysAgo = new Date(
+      Date.now() + vnOffset - 30 * 24 * 60 * 60 * 1000,
+    );
+    const defaultStart = thirtyDaysAgo.toISOString().slice(0, 10);
+
+    const fromDate =
+      startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)
+        ? startDate
+        : defaultStart;
+    const toDate =
+      endDate && /^\d{4}-\d{2}-\d{2}$/.test(endDate) ? endDate : defaultEnd;
+
+    const start = new Date(`${fromDate}T00:00:00.000+07:00`);
+    const end = new Date(`${toDate}T23:59:59.999+07:00`);
+
+    // 1. Thu thập dữ liệu đơn hàng (POS và Online) tạo trong khoảng thời gian
+    const posOrders = this.posOrderModel
+      ? await this.posOrderModel
+          .find({
+            status: { $ne: POSOrderStatus.CANCELLED },
+            createdAt: { $gte: start, $lte: end },
+          })
+          .lean()
+          .exec()
+      : [];
+
+    const onlineOrders = this.orderModel
+      ? await this.orderModel
+          .find({
+            orderStatus: { $ne: OrderStatus.CANCELLED },
+            createdAt: { $gte: start, $lte: end },
+          })
+          .lean()
+          .exec()
+      : [];
+
+    // 2. Thu thập tất cả các nghiệp vụ hoàn tiền phát sinh trong khoảng thời gian
+    // (kể cả trên đơn tạo trước ngày start)
+    const posRefundOrders = this.posOrderModel
+      ? await this.posOrderModel
+          .find({
+            'refundHistory.refundedAt': { $gte: start, $lte: end },
+          })
+          .lean()
+          .exec()
+      : [];
+
+    const onlineRefundOrders = this.orderModel
+      ? await this.orderModel
+          .find({
+            'refundHistory.refundedAt': { $gte: start, $lte: end },
+          })
+          .lean()
+          .exec()
+      : [];
+
+    // 3. Thu thập dữ liệu CashEntry sổ quỹ (nếu có)
+    const cashEntries = this.entryModel
+      ? await this.entryModel
+          .find({
+            isDeleted: false,
+            status: { $ne: CashEntryStatus.CANCELLED },
+            $or: [
+              { postedAt: { $gte: start, $lte: end } },
+              { createdAt: { $gte: start, $lte: end } },
+            ],
+          })
+          .lean()
+          .exec()
+      : [];
+
+    // Khởi tạo map theo từng ngày
+    const daysMap = new Map<
+      string,
+      {
+        orderCount: number;
+        grossRevenue: number;
+        orderRefunds: number;
+        salesCashInflow: number;
+        refundCashOutflow: number;
+      }
+    >();
+
+    const getOrInitDay = (d: string) => {
+      let rec = daysMap.get(d);
+      if (!rec) {
+        rec = {
+          orderCount: 0,
+          grossRevenue: 0,
+          orderRefunds: 0,
+          salesCashInflow: 0,
+          refundCashOutflow: 0,
+        };
+        daysMap.set(d, rec);
+      }
+      return rec;
+    };
+
+    // Đưa POS Orders vào map
+    for (const ord of posOrders) {
+      const d = new Date(new Date(ord.createdAt).getTime() + vnOffset)
+        .toISOString()
+        .slice(0, 10);
+      const dayRec = getOrInitDay(d);
+      dayRec.orderCount++;
+      dayRec.grossRevenue += ord.finalAmount || 0;
+      dayRec.orderRefunds += ord.totalRefundedAmount || 0;
+
+      // Tiền thực thu từ đơn POS (nếu không dùng cashEntries)
+      if (ord.paymentMethod !== PaymentMethod.CREDIT) {
+        dayRec.salesCashInflow += ord.finalAmount || 0;
+      } else {
+        dayRec.salesCashInflow += ord.paidAmount || 0;
+      }
+    }
+
+    // Đưa Online Orders vào map
+    for (const ord of onlineOrders) {
+      const d = new Date(new Date(ord.createdAt).getTime() + vnOffset)
+        .toISOString()
+        .slice(0, 10);
+      const dayRec = getOrInitDay(d);
+      dayRec.orderCount++;
+      dayRec.grossRevenue += ord.total || 0;
+      dayRec.orderRefunds += (ord as any).totalRefundedAmount || 0;
+
+      if (ord.paymentStatus === PaymentStatus.PAID) {
+        dayRec.salesCashInflow += ord.total || 0;
+      }
+    }
+
+    // Ghi nhận tiền hoàn thực tế theo ngày phát sinh hoàn (Actual Cash Outflow Date)
+    for (const ord of posRefundOrders) {
+      for (const rh of ord.refundHistory || []) {
+        const refTime = new Date(rh.refundedAt).getTime();
+        if (refTime >= start.getTime() && refTime <= end.getTime()) {
+          const refDateStr = new Date(refTime + vnOffset)
+            .toISOString()
+            .slice(0, 10);
+          const dayRec = getOrInitDay(refDateStr);
+          dayRec.refundCashOutflow += rh.totalRefundAmount || 0;
+        }
+      }
+    }
+
+    for (const ord of onlineRefundOrders) {
+      for (const rh of (ord as any).refundHistory || []) {
+        const refTime = new Date(rh.refundedAt).getTime();
+        if (refTime >= start.getTime() && refTime <= end.getTime()) {
+          const refDateStr = new Date(refTime + vnOffset)
+            .toISOString()
+            .slice(0, 10);
+          const dayRec = getOrInitDay(refDateStr);
+          dayRec.refundCashOutflow +=
+            rh.refundAmount || rh.totalRefundAmount || 0;
+        }
+      }
+    }
+
+    // Nếu có CashEntries thực tế từ sổ quỹ, đối chiếu và ưu tiên số liệu sổ quỹ
+    if (cashEntries.length > 0) {
+      const cashbookDaily = new Map<string, { in: number; out: number }>();
+      for (const ent of cashEntries) {
+        const entDate =
+          (ent as any).postedAt || (ent as any).createdAt || new Date();
+        const d = new Date(new Date(entDate).getTime() + vnOffset)
+          .toISOString()
+          .slice(0, 10);
+        const cur = cashbookDaily.get(d) || { in: 0, out: 0 };
+        if (ent.direction === CashEntryDirection.IN) {
+          cur.in += ent.amount;
+        } else if (ent.direction === CashEntryDirection.OUT) {
+          cur.out += ent.amount;
+        }
+        cashbookDaily.set(d, cur);
+      }
+      for (const [d, cb] of cashbookDaily.entries()) {
+        const dayRec = getOrInitDay(d);
+        if (cb.in > 0) dayRec.salesCashInflow = cb.in;
+        if (cb.out > 0) dayRec.refundCashOutflow = cb.out;
+      }
+    }
+
+    // Sắp xếp ngày tăng dần
+    const sortedDates = Array.from(daysMap.keys()).sort();
+
+    let totalGrossRevenue = 0;
+    let totalRefundDeductions = 0;
+    let totalNetRevenue = 0;
+    let totalCashInflow = 0;
+    let totalCashOutflow = 0;
+    let totalNetCashFlow = 0;
+
+    const dailyBreakdown = sortedDates.map((date) => {
+      const r = daysMap.get(date)!;
+      const netRevenue = r.grossRevenue - r.orderRefunds;
+      const netCashFlow = r.salesCashInflow - r.refundCashOutflow;
+      const timingDifference = netRevenue - netCashFlow;
+
+      totalGrossRevenue += r.grossRevenue;
+      totalRefundDeductions += r.orderRefunds;
+      totalNetRevenue += netRevenue;
+      totalCashInflow += r.salesCashInflow;
+      totalCashOutflow += r.refundCashOutflow;
+      totalNetCashFlow += netCashFlow;
+
+      let explanation =
+        'Khớp hoàn toàn giữa doanh thu theo đơn và dòng tiền trong ngày.';
+      if (timingDifference > 0) {
+        explanation = `Chênh lệch +${timingDifference.toLocaleString('vi-VN')} đ: Doanh thu theo đơn cao hơn tiền thực thu (do ghi nhận nợ hoặc chi hoàn tiền ở ngày khác).`;
+      } else if (timingDifference < 0) {
+        explanation = `Chênh lệch ${timingDifference.toLocaleString('vi-VN')} đ: Tiền thu trong ngày cao hơn doanh thu thuần hoặc đơn phát sinh hoàn tiền ở ngày sau.`;
+      }
+
+      return {
+        date,
+        orderBasis: {
+          orderCount: r.orderCount,
+          grossRevenue: r.grossRevenue,
+          refundDeductions: r.orderRefunds,
+          netRevenue,
+        },
+        cashBasis: {
+          salesCashInflow: r.salesCashInflow,
+          refundCashOutflow: r.refundCashOutflow,
+          netCashFlow,
+        },
+        timingDifference,
+        explanation,
+      };
+    });
+
+    const cumulativeDifference = totalNetRevenue - totalNetCashFlow;
+    const isBalanced = cumulativeDifference === 0;
+
+    return {
+      fromDate,
+      toDate,
+      dailyBreakdown,
+      cumulativeSummary: {
+        totalGrossRevenue,
+        totalRefundDeductions,
+        totalNetRevenue,
+        totalCashInflow,
+        totalCashOutflow,
+        totalNetCashFlow,
+        cumulativeDifference,
+        isBalanced,
+      },
+      reconciliationAuditNotes: isBalanced
+        ? 'Đối chiếu cân bằng 100%: Tổng doanh thu thuần theo đơn khớp hoàn toàn với tổng dòng tiền thực tế thuần trong kỳ.'
+        : `Chênh lệch đối chiếu kỳ: ${cumulativeDifference.toLocaleString('vi-VN')} đ (cần kiểm tra đơn mua nợ chưa thanh toán hoặc phiếu chi hoàn chưa đối soát).`,
     };
   }
 }

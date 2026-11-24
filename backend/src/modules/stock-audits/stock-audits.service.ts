@@ -146,6 +146,7 @@ export class StockAuditsService {
         discrepancy: 0,
         costPrice,
         discrepancyValue: 0,
+        isCounted: false,
         reason: '',
       };
     });
@@ -156,6 +157,9 @@ export class StockAuditsService {
       items,
       totalDiscrepancyQty: 0,
       totalDiscrepancyValue: 0,
+      totalItemsCount: items.length,
+      countedItemsCount: 0,
+      uncountedItemsCount: items.length,
       requiresApproval: false,
       status: StockAuditStatus.DRAFT,
       createdBy: new Types.ObjectId(userId),
@@ -205,6 +209,9 @@ export class StockAuditsService {
       if (submitted) {
         item.actualStock = submitted.actualStock;
         if (submitted.reason) item.reason = submitted.reason;
+        item.isCounted = true;
+        item.countedAt = new Date();
+        item.countedBy = new Types.ObjectId(userId);
       }
 
       item.discrepancy = item.actualStock - item.systemStock;
@@ -227,6 +234,9 @@ export class StockAuditsService {
 
     audit.totalDiscrepancyQty = totalDiscrepancyQty;
     audit.totalDiscrepancyValue = totalDiscrepancyValue;
+    audit.totalItemsCount = audit.items.length;
+    audit.countedItemsCount = audit.items.filter((it) => it.isCounted).length;
+    audit.uncountedItemsCount = audit.totalItemsCount - audit.countedItemsCount;
     audit.requiresApproval = requiresApproval;
     audit.status = StockAuditStatus.PENDING_APPROVAL;
     audit.submittedBy = new Types.ObjectId(userId);
@@ -422,5 +432,102 @@ export class StockAuditsService {
     }
 
     return audit;
+  }
+
+  /**
+   * ERP-04: Lập biên bản kiểm kê kho (tách rõ ràng các mặt hàng đã đếm và chưa đếm, lưu trữ chính thức)
+   */
+  async generateAuditMinutes(
+    id: string,
+    userId: string,
+    notes?: string,
+  ): Promise<any> {
+    const audit = await this.findById(id);
+    const countedItems = audit.items.filter((it) => it.isCounted);
+    const uncountedItems = audit.items.filter((it) => !it.isCounted);
+
+    const matchedCount = countedItems.filter(
+      (it) => it.discrepancy === 0,
+    ).length;
+    const surplusCount = countedItems.filter((it) => it.discrepancy > 0).length;
+    const shortageCount = countedItems.filter(
+      (it) => it.discrepancy < 0,
+    ).length;
+
+    const totalCountedSystemQty = countedItems.reduce(
+      (sum, it) => sum + it.systemStock,
+      0,
+    );
+    const totalCountedActualQty = countedItems.reduce(
+      (sum, it) => sum + it.actualStock,
+      0,
+    );
+
+    const minutesCode = `BBKK-${audit.auditCode}`;
+    const minutes = {
+      minutesCode,
+      auditCode: audit.auditCode,
+      title: audit.title,
+      generatedAt: new Date(),
+      generatedBy: new Types.ObjectId(userId),
+      totalItemsCount: audit.items.length,
+      countedItemsCount: countedItems.length,
+      uncountedItemsCount: uncountedItems.length,
+      completionRate:
+        audit.items.length > 0
+          ? Math.round((countedItems.length / audit.items.length) * 100)
+          : 100,
+      matchedCount,
+      surplusCount,
+      shortageCount,
+      totalCountedSystemQty,
+      totalCountedActualQty,
+      totalDiscrepancyQty: audit.totalDiscrepancyQty,
+      totalDiscrepancyValue: audit.totalDiscrepancyValue,
+      requiresApproval: audit.requiresApproval,
+      status: audit.status,
+      signOff: {
+        createdBy: audit.createdBy,
+        submittedBy: audit.submittedBy,
+        approvedBy: audit.approvedBy,
+      },
+      notes: notes || audit.note,
+      countedItems: countedItems.map((it) => ({
+        product: it.product,
+        productName: it.productName,
+        sku: it.sku,
+        unit: it.unit,
+        systemStock: it.systemStock,
+        actualStock: it.actualStock,
+        discrepancy: it.discrepancy,
+        discrepancyValue: it.discrepancyValue,
+        reason: it.reason,
+        countedAt: it.countedAt,
+      })),
+      uncountedItems: uncountedItems.map((it) => ({
+        product: it.product,
+        productName: it.productName,
+        sku: it.sku,
+        unit: it.unit,
+        systemStock: it.systemStock,
+      })),
+    };
+
+    audit.auditMinutes = minutes;
+    await audit.save();
+    return minutes;
+  }
+
+  /**
+   * Xem biên bản kiểm kê kho đã lập
+   */
+  async getAuditMinutes(id: string): Promise<any> {
+    const audit = await this.findById(id);
+    if (!audit.auditMinutes) {
+      throw new NotFoundException(
+        'Đợt kiểm kê này chưa được lập biên bản kiểm kê',
+      );
+    }
+    return audit.auditMinutes;
   }
 }

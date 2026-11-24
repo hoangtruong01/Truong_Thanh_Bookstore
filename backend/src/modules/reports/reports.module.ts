@@ -19,6 +19,10 @@ import {
   PurchaseOrderSchema,
 } from '../purchasing/schemas/purchase-order.schema';
 import { Supplier, SupplierSchema } from '../suppliers/schemas/supplier.schema';
+import {
+  CashEntry,
+  CashEntrySchema,
+} from '../finance/schemas/cash-entry.schema';
 
 @Module({
   imports: [
@@ -29,6 +33,7 @@ import { Supplier, SupplierSchema } from '../suppliers/schemas/supplier.schema';
       { name: Product.name, schema: ProductSchema },
       { name: PurchaseOrder.name, schema: PurchaseOrderSchema },
       { name: Supplier.name, schema: SupplierSchema },
+      { name: CashEntry.name, schema: CashEntrySchema },
     ]),
     OrdersModule,
     ProductsModule,

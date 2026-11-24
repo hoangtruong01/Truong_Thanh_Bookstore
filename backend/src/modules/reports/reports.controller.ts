@@ -49,6 +49,20 @@ export class ReportsController {
     return this.reportsService.getRevenue(startDate, endDate, channel);
   }
 
+  @Get('financial-reconciliation')
+  @ApiOperation({
+    summary:
+      'T08: Báo cáo đối soát tài chính giữa Doanh thu theo đơn và Dòng tiền thực tế theo ngày (Cash vs Accrual)',
+  })
+  @ApiQuery({ name: 'startDate', required: false, example: '2026-11-10' })
+  @ApiQuery({ name: 'endDate', required: false, example: '2026-11-12' })
+  getFinancialReconciliation(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.reportsService.getFinancialReconciliation(startDate, endDate);
+  }
+
   @Get('best-selling-products')
   @ApiOperation({ summary: 'Get best selling products' })
   @ApiQuery({ name: 'limit', required: false })

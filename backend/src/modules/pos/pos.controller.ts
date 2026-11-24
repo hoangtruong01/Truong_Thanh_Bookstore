@@ -17,6 +17,8 @@ import {
   POSOrderQueryDto,
   POSSessionReportQueryDto,
   ReconcilePOSQueryDto,
+  ClosePOSShiftDto,
+  POSShiftClosingQueryDto,
 } from './dto/pos.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -121,6 +123,44 @@ export class PosController {
       query.cashierId = user._id;
     }
     return this.posService.getSessionReport(query);
+  }
+
+  @Post('shifts/close')
+  @Permissions(StaffPermission.POS_ACCESS)
+  @ApiOperation({
+    summary:
+      'T06: Chốt ca làm việc thu ngân và lưu biên bản bàn giao ca (Shift Closing Record)',
+  })
+  closeShift(
+    @Body() dto: ClosePOSShiftDto,
+    @CurrentUser()
+    user: { _id: string; fullName?: string; name?: string; role?: string },
+  ) {
+    return this.posService.closeShift(dto, user);
+  }
+
+  @Get('shifts')
+  @Permissions(StaffPermission.POS_ACCESS, StaffPermission.POS_VIEW_REPORTS)
+  @ApiOperation({
+    summary: 'T06: Lấy danh sách biên bản chốt ca thu ngân',
+  })
+  getShiftClosings(
+    @Query() query: POSShiftClosingQueryDto,
+    @CurrentUser() user: { _id: string; role?: string },
+  ) {
+    if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) {
+      query.cashierId = user._id;
+    }
+    return this.posService.getShiftClosings(query);
+  }
+
+  @Get('shifts/:id')
+  @Permissions(StaffPermission.POS_ACCESS, StaffPermission.POS_VIEW_REPORTS)
+  @ApiOperation({
+    summary: 'T06: Xem chi tiết biên bản chốt ca thu ngân theo ID',
+  })
+  getShiftClosingById(@Param('id') id: string) {
+    return this.posService.getShiftClosingById(id);
   }
 
   @Get('reconcile/cashbook')

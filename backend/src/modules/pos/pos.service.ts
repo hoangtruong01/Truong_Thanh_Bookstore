@@ -24,7 +24,13 @@ import {
   POSOrderQueryDto,
   POSSessionReportQueryDto,
   POSShift,
+  ClosePOSShiftDto,
+  POSShiftClosingQueryDto,
 } from './dto/pos.dto';
+import {
+  POSShiftClosing,
+  POSShiftClosingDocument,
+} from './schemas/pos-shift-closing.schema';
 import { Product, ProductDocument } from '../products/schemas/product.schema';
 import {
   Inventory,
@@ -101,6 +107,9 @@ export class PosService {
     private readonly entryModel?: Model<CashEntryDocument>,
     @Optional()
     private readonly financeService?: FinanceService,
+    @Optional()
+    @InjectModel(POSShiftClosing.name)
+    private readonly shiftClosingModel?: Model<POSShiftClosingDocument>,
   ) {}
 
   /**
@@ -1973,6 +1982,151 @@ export class PosService {
       actualCash,
       variance,
     };
+  }
+
+  /**
+   * T06: Chốt ca làm việc thu ngân & Lưu biên bản chốt ca (Shift Closing Record)
+   */
+  async closeShift(
+    dto: ClosePOSShiftDto,
+    cashier: { _id: string; fullName?: string; name?: string },
+  ): Promise<any> {
+    const cashierId = cashier._id;
+    const cashierName = cashier.fullName || cashier.name || 'Thu ngân';
+
+    const sessionReport = await this.getSessionReport({
+      date: dto.date,
+      shift: dto.shift,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      cashierId,
+      openingCash: dto.openingCash,
+      actualCash: dto.actualCash,
+    });
+
+    const now = new Date();
+    const vnDateStr = now.toLocaleDateString('en-CA', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+    });
+    const [yyyy, mm, dd] = vnDateStr.split('-');
+    const yy = yyyy.slice(-2);
+    const datePrefix = `CA${yy}${mm}${dd}`;
+
+    let seq = 1;
+    if (this.shiftClosingModel) {
+      const counterCollection =
+        this.shiftClosingModel.db.collection('counters');
+      const counterRes = await counterCollection.findOneAndUpdate(
+        { _id: `shift_closing_${datePrefix}` as any },
+        { $inc: { seq: 1 } },
+        { upsert: true, returnDocument: 'after' },
+      );
+      seq = (counterRes as any)?.seq || 1;
+    }
+    const closingCode = `${datePrefix}-${String(seq).padStart(4, '0')}`;
+
+    const expectedCash = sessionReport.expectedCash || 0;
+    const actualCash = dto.actualCash;
+    const variance = actualCash - expectedCash;
+
+    const shiftClosingData = {
+      closingCode,
+      date: sessionReport.date,
+      shift: sessionReport.shift as POSShift,
+      cashier: new Types.ObjectId(cashierId),
+      cashierName,
+      startTime: new Date(sessionReport.startTime),
+      endTime: new Date(sessionReport.endTime),
+      closedAt: now,
+      openingCash: sessionReport.openingCash || 0,
+      cashSales: sessionReport.cashTotal,
+      transferSales: sessionReport.transferTotal,
+      creditSales: sessionReport.creditTotal || 0,
+      grossRevenue:
+        sessionReport.totalRevenue + sessionReport.totalRefundedAmount,
+      cashRefunded:
+        (sessionReport as any).cashRefunded ||
+        (sessionReport.cashTotal < 0 ? Math.abs(sessionReport.cashTotal) : 0),
+      transferRefunded: (sessionReport as any).transferRefunded || 0,
+      totalRefundedAmount: sessionReport.totalRefundedAmount,
+      netRevenue: sessionReport.totalRevenue,
+      expectedCash,
+      actualCash,
+      variance,
+      totalOrders: sessionReport.totalOrders,
+      itemsSoldCount: sessionReport.itemsSoldCount,
+      refundedOrdersCount: sessionReport.refundedOrdersCount,
+      handoverTo:
+        dto.handoverTo && Types.ObjectId.isValid(dto.handoverTo)
+          ? new Types.ObjectId(dto.handoverTo)
+          : undefined,
+      handoverToName: dto.handoverToName,
+      notes: dto.notes,
+      status: 'CONFIRMED',
+    };
+
+    if (this.shiftClosingModel) {
+      const closingDoc = new this.shiftClosingModel(shiftClosingData);
+      return await closingDoc.save();
+    }
+
+    return shiftClosingData;
+  }
+
+  async getShiftClosings(query: POSShiftClosingQueryDto): Promise<any> {
+    if (!this.shiftClosingModel) {
+      return { data: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+    }
+    const { page = 1, limit = 20, fromDate, toDate, cashierId } = query;
+    const skip = (page - 1) * limit;
+
+    const filter: Record<string, any> = {};
+    if (cashierId && Types.ObjectId.isValid(cashierId)) {
+      filter.cashier = new Types.ObjectId(cashierId);
+    }
+    if (fromDate || toDate) {
+      filter.date = {};
+      if (fromDate) filter.date.$gte = fromDate;
+      if (toDate) filter.date.$lte = toDate;
+    }
+
+    const [items, total] = await Promise.all([
+      this.shiftClosingModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('cashier', 'name fullName email')
+        .populate('handoverTo', 'name fullName email')
+        .exec(),
+      this.shiftClosingModel.countDocuments(filter).exec(),
+    ]);
+
+    return {
+      data: items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getShiftClosingById(id: string): Promise<any> {
+    if (!this.shiftClosingModel) {
+      throw new NotFoundException('Shift closing feature not available');
+    }
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('ID biên bản chốt ca không hợp lệ');
+    }
+    const record = await this.shiftClosingModel
+      .findById(id)
+      .populate('cashier', 'name fullName email')
+      .populate('handoverTo', 'name fullName email')
+      .exec();
+    if (!record) {
+      throw new NotFoundException('Không tìm thấy biên bản chốt ca');
+    }
+    return record;
   }
 
   /**

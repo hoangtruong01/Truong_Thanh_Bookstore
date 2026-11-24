@@ -56,6 +56,7 @@
 | TASK-002, TASK-004 / T01 | Công cụ đối soát SHA release và kiểm tra parity triển khai (Backend Render & Frontend Vercel) | `scripts/verify-release-parity.mjs`, `scripts/smoke-test.test.mjs` (7/7 PASS) |
 | BUG-022 / T02, T03 | Atomic rollback đa dòng (không lệch đơn/tồn/ledger khi lỗi dòng N), Omnichannel Concurrency (POS/Web tranh món cuối chỉ 1 bên bán được), hàng hoàn lỗi cách ly kho kiểm/hỏng không tăng tồn bán khả dụng | `orders-inventory-invariants.spec.ts` (4/4 PASS), `order-inventory.service.spec.ts` (3/3 PASS), `sales-return.spec.ts` (7/7 PASS), `orders.race-condition.spec.ts` (6/6 PASS) |
 | T04 | Thanh toán và hoàn tiền: Truy vết từ đơn tới khoản thu, mã chi hoàn và người duyệt; Callback trễ trên đơn CANCELLED/RETURNED tự động gắn cờ đối soát MANUAL_REQUIRED; Hoàn một phần (PARTIAL) và Idempotency retry không tạo thêm khoản chi kép | `payment-refund-t04.spec.ts` (6/6 PASS), `payment-order-safety.spec.ts` (14/14 PASS), `payment-be01-be02.spec.ts` (5/5 PASS), `refund-safety.spec.ts` (10/10 PASS) |
+| T06–T08 | Chốt ca POS, Kiểm kê kho (tách chưa đếm/đã đếm & lưu biên bản `auditMinutes`, `POSShiftClosing`), Công nợ khách sỉ B2B & Đối soát tài chính Ngày 10 - Ngày 12 (doanh thu theo đơn vs dòng tiền thực chi theo ngày cân bằng 100%) | `reconciliation-t06-t08.spec.ts` (9/9 PASS), `stock-audits.service.spec.ts`, `pos.service.spec.ts`, `finance.service.spec.ts`, `reports.service.spec.ts` (157/157 PASS) |
 
 **Lưu ý:** các bản sửa backend (đặc biệt TASK-005) **chưa có tác dụng trên production** cho tới khi deploy được (mục 3, việc #2).
 

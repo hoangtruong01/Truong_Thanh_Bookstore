@@ -405,3 +405,77 @@ export class ReconcilePOSQueryDto {
   @IsString()
   toDate?: string;
 }
+
+export class ClosePOSShiftDto {
+  @ApiPropertyOptional({ description: 'Ngày chốt ca (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  date?: string;
+
+  @ApiPropertyOptional({
+    enum: POSShift,
+    description: 'Ca làm việc (MORNING, AFTERNOON, EVENING, ALL)',
+  })
+  @IsOptional()
+  @IsEnum(POSShift, { message: 'Ca làm việc không hợp lệ' })
+  shift?: POSShift;
+
+  @ApiPropertyOptional({ description: 'Giờ bắt đầu tùy chọn (HH:mm)' })
+  @IsOptional()
+  @IsString()
+  startTime?: string;
+
+  @ApiPropertyOptional({ description: 'Giờ kết thúc tùy chọn (HH:mm)' })
+  @IsOptional()
+  @IsString()
+  endTime?: string;
+
+  @ApiPropertyOptional({
+    description: 'Tiền mặt đầu ca (VND)',
+    example: 1000000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  openingCash?: number;
+
+  @ApiProperty({
+    description: 'Tiền mặt thực tế kiểm đếm khi bàn giao (bắt buộc)',
+    example: 3500000,
+  })
+  @IsNumber()
+  @Min(0)
+  actualCash: number;
+
+  @ApiPropertyOptional({ description: 'ID người nhận bàn giao' })
+  @IsOptional()
+  @IsString()
+  handoverTo?: string;
+
+  @ApiPropertyOptional({ description: 'Tên người nhận bàn giao' })
+  @IsOptional()
+  @IsString()
+  handoverToName?: string;
+
+  @ApiPropertyOptional({ description: 'Ghi chú / Giải trình chênh lệch' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class POSShiftClosingQueryDto extends PaginationDto {
+  @ApiPropertyOptional({ description: 'Từ ngày (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  fromDate?: string;
+
+  @ApiPropertyOptional({ description: 'Đến ngày (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  toDate?: string;
+
+  @ApiPropertyOptional({ description: 'ID thu ngân' })
+  @IsOptional()
+  @IsString()
+  cashierId?: string;
+}

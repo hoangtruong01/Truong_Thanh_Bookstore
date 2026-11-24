@@ -27,6 +27,10 @@ import {
   CashEntry,
   CashEntrySchema,
 } from '../finance/schemas/cash-entry.schema';
+import {
+  POSShiftClosing,
+  POSShiftClosingSchema,
+} from './schemas/pos-shift-closing.schema';
 
 @Module({
   imports: [
@@ -38,6 +42,7 @@ import {
       { name: CustomerReceivable.name, schema: CustomerReceivableSchema },
       { name: CashAccount.name, schema: CashAccountSchema },
       { name: CashEntry.name, schema: CashEntrySchema },
+      { name: POSShiftClosing.name, schema: POSShiftClosingSchema },
     ]),
     ProductsModule,
     InventoryModule,

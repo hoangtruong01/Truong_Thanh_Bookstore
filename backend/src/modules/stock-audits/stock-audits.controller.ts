@@ -90,4 +90,23 @@ export class StockAuditsController {
   ) {
     return this.auditsService.reject(id, userId, dto);
   }
+
+  @Post(':id/minutes')
+  @ApiOperation({
+    summary:
+      'ERP-04: Lập biên bản kiểm kê kho chính thức (tách rõ các mặt hàng đã đếm và chưa đếm)',
+  })
+  async generateMinutes(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @Body('notes') notes?: string,
+  ) {
+    return this.auditsService.generateAuditMinutes(id, userId, notes);
+  }
+
+  @Get(':id/minutes')
+  @ApiOperation({ summary: 'ERP-04: Xem biên bản kiểm kê kho đã lập' })
+  async getMinutes(@Param('id') id: string) {
+    return this.auditsService.getAuditMinutes(id);
+  }
 }

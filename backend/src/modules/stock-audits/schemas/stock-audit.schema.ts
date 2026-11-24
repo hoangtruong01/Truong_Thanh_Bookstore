@@ -40,6 +40,15 @@ export class StockAuditItem {
   @Prop({ default: 0 })
   discrepancyValue: number; // discrepancy * costPrice
 
+  @Prop({ default: false })
+  isCounted: boolean;
+
+  @Prop()
+  countedAt?: Date;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
+  countedBy?: Types.ObjectId;
+
   @Prop({ trim: true })
   reason?: string;
 }
@@ -63,6 +72,18 @@ export class StockAudit {
 
   @Prop({ default: 0 })
   totalDiscrepancyValue: number;
+
+  @Prop({ default: 0 })
+  totalItemsCount: number;
+
+  @Prop({ default: 0 })
+  countedItemsCount: number;
+
+  @Prop({ default: 0 })
+  uncountedItemsCount: number;
+
+  @Prop({ type: Object })
+  auditMinutes?: Record<string, any>;
 
   @Prop({ default: false })
   requiresApproval: boolean;
