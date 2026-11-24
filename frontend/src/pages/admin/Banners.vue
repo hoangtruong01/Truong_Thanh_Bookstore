@@ -101,6 +101,25 @@
               <span>Thứ tự: {{ banner.sortOrder }}</span>
             </div>
 
+            <!-- Performance Metrics (BAN-05) -->
+            <div class="flex items-center gap-2 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100 text-[11px] font-semibold text-slate-600">
+              <span title="Lượt hiển thị" class="flex items-center gap-1">
+                👁️ {{ (banner.impressionCount || 0).toLocaleString('vi-VN') }}
+              </span>
+              <span class="text-slate-300">•</span>
+              <span title="Lượt nhấp" class="flex items-center gap-1">
+                👆 {{ (banner.clickCount || 0).toLocaleString('vi-VN') }}
+              </span>
+              <span class="text-slate-300">•</span>
+              <span
+                class="px-1.5 py-0.2 rounded font-black text-[10px]"
+                :class="banner.impressionCount && banner.clickCount ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'"
+                title="Tỷ lệ nhấp (CTR)"
+              >
+                CTR: {{ banner.impressionCount ? (((banner.clickCount || 0) / banner.impressionCount) * 100).toFixed(1) + '%' : '0%' }}
+              </span>
+            </div>
+
             <div v-if="banner.position === 'entry_popup' && (banner.startAt || banner.endAt)" class="text-[10px] text-slate-500 font-medium bg-slate-50 p-2 rounded-lg space-y-0.5">
               <div v-if="banner.startAt">📅 Bắt đầu: {{ formatDisplayDate(banner.startAt) }}</div>
               <div v-if="banner.endAt">⌛ Kết thúc: {{ formatDisplayDate(banner.endAt) }}</div>
@@ -331,6 +350,28 @@
             </div>
           </div>
 
+          <!-- Mobile Image URL & Alt Text (BAN-01, SEC-02) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-extrabold text-slate-700 mb-1.5">Ảnh riêng cho Mobile (tùy chọn)</label>
+              <input
+                v-model="form.mobileImageUrl"
+                type="text"
+                placeholder="https://... (màn hình <640px)"
+                class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] transition-all"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-extrabold text-slate-700 mb-1.5">Mô tả trợ năng (Alt Text)</label>
+              <input
+                v-model="form.altText"
+                type="text"
+                placeholder="Mô tả nội dung hình ảnh"
+                class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] transition-all"
+              />
+            </div>
+          </div>
+
           <!-- Title -->
           <div>
             <label class="block text-xs font-extrabold text-slate-700 mb-1.5">
@@ -344,15 +385,43 @@
             />
           </div>
 
-          <!-- Link URL -->
-          <div>
-            <label class="block text-xs font-extrabold text-slate-700 mb-1.5">URL khi click (tùy chọn)</label>
-            <input
-              v-model="form.linkUrl"
-              type="text"
-              placeholder="VD: /products?discounted=true hoặc https://..."
-              class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] transition-all"
-            />
+          <!-- Link URL & Target Destination (BAN-04) -->
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-extrabold text-slate-700 mb-1.5">URL khi click (tùy chọn)</label>
+              <input
+                v-model="form.linkUrl"
+                type="text"
+                placeholder="VD: /products?discounted=true hoặc https://..."
+                class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] transition-all"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+              <div>
+                <label class="block text-[11px] font-extrabold text-slate-700 mb-1">Loại điều hướng (Target Type)</label>
+                <select
+                  v-model="form.targetType"
+                  class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626]"
+                >
+                  <option value="NONE">Không điều hướng (NONE)</option>
+                  <option value="PRODUCT">Chi tiết sản phẩm (PRODUCT)</option>
+                  <option value="CATEGORY">Danh mục sản phẩm (CATEGORY)</option>
+                  <option value="LANDING_PAGE">Trang đích ưu đãi (LANDING_PAGE)</option>
+                  <option value="INTERNAL_PATH">Đường dẫn nội bộ (INTERNAL_PATH)</option>
+                  <option value="EXTERNAL_HTTPS">Website bên ngoài (EXTERNAL_HTTPS)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-extrabold text-slate-700 mb-1">Tham chiếu đích (Target Ref)</label>
+                <input
+                  v-model="form.targetRef"
+                  type="text"
+                  placeholder="Slug / ID / Path"
+                  class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] bg-white"
+                />
+              </div>
+            </div>
           </div>
 
           <!-- Entry Popup Specific Fields -->
@@ -433,6 +502,23 @@
                   :class="form.closeable ? 'translate-x-5.5' : 'translate-x-0.5'"
                 ></div>
               </button>
+            </div>
+
+            <!-- Delay Time (BAN-03) -->
+            <div>
+              <label class="block text-xs font-extrabold text-slate-700 mb-1.5">Thời gian trễ trước khi bật popup (ms)</label>
+              <div class="flex items-center gap-2">
+                <input
+                  v-model.number="form.delayMs"
+                  type="number"
+                  min="0"
+                  step="500"
+                  placeholder="3000"
+                  class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 focus:border-[#dc2626] transition-all bg-white"
+                />
+                <span class="text-xs text-slate-400 font-bold whitespace-nowrap">mili-giây</span>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1 font-medium">Mặc định 3000ms (3 giây) giúp không che trải nghiệm ban đầu của khách hàng.</p>
             </div>
           </template>
 
@@ -759,7 +845,11 @@ const positionSpecs: Record<string, { ratio: number; ratioText: string; recommen
 const defaultForm = () => ({
   title: '',
   imageUrl: '',
+  mobileImageUrl: '',
+  altText: '',
   linkUrl: '',
+  targetType: 'NONE',
+  targetRef: '',
   position: 'main_slider',
   sortOrder: 0,
   isActive: true,
@@ -768,6 +858,7 @@ const defaultForm = () => ({
   endAt: '',
   ctaLabel: 'Mở',
   closeable: true,
+  delayMs: 3000,
 })
 
 const form = ref(defaultForm())
@@ -879,7 +970,11 @@ function openEditModal(banner: any) {
   form.value = {
     title: banner.title,
     imageUrl: banner.imageUrl,
+    mobileImageUrl: banner.mobileImageUrl || '',
+    altText: banner.altText || '',
     linkUrl: banner.linkUrl || '',
+    targetType: banner.targetType || 'NONE',
+    targetRef: banner.targetRef || '',
     position: banner.position,
     sortOrder: banner.sortOrder || 0,
     isActive: banner.isActive,
@@ -888,6 +983,7 @@ function openEditModal(banner: any) {
     endAt: formatForDateTimeLocal(banner.endAt),
     ctaLabel: banner.ctaLabel || 'Mở',
     closeable: banner.closeable !== false,
+    delayMs: banner.delayMs ?? 3000,
   }
   rawImageSrc.value = banner.imageUrl
   showModal.value = true
@@ -1031,7 +1127,11 @@ async function saveBanner() {
     const payload: any = {
       title: form.value.title.trim(),
       imageUrl: form.value.imageUrl,
+      mobileImageUrl: form.value.mobileImageUrl ? form.value.mobileImageUrl.trim() : '',
+      altText: form.value.altText ? form.value.altText.trim() : '',
       linkUrl: form.value.linkUrl ? form.value.linkUrl.trim() : '',
+      targetType: form.value.targetType || 'NONE',
+      targetRef: form.value.targetRef ? form.value.targetRef.trim() : '',
       position: form.value.position,
       sortOrder: form.value.sortOrder || 0,
       isActive: form.value.isActive,
@@ -1041,6 +1141,7 @@ async function saveBanner() {
       payload.frequency = form.value.frequency || 'EVERY_VISIT'
       payload.ctaLabel = form.value.ctaLabel ? form.value.ctaLabel.trim() : 'Mở'
       payload.closeable = form.value.closeable !== false
+      payload.delayMs = typeof form.value.delayMs === 'number' ? form.value.delayMs : 3000
       payload.startAt = form.value.startAt ? new Date(form.value.startAt).toISOString() : null
       payload.endAt = form.value.endAt ? new Date(form.value.endAt).toISOString() : null
     }

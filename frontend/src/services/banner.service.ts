@@ -19,4 +19,10 @@ export const bannerService = {
   delete(id: string) {
     return api.delete(`/banners/${id}`)
   },
+  recordImpression(id: string) {
+    return api.post(`/banners/${id}/impression`)
+  },
+  recordClick(id: string) {
+    return api.post(`/banners/${id}/click`)
+  },
 }

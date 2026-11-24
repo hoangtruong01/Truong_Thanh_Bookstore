@@ -16,6 +16,8 @@ describe('BannersController', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      recordImpression: jest.fn(),
+      recordClick: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -77,6 +79,20 @@ describe('BannersController', () => {
 
       expect(service.create).toHaveBeenCalledWith(dto);
       expect(result._id).toBe('1');
+    });
+  });
+
+  describe('recordImpression and recordClick', () => {
+    it('should delegate recordImpression to service', async () => {
+      (service.recordImpression as jest.Mock).mockResolvedValue(undefined);
+      await controller.recordImpression('b1');
+      expect(service.recordImpression).toHaveBeenCalledWith('b1');
+    });
+
+    it('should delegate recordClick to service', async () => {
+      (service.recordClick as jest.Mock).mockResolvedValue(undefined);
+      await controller.recordClick('b1');
+      expect(service.recordClick).toHaveBeenCalledWith('b1');
     });
   });
 });

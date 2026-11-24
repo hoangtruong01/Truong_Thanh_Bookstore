@@ -23,6 +23,7 @@ import { RedisThrottlerStorageService } from './common/redis/redis-throttler-sto
 import { APP_GUARD } from '@nestjs/core';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { BannersModule } from './modules/banners/banners.module';
+import { MarketingModule } from './modules/marketing/marketing.module';
 import { AppController } from './app.controller';
 import { AddressesModule } from './modules/users/addresses.module';
 import { EmailModule } from './modules/email/email.module';
@@ -108,6 +109,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
     LandingPagesModule,
     NotificationsModule,
     BannersModule,
+    MarketingModule,
     AddressesModule,
     EmailModule,
     OutboxModule,

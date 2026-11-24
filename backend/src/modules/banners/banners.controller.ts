@@ -35,6 +35,18 @@ export class BannersController {
     return this.bannersService.findActivePopup();
   }
 
+  @Post(':id/impression')
+  @ApiOperation({ summary: 'Record a banner/popup impression (public)' })
+  recordImpression(@Param('id') id: string) {
+    return this.bannersService.recordImpression(id);
+  }
+
+  @Post(':id/click')
+  @ApiOperation({ summary: 'Record a banner/popup click (public)' })
+  recordClick(@Param('id') id: string) {
+    return this.bannersService.recordClick(id);
+  }
+
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(StaffPermission.MANAGE_BANNERS)

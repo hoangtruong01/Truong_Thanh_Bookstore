@@ -1,4 +1,5 @@
 # TRƯỜNG THÀNH BOOKSTORE
+
 ## MARKETING & OMNICHANNEL COMMERCE — BA SPECIFICATION & AI IMPLEMENTATION PLAYBOOK
 
 > **Phiên bản:** 1.0 | **Ngày lập:** 24/11/2026 | **Trạng thái:** Proposed — chờ review nghiệp vụ và technical discovery trước khi triển khai.
@@ -13,17 +14,17 @@
 
 **Quy mô tài liệu:** 41 task có đặc tả triển khai, 7 use case end-to-end, 80 test case đề xuất, 5 release và 15 quyết định nghiệp vụ cần chốt.
 
-| Phần | Nội dung |
-|---|---|
-| 0–1 | Hướng dẫn AI, bằng chứng audit và hiện trạng repository |
-| 2–4 | Product vision, KPI, actor, phân quyền và business rules |
-| 5 | Use cases và luồng xử lý nghiệp vụ end-to-end |
-| 6 | Master backlog, dependency, priority và owner |
-| 7–10 | Đặc tả 41 task theo release, BE/FE/QA và acceptance criteria |
-| 11–12 | Kiến trúc module, database, API và JSON contract mẫu |
-| 13 | 80 test case, fixture, quality gates |
+| Phần  | Nội dung                                                      |
+| ----- | ------------------------------------------------------------- |
+| 0–1   | Hướng dẫn AI, bằng chứng audit và hiện trạng repository       |
+| 2–4   | Product vision, KPI, actor, phân quyền và business rules      |
+| 5     | Use cases và luồng xử lý nghiệp vụ end-to-end                 |
+| 6     | Master backlog, dependency, priority và owner                 |
+| 7–10  | Đặc tả 41 task theo release, BE/FE/QA và acceptance criteria  |
+| 11–12 | Kiến trúc module, database, API và JSON contract mẫu          |
+| 13    | 80 test case, fixture, quality gates                          |
 | 14–15 | Deployment, rollback, quyết định BA và điều kiện tích hợp API |
-| 16–17 | Definition of Done, prompt thực thi và go/no-go |
+| 16–17 | Definition of Done, prompt thực thi và go/no-go               |
 
 **Bắt đầu:** DISC-01 → DISC-02 → R0 blockers → R1 owned marketing → R2 social/ads → R3 channel pilot → R4 optimization. Nếu chỉ có nguồn lực làm phần quảng cáo trước, ưu tiên BAN-01–05, TRK-01, LIVE-01 và MKT-01–03 theo dependency, triển khai trên staging song song với R0; chưa chạy paid traffic nếu R0 chưa đạt.
 
@@ -69,35 +70,35 @@ Không chỉ trả lời tư vấn hoặc tạo mockup. Với các task được
 
 Rà soát trước đó dựa trên metadata GitHub, cây repository và đọc các file trọng tâm; không phải kiểm toán từng dòng toàn bộ repository, không phải kết quả chạy test hoặc UAT độc lập. Baseline quan sát: branch `main`, commit `f2c1f1f4ae79271dbdaef7fb5b286710b41465d9`, cây gồm 1.152 mục (bao gồm thư mục). AI cần kiểm tra lại HEAD trước khi sử dụng.
 
-| Thành phần | Nền tảng quan sát | Hướng xử lý |
-|---|---|---|
-| Backend | NestJS 11, TypeScript, Mongoose/MongoDB | Giữ modular monolith |
-| Web | Vue 3, Pinia, Tailwind, Vite | Mở rộng storefront và Admin CMS hiện có |
-| Mobile | Flutter | Giữ tương thích API; không tự ý thêm popup mobile app |
-| Hạ tầng | GitHub Actions, Docker, Render, Vercel | Ưu tiên sửa deployment, kiểm chứng release |
-| Core commerce | Products, cart, orders, payments, promotions, pricing, inventory, POS, finance | Tái sử dụng, bảo toàn invariant |
-| Marketing | Banners, Entry Popup, landing pages, nhóm menu Marketing & Truyền thông | Hoàn thiện thay vì làm lại |
-| Reliability | Outbox, retry, atomic lock cho event | Review khả năng mở rộng cho social/tracking |
-| SEO | Module SEO, canonical, JSON-LD, sitemap và frontend composables | Hoàn thiện crawler/social preview, dữ liệu thật |
+| Thành phần    | Nền tảng quan sát                                                              | Hướng xử lý                                           |
+| ------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| Backend       | NestJS 11, TypeScript, Mongoose/MongoDB                                        | Giữ modular monolith                                  |
+| Web           | Vue 3, Pinia, Tailwind, Vite                                                   | Mở rộng storefront và Admin CMS hiện có               |
+| Mobile        | Flutter                                                                        | Giữ tương thích API; không tự ý thêm popup mobile app |
+| Hạ tầng       | GitHub Actions, Docker, Render, Vercel                                         | Ưu tiên sửa deployment, kiểm chứng release            |
+| Core commerce | Products, cart, orders, payments, promotions, pricing, inventory, POS, finance | Tái sử dụng, bảo toàn invariant                       |
+| Marketing     | Banners, Entry Popup, landing pages, nhóm menu Marketing & Truyền thông        | Hoàn thiện thay vì làm lại                            |
+| Reliability   | Outbox, retry, atomic lock cho event                                           | Review khả năng mở rộng cho social/tracking           |
+| SEO           | Module SEO, canonical, JSON-LD, sitemap và frontend composables                | Hoàn thiện crawler/social preview, dữ liệu thật       |
 
 ### 1.2. Bằng chứng kỹ thuật và khoảng trống đã quan sát
 
-| ID | Hiện trạng tại baseline | File/căn cứ | Tác động | Task |
-|---|---|---|---|---|
-| G01 | CI và Docker scan thành công nhưng CD Deploy thất bại ở backend smoke test; bước frontend bị skipped trong workflow đó | [CD run](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/runs/45340192933), [CI run](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/runs/45339756808), [Docker run](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/runs/45339756840) | Code mới có thể chưa được triển khai; chưa kết luận nguyên nhân runtime | OPS-01 |
-| G02 | Popup đã có ở `CustomerLayout.vue`, component `EntryAdPopup.vue` và Admin `Banners.vue`; có preview, CTA, tần suất, lịch | `frontend/src/components/EntryAdPopup.vue`, `frontend/src/pages/admin/Banners.vue` | Không cần viết mới | BAN-01–05 |
-| G03 | Banner schema có `impressionCount`, `clickCount`; controller/component đọc được chưa có luồng ghi nhận tương ứng | `backend/src/modules/banners/schemas/banner.schema.ts`, `banners.controller.ts`, `EntryAdPopup.vue` | Không đủ dữ liệu CTR thật | TRK-01, BAN-05 |
-| G04 | `deactivateOtherPopups()` chạy trước `save`/update; chưa thấy đảm bảo atomic ở đoạn code kiểm tra. Popup lịch tương lai có thể tắt popup hiện tại | `backend/src/modules/banners/banners.service.ts` | Mất popup đang chạy hoặc race | BAN-02 |
-| G05 | `findActive()` lọc active nhưng chưa lọc schedule như `findActivePopup()` | `banners.service.ts` | Banner thường có thể hiện sai lịch | BAN-02 |
-| G06 | Popup dùng ngày UTC, mặc định EVERY_VISIT ở schema, có thể không cho đóng; chưa thấy focus trap/restore | `EntryAdPopup.vue`, `banner.schema.ts` | Trải nghiệm và accessibility | BAN-03 |
-| G07 | Fallback ảnh data URI khi upload Cloudinary thất bại; URL validation prefix rộng | `banners.service.ts`, `banner.dto.ts`, `EntryAdPopup.vue` | Payload nặng, link không mong muốn | BAN-01, SEC-02 |
-| G08 | Nhóm Marketing hiện chứa banner và landing page | `frontend/src/layouts/AdminLayout.vue`, `frontend/src/router/index.ts` | Cần workflow campaign tập trung | MKT-01, MKT-02 |
-| G09 | OrderSource gồm WEB, MOBILE, LANDING_PAGE, POS | `backend/src/common/enums/index.ts`, `orders/schemas/order.schema.ts` | Chưa phân biệt đầy đủ acquisition/attribution và kênh tạo đơn | TRK-02, CHN-01 |
-| G10 | Đã có SEO composables, metadata và structured data sản phẩm; tài liệu backlog còn social crawler/prerender | `frontend/src/pages/customer/ProductDetail.vue`, `frontend/src/utils/seo.ts`, `docs/PENDING_TASKS.md` | Link share có thể thiếu preview phù hợp | WEB-03 |
-| G11 | Checkout có idempotency key, kiểm tra tồn, guest COD trong source | `frontend/src/pages/customer/Checkout.vue` | Bảo toàn cơ chế hiện tại, kiểm thử UAT | OPS-02, WEB-02 |
-| G12 | Outbox đã có retry, event lock và dispatch các nghiệp vụ hiện hữu | `backend/src/modules/outbox/outbox.service.ts` | Tái sử dụng sau khi xác minh lease/recovery, không làm chậm checkout | INF-01 |
-| G13 | Tài liệu audit 10/11 đề cập account seed, dữ liệu demo, deploy, sandbox | `docs/AUDIT_REMAINING_TASKS.md`, `docs/PENDING_TASKS.md` | Cần xác minh lại; không coi mọi ghi chú cũ là lỗi đang tồn tại | SEC-01, DATA-01, OPS-02 |
-| G14 | Chưa thấy module chuyên biệt social-media, marketing campaigns, livestream, ad insights trong cây kiểm tra | Backend modules và router tại baseline | Khoảng trống chức năng; search symbol/contract để xác nhận trước khi tạo | DISC-02 |
+| ID  | Hiện trạng tại baseline                                                                                                                           | File/căn cứ                                                                                                                                                                                                                                                                            | Tác động                                                                 | Task                    |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------- |
+| G01 | CI và Docker scan thành công nhưng CD Deploy thất bại ở backend smoke test; bước frontend bị skipped trong workflow đó                            | [CD run](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/runs/45340192933), [CI run](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/runs/45339756808), [Docker run](https://github.com/hoangtruong01/Truong_Thanh_Bookstore/actions/runs/45339756840) | Code mới có thể chưa được triển khai; chưa kết luận nguyên nhân runtime  | OPS-01                  |
+| G02 | Popup đã có ở `CustomerLayout.vue`, component `EntryAdPopup.vue` và Admin `Banners.vue`; có preview, CTA, tần suất, lịch                          | `frontend/src/components/EntryAdPopup.vue`, `frontend/src/pages/admin/Banners.vue`                                                                                                                                                                                                     | Không cần viết mới                                                       | BAN-01–05               |
+| G03 | Banner schema có `impressionCount`, `clickCount`; controller/component đọc được chưa có luồng ghi nhận tương ứng                                  | `backend/src/modules/banners/schemas/banner.schema.ts`, `banners.controller.ts`, `EntryAdPopup.vue`                                                                                                                                                                                    | Không đủ dữ liệu CTR thật                                                | TRK-01, BAN-05          |
+| G04 | `deactivateOtherPopups()` chạy trước `save`/update; chưa thấy đảm bảo atomic ở đoạn code kiểm tra. Popup lịch tương lai có thể tắt popup hiện tại | `backend/src/modules/banners/banners.service.ts`                                                                                                                                                                                                                                       | Mất popup đang chạy hoặc race                                            | BAN-02                  |
+| G05 | `findActive()` lọc active nhưng chưa lọc schedule như `findActivePopup()`                                                                         | `banners.service.ts`                                                                                                                                                                                                                                                                   | Banner thường có thể hiện sai lịch                                       | BAN-02                  |
+| G06 | Popup dùng ngày UTC, mặc định EVERY_VISIT ở schema, có thể không cho đóng; chưa thấy focus trap/restore                                           | `EntryAdPopup.vue`, `banner.schema.ts`                                                                                                                                                                                                                                                 | Trải nghiệm và accessibility                                             | BAN-03                  |
+| G07 | Fallback ảnh data URI khi upload Cloudinary thất bại; URL validation prefix rộng                                                                  | `banners.service.ts`, `banner.dto.ts`, `EntryAdPopup.vue`                                                                                                                                                                                                                              | Payload nặng, link không mong muốn                                       | BAN-01, SEC-02          |
+| G08 | Nhóm Marketing hiện chứa banner và landing page                                                                                                   | `frontend/src/layouts/AdminLayout.vue`, `frontend/src/router/index.ts`                                                                                                                                                                                                                 | Cần workflow campaign tập trung                                          | MKT-01, MKT-02          |
+| G09 | OrderSource gồm WEB, MOBILE, LANDING_PAGE, POS                                                                                                    | `backend/src/common/enums/index.ts`, `orders/schemas/order.schema.ts`                                                                                                                                                                                                                  | Chưa phân biệt đầy đủ acquisition/attribution và kênh tạo đơn            | TRK-02, CHN-01          |
+| G10 | Đã có SEO composables, metadata và structured data sản phẩm; tài liệu backlog còn social crawler/prerender                                        | `frontend/src/pages/customer/ProductDetail.vue`, `frontend/src/utils/seo.ts`, `docs/PENDING_TASKS.md`                                                                                                                                                                                  | Link share có thể thiếu preview phù hợp                                  | WEB-03                  |
+| G11 | Checkout có idempotency key, kiểm tra tồn, guest COD trong source                                                                                 | `frontend/src/pages/customer/Checkout.vue`                                                                                                                                                                                                                                             | Bảo toàn cơ chế hiện tại, kiểm thử UAT                                   | OPS-02, WEB-02          |
+| G12 | Outbox đã có retry, event lock và dispatch các nghiệp vụ hiện hữu                                                                                 | `backend/src/modules/outbox/outbox.service.ts`                                                                                                                                                                                                                                         | Tái sử dụng sau khi xác minh lease/recovery, không làm chậm checkout     | INF-01                  |
+| G13 | Tài liệu audit 10/11 đề cập account seed, dữ liệu demo, deploy, sandbox                                                                           | `docs/AUDIT_REMAINING_TASKS.md`, `docs/PENDING_TASKS.md`                                                                                                                                                                                                                               | Cần xác minh lại; không coi mọi ghi chú cũ là lỗi đang tồn tại           | SEC-01, DATA-01, OPS-02 |
+| G14 | Chưa thấy module chuyên biệt social-media, marketing campaigns, livestream, ad insights trong cây kiểm tra                                        | Backend modules và router tại baseline                                                                                                                                                                                                                                                 | Khoảng trống chức năng; search symbol/contract để xác nhận trước khi tạo | DISC-02                 |
 
 ### 1.3. Nguồn code và tài liệu để kiểm tra lại
 
@@ -140,27 +141,27 @@ flowchart TD
 
 ### 2.2. Scope và giới hạn theo giai đoạn
 
-| Release | In scope | Out of scope cho release đó |
-|---|---|---|
-| R0 — Production readiness | Deploy, checkout, dữ liệu thật, RBAC, bảo mật, smoke | Thêm quảng cáo mới khi core chưa an toàn |
-| R1 — Owned marketing | Popup/banner, campaign, landing page, web UX, tracking nội bộ, lịch live + link, dashboard cơ bản | Tự động đăng thật, mua ads, đồng bộ đơn sàn |
-| R2 — Social & measurement | Facebook OAuth, content drafts, approval, scheduling, Page/Ads Insights read-only, pixel/server events có consent, hỗ trợ nội dung TikTok | Tự động tăng ngân sách, bot livestream, auto-post TikTok không đủ quyền |
-| R3 — Channel commerce pilot | TikTok Shop theo quyền, mapping SKU, import đơn, tồn kho, returns, đối soát | Multi-warehouse phức tạp, tự động giá đa sàn, mọi kênh cùng lúc |
-| R4 — Optimization | A/B test, remarketing hợp lệ, gợi ý sản phẩm, mở rộng kênh theo dữ liệu | Thay framework hoặc microservices không có lý do |
+| Release                     | In scope                                                                                                                                  | Out of scope cho release đó                                             |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| R0 — Production readiness   | Deploy, checkout, dữ liệu thật, RBAC, bảo mật, smoke                                                                                      | Thêm quảng cáo mới khi core chưa an toàn                                |
+| R1 — Owned marketing        | Popup/banner, campaign, landing page, web UX, tracking nội bộ, lịch live + link, dashboard cơ bản                                         | Tự động đăng thật, mua ads, đồng bộ đơn sàn                             |
+| R2 — Social & measurement   | Facebook OAuth, content drafts, approval, scheduling, Page/Ads Insights read-only, pixel/server events có consent, hỗ trợ nội dung TikTok | Tự động tăng ngân sách, bot livestream, auto-post TikTok không đủ quyền |
+| R3 — Channel commerce pilot | TikTok Shop theo quyền, mapping SKU, import đơn, tồn kho, returns, đối soát                                                               | Multi-warehouse phức tạp, tự động giá đa sàn, mọi kênh cùng lúc         |
+| R4 — Optimization           | A/B test, remarketing hợp lệ, gợi ý sản phẩm, mở rộng kênh theo dữ liệu                                                                   | Thay framework hoặc microservices không có lý do                        |
 
 ### 2.3. KPI đo lường (mục tiêu đề xuất, không phải số liệu hiện tại)
 
-| KPI | Định nghĩa | Nguồn dữ liệu | Cách dùng |
-|---|---|---|---|
-| Website order conversion | Số phiên đủ điều kiện có >=1 đơn hợp lệ / số phiên đủ điều kiện | Tracking + orders | Baseline trước, cải thiện theo kỳ |
-| Popup CTR | Số click hợp lệ / số impression hợp lệ, cùng phạm vi/dedup | Marketing events | So sánh creative và placement |
-| Checkout completion | Phiên bắt đầu checkout có đơn hợp lệ / phiên bắt đầu checkout | Events + orders | Phát hiện bước rớt |
-| AOV | Doanh thu theo định nghĩa đã chốt / số đơn cùng tập | Orders/finance | Đo combo và upsell |
-| CPC / CPA | Spend / clicks; spend / conversion cùng phạm vi | Ads provider + attribution | Không trộn đơn toàn hệ thống với paid-only |
-| ROAS | Doanh thu quy nguồn quảng cáo / chi phí quảng cáo cùng scope | Attribution + ad insights | Không đồng nhất với lợi nhuận |
-| Contribution after ads | Doanh thu thuần - COGS - phí biến đổi - chi phí quảng cáo phân bổ | Finance, orders, ads | Khi thiếu COGS/phí thì hiển thị chưa đủ dữ liệu |
-| Sync lag | Thời gian từ external event đến apply thành công | Integration logs | Đo độ tin cậy |
-| Duplicate external order | Số external ID tạo nhiều đơn nội bộ | Channel mappings | Mục tiêu 0 |
+| KPI                      | Định nghĩa                                                        | Nguồn dữ liệu              | Cách dùng                                       |
+| ------------------------ | ----------------------------------------------------------------- | -------------------------- | ----------------------------------------------- |
+| Website order conversion | Số phiên đủ điều kiện có >=1 đơn hợp lệ / số phiên đủ điều kiện   | Tracking + orders          | Baseline trước, cải thiện theo kỳ               |
+| Popup CTR                | Số click hợp lệ / số impression hợp lệ, cùng phạm vi/dedup        | Marketing events           | So sánh creative và placement                   |
+| Checkout completion      | Phiên bắt đầu checkout có đơn hợp lệ / phiên bắt đầu checkout     | Events + orders            | Phát hiện bước rớt                              |
+| AOV                      | Doanh thu theo định nghĩa đã chốt / số đơn cùng tập               | Orders/finance             | Đo combo và upsell                              |
+| CPC / CPA                | Spend / clicks; spend / conversion cùng phạm vi                   | Ads provider + attribution | Không trộn đơn toàn hệ thống với paid-only      |
+| ROAS                     | Doanh thu quy nguồn quảng cáo / chi phí quảng cáo cùng scope      | Attribution + ad insights  | Không đồng nhất với lợi nhuận                   |
+| Contribution after ads   | Doanh thu thuần - COGS - phí biến đổi - chi phí quảng cáo phân bổ | Finance, orders, ads       | Khi thiếu COGS/phí thì hiển thị chưa đủ dữ liệu |
+| Sync lag                 | Thời gian từ external event đến apply thành công                  | Integration logs           | Đo độ tin cậy                                   |
+| Duplicate external order | Số external ID tạo nhiều đơn nội bộ                               | Channel mappings           | Mục tiêu 0                                      |
 
 Tất cả KPI cần time zone `Asia/Ho_Chi_Minh` cho kỳ báo cáo, lưu timestamp UTC, định nghĩa cohort/window, mẫu số, currency, data freshness, trạng thái thiếu dữ liệu. Không tự đặt doanh thu hay tỷ lệ chuyển đổi mục tiêu khi chưa có baseline thật.
 
@@ -170,36 +171,36 @@ Tất cả KPI cần time zone `Asia/Ho_Chi_Minh` cho kỳ báo cáo, lưu times
 
 ### 3.1. Actor
 
-| Actor | Nhu cầu |
-|---|---|
-| Guest / Customer | Xem sản phẩm, mua hàng, nhận ưu đãi, xem livestream, quản lý lựa chọn tracking |
-| Marketing Staff | Tạo campaign/banner/content/live, xem số liệu trong phạm vi quyền |
-| Marketing Approver | Duyệt nội dung, lịch, campaign và thao tác publish được cấp quyền |
-| Sales / CS Staff | Xem đơn, nguồn khách, xử lý theo quy trình core commerce; không xem token hoặc tự đăng bài |
-| Inventory Staff | Mapping SKU, tồn khả dụng, kiểm tra ngoại lệ đồng bộ khi có quyền |
-| Finance Staff | Đối soát đơn, phí sàn, doanh thu, chi phí quảng cáo |
-| ADMIN / SUPER_ADMIN | Cấu hình, cấp quyền, kết nối/ngắt kết nối nền tảng, xử lý sự cố |
-| Scheduler / Worker | Chạy job nội bộ với service identity và audit; không giả làm người dùng |
-| External Provider | OAuth, API, webhook của Meta/TikTok/các nền tảng được cấp quyền |
+| Actor               | Nhu cầu                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------ |
+| Guest / Customer    | Xem sản phẩm, mua hàng, nhận ưu đãi, xem livestream, quản lý lựa chọn tracking             |
+| Marketing Staff     | Tạo campaign/banner/content/live, xem số liệu trong phạm vi quyền                          |
+| Marketing Approver  | Duyệt nội dung, lịch, campaign và thao tác publish được cấp quyền                          |
+| Sales / CS Staff    | Xem đơn, nguồn khách, xử lý theo quy trình core commerce; không xem token hoặc tự đăng bài |
+| Inventory Staff     | Mapping SKU, tồn khả dụng, kiểm tra ngoại lệ đồng bộ khi có quyền                          |
+| Finance Staff       | Đối soát đơn, phí sàn, doanh thu, chi phí quảng cáo                                        |
+| ADMIN / SUPER_ADMIN | Cấu hình, cấp quyền, kết nối/ngắt kết nối nền tảng, xử lý sự cố                            |
+| Scheduler / Worker  | Chạy job nội bộ với service identity và audit; không giả làm người dùng                    |
+| External Provider   | OAuth, API, webhook của Meta/TikTok/các nền tảng được cấp quyền                            |
 
 ### 3.2. Permission matrix đề xuất
 
 Giữ `MANAGE_BANNERS`, `MANAGE_LANDING_PAGES`, `MANAGE_PROMOTIONS`, `VIEW_REPORTS` hiện có. Tên quyền mới chỉ là đề xuất; đối chiếu enum, guard, cơ chế SUPER_ADMIN/ADMIN/STAFF và migration quyền trước khi thêm. Không mặc định grant quyền mới cho toàn bộ staff.
 
-| Action | Permission | Marketing editor | Approver | Sales | Finance | Admin |
-|---|---|---|---|---|---|---|
-| Đọc marketing overview | `VIEW_MARKETING` | Có | Có | Theo grant | Theo grant | Có |
-| Tạo/sửa draft campaign | `MANAGE_CAMPAIGNS` | Có | Có | Không | Không | Có |
-| Activate/pause campaign | `APPROVE_CAMPAIGNS` | Không mặc định | Có | Không | Không | Có |
-| Quản lý banner | `MANAGE_BANNERS` | Theo grant | Theo grant | Không | Không | Có |
-| Tạo/sửa draft social | `MANAGE_SOCIAL_CONTENT` | Có | Có | Không | Không | Có |
-| Duyệt nội dung | `APPROVE_SOCIAL_CONTENT` | Không mặc định | Có | Không | Không | Có |
-| Đăng/lên lịch thật | `PUBLISH_SOCIAL_CONTENT` | Không mặc định | Theo grant | Không | Không | Có |
-| Quản lý kết nối | `MANAGE_SOCIAL_CONNECTIONS` | Không | Không mặc định | Không | Không | Có |
-| Xem chi phí ads | `VIEW_AD_INSIGHTS` | Theo grant | Theo grant | Không | Có | Có |
-| Quản lý live | `MANAGE_LIVESTREAMS` | Theo grant | Có | Theo grant | Không | Có |
-| Quản lý kênh bán | `MANAGE_SALES_CHANNELS` | Không | Không | Theo grant | Theo grant | Có |
-| Đối soát kênh | `RECONCILE_CHANNELS` | Không | Không | Không | Có | Có |
+| Action                  | Permission                  | Marketing editor | Approver       | Sales      | Finance    | Admin |
+| ----------------------- | --------------------------- | ---------------- | -------------- | ---------- | ---------- | ----- |
+| Đọc marketing overview  | `VIEW_MARKETING`            | Có               | Có             | Theo grant | Theo grant | Có    |
+| Tạo/sửa draft campaign  | `MANAGE_CAMPAIGNS`          | Có               | Có             | Không      | Không      | Có    |
+| Activate/pause campaign | `APPROVE_CAMPAIGNS`         | Không mặc định   | Có             | Không      | Không      | Có    |
+| Quản lý banner          | `MANAGE_BANNERS`            | Theo grant       | Theo grant     | Không      | Không      | Có    |
+| Tạo/sửa draft social    | `MANAGE_SOCIAL_CONTENT`     | Có               | Có             | Không      | Không      | Có    |
+| Duyệt nội dung          | `APPROVE_SOCIAL_CONTENT`    | Không mặc định   | Có             | Không      | Không      | Có    |
+| Đăng/lên lịch thật      | `PUBLISH_SOCIAL_CONTENT`    | Không mặc định   | Theo grant     | Không      | Không      | Có    |
+| Quản lý kết nối         | `MANAGE_SOCIAL_CONNECTIONS` | Không            | Không mặc định | Không      | Không      | Có    |
+| Xem chi phí ads         | `VIEW_AD_INSIGHTS`          | Theo grant       | Theo grant     | Không      | Có         | Có    |
+| Quản lý live            | `MANAGE_LIVESTREAMS`        | Theo grant       | Có             | Theo grant | Không      | Có    |
+| Quản lý kênh bán        | `MANAGE_SALES_CHANNELS`     | Không            | Không          | Theo grant | Theo grant | Có    |
+| Đối soát kênh           | `RECONCILE_CHANNELS`        | Không            | Không          | Không      | Có         | Có    |
 
 - Permission phải được kiểm tra ở backend controller/service; menu/router chỉ hỗ trợ UX. Trả 401 khi thiếu xác thực, 403 khi không đủ quyền, 404 cho tài nguyên không được phép tiết lộ theo convention hiện tại.
 - Người duyệt và người đăng có thể là một người ở mô hình nhỏ nếu policy cho phép; audit lưu riêng actor từng hành động. Mặc định nội dung cần approval trước khi publish.
@@ -215,17 +216,17 @@ Tận dụng component/layout hiện có; thiết kế gọn, dễ thao tác, kh
 
 ### 4.1. Phân biệt các khái niệm
 
-| Khái niệm | Ý nghĩa | Ví dụ |
-|---|---|---|
-| Sales channel / OrderSource | Nơi tạo đơn hàng | WEB, POS, MOBILE, LANDING_PAGE, TikTok Shop nếu tích hợp |
-| Acquisition source | Nơi khách đến | facebook, tiktok, google, direct, unknown |
-| Campaign | Chương trình marketing có thời hạn và mục tiêu | SALE_1212 |
-| Placement | Vị trí hiển thị owned media | main_slider, entry_popup |
-| Creative / content | Ảnh/banner/video/bài viết cụ thể | combo-video-01 |
-| Promotion | Luật ưu đãi, giá, điều kiện sử dụng | voucher 10%, quota |
-| Conversion | Sự kiện nghiệp vụ hợp lệ theo định nghĩa | order_placed hoặc paid/realized |
-| Attribution | Quy tắc quy nguồn conversion | last eligible non-direct, first-touch |
-| External order | Đơn tạo trên nền tảng khác | orderId từ TikTok Shop |
+| Khái niệm                   | Ý nghĩa                                        | Ví dụ                                                    |
+| --------------------------- | ---------------------------------------------- | -------------------------------------------------------- |
+| Sales channel / OrderSource | Nơi tạo đơn hàng                               | WEB, POS, MOBILE, LANDING_PAGE, TikTok Shop nếu tích hợp |
+| Acquisition source          | Nơi khách đến                                  | facebook, tiktok, google, direct, unknown                |
+| Campaign                    | Chương trình marketing có thời hạn và mục tiêu | SALE_1212                                                |
+| Placement                   | Vị trí hiển thị owned media                    | main_slider, entry_popup                                 |
+| Creative / content          | Ảnh/banner/video/bài viết cụ thể               | combo-video-01                                           |
+| Promotion                   | Luật ưu đãi, giá, điều kiện sử dụng            | voucher 10%, quota                                       |
+| Conversion                  | Sự kiện nghiệp vụ hợp lệ theo định nghĩa       | order_placed hoặc paid/realized                          |
+| Attribution                 | Quy tắc quy nguồn conversion                   | last eligible non-direct, first-touch                    |
+| External order              | Đơn tạo trên nền tảng khác                     | orderId từ TikTok Shop                                   |
 
 **BR-COM-01:** Khách xem Facebook Ads rồi mua trên website => `orderSource=WEB`; `attribution.source=facebook`. Không biến đơn web thành đơn Facebook. Chỉ mở rộng order source khi thực sự nhập đơn ngoài hệ thống.
 
@@ -256,6 +257,7 @@ Tận dụng component/layout hiện có; thiết kế gọn, dễ thao tác, kh
 **Actor:** Marketing editor, approver. **Precondition:** Có quyền, product/promotion tồn tại và được publish, thời gian hợp lệ. **Trigger:** Tạo campaign 12.12 hoặc tựu trường.
 
 **Main flow:**
+
 1. Tạo campaign nháp: tên, code, mục tiêu, thời gian, kênh, ngân sách dự kiến (chỉ để lập kế hoạch), owner.
 2. Gắn sản phẩm/danh mục, promotion hiện có, landing page, banner/popup; chọn từng asset có phạm vi/khoảng thời gian không vượt campaign. Kiểm tra URL đích, giá/stock và nội dung quảng cáo.
 3. Xem preview desktop/mobile, bảng xung đột popup, lịch nội dung, UTM link. Không thay đổi giá bán thực tế ở bước preview.
@@ -321,6 +323,7 @@ stateDiagram-v2
 **Precondition:** Sản phẩm đã publish, ảnh public hợp lệ, giá bán thật, tồn khả dụng > 0 (trừ nội dung đặt trước được phê duyệt), có quyền. Facebook account có authorization phù hợp cho publish thật.
 
 **Main flow:**
+
 1. Product lifecycle phát event `PRODUCT_PUBLISHED` khi chuyển từ nháp/không bán sang publish; cập nhật giá bình thường không tạo spam bài mới. Event commit cùng thay đổi dữ liệu khi cần đảm bảo atomic, theo outbox pattern hiện tại.
 2. Tạo một social draft theo unique key `(productId, publicationVersion, channel, templateKey)`; nếu event replay trả draft hiện có. Có thể tắt auto-draft theo cấu hình.
 3. Nhân viên chọn mẫu, AI hỗ trợ caption từ dữ liệu allowlist của sản phẩm (không gửi PII/giá vốn/token). Nếu AI lỗi, dùng template thủ công; không invent ưu đãi, công dụng, tồn kho hay review.
@@ -398,77 +401,86 @@ flowchart TD
 
 **Priority:** P0 = release blocker, P1 = MVP tạo giá trị sớm, P2 = tích hợp cần quyền hoặc sau MVP, P3 = pilot/optimization. Effort S/M/L/XL là độ lớn tương đối, không phải cam kết ngày. Trạng thái khởi tạo `NEED_VERIFY` với hạng mục code hiện có, `NOT_STARTED` với đề xuất mới, `BLOCKED` chỉ sau khi xác định dependency thực tế.
 
-| ID | Task | Release | Priority | Effort | Dependency | Owner chính |
-|---|---|---|---|---|---|---|
-| DISC-01 | Baseline repository, CI/CD, release evidence | R0 | P0 | S | — | TL/DevOps |
-| DISC-02 | Gap analysis, business decision, API capability | R0 | P0 | M | DISC-01 | BA/TL |
-| OPS-01 | Sửa deploy và smoke test | R0 | P0 | M | DISC-01 | DevOps |
-| SEC-01 | Xác minh security/account production | R0 | P0 | M | DISC-01 | Security |
-| DATA-01 | Làm sạch catalog/demo, ảnh thật | R0 | P0 | M | DISC-02 | BA/BE |
-| OPS-02 | Nghiệm thu core checkout, payments, GHN | R0 | P0 | L | OPS-01, SEC-01, DATA-01 | QA/BE/FE |
-| INF-01 | Outbox/job reliability, feature flags, observability | R1 | P1 | M | DISC-02 | BE/DevOps |
-| SEC-02 | Validation media/link và permission | R1 | P1 | M | DISC-02 | BE/Security |
-| BAN-01 | Nâng cấp media, Admin banner UX | R1 | P1 | M | SEC-02 | FE/BE |
-| BAN-02 | Schedule, status và concurrency banner | R1 | P1 | L | DISC-02, SEC-02 | BE |
-| BAN-03 | Entry popup UX, route, cap, accessibility | R1 | P1 | M | BAN-01, BAN-02 | FE |
-| TRK-01 | Consent-aware event collector và dedup | R1 | P1 | L | SEC-02, INF-01 | BE/FE |
-| BAN-04 | Banner target/routing & CTA preview | R1 | P1 | M | BAN-01, BAN-03 | FE/BE |
-| BAN-05 | Impression/click và dashboard banner | R1 | P1 | M | TRK-01, BAN-03, BAN-04 | FE/BE |
-| MKT-01 | Campaign domain, APIs, lifecycle | R1 | P1 | L | BAN-02, INF-01, SEC-02 | BE |
-| MKT-02 | Admin Marketing Center, campaign wizard | R1 | P1 | L | MKT-01 | FE/UX |
-| WEB-01 | Storefront merchandising & search | R1 | P1 | L | DATA-01, BAN-01 | FE/BE |
-| WEB-02 | Checkout UX, conversion regression | R1 | P1 | M | OPS-02, TRK-01 | FE/QA |
-| WEB-03 | SEO, social preview, share URL | R1 | P1 | M | DATA-01, SEC-02 | FE/BE/DevOps |
-| WEB-04 | Landing page và promotion linkage | R1 | P1 | M | MKT-01, WEB-03 | BE/FE |
-| TRK-02 | UTM attribution và order snapshot | R1 | P1 | L | TRK-01, MKT-01, OPS-02 | BE/FE |
-| TRK-03 | Conversion events & net revenue | R1 | P1 | L | TRK-02, INF-01 | BE/Finance |
-| LIVE-01 | Live session management & outbound links | R1 | P1 | M | MKT-01, SEC-02, TRK-01 | BE/FE |
-| MKT-03 | Marketing analytics dashboard | R1 | P1 | L | BAN-05, TRK-03, LIVE-01 | BE/FE |
-| QA-01 | R1 E2E + accessibility + load/security gate | R1 | P1 | L | R1 core tasks, OPS-02 | QA |
-| SOC-01 | Facebook OAuth, account capabilities | R2 | P2 | L | SEC-02, INF-01, QA-01, provider access | BE/Security |
-| SOC-02 | Product event → draft + AI content | R2 | P2 | M | INF-01, MKT-01 | BE/FE |
-| SOC-03 | Approval, scheduler, publishing, reconcile | R2 | P2 | L | SOC-01, SOC-02 | BE/FE |
-| SOC-04 | Page Insights & content performance | R2 | P2 | M | SOC-01, SOC-03 | BE/FE |
-| ADS-01 | Meta Ads Insights read-only | R2 | P2 | L | SOC-01, MKT-03, provider ads access | BE |
-| ADS-02 | GA4/GTM, Meta Pixel/CAPI | R2 | P2 | L | TRK-01, TRK-03, privacy approval | BE/FE |
-| ADS-03 | TikTok Pixel/Events API | R2 | P2 | M | TRK-03, privacy/provider approval | BE/FE |
-| SOC-05 | TikTok content assistant/manual publish | R2 | P2 | M | SOC-02 | FE/BE |
-| QA-02 | R2 sandbox, consent and integration gate | R2 | P2 | L | R2 tasks đủ quyền | QA/Security |
-| CHN-01 | TikTok Shop capability, account, channel model | R3 | P3 | L | QA-01, provider Shop access | BA/BE |
-| CHN-02 | SKU mapping & inventory sync | R3 | P3 | XL | CHN-01 | BE/Inventory |
-| CHN-03 | Webhook inbox & external orders | R3 | P3 | XL | CHN-01, CHN-02, INF-01, OPS-02 | BE |
-| CHN-04 | Cancel, return, settlement reconciliation | R3 | P3 | XL | CHN-03 | BE/Finance |
-| QA-03 | Channel pilot & reconciliation acceptance | R3 | P3 | L | CHN-02–04 | QA/BA |
-| OPT-01 | A/B testing & optimization | R4 | P3 | L | QA-01, đủ dữ liệu thật | BA/BE/FE |
-| OPT-02 | B2B/combo, wishlist/restock, remarketing | R4 | P3 | L | QA-01, business approval | BA/FE/BE |
+| ID      | Task                                                 | Release | Priority | Effort | Dependency                             | Owner chính  |
+| ------- | ---------------------------------------------------- | ------- | -------- | ------ | -------------------------------------- | ------------ |
+| DISC-01 | Baseline repository, CI/CD, release evidence         | R0      | P0       | S      | —                                      | TL/DevOps    |
+| DISC-02 | Gap analysis, business decision, API capability      | R0      | P0       | M      | DISC-01                                | BA/TL        |
+| OPS-01  | Sửa deploy và smoke test                             | R0      | P0       | M      | DISC-01                                | DevOps       |
+| SEC-01  | Xác minh security/account production                 | R0      | P0       | M      | DISC-01                                | Security     |
+| DATA-01 | Làm sạch catalog/demo, ảnh thật                      | R0      | P0       | M      | DISC-02                                | BA/BE        |
+| OPS-02  | Nghiệm thu core checkout, payments, GHN              | R0      | P0       | L      | OPS-01, SEC-01, DATA-01                | QA/BE/FE     |
+| INF-01  | Outbox/job reliability, feature flags, observability | R1      | P1       | M      | DISC-02                                | BE/DevOps    |
+| SEC-02  | Validation media/link và permission                  | R1      | P1       | M      | DISC-02                                | BE/Security  |
+| BAN-01  | Nâng cấp media, Admin banner UX                      | R1      | P1       | M      | SEC-02                                 | FE/BE        |
+| BAN-02  | Schedule, status và concurrency banner               | R1      | P1       | L      | DISC-02, SEC-02                        | BE           |
+| BAN-03  | Entry popup UX, route, cap, accessibility            | R1      | P1       | M      | BAN-01, BAN-02                         | FE           |
+| TRK-01  | Consent-aware event collector và dedup               | R1      | P1       | L      | SEC-02, INF-01                         | BE/FE        |
+| BAN-04  | Banner target/routing & CTA preview                  | R1      | P1       | M      | BAN-01, BAN-03                         | FE/BE        |
+| BAN-05  | Impression/click và dashboard banner                 | R1      | P1       | M      | TRK-01, BAN-03, BAN-04                 | FE/BE        |
+| MKT-01  | Campaign domain, APIs, lifecycle                     | R1      | P1       | L      | BAN-02, INF-01, SEC-02                 | BE           |
+| MKT-02  | Admin Marketing Center, campaign wizard              | R1      | P1       | L      | MKT-01                                 | FE/UX        |
+| WEB-01  | Storefront merchandising & search                    | R1      | P1       | L      | DATA-01, BAN-01                        | FE/BE        |
+| WEB-02  | Checkout UX, conversion regression                   | R1      | P1       | M      | OPS-02, TRK-01                         | FE/QA        |
+| WEB-03  | SEO, social preview, share URL                       | R1      | P1       | M      | DATA-01, SEC-02                        | FE/BE/DevOps |
+| WEB-04  | Landing page và promotion linkage                    | R1      | P1       | M      | MKT-01, WEB-03                         | BE/FE        |
+| TRK-02  | UTM attribution và order snapshot                    | R1      | P1       | L      | TRK-01, MKT-01, OPS-02                 | BE/FE        |
+| TRK-03  | Conversion events & net revenue                      | R1      | P1       | L      | TRK-02, INF-01                         | BE/Finance   |
+| LIVE-01 | Live session management & outbound links             | R1      | P1       | M      | MKT-01, SEC-02, TRK-01                 | BE/FE        |
+| MKT-03  | Marketing analytics dashboard                        | R1      | P1       | L      | BAN-05, TRK-03, LIVE-01                | BE/FE        |
+| QA-01   | R1 E2E + accessibility + load/security gate          | R1      | P1       | L      | R1 core tasks, OPS-02                  | QA           |
+| SOC-01  | Facebook OAuth, account capabilities                 | R2      | P2       | L      | SEC-02, INF-01, QA-01, provider access | BE/Security  |
+| SOC-02  | Product event → draft + AI content                   | R2      | P2       | M      | INF-01, MKT-01                         | BE/FE        |
+| SOC-03  | Approval, scheduler, publishing, reconcile           | R2      | P2       | L      | SOC-01, SOC-02                         | BE/FE        |
+| SOC-04  | Page Insights & content performance                  | R2      | P2       | M      | SOC-01, SOC-03                         | BE/FE        |
+| ADS-01  | Meta Ads Insights read-only                          | R2      | P2       | L      | SOC-01, MKT-03, provider ads access    | BE           |
+| ADS-02  | GA4/GTM, Meta Pixel/CAPI                             | R2      | P2       | L      | TRK-01, TRK-03, privacy approval       | BE/FE        |
+| ADS-03  | TikTok Pixel/Events API                              | R2      | P2       | M      | TRK-03, privacy/provider approval      | BE/FE        |
+| SOC-05  | TikTok content assistant/manual publish              | R2      | P2       | M      | SOC-02                                 | FE/BE        |
+| QA-02   | R2 sandbox, consent and integration gate             | R2      | P2       | L      | R2 tasks đủ quyền                      | QA/Security  |
+| CHN-01  | TikTok Shop capability, account, channel model       | R3      | P3       | L      | QA-01, provider Shop access            | BA/BE        |
+| CHN-02  | SKU mapping & inventory sync                         | R3      | P3       | XL     | CHN-01                                 | BE/Inventory |
+| CHN-03  | Webhook inbox & external orders                      | R3      | P3       | XL     | CHN-01, CHN-02, INF-01, OPS-02         | BE           |
+| CHN-04  | Cancel, return, settlement reconciliation            | R3      | P3       | XL     | CHN-03                                 | BE/Finance   |
+| QA-03   | Channel pilot & reconciliation acceptance            | R3      | P3       | L      | CHN-02–04                              | QA/BA        |
+| OPT-01  | A/B testing & optimization                           | R4      | P3       | L      | QA-01, đủ dữ liệu thật                 | BA/BE/FE     |
+| OPT-02  | B2B/combo, wishlist/restock, remarketing             | R4      | P3       | L      | QA-01, business approval               | BA/FE/BE     |
 
 ---
 
 ## 7. TASK SPECIFICATION CHI TIẾT — RELEASE R0
 
 ### DISC-01 — Baseline & release investigation
+
 ### DISC-02 — Functional gap & decisions
+
 ### OPS-01 — Deploy backend/frontend đúng phiên bản
+
 ### SEC-01 — Production account & security verification
+
 ### DATA-01 — Catalog thật, media thật, dữ liệu demo an toàn
+
 ### OPS-02 — Core commerce readiness
 
 ---
 
 ## 8. TASK SPECIFICATION CHI TIẾT — RELEASE R1
-*(Bao gồm INF-01, SEC-02, BAN-01 đến BAN-05, MKT-01 đến MKT-03, WEB-01 đến WEB-04, TRK-01 đến TRK-03, LIVE-01, QA-01)*
+
+_(Bao gồm INF-01, SEC-02, BAN-01 đến BAN-05, MKT-01 đến MKT-03, WEB-01 đến WEB-04, TRK-01 đến TRK-03, LIVE-01, QA-01)_
 
 ---
 
 ## 9. TASK SPECIFICATION CHI TIẾT — RELEASE R2
-*(Bao gồm SOC-01 đến SOC-05, ADS-01 đến ADS-03, QA-02)*
+
+_(Bao gồm SOC-01 đến SOC-05, ADS-01 đến ADS-03, QA-02)_
 
 ---
 
 ## 10. TASK SPECIFICATION CHI TIẾT — RELEASE R3/R4
-*(Bao gồm CHN-01 đến CHN-04, QA-03, OPT-01, OPT-02)*
+
+_(Bao gồm CHN-01 đến CHN-04, QA-03, OPT-01, OPT-02)_
 
 ---
 
 ## 11–17. TECHNICAL DESIGN, APIS, QA/QC, RUNBOOK & DOD
-*(Chi tiết đặc tả kỹ thuật, schema, API, test matrix, runbook và Definition of Done)*
+
+_(Chi tiết đặc tả kỹ thuật, schema, API, test matrix, runbook và Definition of Done)_

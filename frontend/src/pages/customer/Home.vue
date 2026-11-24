@@ -3,6 +3,11 @@
     <!-- Category Navigation Bar -->
     <HomeCategoryNav :categories="parentCategories" :loading="loadingCategories" />
 
+    <!-- Section 0: Live Stream Announcement Banner (LIVE-01) -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+      <LivestreamBanner />
+    </div>
+
     <!-- Section 1: Hero Banner Grid (Fahasa-style) -->
     <HeroBannerGrid :banners="bannerGroups" :loading="loadingBanners" />
 
@@ -118,6 +123,7 @@ import HeroBannerGrid, { type HomeBanner } from "@/components/customer/home/Hero
 import FlashSaleCarousel from "@/components/customer/home/FlashSaleCarousel.vue";
 import FeaturedCategories from "@/components/customer/home/FeaturedCategories.vue";
 import EditorialBanner from "@/components/customer/home/EditorialBanner.vue";
+import LivestreamBanner from "@/components/customer/home/LivestreamBanner.vue";
 import { getCategoryIdBySlug as findCategoryIdBySlug } from "@/components/customer/home/homeCategories";
 import { useScrollReveal } from "@/composables/useScrollReveal";
 import type { Product, Category } from "@/types";

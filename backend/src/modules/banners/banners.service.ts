@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
@@ -30,6 +34,11 @@ export class BannersService {
           'truong_thanh_banners',
         );
       } catch (err: unknown) {
+        if (imageUrl.length > 65536) {
+          throw new BadRequestException(
+            'Dung lượng ảnh banner quá lớn (vượt quá 64KB) và chưa tải được lên Cloudinary. Vui lòng cung cấp URL ảnh trực tiếp.',
+          );
+        }
         console.warn(
           'Upload banner to Cloudinary failed, falling back to raw data URI:',
           (err as Error)?.message,
@@ -37,7 +46,26 @@ export class BannersService {
         return imageUrl;
       }
     }
+    if (imageUrl.startsWith('data:image/') && imageUrl.length > 65536) {
+      throw new BadRequestException(
+        'Dung lượng ảnh banner dạng data URI quá lớn (>64KB). Vui lòng cung cấp URL ảnh trực tiếp.',
+      );
+    }
     return imageUrl;
+  }
+
+  private isPopupCurrentlyActive(
+    banner: { isActive?: boolean; startAt?: Date | null; endAt?: Date | null },
+    now = new Date(),
+  ): boolean {
+    if (banner.isActive === false) return false;
+    if (banner.startAt && new Date(banner.startAt).getTime() > now.getTime()) {
+      return false;
+    }
+    if (banner.endAt && new Date(banner.endAt).getTime() <= now.getTime()) {
+      return false;
+    }
+    return true;
   }
 
   private async deactivateOtherPopups(excludeId?: string): Promise<void> {
@@ -71,11 +99,28 @@ export class BannersService {
   }
 
   async findActive(): Promise<Record<string, Banner[]>> {
+    const now = new Date();
     const banners = (
       await this.bannerModel
         .find({
           isActive: true,
           position: { $ne: BannerPosition.ENTRY_POPUP },
+          $and: [
+            {
+              $or: [
+                { startAt: null },
+                { startAt: { $exists: false } },
+                { startAt: { $lte: now } },
+              ],
+            },
+            {
+              $or: [
+                { endAt: null },
+                { endAt: { $exists: false } },
+                { endAt: { $gt: now } },
+              ],
+            },
+          ],
         })
         .sort({ sortOrder: 1 })
         .lean<Banner[]>()
@@ -129,10 +174,15 @@ export class BannersService {
     if (bannerData.imageUrl) {
       bannerData.imageUrl = await this.processImageUrl(bannerData.imageUrl);
     }
+    if (bannerData.mobileImageUrl) {
+      bannerData.mobileImageUrl = await this.processImageUrl(
+        bannerData.mobileImageUrl,
+      );
+    }
 
     if (
       bannerData.position === BannerPosition.ENTRY_POPUP &&
-      bannerData.isActive !== false
+      this.isPopupCurrentlyActive(bannerData)
     ) {
       await this.deactivateOtherPopups();
     }
@@ -151,13 +201,22 @@ export class BannersService {
     if (updateData.imageUrl) {
       updateData.imageUrl = await this.processImageUrl(updateData.imageUrl);
     }
+    if (updateData.mobileImageUrl) {
+      updateData.mobileImageUrl = await this.processImageUrl(
+        updateData.mobileImageUrl,
+      );
+    }
 
     const targetPosition = updateData.position ?? existing.position;
-    const targetIsActive = updateData.isActive ?? existing.isActive;
+    const mergedBanner = {
+      isActive: updateData.isActive ?? existing.isActive,
+      startAt: updateData.startAt ?? existing.startAt,
+      endAt: updateData.endAt ?? existing.endAt,
+    };
 
     if (
       targetPosition === BannerPosition.ENTRY_POPUP &&
-      targetIsActive === true
+      this.isPopupCurrentlyActive(mergedBanner)
     ) {
       await this.deactivateOtherPopups(id);
     }
@@ -170,6 +229,18 @@ export class BannersService {
     }
 
     return banner;
+  }
+
+  async recordImpression(id: string): Promise<void> {
+    await this.bannerModel
+      .findByIdAndUpdate(id, { $inc: { impressionCount: 1 } })
+      .exec();
+  }
+
+  async recordClick(id: string): Promise<void> {
+    await this.bannerModel
+      .findByIdAndUpdate(id, { $inc: { clickCount: 1 } })
+      .exec();
   }
 
   async delete(id: string): Promise<void> {

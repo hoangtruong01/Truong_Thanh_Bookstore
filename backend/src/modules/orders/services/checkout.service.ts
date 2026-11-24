@@ -791,6 +791,17 @@ export class CheckoutService {
             effectiveOrderSource === OrderSource.LANDING_PAGE
               ? dto.landingPageId
               : undefined,
+          attribution: dto.attribution
+            ? {
+                source: dto.attribution.source?.trim() || undefined,
+                medium: dto.attribution.medium?.trim() || undefined,
+                campaignCode: dto.attribution.campaignCode?.trim() || undefined,
+                creativeCode: dto.attribution.creativeCode?.trim() || undefined,
+                landingPage: dto.attribution.landingPage?.trim() || undefined,
+                referrer: dto.attribution.referrer?.trim() || undefined,
+                capturedAt: new Date(),
+              }
+            : undefined,
           timeline: [
             {
               status: OrderStatus.PENDING,

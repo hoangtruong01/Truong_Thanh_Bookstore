@@ -1,7 +1,11 @@
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { CreateBannerDto } from './banner.dto';
-import { BannerPosition, BannerFrequency } from '../schemas/banner.schema';
+import {
+  BannerPosition,
+  BannerFrequency,
+  BannerTargetType,
+} from '../schemas/banner.schema';
 
 describe('Banner DTO Validation', () => {
   it('should pass with valid entry popup data', async () => {
@@ -91,5 +95,39 @@ describe('Banner DTO Validation', () => {
     const dto = plainToInstance(CreateBannerDto, raw);
     const errors = await validate(dto);
     expect(errors.length).toBe(0);
+  });
+
+  it('should accept valid targetType, delayMs and mobileImageUrl', async () => {
+    const raw = {
+      title: 'Multi-device Banner',
+      imageUrl: 'https://example.com/desktop.jpg',
+      mobileImageUrl: 'https://example.com/mobile.jpg',
+      altText: 'Khuyến mãi 12.12',
+      position: BannerPosition.ENTRY_POPUP,
+      targetType: BannerTargetType.PRODUCT,
+      targetRef: 'product_123',
+      delayMs: 2500,
+      allowedRouteNames: ['Home', 'ProductList'],
+    };
+
+    const dto = plainToInstance(CreateBannerDto, raw);
+    const errors = await validate(dto);
+    expect(errors.length).toBe(0);
+  });
+
+  it('should reject negative delayMs or invalid targetType', async () => {
+    const raw = {
+      title: 'Invalid timing banner',
+      imageUrl: 'https://example.com/desktop.jpg',
+      position: BannerPosition.ENTRY_POPUP,
+      targetType: 'INVALID_TARGET',
+      delayMs: -500,
+    };
+
+    const dto = plainToInstance(CreateBannerDto, raw);
+    const errors = await validate(dto);
+    expect(errors.length).toBeGreaterThanOrEqual(2);
+    expect(errors.some((e) => e.property === 'targetType')).toBe(true);
+    expect(errors.some((e) => e.property === 'delayMs')).toBe(true);
   });
 });

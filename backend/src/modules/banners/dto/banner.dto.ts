@@ -14,7 +14,11 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { BannerPosition, BannerFrequency } from '../schemas/banner.schema';
+import {
+  BannerPosition,
+  BannerFrequency,
+  BannerTargetType,
+} from '../schemas/banner.schema';
 
 const SAFE_URL_REGEX = /^(\/|https?:\/\/)/i;
 
@@ -32,6 +36,25 @@ export class CreateBannerDto {
   imageUrl: string;
 
   @ApiProperty({
+    description: 'Optional mobile-specific image URL',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  mobileImageUrl?: string;
+
+  @ApiProperty({
+    description: 'Image ALT text for accessibility',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200, {
+    message: 'Mô tả hình ảnh (altText) không vượt quá 200 ký tự',
+  })
+  altText?: string;
+
+  @ApiProperty({
     description: 'Link URL when banner is clicked',
     required: false,
   })
@@ -44,6 +67,21 @@ export class CreateBannerDto {
     message: 'Đường dẫn liên kết phải bắt đầu bằng / hoặc http://, https://',
   })
   linkUrl?: string;
+
+  @ApiProperty({
+    description: 'Navigation target type',
+    enum: BannerTargetType,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(BannerTargetType, { message: 'Loại đích chuyển hướng không hợp lệ' })
+  targetType?: BannerTargetType;
+
+  @ApiProperty({ description: 'Target reference ID or Slug', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  targetRef?: string;
 
   @ApiProperty({
     description: 'Banner position in the grid or entry popup',
@@ -114,6 +152,45 @@ export class CreateBannerDto {
   @IsOptional()
   @IsBoolean()
   closeable?: boolean;
+
+  @ApiProperty({
+    description: 'Delay in milliseconds before popup opens',
+    required: false,
+    default: 3000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'Thời gian trễ (delayMs) phải là số nguyên' })
+  @Min(0, { message: 'Thời gian trễ không được âm' })
+  delayMs?: number;
+
+  @ApiProperty({
+    description: 'Allowed route names for popup',
+    required: false,
+    default: ['Home'],
+  })
+  @IsOptional()
+  @IsString({ each: true })
+  allowedRouteNames?: string[];
+
+  @ApiProperty({
+    description: 'Associated marketing campaign ID',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  campaignId?: string;
+
+  @ApiProperty({
+    description: 'Creative version number',
+    required: false,
+    default: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  creativeVersion?: number;
 }
 
 export class UpdateBannerDto {
@@ -129,6 +206,25 @@ export class UpdateBannerDto {
   @IsString()
   imageUrl?: string;
 
+  @ApiProperty({
+    description: 'Optional mobile-specific image URL',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  mobileImageUrl?: string;
+
+  @ApiProperty({
+    description: 'Image ALT text for accessibility',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200, {
+    message: 'Mô tả hình ảnh (altText) không vượt quá 200 ký tự',
+  })
+  altText?: string;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
@@ -139,6 +235,21 @@ export class UpdateBannerDto {
     message: 'Đường dẫn liên kết phải bắt đầu bằng / hoặc http://, https://',
   })
   linkUrl?: string;
+
+  @ApiProperty({
+    description: 'Navigation target type',
+    enum: BannerTargetType,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(BannerTargetType, { message: 'Loại đích chuyển hướng không hợp lệ' })
+  targetType?: BannerTargetType;
+
+  @ApiProperty({ description: 'Target reference ID or Slug', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  targetRef?: string;
 
   @ApiProperty({ required: false, enum: BannerPosition })
   @IsOptional()
@@ -201,4 +312,40 @@ export class UpdateBannerDto {
   @IsOptional()
   @IsBoolean()
   closeable?: boolean;
+
+  @ApiProperty({
+    description: 'Delay in milliseconds before popup opens',
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'Thời gian trễ (delayMs) phải là số nguyên' })
+  @Min(0, { message: 'Thời gian trễ không được âm' })
+  delayMs?: number;
+
+  @ApiProperty({
+    description: 'Allowed route names for popup',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ each: true })
+  allowedRouteNames?: string[];
+
+  @ApiProperty({
+    description: 'Associated marketing campaign ID',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  campaignId?: string;
+
+  @ApiProperty({
+    description: 'Creative version number',
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  creativeVersion?: number;
 }

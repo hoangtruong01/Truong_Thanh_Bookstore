@@ -199,6 +199,28 @@ export class Order {
   landingPageId?: Types.ObjectId;
 
   @Prop({
+    type: {
+      source: { type: String, trim: true },
+      medium: { type: String, trim: true },
+      campaignCode: { type: String, trim: true },
+      creativeCode: { type: String, trim: true },
+      landingPage: { type: String, trim: true },
+      referrer: { type: String, trim: true },
+      capturedAt: { type: Date },
+    },
+    _id: false,
+  })
+  attribution?: {
+    source?: string;
+    medium?: string;
+    campaignCode?: string;
+    creativeCode?: string;
+    landingPage?: string;
+    referrer?: string;
+    capturedAt?: Date;
+  };
+
+  @Prop({
     type: String,
     enum: Object.values(RefundStatus),
     default: RefundStatus.NONE,

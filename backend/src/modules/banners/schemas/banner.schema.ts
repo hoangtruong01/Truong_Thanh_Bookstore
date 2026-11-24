@@ -18,6 +18,16 @@ export enum BannerFrequency {
   ONCE_PER_DAY = 'ONCE_PER_DAY',
 }
 
+export enum BannerTargetType {
+  NONE = 'NONE',
+  PRODUCT = 'PRODUCT',
+  CATEGORY = 'CATEGORY',
+  LANDING_PAGE = 'LANDING_PAGE',
+  INTERNAL_PATH = 'INTERNAL_PATH',
+  EXTERNAL_HTTPS = 'EXTERNAL_HTTPS',
+  LIVESTREAM = 'LIVESTREAM',
+}
+
 @Schema({ timestamps: true })
 export class Banner {
   @Prop({ required: true })
@@ -26,8 +36,25 @@ export class Banner {
   @Prop({ required: true })
   imageUrl: string;
 
+  @Prop({ type: String, required: false, default: null })
+  mobileImageUrl?: string;
+
+  @Prop({ type: String, required: false, default: '' })
+  altText?: string;
+
   @Prop({ default: '' })
   linkUrl: string;
+
+  @Prop({
+    type: String,
+    enum: BannerTargetType,
+    required: false,
+    default: BannerTargetType.INTERNAL_PATH,
+  })
+  targetType?: BannerTargetType;
+
+  @Prop({ type: String, required: false, default: '' })
+  targetRef?: string;
 
   @Prop({
     type: String,
@@ -62,6 +89,18 @@ export class Banner {
 
   @Prop({ type: Boolean, required: false, default: true })
   closeable?: boolean;
+
+  @Prop({ type: Number, required: false, default: 3000 })
+  delayMs?: number;
+
+  @Prop({ type: [String], required: false, default: ['Home'] })
+  allowedRouteNames?: string[];
+
+  @Prop({ type: String, required: false, default: null })
+  campaignId?: string;
+
+  @Prop({ type: Number, required: false, default: 1 })
+  creativeVersion?: number;
 
   @Prop({ type: Number, required: false, default: 0 })
   impressionCount?: number;

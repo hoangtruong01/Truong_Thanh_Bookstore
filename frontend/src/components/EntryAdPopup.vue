@@ -35,6 +35,7 @@
               class="w-full flex justify-end pb-2 sm:pb-3"
             >
               <button
+                ref="closeBtnRef"
                 type="button"
                 class="group w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/20 hover:bg-white text-white hover:text-slate-900 backdrop-blur-md border border-white/30 shadow-lg flex items-center justify-center transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white active:scale-95"
                 aria-label="Đóng quảng cáo"
@@ -60,14 +61,21 @@
               :class="{ 'cursor-pointer': hasLink }"
               @click="handleContentClick"
             >
-              <!-- Ad Image -->
-              <img
-                :src="popup.imageUrl"
-                :alt="popup.title || 'Quảng cáo'"
-                class="w-full h-auto max-h-[68vh] sm:max-h-[72vh] object-contain transition-transform duration-300 hover:scale-[1.01]"
-                loading="eager"
-                @error="handleImageError"
-              />
+              <!-- Ad Image with responsive picture support -->
+              <picture class="w-full flex justify-center">
+                <source
+                  v-if="popup.mobileImageUrl"
+                  media="(max-width: 639px)"
+                  :srcset="popup.mobileImageUrl"
+                />
+                <img
+                  :src="popup.imageUrl"
+                  :alt="popup.altText || popup.title || 'Quảng cáo'"
+                  class="w-full h-auto max-h-[68vh] sm:max-h-[72vh] object-contain transition-transform duration-300 hover:scale-[1.01]"
+                  loading="eager"
+                  @error="handleImageError"
+                />
+              </picture>
             </div>
 
             <!-- CTA Button Bar (if link or custom CTA provided) -->
@@ -76,8 +84,9 @@
               class="mt-3 sm:mt-4 flex items-center justify-center w-full"
             >
               <button
+                ref="ctaBtnRef"
                 type="button"
-                class="bg-[#dc2626] hover:bg-[#b91c1c] active:bg-[#991b1b] text-white font-black text-sm sm:text-base px-8 sm:px-10 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl shadow-xl shadow-red-950/40 hover:shadow-red-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center gap-2 cursor-pointer border border-red-400/30 tracking-wide"
+                class="bg-[#dc2626] hover:bg-[#b91c1c] active:bg-[#991b1b] text-white font-black text-sm sm:text-base px-8 sm:px-10 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl shadow-xl shadow-red-950/40 hover:shadow-red-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center gap-2 cursor-pointer border border-red-400/30 tracking-wide focus:outline-none focus:ring-2 focus:ring-white"
                 @click="handleCtaClick"
               >
                 <span>{{ popup.ctaLabel || 'MỞ / XEM NGAY' }}</span>
@@ -101,36 +110,104 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { bannerService } from '@/services/banner.service'
 
 interface PopupBanner {
   _id: string
   title: string
   imageUrl: string
+  mobileImageUrl?: string | null
+  altText?: string
   linkUrl?: string
+  targetType?: string
+  targetRef?: string
   position: string
   frequency?: 'EVERY_VISIT' | 'ONCE_PER_SESSION' | 'ONCE_PER_DAY'
   startAt?: string | null
   endAt?: string | null
   ctaLabel?: string
   closeable?: boolean
+  delayMs?: number
+  allowedRouteNames?: string[]
   isActive: boolean
   updatedAt?: string
 }
 
+interface Props {
+  previewMode?: boolean
+  previewData?: PopupBanner | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  previewMode: false,
+  previewData: null,
+})
+
+const route = useRoute()
 const router = useRouter()
 const showPopup = ref(false)
 const popup = ref<PopupBanner | null>(null)
 let previousOverflow = ''
+let lastFocusedElement: HTMLElement | null = null
+let delayTimer: ReturnType<typeof setTimeout> | null = null
+
+const closeBtnRef = ref<HTMLButtonElement | null>(null)
+const ctaBtnRef = ref<HTMLButtonElement | null>(null)
+
+const EXCLUDED_ROUTE_NAMES = [
+  'Cart',
+  'Checkout',
+  'MyOrders',
+  'OrderTracking',
+  'Login',
+  'Register',
+]
+
+function isRouteExcluded(): boolean {
+  if (props.previewMode) return false
+  const name = String(route?.name || '')
+  const path = String(route?.path || '')
+  if (EXCLUDED_ROUTE_NAMES.includes(name)) return true
+  if (
+    path.startsWith('/checkout') ||
+    path.startsWith('/cart') ||
+    path.startsWith('/admin')
+  ) {
+    return true
+  }
+  return false
+}
+
+function clearPendingTimer() {
+  if (delayTimer) {
+    clearTimeout(delayTimer)
+    delayTimer = null
+  }
+}
+
+watch(
+  () => route?.path,
+  () => {
+    if (isRouteExcluded()) {
+      clearPendingTimer()
+      if (showPopup.value) {
+        closePopup()
+      }
+    }
+  },
+)
 
 const isCloseable = computed(() => {
   return popup.value?.closeable !== false
 })
 
 const hasLink = computed(() => {
-  const link = popup.value?.linkUrl?.trim()
+  const p = popup.value
+  if (!p) return false
+  if (p.targetType && p.targetType !== 'NONE') return true
+  const link = p.linkUrl?.trim()
   return Boolean(link && isSafeUrl(link))
 })
 
@@ -138,7 +215,6 @@ function isSafeUrl(url: string): boolean {
   if (!url) return false
   const trimmed = url.trim()
   const lower = trimmed.toLowerCase()
-  // Deny dangerous script schemes
   if (
     lower.startsWith('javascript:') ||
     lower.startsWith('data:') ||
@@ -146,7 +222,6 @@ function isSafeUrl(url: string): boolean {
   ) {
     return false
   }
-  // Allow relative paths or standard web schemes
   return (
     trimmed.startsWith('/') ||
     lower.startsWith('http://') ||
@@ -154,7 +229,15 @@ function isSafeUrl(url: string): boolean {
   )
 }
 
+function getVietnamDateString(): string {
+  const now = new Date()
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000
+  const vnTime = new Date(utcMs + 7 * 3600000)
+  return vnTime.toISOString().slice(0, 10)
+}
+
 function shouldShowByFrequency(banner: PopupBanner): boolean {
+  if (props.previewMode) return true
   const freq = banner.frequency || 'EVERY_VISIT'
   if (freq === 'EVERY_VISIT') {
     return true
@@ -170,20 +253,18 @@ function shouldShowByFrequency(banner: PopupBanner): boolean {
         return false
       }
     } catch {
-      // If sessionStorage is restricted (private mode), allow display gracefully
       return true
     }
   }
 
   if (freq === 'ONCE_PER_DAY') {
     try {
-      const todayStr = new Date().toISOString().slice(0, 10)
+      const todayStr = getVietnamDateString()
       const dayKey = `entry_ad_seen_${bannerId}_${todayStr}`
       if (localStorage.getItem(dayKey)) {
         return false
       }
     } catch {
-      // If localStorage is restricted, allow display gracefully
       return true
     }
   }
@@ -192,6 +273,7 @@ function shouldShowByFrequency(banner: PopupBanner): boolean {
 }
 
 function markSeen(banner: PopupBanner) {
+  if (props.previewMode) return
   const freq = banner.frequency || 'EVERY_VISIT'
   const bannerId = banner._id
   const version = banner.updatedAt || 'v1'
@@ -201,17 +283,17 @@ function markSeen(banner: PopupBanner) {
       const sessionKey = `entry_ad_seen_${bannerId}_${version}`
       sessionStorage.setItem(sessionKey, '1')
     } catch {
-      // Ignore storage errors
+      // Ignore private browsing storage quota exceptions
     }
   }
 
   if (freq === 'ONCE_PER_DAY') {
     try {
-      const todayStr = new Date().toISOString().slice(0, 10)
+      const todayStr = getVietnamDateString()
       const dayKey = `entry_ad_seen_${bannerId}_${todayStr}`
       localStorage.setItem(dayKey, '1')
     } catch {
-      // Ignore storage errors
+      // Ignore private browsing storage quota exceptions
     }
   }
 }
@@ -229,13 +311,43 @@ function unlockScroll() {
   }
 }
 
+function openModal(data: PopupBanner) {
+  popup.value = data
+  if (typeof document !== 'undefined') {
+    lastFocusedElement = document.activeElement as HTMLElement | null
+  }
+  showPopup.value = true
+  lockScroll()
+
+  if (!props.previewMode && data._id) {
+    bannerService.recordImpression(data._id).catch(() => {})
+  }
+
+  setTimeout(() => {
+    if (closeBtnRef.value) {
+      closeBtnRef.value.focus()
+    } else if (ctaBtnRef.value) {
+      ctaBtnRef.value.focus()
+    }
+  }, 50)
+}
+
 function closePopup() {
   if (!isCloseable.value) return
-  if (popup.value) {
+  clearPendingTimer()
+  if (popup.value && !props.previewMode) {
     markSeen(popup.value)
   }
   showPopup.value = false
   unlockScroll()
+
+  if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+    try {
+      lastFocusedElement.focus()
+    } catch {
+      // Focus restoration fallback
+    }
+  }
 }
 
 function onBackdropClick() {
@@ -259,38 +371,97 @@ function handleCtaClick() {
 }
 
 function navigateLink() {
-  const link = popup.value?.linkUrl?.trim()
-  if (!link || !isSafeUrl(link)) {
-    closePopup()
-    return
+  const p = popup.value
+  if (!p) return
+
+  if (!props.previewMode && p._id) {
+    bannerService.recordClick(p._id).catch(() => {})
+    markSeen(p)
   }
 
-  if (popup.value) {
-    markSeen(popup.value)
-  }
   showPopup.value = false
   unlockScroll()
 
-  if (link.startsWith('/')) {
-    router.push(link)
-  } else {
-    window.open(link, '_blank', 'noopener,noreferrer')
+  const targetType = p.targetType || 'INTERNAL_PATH'
+  const targetRef = p.targetRef?.trim()
+  const link = p.linkUrl?.trim()
+
+  if (targetType === 'PRODUCT' && targetRef) {
+    router.push(`/products/${targetRef}`)
+    return
+  }
+  if (targetType === 'LANDING_PAGE' && targetRef) {
+    router.push(`/t/${targetRef}`)
+    return
+  }
+  if (targetType === 'CATEGORY' && targetRef) {
+    router.push(`/products?category=${encodeURIComponent(targetRef)}`)
+    return
+  }
+  if (targetType === 'EXTERNAL_HTTPS' && (link || targetRef)) {
+    const url = link || targetRef || ''
+    if (url.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+    return
+  }
+  if (targetType === 'NONE') {
+    return
+  }
+
+  if (link && isSafeUrl(link)) {
+    if (link.startsWith('/')) {
+      router.push(link)
+    } else {
+      window.open(link, '_blank', 'noopener,noreferrer')
+    }
   }
 }
 
 function handleImageError() {
-  // If ad image fails to load, gracefully hide popup without crashing
+  clearPendingTimer()
   showPopup.value = false
   unlockScroll()
 }
 
 function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape' && showPopup.value && isCloseable.value) {
+  if (!showPopup.value) return
+  if (e.key === 'Escape' && isCloseable.value) {
+    e.preventDefault()
     closePopup()
+    return
+  }
+
+  if (e.key === 'Tab') {
+    const focusable = [closeBtnRef.value, ctaBtnRef.value].filter(
+      Boolean,
+    ) as HTMLElement[]
+    if (focusable.length < 2) return
+    const firstEl = focusable[0]
+    const lastEl = focusable[focusable.length - 1]
+
+    if (e.shiftKey) {
+      if (document.activeElement === firstEl) {
+        e.preventDefault()
+        lastEl.focus()
+      }
+    } else {
+      if (document.activeElement === lastEl) {
+        e.preventDefault()
+        firstEl.focus()
+      }
+    }
   }
 }
 
 async function loadActivePopup() {
+  if (isRouteExcluded()) return
+
+  if (props.previewMode && props.previewData) {
+    openModal(props.previewData)
+    return
+  }
+
   try {
     const res = await bannerService.getActivePopup()
     const data = res?.data ?? res
@@ -298,7 +469,6 @@ async function loadActivePopup() {
       return
     }
 
-    // Double check client-side expiration
     const now = Date.now()
     if (data.startAt && new Date(data.startAt).getTime() > now) {
       return
@@ -311,11 +481,18 @@ async function loadActivePopup() {
       return
     }
 
-    popup.value = data
-    showPopup.value = true
-    lockScroll()
+    clearPendingTimer()
+    const delay = typeof data.delayMs === 'number' ? data.delayMs : 0
+    if (delay > 0) {
+      delayTimer = setTimeout(() => {
+        if (!isRouteExcluded()) {
+          openModal(data)
+        }
+      }, delay)
+    } else {
+      openModal(data)
+    }
   } catch {
-    // API errors must not affect website operation
     showPopup.value = false
   }
 }
@@ -328,6 +505,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  clearPendingTimer()
   if (typeof window !== 'undefined') {
     window.removeEventListener('keydown', handleKeydown)
   }

@@ -66,6 +66,7 @@ import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
+import { initAttributionCapture } from '@/utils/attribution'
 
 const authStore = useAuthStore()
 const toast = useToast()
@@ -121,6 +122,7 @@ watch(
 )
 
 onMounted(async () => {
+  initAttributionCapture()
   window.addEventListener('auth-session-expired', authStore.clearSession)
   if (!authStore.isHydrated) {
     await authStore.hydrateAuth().catch(() => undefined)

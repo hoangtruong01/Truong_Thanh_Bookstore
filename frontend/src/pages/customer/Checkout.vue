@@ -247,6 +247,7 @@ import type { Promotion, Address } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 import { useDoubleSubmit } from '@/composables/useDoubleSubmit'
 import { useCoupon } from '@/composables/useCoupon'
+import { getStoredAttribution } from '@/utils/attribution'
 import OrderSuccess from '@/components/customer/checkout/OrderSuccess.vue'
 import AddressSection from '@/components/customer/checkout/AddressSection.vue'
 import PaymentMethodSelector from '@/components/customer/checkout/PaymentMethodSelector.vue'
@@ -560,6 +561,11 @@ async function placeOrder() {
       customerName: shippingInfo.fullName,
       customerEmail: shippingInfo.email,
       idempotencyKey: checkoutIdempotencyKey.value,
+    }
+
+    const attribution = getStoredAttribution()
+    if (attribution && (attribution.source || attribution.campaignCode || attribution.medium)) {
+      orderData.attribution = attribution
     }
 
     // Pre-checkout safe validation: re-price right now and stop if anything changed or is invalid

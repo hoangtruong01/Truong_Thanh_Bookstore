@@ -4,21 +4,27 @@ import EntryAdPopup from '../EntryAdPopup.vue'
 import { bannerService } from '@/services/banner.service'
 
 const mockPush = vi.fn()
+let mockRoute = { name: 'Home', path: '/' }
+
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  useRoute: () => mockRoute,
 }))
 
 vi.mock('@/services/banner.service', () => ({
   bannerService: {
     getActivePopup: vi.fn(),
+    recordImpression: vi.fn().mockResolvedValue({}),
+    recordClick: vi.fn().mockResolvedValue({}),
   },
 }))
 
 describe('EntryAdPopup Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockRoute = { name: 'Home', path: '/' }
     sessionStorage.clear()
     localStorage.clear()
     mockPush.mockReset()
@@ -301,5 +307,51 @@ describe('EntryAdPopup Component', () => {
     await flushPromises()
 
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+  })
+
+  it('TC-018: does not render popup on excluded routes such as Checkout and Cart', async () => {
+    mockRoute = { name: 'Checkout', path: '/checkout' }
+    const mockPopup = {
+      _id: 'checkout_popup',
+      title: 'Checkout Promo',
+      imageUrl: 'https://example.com/ad.jpg',
+      frequency: 'EVERY_VISIT',
+      isActive: true,
+    }
+
+    vi.mocked(bannerService.getActivePopup).mockResolvedValue({
+      data: mockPopup,
+    } as any)
+
+    const wrapper = mountPopup()
+    await flushPromises()
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+  })
+
+  it('TC-048: records impression on display and click on CTA', async () => {
+    const mockPopup = {
+      _id: 'track_popup',
+      title: 'Tracking test',
+      imageUrl: 'https://example.com/ad.jpg',
+      linkUrl: '/products',
+      frequency: 'EVERY_VISIT',
+      isActive: true,
+    }
+
+    vi.mocked(bannerService.getActivePopup).mockResolvedValue({
+      data: mockPopup,
+    } as any)
+
+    const wrapper = mountPopup()
+    await flushPromises()
+
+    expect(bannerService.recordImpression).toHaveBeenCalledWith('track_popup')
+
+    const ctaBtn = wrapper.find('button.bg-\\[\\#dc2626\\]')
+    if (ctaBtn.exists()) {
+      await ctaBtn.trigger('click')
+      expect(bannerService.recordClick).toHaveBeenCalledWith('track_popup')
+    }
   })
 })

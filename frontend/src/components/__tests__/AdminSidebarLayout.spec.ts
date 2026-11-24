@@ -40,6 +40,7 @@ const adminPaths = [
   '/admin/cashbook',
   '/admin/documents',
   '/admin/reports',
+  '/admin/marketing/campaigns',
   '/admin/banners',
   '/admin/landing-pages',
   '/admin/reviews',

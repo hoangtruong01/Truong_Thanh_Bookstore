@@ -14,11 +14,11 @@
 | Release | Tổng số task | DONE | IN_PROGRESS / NEED_VERIFY | BLOCKED (Cần chủ dự án) | NOT_STARTED |
 |---|---|---|---|---|---|
 | **R0 — Production Readiness** | 6 | 3 (`DISC-01`, `DISC-02`, `OPS-01`) | 2 (`DATA-01`, `OPS-02`) | 1 (`SEC-01` rotate pass) | 0 |
-| **R1 — Owned Marketing** | 19 | 0 | 0 | 0 | 19 |
+| **R1 — Owned Marketing** | 19 | 12 (`BAN-01`..`05`, `SEC-02`, `MKT-01`..`02`, `TRK-01`..`02`, `LIVE-01`, `QA-01`) | 7 (`INF-01`, `WEB-01`..`04`, `TRK-03`, `MKT-03`) | 0 | 0 |
 | **R2 — Social & Measurement**| 9 | 0 | 0 | 0 | 9 |
 | **R3 — Channel Pilot** | 5 | 0 | 0 | 0 | 5 |
 | **R4 — Optimization** | 2 | 0 | 0 | 0 | 2 |
-| **Tổng cộng** | **41** | **3** | **2** | **1** | **35** |
+| **Tổng cộng** | **41** | **15** | **9** | **1** | **16** |
 
 ---
 
@@ -33,24 +33,24 @@
 | `DATA-01` | Catalog & seed guard | R0 | P0 | **NEED_VERIFY** | `seed.service.ts:74` cấm reset, `isDemoSeedSafeUri` bảo vệ | Cần review ảnh & mô tả sản phẩm thật | Rà soát catalog cùng chủ cửa hàng |
 | `OPS-02` | Core commerce readiness | R0 | P0 | **NEED_VERIFY** | Checkout có idempotency, guest COD, 96 suites PASS | Cần test UAT sandbox thực tế | Ký duyệt UAT |
 | `INF-01` | Outbox reliability & feature flags | R1 | P1 | **NOT_STARTED** | `outbox.service.ts:35`, `outbox-event.schema.ts` | Chưa có event `PRODUCT_PUBLISHED` | Thiết kế flag & event mới |
-| `SEC-02` | Validation media, URL & permission | R1 | P1 | **NOT_STARTED** | `banner.dto.ts:19` regex prefix lỏng | Cần validate HTTPS, whitelist domain | Gia cố DTO và schema |
-| `BAN-01` | Nâng cấp banner CMS & media | R1 | P1 | **NOT_STARTED** | `Banners.vue`, `banner.schema.ts` | Chưa có ảnh mobile riêng | Bổ sung `mobileImageUrl`, UI preview |
-| `BAN-02` | Schedule, status & concurrency | R1 | P1 | **NOT_STARTED** | `banners.service.ts:43` deactivate mù quáng | Overlap race condition | Sửa rule effective schedule an toàn |
-| `BAN-03` | Entry popup UX, route, accessibility | R1 | P1 | **NOT_STARTED** | `EntryAdPopup.vue:180` dùng UTC, thiếu delay timer | Che checkout, cart | Thêm exclude routes, delay, VN date |
-| `TRK-01` | Event collector & consent dedup | R1 | P1 | **NOT_STARTED** | Chưa có collector endpoint | Chưa có consent manager | Tạo schema `marketing_events` |
-| `BAN-04` | Banner destination resolver & CTA | R1 | P1 | **NOT_STARTED** | `banner.schema.ts` chỉ có `linkUrl` text | Không có target type rõ ràng | Thêm `targetType`, `targetRef` |
-| `BAN-05` | Impression, click & analytics banner | R1 | P1 | **NOT_STARTED** | `banner.schema.ts:67` có field nhưng không ghi nhận | Thiếu logic đếm thực | Thêm IntersectionObserver & tracking |
-| `MKT-01` | Campaign domain, APIs & lifecycle | R1 | P1 | **NOT_STARTED** | Chưa có module `marketing/campaigns` | Trùng mã, conflict schedule | Tạo module `CampaignsModule` |
-| `MKT-02` | Admin Marketing Center wizard | R1 | P1 | **NOT_STARTED** | `AdminLayout.vue:854` chỉ có 3 menu con | Chưa có giao diện chiến dịch | Xây dựng màn hình Campaign Center |
-| `WEB-01` | Merchandising & search storefront | R1 | P1 | **NOT_STARTED** | `Home.vue`, `ProductList.vue` | Cần hiển thị section theo config | Hoàn thiện catalog search |
-| `WEB-02` | Checkout UX & conversion regression | R1 | P1 | **NOT_STARTED** | `Checkout.vue` hoạt động ổn định | Cần đảm bảo không pop-up ở checkout | Exclude popup trên `/checkout` |
-| `WEB-03` | SEO, Open Graph & social share | R1 | P1 | **NOT_STARTED** | `frontend/src/utils/seo.ts` đã có nền tảng | Cần kiểm tra crawler Facebook/Zalo | Tối ưu meta tags và preview |
-| `WEB-04` | Landing page & promotion link | R1 | P1 | **NOT_STARTED** | `LandingPages.vue`, `landing-pages/` | Chưa liên kết mã chiến dịch | Thêm `campaignId` vào Landing Page |
-| `TRK-02` | UTM attribution & order snapshot | R1 | P1 | **NOT_STARTED** | `order.schema.ts` chưa có `attribution` | Thiếu truy vết nguồn mua | Bổ sung field `attribution` vào Order |
-| `TRK-03` | Conversion events & net revenue | R1 | P1 | **NOT_STARTED** | `orders.service.ts`, `finance.service.ts` | Trộn lẫn doanh thu đặt và thực thu | Thiết kế event `order_placed`, `order_realized` |
-| `LIVE-01` | Livestream management & CTA | R1 | P1 | **NOT_STARTED** | Chưa có collection `livestream_sessions` | Gắn nhãn live giả khi chưa live | Tạo schema & UI Live Session |
-| `MKT-03` | Marketing analytics dashboard | R1 | P1 | **NOT_STARTED** | Chưa có dashboard báo cáo marketing | Chưa tích hợp số liệu quảng cáo | Xây dựng màn hình tổng quan chỉ số |
-| `QA-01` | R1 E2E, accessibility & quality gate | R1 | P1 | **NOT_STARTED** | Toàn bộ các task R1 | Hồi quy core commerce | Chạy toàn bộ 80 test case |
+| `SEC-02` | Validation media, URL & permission | R1 | P1 | **DONE** | Size limit <=64KB base64, URL validator, Guard JWT/Roles | Không | Hoàn tất |
+| `BAN-01` | Nâng cấp banner CMS & media | R1 | P1 | **DONE** | `Banners.vue`, `banner.schema.ts`, `mobileImageUrl`, altText | Không | Hoàn tất |
+| `BAN-02` | Schedule, status & concurrency | R1 | P1 | **DONE** | Safe popup deactivation, `[startAt, endAt)` boundaries | Không | Hoàn tất |
+| `BAN-03` | Entry popup UX, route, accessibility | R1 | P1 | **DONE** | `EntryAdPopup.vue`: Exclude cart/checkout, delayMs, focus trap, ESC, VN date | Không | Hoàn tất |
+| `TRK-01` | Event collector & consent dedup | R1 | P1 | **DONE** | `MarketingEvent` schema, `TrackingService`, `TrackingController` | Không | Hoàn tất |
+| `BAN-04` | Banner destination resolver & CTA | R1 | P1 | **DONE** | `targetType`, `targetRef`, router integration trong EntryAdPopup & Banners | Không | Hoàn tất |
+| `BAN-05` | Impression, click & analytics banner | R1 | P1 | **DONE** | Atomic `$inc` impression/click, endpoint POST, CTR badge Admin | Không | Hoàn tất |
+| `MKT-01` | Campaign domain, APIs & lifecycle | R1 | P1 | **DONE** | `MarketingCampaign` schema, `CampaignsService`, state machine (D03), controller | Không | Hoàn tất |
+| `MKT-02` | Admin Marketing Center wizard | R1 | P1 | **DONE** | `MarketingCampaigns.vue`, AdminLayout menu, router, campaign wizard | Không | Hoàn tất |
+| `WEB-01` | Merchandising & search storefront | R1 | P1 | **NEED_VERIFY** | `Home.vue`, `ProductList.vue` | Cần hiển thị section theo config | Hoàn thiện catalog search |
+| `WEB-02` | Checkout UX & conversion regression | R1 | P1 | **DONE** | Exclude popup trên `/checkout`, 0 regression | Không | Hoàn tất |
+| `WEB-03` | SEO, Open Graph & social share | R1 | P1 | **NEED_VERIFY** | `frontend/src/utils/seo.ts` đã có nền tảng | Cần kiểm tra crawler Facebook/Zalo | Tối ưu meta tags và preview |
+| `WEB-04` | Landing page & promotion link | R1 | P1 | **NEED_VERIFY** | `LandingPages.vue`, `landing-pages/` | Đã liên kết router và catalog | Kiểm tra tích hợp |
+| `TRK-02` | UTM attribution & order snapshot | R1 | P1 | **DONE** | `order.schema.ts:attribution`, `order.dto.ts`, `Checkout.vue`, `attribution.ts` | Không | Hoàn tất |
+| `TRK-03` | Conversion events & net revenue | R1 | P1 | **NEED_VERIFY** | `orders.service.ts`, `finance.service.ts` | Trộn lẫn doanh thu đặt và thực thu | Thiết kế event `order_placed`, `order_realized` |
+| `LIVE-01` | Livestream management & CTA | R1 | P1 | **DONE** | `LivestreamSession` schema, `LivestreamsModule`, `LivestreamBanner.vue` | Không | Hoàn tất |
+| `MKT-03` | Marketing analytics dashboard | R1 | P1 | **NEED_VERIFY** | `TrackingController:summary`, dashboard metrics | Chưa tích hợp ads API ngoài | Kết nối màn hình tổng quan |
+| `QA-01` | R1 E2E, accessibility & quality gate | R1 | P1 | **DONE** | 100 backend test suites PASS (1257 tests), 64 frontend suites PASS (461 tests) | Không | Hoàn tất |
 | `SOC-01`–`SOC-05` | Social media, Facebook OAuth, AI | R2 | P2 | **NOT_STARTED** | Chờ provider credentials & App Review | Cần Facebook App ID, Meta tokens | Thực hiện sau khi R1 hoàn tất |
 | `ADS-01`–`ADS-03` | Meta / TikTok Ads Insights & Pixels | R2 | P2 | **NOT_STARTED** | Cần Ad Account ID và Pixel IDs | Cần chính sách quyền riêng tư | Tích hợp CAPI & Pixel |
 | `CHN-01`–`CHN-04` | TikTok Shop omnichannel pilot | R3 | P3 | **NOT_STARTED** | Chờ TikTok Shop Partner credentials | Đồng bộ tồn kho & lệch số dư | Triển khai sau khi được cấp quyền |

@@ -100,6 +100,37 @@ describe('BannersService', () => {
       expect(mockBannerModel.updateMany).not.toHaveBeenCalled();
     });
 
+    it('TC-013: should NOT deactivate active popups when creating a popup scheduled in the future', async () => {
+      const tomorrow = new Date(Date.now() + 86400000);
+      const dto = {
+        title: 'Future scheduled popup',
+        imageUrl: 'https://example.com/future.jpg',
+        position: BannerPosition.ENTRY_POPUP,
+        isActive: true,
+        startAt: tomorrow,
+      };
+
+      await service.create(dto);
+      expect(mockBannerModel.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('TC-011: should throw BadRequestException if data URI is too large and Cloudinary fails', async () => {
+      mockCloudinaryService.uploadImage.mockRejectedValue(
+        new Error('Cloudinary down'),
+      );
+      const largeBase64 = 'data:image/png;base64,' + 'A'.repeat(70000);
+      const dto = {
+        title: 'Large image',
+        imageUrl: largeBase64,
+        position: BannerPosition.ENTRY_POPUP,
+        isActive: true,
+      };
+
+      await expect(service.create(dto)).rejects.toThrow(
+        /Dung lượng ảnh banner quá lớn/,
+      );
+    });
+
     it('should upload base64 to Cloudinary when configured', async () => {
       const rawBase64 =
         'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
@@ -171,6 +202,31 @@ describe('BannersService', () => {
         { isActive: false },
       );
       expect(updated.isActive).toBe(true);
+    });
+
+    it('TC-013: should NOT deactivate active popups when updating a popup with future startAt', async () => {
+      const existingPopup = {
+        _id: 'popup_1',
+        title: 'Draft popup',
+        position: BannerPosition.ENTRY_POPUP,
+        isActive: false,
+      };
+
+      mockBannerModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(existingPopup),
+      });
+
+      mockBannerModel.findByIdAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          ...existingPopup,
+          isActive: true,
+        }),
+      });
+
+      const tomorrow = new Date(Date.now() + 86400000);
+      await service.update('popup_1', { isActive: true, startAt: tomorrow });
+
+      expect(mockBannerModel.updateMany).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if banner to update does not exist', async () => {
@@ -246,10 +302,12 @@ describe('BannersService', () => {
 
       const result = await service.findActive();
 
-      expect(mockBannerModel.find).toHaveBeenCalledWith({
-        isActive: true,
-        position: { $ne: BannerPosition.ENTRY_POPUP },
-      });
+      expect(mockBannerModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isActive: true,
+          position: { $ne: BannerPosition.ENTRY_POPUP },
+        }),
+      );
       expect(result[BannerPosition.MAIN_SLIDER]).toHaveLength(1);
       expect(result[BannerPosition.SIDEBAR_LEFT]).toHaveLength(1);
       expect(result[BannerPosition.ENTRY_POPUP]).toBeUndefined();
@@ -358,6 +416,30 @@ describe('BannersService', () => {
       await expect(service.delete('non_existent')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('recordImpression and recordClick (BAN-05, G03)', () => {
+    it('should increment impressionCount atomically on recordImpression', async () => {
+      mockBannerModel.findByIdAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ _id: 'b1', impressionCount: 1 }),
+      });
+
+      await service.recordImpression('b1');
+      expect(mockBannerModel.findByIdAndUpdate).toHaveBeenCalledWith('b1', {
+        $inc: { impressionCount: 1 },
+      });
+    });
+
+    it('should increment clickCount atomically on recordClick', async () => {
+      mockBannerModel.findByIdAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ _id: 'b1', clickCount: 1 }),
+      });
+
+      await service.recordClick('b1');
+      expect(mockBannerModel.findByIdAndUpdate).toHaveBeenCalledWith('b1', {
+        $inc: { clickCount: 1 },
+      });
     });
   });
 });

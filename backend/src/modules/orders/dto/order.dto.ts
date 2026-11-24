@@ -73,6 +73,44 @@ export class OrderItemDto {
   image?: string;
 }
 
+export class OrderAttributionDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  source?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  medium?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  campaignCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  creativeCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  landingPage?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  referrer?: string;
+}
+
 export class CreateOrderDto {
   @ApiProperty({ type: [OrderItemDto] })
   @IsArray({ message: 'items phải là một danh sách sản phẩm' })
@@ -191,6 +229,12 @@ export class CreateOrderDto {
   @IsOptional()
   @IsMongoObjectId({ message: 'landingPageId phải là ObjectId hợp lệ' })
   landingPageId?: string;
+
+  @ApiPropertyOptional({ type: OrderAttributionDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => OrderAttributionDto)
+  attribution?: OrderAttributionDto;
 
   @ApiPropertyOptional({
     description:
