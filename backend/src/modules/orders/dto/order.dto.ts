@@ -378,6 +378,31 @@ export class ProcessRefundDto {
   @IsNumber({}, { message: 'Số tiền hoàn phải là số' })
   @Min(0, { message: 'Số tiền hoàn không được âm' })
   amount?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Mã giao dịch chi hoàn từ ngân hàng/cổng thanh toán hoặc số phiếu chi',
+    example: 'VNPAY_REF_9871234',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : (value as string),
+  )
+  refundTransactionRef?: string;
+
+  @ApiPropertyOptional({
+    description: 'Khóa idempotency chống trùng lặp giao dịch chi hoàn',
+    example: 'ref_idemp_ORD20261124_001',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : (value as string),
+  )
+  idempotencyKey?: string;
 }
 
 export class CancelOrderDto {

@@ -56,9 +56,45 @@ export class OrderItem {
 
   @Prop({ type: String })
   approvalReason?: string;
+
+  @Prop({ default: 0, min: 0 })
+  returnedQuantity?: number;
 }
 
 export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);
+
+@Schema({ _id: false })
+export class OrderRefundRecord {
+  @Prop({ required: true })
+  refundId: string;
+
+  @Prop({ required: true, min: 0 })
+  amount: number;
+
+  @Prop({ required: true })
+  reason: string;
+
+  @Prop()
+  refundTransactionRef?: string;
+
+  @Prop({ default: Date.now })
+  refundedAt: Date;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
+  actor?: Types.ObjectId;
+
+  @Prop()
+  actorName?: string;
+
+  @Prop()
+  idempotencyKey?: string;
+
+  @Prop()
+  payloadHash?: string;
+}
+
+export const OrderRefundRecordSchema =
+  SchemaFactory.createForClass(OrderRefundRecord);
 
 @Schema()
 export class OrderTimelineItem {
@@ -122,6 +158,12 @@ export class Order {
   @Prop({ type: String, enum: PaymentStatus, default: PaymentStatus.UNPAID })
   paymentStatus: PaymentStatus;
 
+  @Prop()
+  paymentTransactionId?: string;
+
+  @Prop()
+  paidAt?: Date;
+
   @Prop({ type: String, enum: OrderStatus, default: OrderStatus.PENDING })
   orderStatus: OrderStatus;
 
@@ -178,6 +220,15 @@ export class Order {
 
   @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   refundActor?: Types.ObjectId;
+
+  @Prop()
+  refundActorName?: string;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  totalRefundedAmount: number;
+
+  @Prop({ type: [OrderRefundRecordSchema], default: [] })
+  refundHistory: OrderRefundRecord[];
 
   @Prop()
   returnReason?: string;

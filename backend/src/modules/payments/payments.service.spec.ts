@@ -44,12 +44,12 @@ describe('PaymentsService callback reconciliation', () => {
     expect(result).toBe(payment);
     expect(orderModel.updateOne).toHaveBeenCalledWith(
       { _id: payment.order },
-      {
-        $set: {
+      expect.objectContaining({
+        $set: expect.objectContaining({
           paymentStatus: PaymentStatus.PAID,
           revenueRecognizedAt: paidAt,
-        },
-      },
+        }),
+      }),
     );
     expect(orderModel.updateOne).toHaveBeenNthCalledWith(
       2,

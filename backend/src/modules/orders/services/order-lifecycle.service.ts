@@ -737,8 +737,19 @@ export class OrderLifecycleService {
 
   async processRefund(
     id: string,
-    actor: { _id: string; role?: string; permissions?: string[] },
-    dto?: { reason?: string; amount?: number },
+    actor: {
+      _id: string;
+      role?: string;
+      permissions?: string[];
+      name?: string;
+      fullName?: string;
+    },
+    dto?: {
+      reason?: string;
+      amount?: number;
+      refundTransactionRef?: string;
+      idempotencyKey?: string;
+    },
   ): Promise<OrderDocument> {
     if (
       actor.role !== UserRole.ADMIN &&
@@ -766,12 +777,39 @@ export class OrderLifecycleService {
       throw new ConflictException('Đơn hàng này đã được hoàn tiền trước đó');
     }
 
-    if (order.paymentStatus !== PaymentStatus.PAID) {
+    if (
+      order.paymentStatus !== PaymentStatus.PAID &&
+      order.paymentStatus !== PaymentStatus.PARTIALLY_PAID
+    ) {
       throw new BadRequestException(
         'Chỉ có thể hoàn tiền cho đơn đã thanh toán',
       );
     }
-    const refundAmount = dto?.amount ?? order.refundAmount ?? order.total;
+
+    // T04: Idempotency Replay Protection for Refunds
+    if (dto?.idempotencyKey && dto.idempotencyKey.trim()) {
+      const existingRefund = (order.refundHistory || []).find(
+        (r) => r.idempotencyKey === dto.idempotencyKey!.trim(),
+      );
+      if (existingRefund) {
+        if (dto.amount !== undefined && existingRefund.amount !== dto.amount) {
+          throw new ConflictException(
+            `Idempotency key hoàn tiền "${dto.idempotencyKey}" đã được sử dụng với số tiền khác (${existingRefund.amount}đ vs ${dto.amount}đ).`,
+          );
+        }
+        this.logger.log(
+          `Idempotent refund replay for order ${order.orderCode || id}, key: ${dto.idempotencyKey}`,
+        );
+        return order;
+      }
+    }
+
+    // T04: Partial Refund Calculation & Bounds Checking
+    const currentTotalRefunded = order.totalRefundedAmount || 0;
+    const remainingRefundable = Math.max(0, order.total - currentTotalRefunded);
+    const refundAmount =
+      dto?.amount ?? order.refundAmount ?? remainingRefundable;
+
     if (
       !Number.isFinite(refundAmount) ||
       refundAmount <= 0 ||
@@ -781,6 +819,89 @@ export class OrderLifecycleService {
         'Số tiền hoàn phải lớn hơn 0 và không vượt quá số tiền đã thanh toán',
       );
     }
+
+    if (refundAmount > remainingRefundable) {
+      throw new BadRequestException(
+        `Số tiền hoàn vượt quá số tiền còn lại có thể hoàn (Còn lại: ${remainingRefundable.toLocaleString('vi-VN')}đ)`,
+      );
+    }
+
+    const actorName =
+      actor.name ||
+      actor.fullName ||
+      (actor.role === UserRole.SUPER_ADMIN ? 'Super Admin' : 'Admin/Staff');
+
+    // T04: If refundTransactionRef is provided, finalize and record the disbursement
+    if (dto?.refundTransactionRef && dto.refundTransactionRef.trim()) {
+      const newTotalRefunded = currentTotalRefunded + refundAmount;
+      const isFullRefund = newTotalRefunded >= order.total;
+      const targetRefundStatus = isFullRefund
+        ? RefundStatus.REFUNDED
+        : RefundStatus.PARTIAL;
+
+      const refundRecord = {
+        refundId: `REF-${order.orderCode || id.slice(-6)}-${(order.refundHistory?.length || 0) + 1}`,
+        amount: refundAmount,
+        reason: dto?.reason || order.refundReason || 'Hoàn tiền cho khách',
+        refundTransactionRef: dto.refundTransactionRef.trim(),
+        refundedAt: new Date(),
+        actor: new Types.ObjectId(actor._id),
+        actorName,
+        idempotencyKey: dto?.idempotencyKey?.trim(),
+      };
+
+      const lockedOrder = await this.orderModel
+        .findOneAndUpdate(
+          {
+            _id: new Types.ObjectId(id),
+            orderStatus: order.orderStatus,
+            refundStatus: {
+              $in: [
+                RefundStatus.NONE,
+                RefundStatus.REQUESTED,
+                RefundStatus.MANUAL_REQUIRED,
+                RefundStatus.PARTIAL,
+                RefundStatus.FAILED,
+              ],
+            },
+          },
+          {
+            $set: {
+              refundStatus: targetRefundStatus,
+              totalRefundedAmount: newTotalRefunded,
+              refundAmount: newTotalRefunded,
+              refundReason:
+                dto?.reason || order.refundReason || 'Hoàn tiền thành công',
+              refundTransactionRef: dto.refundTransactionRef.trim(),
+              refundActor: new Types.ObjectId(actor._id),
+              refundActorName: actorName,
+              refundedAt: new Date(),
+              ...(isFullRefund
+                ? { paymentStatus: PaymentStatus.REFUNDED }
+                : {}),
+            },
+            $push: {
+              refundHistory: refundRecord,
+              timeline: {
+                status: order.orderStatus,
+                note: `[HOÀN TIỀN THÀNH CÔNG] Đã hoàn ${refundAmount.toLocaleString('vi-VN')}đ (Lũy kế: ${newTotalRefunded.toLocaleString('vi-VN')}đ/${order.total.toLocaleString('vi-VN')}đ). Mã GD chi: ${dto.refundTransactionRef.trim()}. Người duyệt: ${actorName}.`,
+                createdAt: new Date(),
+              },
+            },
+          },
+          { returnDocument: 'after' },
+        )
+        .exec();
+
+      if (!lockedOrder) {
+        throw new ConflictException(
+          'Giao dịch hoàn tiền đang được xử lý bởi tiến trình khác hoặc đã hoàn tất',
+        );
+      }
+
+      return lockedOrder;
+    }
+
     if (order.refundStatus === RefundStatus.MANUAL_REQUIRED) {
       if (refundAmount !== order.refundAmount) {
         throw new ConflictException(
@@ -836,6 +957,30 @@ export class OrderLifecycleService {
     }
 
     return lockedOrder;
+  }
+
+  async confirmRefund(
+    id: string,
+    actor: {
+      _id: string;
+      role?: string;
+      permissions?: string[];
+      name?: string;
+      fullName?: string;
+    },
+    dto: {
+      refundTransactionRef: string;
+      amount?: number;
+      reason?: string;
+      idempotencyKey?: string;
+    },
+  ): Promise<OrderDocument> {
+    if (!dto?.refundTransactionRef || !dto.refundTransactionRef.trim()) {
+      throw new BadRequestException(
+        'Mã giao dịch chi hoàn (refundTransactionRef) là bắt buộc',
+      );
+    }
+    return this.processRefund(id, actor, dto);
   }
 
   /**

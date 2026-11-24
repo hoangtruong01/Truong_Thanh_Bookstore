@@ -456,10 +456,40 @@ export class OrdersService {
 
   async processRefund(
     id: string,
-    actor: { _id: string; role?: string; permissions?: string[] },
-    dto?: { reason?: string; amount?: number },
+    actor: {
+      _id: string;
+      role?: string;
+      permissions?: string[];
+      name?: string;
+      fullName?: string;
+    },
+    dto?: {
+      reason?: string;
+      amount?: number;
+      refundTransactionRef?: string;
+      idempotencyKey?: string;
+    },
   ): Promise<OrderDocument> {
     return this.orderLifecycleService.processRefund(id, actor, dto);
+  }
+
+  async confirmRefund(
+    id: string,
+    actor: {
+      _id: string;
+      role?: string;
+      permissions?: string[];
+      name?: string;
+      fullName?: string;
+    },
+    dto: {
+      refundTransactionRef: string;
+      amount?: number;
+      reason?: string;
+      idempotencyKey?: string;
+    },
+  ): Promise<OrderDocument> {
+    return this.orderLifecycleService.confirmRefund(id, actor, dto);
   }
 
   // --- Auto-Cancel Operations (BE-06 & BE-05) ---

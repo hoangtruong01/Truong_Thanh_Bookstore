@@ -352,6 +352,29 @@ export class OrdersController {
     );
   }
 
+  @Post(':id/refund/confirm')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(StaffPermission.MANAGE_ORDERS)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Xác nhận hoàn tất hoàn tiền với mã giao dịch chi hoàn từ ngân hàng/sổ quỹ (Admin/Staff)',
+  })
+  confirmRefund(
+    @Param('id') id: string,
+    @Body() dto: ProcessRefundDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.ordersService.confirmRefund(
+      id,
+      {
+        ...req.user,
+        _id: req.user._id.toString(),
+      },
+      dto as any,
+    );
+  }
+
   @Post(':id/cancel')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()

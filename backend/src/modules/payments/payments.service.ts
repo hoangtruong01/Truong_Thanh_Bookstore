@@ -81,10 +81,15 @@ export class PaymentsService {
     status: PaymentStatus,
     paidAt?: Date,
     session?: ClientSession,
+    transactionId?: string,
   ): Promise<void> {
     const update: Record<string, unknown> = { paymentStatus: status };
     if (status === PaymentStatus.PAID) {
       update.revenueRecognizedAt = paidAt || new Date();
+      update.paidAt = paidAt || new Date();
+      if (transactionId) {
+        update.paymentTransactionId = transactionId;
+      }
     }
     // BE-02: Never rollback an already PAID order to UNPAID/FAILED/PENDING
     const orderFilter: Record<string, unknown> = {
@@ -381,6 +386,8 @@ export class PaymentsService {
           payment.order,
           payment.status,
           payment.paidAt,
+          undefined,
+          effectiveTransactionId,
         );
         return payment;
       }
@@ -429,18 +436,19 @@ export class PaymentsService {
     }
 
     // 5. BE-02: Expiration and Terminal Order State Check with Reconciliation
-    const isExpired = payment.expiresAt && payment.expiresAt < new Date();
+    const isExpired = Boolean(
+      payment.expiresAt && payment.expiresAt < new Date(),
+    );
+    const order = await this.orderModel.findById?.(payment.order)?.exec?.();
+    const isOrderTerminal =
+      order &&
+      [
+        OrderStatus.CANCELLED,
+        OrderStatus.RETURNED,
+        OrderStatus.COMPLETED,
+      ].includes(order.orderStatus);
 
-    if (isExpired) {
-      const order = await this.orderModel.findById?.(payment.order)?.exec?.();
-      const isOrderTerminal =
-        order &&
-        [
-          OrderStatus.CANCELLED,
-          OrderStatus.RETURNED,
-          OrderStatus.COMPLETED,
-        ].includes(order.orderStatus);
-
+    if (isExpired || isOrderTerminal) {
       if (result.success) {
         // Customer was charged money, but payment is expired or order is cancelled.
         // Record payment as PAID with MANUAL_REQUIRED refund for financial reconciliation.
@@ -461,6 +469,8 @@ export class PaymentsService {
               {
                 $set: {
                   paymentStatus: PaymentStatus.PAID,
+                  paymentTransactionId: effectiveTransactionId,
+                  paidAt: new Date(),
                   refundStatus: RefundStatus.MANUAL_REQUIRED,
                   refundReason: payment.failureReason,
                   revenueRecognizedAt: new Date(),
@@ -483,13 +493,17 @@ export class PaymentsService {
         return payment;
       } else {
         payment.status = PaymentStatus.FAILED;
-        payment.failureReason =
-          'Callback thất bại đến sau khi phiên thanh toán hết hạn';
+        payment.failureReason = isOrderTerminal
+          ? `Callback thất bại cho đơn hàng đã ở trạng thái ${order?.orderStatus}`
+          : 'Callback thất bại đến sau khi phiên thanh toán hết hạn';
         await payment.save();
         this.logger.warn(
-          `[CID: ${correlationId}] Callback đến sau khi phiên thanh toán ${payment._id?.toString?.() ?? String(payment._id ?? 'none')} đã hết hạn`,
+          `[CID: ${correlationId}] Callback đến sau khi phiên thanh toán ${payment._id?.toString?.() ?? String(payment._id ?? 'none')} đã hết hạn hoặc đơn đã đóng`,
         );
-        throw new BadRequestException('Phiên thanh toán đã hết hạn');
+        if (isExpired) {
+          throw new BadRequestException('Phiên thanh toán đã hết hạn');
+        }
+        return payment;
       }
     }
 
@@ -556,6 +570,8 @@ export class PaymentsService {
             processed.order,
             processed.status,
             processed.paidAt,
+            undefined,
+            effectiveTransactionId,
           );
           return processed;
         }
@@ -567,6 +583,7 @@ export class PaymentsService {
         result.status,
         updated.paidAt,
         useTransaction && session ? session : undefined,
+        effectiveTransactionId,
       );
 
       if (useTransaction && session) {
