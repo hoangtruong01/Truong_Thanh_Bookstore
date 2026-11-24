@@ -86,6 +86,10 @@ export class EnvironmentVariables {
   @IsOptional()
   REDIS_URL?: string;
 
+  @IsString()
+  @IsOptional()
+  ALLOW_IN_MEMORY_REDIS_FALLBACK?: string;
+
   @IsString({ message: 'JWT_SECRET phải là một chuỗi ký tự hợp lệ' })
   @IsNotEmpty({
     message: 'JWT_SECRET là biến môi trường bắt buộc (không được để trống)',
@@ -482,18 +486,31 @@ export function validateEnv(
     }
 
     const rawRedisUrl = config.REDIS_URL;
-    if (typeof rawRedisUrl !== 'string' || !rawRedisUrl.trim()) {
-      throw new Error(
-        'REDIS_URL is required in production for distributed throttling and token revocation',
-      );
-    }
-    try {
-      const redisUrl = new URL(rawRedisUrl);
-      if (!['redis:', 'rediss:'].includes(redisUrl.protocol)) {
-        throw new Error('invalid protocol');
+    const rawFallback =
+      typeof config.ALLOW_IN_MEMORY_REDIS_FALLBACK === 'string'
+        ? config.ALLOW_IN_MEMORY_REDIS_FALLBACK
+        : typeof process.env.ALLOW_IN_MEMORY_REDIS_FALLBACK === 'string'
+          ? process.env.ALLOW_IN_MEMORY_REDIS_FALLBACK
+          : '';
+    const allowInMemoryFallback = rawFallback.trim().toLowerCase() === 'true';
+
+    if (!allowInMemoryFallback) {
+      if (typeof rawRedisUrl !== 'string' || !rawRedisUrl.trim()) {
+        throw new Error(
+          'REDIS_URL is required in production for distributed throttling and token revocation (or set ALLOW_IN_MEMORY_REDIS_FALLBACK=true for single-instance deployments)',
+        );
       }
-    } catch {
-      throw new Error('REDIS_URL must be a valid redis:// or rediss:// URL');
+    }
+
+    if (typeof rawRedisUrl === 'string' && rawRedisUrl.trim()) {
+      try {
+        const redisUrl = new URL(rawRedisUrl);
+        if (!['redis:', 'rediss:'].includes(redisUrl.protocol)) {
+          throw new Error('invalid protocol');
+        }
+      } catch {
+        throw new Error('REDIS_URL must be a valid redis:// or rediss:// URL');
+      }
     }
 
     const frontendUrls = validatedConfig.FRONTEND_URL.split(',').map((url) =>

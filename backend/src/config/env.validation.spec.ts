@@ -300,6 +300,15 @@ describe('Environment Configuration Validation (env.validation.ts)', () => {
       ).toThrow(/redis:\/\/ or rediss:\/\//);
     });
 
+    it('allows omitting REDIS_URL in production when ALLOW_IN_MEMORY_REDIS_FALLBACK=true', () => {
+      const result = validateEnv({
+        ...validProductionConfig,
+        REDIS_URL: undefined,
+        ALLOW_IN_MEMORY_REDIS_FALLBACK: 'true',
+      });
+      expect(result.ALLOW_IN_MEMORY_REDIS_FALLBACK).toBe('true');
+    });
+
     it('ENV-P1-07: should enforce strict production rules when cloud hosted (RENDER or VERCEL) even if NODE_ENV is development', () => {
       expect(() =>
         validateEnv({

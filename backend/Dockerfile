@@ -31,6 +31,7 @@ RUN apk add --no-cache \
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV ALLOW_IN_MEMORY_REDIS_FALLBACK=true
 
 # Install only production dependencies
 COPY package*.json ./

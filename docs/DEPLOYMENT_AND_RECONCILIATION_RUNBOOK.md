@@ -25,7 +25,7 @@ Kiểm tra trực tiếp qua công cụ `scripts/verify-release-parity.mjs` trê
 ### 2.1. Chuỗi sự kiện gây lỗi
 1. **Validation môi trường nghiêm ngặt (Strict Production Validation):**
    Từ commit `231b1b4`, file `backend/src/config/env.validation.ts` bổ sung cơ chế kiểm soát an toàn môi trường production. Khi chạy trên Render (`process.env.RENDER === 'true'`), NestJS bắt buộc phải có:
-   - `REDIS_URL` hợp lệ (`redis://` hoặc `rediss://`).
+   - `REDIS_URL` hợp lệ (`redis://` hoặc `rediss://`) HOẶC `ALLOW_IN_MEMORY_REDIS_FALLBACK=true` (cho single-instance deployment/Render, đã cấu hình mặc định trong Dockerfile).
    - `COOKIE_SECURE=true`.
    - `AUTO_SEED=false` và `RESET_DATABASE_ON_SEED=false`.
    - 3 secret JWT riêng biệt, tối thiểu 32 ký tự: `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_RESET_SECRET`.
@@ -100,7 +100,8 @@ Truy cập **Render.com** $\rightarrow$ Chọn Service Backend $\rightarrow$ **E
 | Biến môi trường | Giá trị yêu cầu | Ý nghĩa / Lý do bắt buộc |
 |---|---|---|
 | `NODE_ENV` | `production` | Bật chế độ production |
-| `REDIS_URL` | `rediss://...` hoặc `redis://...` | Dùng cho distributed rate-limiting và thu hồi token (Upstash Redis hoặc Redis Cloud miễn phí) |
+| `REDIS_URL` | `rediss://...` hoặc `redis://...` | Dùng cho distributed rate-limiting và thu hồi token (Upstash Redis hoặc Redis Cloud miễn phí). Nếu chưa có Redis, Dockerfile tự động bật `ALLOW_IN_MEMORY_REDIS_FALLBACK=true` để chạy fallback in-memory an toàn trên single-instance Render. |
+| `ALLOW_IN_MEMORY_REDIS_FALLBACK` | `true` | Cho phép chạy in-memory rate-limiter mà không cần Redis ngoài (mặc định đã bật trong Dockerfile) |
 | `COOKIE_SECURE` | `true` | Bắt buộc truyền cookie qua HTTPS |
 | `AUTO_SEED` | `false` | Ngăn tự động seed dữ liệu mẫu đè lên DB thật |
 | `RESET_DATABASE_ON_SEED` | `false` | Ngăn xóa trắng DB khi deploy |
