@@ -28,7 +28,19 @@ test.describe('Kịch bản 1: Browser Auth Lifecycle', () => {
     await page.route('**/api/notifications/**', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
     });
+    await page.route('**/api/marketing/**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+    });
+    await page.route('**/api/reports/**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+    });
     await page.route('**/api/promotions/**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+    });
+    await page.route('**/api/orders/**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+    });
+    await page.route('**/api/addresses/**', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
     });
 
@@ -132,11 +144,11 @@ test.describe('Kịch bản 1: Browser Auth Lifecycle', () => {
     // 5. Logout through the real UI/store and verify the protected-route guard.
     const accountName = page.getByText('Người Dùng Mới', { exact: true });
     await expect(accountName).toBeVisible();
-    const toastClose = page.getByRole('button', { name: 'close' }).first();
-    if (await toastClose.isVisible()) {
-      await toastClose.click();
-    }
-    await accountName.hover();
+    // Dismiss any active toast notifications so they don't intercept top-right header interactions
+    await page.evaluate(() => {
+      document.querySelectorAll('.Vue-Toastification__container').forEach((el) => el.remove());
+    });
+    await accountName.hover({ force: true });
     await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
     await expect(page).toHaveURL(/\/login/);
     expect(await page.evaluate(() => localStorage.getItem('user'))).toBeNull();
