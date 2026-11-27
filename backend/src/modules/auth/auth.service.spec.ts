@@ -3,6 +3,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   UnauthorizedException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -14,8 +16,10 @@ import { UsersService } from '../users/users.service';
 import { CloudinaryService } from '../users/cloudinary.service';
 import { EmailService } from '../email/email.service';
 import { TokenBlacklistService } from './token-blacklist.service';
+import { AccountLockoutService } from './account-lockout.service';
 import { User } from '../users/schemas/user.schema';
 import { UserRole, LoyaltyTier } from '../../common/enums';
+import { ErrorCode } from '../../common/enums/error-code.enum';
 
 interface MockUser extends Omit<Partial<User>, 'refreshTokenHash' | 'email'> {
   _id: string;
@@ -56,6 +60,14 @@ type MockedConfigService = {
   getOrThrow: jest.Mock;
 };
 
+type MockedAccountLockoutService = {
+  checkLockout: jest.Mock;
+  recordFailure: jest.Mock;
+  recordSuccess: jest.Mock;
+  reset: jest.Mock;
+  isLocked: jest.Mock;
+};
+
 describe('AuthService (auth.service.spec.ts)', () => {
   let authService: AuthService;
   let usersService: MockedUsersService;
@@ -64,6 +76,7 @@ describe('AuthService (auth.service.spec.ts)', () => {
   let cloudinaryService: MockedCloudinaryService;
   let tokenBlacklistService: TokenBlacklistService;
   let configService: MockedConfigService;
+  let accountLockoutService: MockedAccountLockoutService;
 
   const mockUser: MockUser = {
     _id: '507f1f77bcf86cd799439011',
@@ -126,6 +139,14 @@ describe('AuthService (auth.service.spec.ts)', () => {
       }),
     };
 
+    accountLockoutService = {
+      checkLockout: jest.fn().mockReturnValue(undefined),
+      recordFailure: jest.fn().mockResolvedValue({ isLocked: false, remainingSeconds: 0, attempts: 1 }),
+      recordSuccess: jest.fn().mockResolvedValue(undefined),
+      reset: jest.fn().mockResolvedValue(undefined),
+      isLocked: jest.fn().mockResolvedValue({ isLocked: false, remainingSeconds: 0, attempts: 0 }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -135,6 +156,7 @@ describe('AuthService (auth.service.spec.ts)', () => {
         { provide: EmailService, useValue: emailService },
         { provide: CloudinaryService, useValue: cloudinaryService },
         { provide: ConfigService, useValue: configService },
+        { provide: AccountLockoutService, useValue: accountLockoutService },
       ],
     }).compile();
 
@@ -998,6 +1020,76 @@ describe('AuthService (auth.service.spec.ts)', () => {
 
       const result = await authService.verifyOtp(mockUser.email, rawOtp);
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe('Account Lockout Throttler (SEC-044)', () => {
+    it('throws 429 when accountLockoutService throws on checkLockout', async () => {
+      accountLockoutService.checkLockout.mockImplementation(() => {
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.TOO_MANY_REQUESTS,
+            message: 'Tài khoản tạm thời bị khóa do nhập sai nhiều lần.',
+            error: 'Too Many Requests',
+            errorCode: ErrorCode.ERR_ACCOUNT_TEMPORARILY_LOCKED,
+            retryAfter: 600,
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      });
+
+      await expect(
+        authService.login({ email: mockUser.email, password: 'AnyPassword' }),
+      ).rejects.toThrow('Tài khoản tạm thời bị khóa');
+
+      expect(usersService.findByEmail).not.toHaveBeenCalled();
+    });
+
+    it('records failure in accountLockoutService when user does not exist (anti-enumeration)', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+
+      await expect(
+        authService.login({ email: 'unknown@truongthanh.vn', password: 'Password@123' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(accountLockoutService.recordFailure).toHaveBeenCalledWith('unknown@truongthanh.vn');
+    });
+
+    it('records failure in accountLockoutService when password is incorrect', async () => {
+      usersService.findByEmail.mockResolvedValue(mockUser);
+
+      await expect(
+        authService.login({ email: mockUser.email, password: 'WrongPassword' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(accountLockoutService.recordFailure).toHaveBeenCalledWith(mockUser.email);
+    });
+
+    it('records success in accountLockoutService when login succeeds', async () => {
+      usersService.findByEmail.mockResolvedValue(mockUser);
+      jest.spyOn(bcrypt, 'compare').mockImplementation(async () => true);
+
+      const result = await authService.login({
+        email: mockUser.email,
+        password: 'ValidPassword@123',
+      });
+
+      expect(result).toBeDefined();
+      expect(accountLockoutService.recordSuccess).toHaveBeenCalledWith(mockUser.email);
+    });
+
+    it('checks lockout on forgotPassword and records failure on invalid verifyOtp', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+
+      // forgotPassword checks lockout
+      await authService.forgotPassword('nonexistent@truongthanh.vn');
+      expect(accountLockoutService.checkLockout).toHaveBeenCalledWith('nonexistent@truongthanh.vn');
+
+      // verifyOtp on non-existent email records failure and throws
+      await expect(
+        authService.verifyOtp('nonexistent@truongthanh.vn', '123456'),
+      ).rejects.toThrow('Mã OTP không hợp lệ hoặc đã hết hạn');
+      expect(accountLockoutService.recordFailure).toHaveBeenCalledWith('nonexistent@truongthanh.vn');
     });
   });
 });

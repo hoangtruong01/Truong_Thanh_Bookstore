@@ -344,6 +344,31 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   GHN_SHOP_ID?: string;
+
+  @Type(() => Number)
+  @IsInt({ message: 'AUTH_LOCKOUT_MAX_ATTEMPTS phải là số nguyên' })
+  @Min(1, { message: 'AUTH_LOCKOUT_MAX_ATTEMPTS tối thiểu là 1' })
+  @Max(100, { message: 'AUTH_LOCKOUT_MAX_ATTEMPTS tối đa là 100' })
+  @IsOptional()
+  AUTH_LOCKOUT_MAX_ATTEMPTS?: number = 10;
+
+  @Type(() => Number)
+  @IsInt({ message: 'AUTH_LOCKOUT_DURATION_SECONDS phải là số nguyên' })
+  @Min(1, { message: 'AUTH_LOCKOUT_DURATION_SECONDS tối thiểu là 1 giây' })
+  @Max(86400, {
+    message: 'AUTH_LOCKOUT_DURATION_SECONDS tối đa là 86400 giây (24h)',
+  })
+  @IsOptional()
+  AUTH_LOCKOUT_DURATION_SECONDS?: number = 900;
+
+  @Type(() => Number)
+  @IsInt({ message: 'AUTH_LOCKOUT_WINDOW_SECONDS phải là số nguyên' })
+  @Min(1, { message: 'AUTH_LOCKOUT_WINDOW_SECONDS tối thiểu là 1 giây' })
+  @Max(86400, {
+    message: 'AUTH_LOCKOUT_WINDOW_SECONDS tối đa là 86400 giây (24h)',
+  })
+  @IsOptional()
+  AUTH_LOCKOUT_WINDOW_SECONDS?: number = 900;
 }
 
 /**

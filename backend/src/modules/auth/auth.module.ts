@@ -7,6 +7,8 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { TokenBlacklistService } from './token-blacklist.service';
+import { AccountLockoutService } from './account-lockout.service';
+import { AccountLockoutGuard } from './account-lockout.guard';
 
 @Module({
   imports: [
@@ -25,7 +27,19 @@ import { TokenBlacklistService } from './token-blacklist.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, TokenBlacklistService],
-  exports: [AuthService, JwtModule, TokenBlacklistService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    TokenBlacklistService,
+    AccountLockoutService,
+    AccountLockoutGuard,
+  ],
+  exports: [
+    AuthService,
+    JwtModule,
+    TokenBlacklistService,
+    AccountLockoutService,
+    AccountLockoutGuard,
+  ],
 })
 export class AuthModule {}

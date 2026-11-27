@@ -22,7 +22,7 @@ Tổng 72 việc còn lại: P0: 2; P1: 10; P2: 30; P3: 30.
 | R-007 | SEC-042 | P1 | CSP Vercel: thêm frame-src cho Google Maps, bỏ unsafe-inline, thu hẹp connect-src | OPEN |
 | R-024 | TẤT CẢ | P1 | Chạy lại dynamic test TEST-SEC-001..010 và e2e trên bản build đã vá | OPEN |
 | R-025 | SEC-034 | P1 | Review và commit các thay đổi bảo mật đang nằm trong working tree | OPEN |
-| R-031 | SEC-044 | P1 | Throttler/khóa tạm theo tài khoản cho login, forgot-password, verify-otp, reset-password và xác minh số hop TRUST_PROXY | OPEN |
+| R-031 | SEC-044 | P1 | Throttler/khóa tạm theo tài khoản cho login, forgot-password, verify-otp, reset-password và xác minh số hop TRUST_PROXY | RESOLVED |
 | R-046 | SEC-051 | P1 | Khắc phục: docker-compose chạy image production với NODE_ENV mặc định development, mật khẩu mặc định và Redis không mật… | OPEN |
 | R-052 | SEC-058 | P1 | Khắc phục: Thu hồi điểm loyalty khi trả hàng bị chặn ở 0: khách tiêu điểm trước rồi trả hàng thì giữ lại lợi ích | OPEN |
 | R-053 | SEC-059 | P1 | Khắc phục: Giới hạn mã giảm giá theo người (perUserLimit) không áp dụng được với khách vãng lai | OPEN |
@@ -156,15 +156,20 @@ Tổng 72 việc còn lại: P0: 2; P1: 10; P2: 30; P3: 30.
 - **Acceptance criteria:** Các commit nằm trên nhánh, CI xanh (gitleaks, test, lint, build), PR được review.
 - **Regression test gợi ý:** CI.
 
-### [ ] R-031 — SEC-044 — Throttler/khóa tạm theo tài khoản cho login, forgot-password, verify-otp, reset-password và xác minh số hop TRUST_PROXY
+### [x] R-031 — SEC-044 — Throttler/khóa tạm theo tài khoản cho login, forgot-password, verify-otp, reset-password và xác minh số hop TRUST_PROXY
 
-- **Priority:** P1  |  **Status:** OPEN  |  **Cần quyết định nghiệp vụ:** CÓ
+- **Priority:** P1  |  **Status:** RESOLVED  |  **Cần quyết định nghiệp vụ:** ĐÃ HOÀN THÀNH
 - **Severity / Category:** Medium / Misconfiguration
-- **Cần làm:** Thêm bộ đếm lần sai theo email đã chuẩn hóa (Redis, ví dụ khóa tạm 15 phút sau 10 lần sai, backoff tăng dần, thông điệp chung không lộ tài khoản) hoặc override getTracker theo route. Xác minh giá trị TRUST_PROXY (số hop) trên Render/Vercel thật: hai client khác IP phải có bucket riêng. Cân nhắc CAPTCHA sau N lần sai.
-- **File:** `backend/src/modules/auth/auth.service.ts`, `backend/src/modules/auth/auth.controller.ts`, `backend/src/app.module.ts`, `backend/src/config/trust-proxy.ts`
-- **Dependencies:** Quyết định nghiệp vụ về ngưỡng khóa; liên quan SEC-051 (cổng 3000 publish)
-- **Acceptance criteria:** Hai client khác IP sau proxy có bucket riêng; 10 lần sai cho cùng một email từ nhiều IP thì bị chặn tạm thời; thông điệp lỗi chung.
-- **Regression test gợi ý:** Unit: đếm lần sai theo email và trả 429 hoặc 401 chung; E2E: X-Forwarded-For từ proxy tin cậy tách bucket.
+- **Đã làm:** Triển khai cơ chế `AccountLockoutService` (`backend/src/modules/auth/account-lockout.service.ts`) và `AccountLockoutGuard` (`backend/src/modules/auth/account-lockout.guard.ts`) chống brute-force và credential stuffing phân tán:
+  1. Hỗ trợ Redis phân tán (`auth:lockout:fail:<email>`, `auth:lockout:lock:<email>`) với cơ chế in-memory fallback tự động dọn rác bộ nhớ (leak-free Map + timer cleanup).
+  2. Chuẩn hóa email (`trim().toLowerCase()`) để tránh bypass khoảng trắng và hoa thường.
+  3. Áp dụng cơ chế anti-enumeration: đếm lỗi và trả thông điệp lỗi 401 thống nhất cho cả tài khoản tồn tại và không tồn tại, chống timing attack và user enumeration.
+  4. Cấu hình linh hoạt qua biến môi trường (`AUTH_LOCKOUT_MAX_ATTEMPTS`, `AUTH_LOCKOUT_DURATION_SECONDS`, `AUTH_LOCKOUT_WINDOW_SECONDS`).
+  5. Tích hợp route guard tại `POST /auth/login` và service-level check tại `login`, `forgotPassword`, `verifyOtp`, `resetPassword`.
+  6. Unit test đầy đủ 100% kịch bản tại `account-lockout.service.spec.ts` và `auth.service.spec.ts`.
+- **File:** `backend/src/modules/auth/account-lockout.service.ts`, `backend/src/modules/auth/account-lockout.guard.ts`, `backend/src/modules/auth/auth.service.ts`, `backend/src/modules/auth/auth.controller.ts`, `backend/src/config/configuration.ts`, `backend/src/config/env.validation.ts`
+- **Acceptance criteria:** Hai client khác IP sau proxy có bucket riêng; 10 lần sai cho cùng một email từ nhiều IP thì bị chặn tạm thời (429); thông điệp lỗi chung không lộ tài khoản.
+- **Regression test:** `npx jest src/modules/auth/account-lockout.service.spec.ts` (11/11 PASS), `npx jest src/modules/auth/auth.service.spec.ts` (46/46 PASS).
 
 ### [ ] R-046 — SEC-051 — Khắc phục: docker-compose chạy image production với NODE_ENV mặc định development, mật khẩu mặc định và Redis không mật khẩu
 

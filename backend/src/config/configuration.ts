@@ -18,6 +18,17 @@ export default () => ({
   singleWarehouseMode:
     process.env.SINGLE_WAREHOUSE_MODE === 'true' ||
     process.env.SINGLE_WAREHOUSE_MODE === '1',
+  authLockout: {
+    maxAttempts: parseInt(process.env.AUTH_LOCKOUT_MAX_ATTEMPTS || '10', 10),
+    durationSeconds: parseInt(
+      process.env.AUTH_LOCKOUT_DURATION_SECONDS || '900',
+      10,
+    ),
+    windowSeconds: parseInt(
+      process.env.AUTH_LOCKOUT_WINDOW_SECONDS || '900',
+      10,
+    ),
+  },
   cookie: {
     sameSite: process.env.COOKIE_SAME_SITE || 'lax',
     secure:

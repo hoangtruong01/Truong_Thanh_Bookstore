@@ -32,6 +32,8 @@ import {
   RefreshTokenDto,
 } from './dto/auth.dto';
 
+import { AccountLockoutGuard } from './account-lockout.guard';
+
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -159,6 +161,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @UseGuards(AccountLockoutGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Login with email and password' })
   @ApiResponse({ status: 200, description: 'User logged in successfully' })

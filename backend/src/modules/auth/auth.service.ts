@@ -31,6 +31,7 @@ import { CloudinaryService } from '../users/cloudinary.service';
 import { EmailService } from '../email/email.service';
 import { UserDocument } from '../users/schemas/user.schema';
 import { TokenBlacklistService } from './token-blacklist.service';
+import { AccountLockoutService } from './account-lockout.service';
 import { SecurityAuditService } from '../../common/audit/security-audit.service';
 
 // SEC-005: trần an toàn (giây) cho TTL ghi blacklist. exp đã được verify chữ ký nên
@@ -59,6 +60,8 @@ export class AuthService implements OnModuleInit {
     private configService: ConfigService,
     @Optional()
     private securityAuditService?: SecurityAuditService,
+    @Optional()
+    private accountLockoutService?: AccountLockoutService,
   ) {}
 
   private hashToken(token: string): string {
@@ -312,8 +315,11 @@ export class AuthService implements OnModuleInit {
   }
 
   async login(loginDto: LoginDto) {
+    await this.accountLockoutService?.checkLockout(loginDto.email);
+
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
+      await this.accountLockoutService?.recordFailure(loginDto.email);
       this.securityAuditService?.logAuthFailure({
         email: loginDto.email,
         reason: 'USER_NOT_FOUND',
@@ -333,12 +339,15 @@ export class AuthService implements OnModuleInit {
       user.password,
     );
     if (!isPasswordValid) {
+      await this.accountLockoutService?.recordFailure(loginDto.email);
       this.securityAuditService?.logAuthFailure({
         email: loginDto.email,
         reason: 'INVALID_PASSWORD',
       });
       throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
     }
+
+    await this.accountLockoutService?.recordSuccess(loginDto.email);
 
     const tokens = await this.generateTokens(user);
     return {
@@ -632,6 +641,8 @@ export class AuthService implements OnModuleInit {
   }
 
   async forgotPassword(email: string) {
+    await this.accountLockoutService?.checkLockout(email);
+
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       // Anti-enumeration: Do not disclose email existence
@@ -666,8 +677,11 @@ export class AuthService implements OnModuleInit {
   }
 
   async verifyOtp(email: string, otp: string) {
+    await this.accountLockoutService?.checkLockout(email);
+
     const user = await this.usersService.findByEmail(email);
     if (!user || !user.resetOtp) {
+      await this.accountLockoutService?.recordFailure(email);
       throw new UnauthorizedException(INVALID_OTP_MESSAGE);
     }
 
@@ -684,11 +698,14 @@ export class AuthService implements OnModuleInit {
     }
 
     if (!this.isOtpHashValid(user.resetOtp, otp)) {
+      await this.accountLockoutService?.recordFailure(email);
       if (attemptsUsed >= MAX_OTP_ATTEMPTS) {
         await this.clearOtp(user);
       }
       throw new UnauthorizedException(INVALID_OTP_MESSAGE);
     }
+
+    await this.accountLockoutService?.recordSuccess(email);
 
     const resetToken = this.jwtService.sign(
       {
@@ -705,6 +722,8 @@ export class AuthService implements OnModuleInit {
   }
 
   async resetPassword(dto: ResetPasswordDto) {
+    await this.accountLockoutService?.checkLockout(dto.email);
+
     const { email, otp, resetToken, newPassword } = dto;
     const user = await this.usersService.findByEmail(email);
     if (!user) {
@@ -774,6 +793,8 @@ export class AuthService implements OnModuleInit {
       userId: user._id.toString(),
       email: user.email,
     });
+
+    await this.accountLockoutService?.recordSuccess(dto.email);
 
     return { success: true, message: 'Đặt lại mật khẩu thành công' };
   }
