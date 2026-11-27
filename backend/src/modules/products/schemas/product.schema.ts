@@ -75,6 +75,24 @@ export class Product {
   @Prop({ default: 'BOOK' })
   productType: string;
 
+  // B2B & Combo Bundles (OPT-02)
+  @Prop({ default: false })
+  isCombo: boolean;
+
+  @Prop({
+    type: [
+      {
+        product: { type: SchemaTypes.ObjectId, ref: 'Product', required: true },
+        quantity: { type: Number, required: true, min: 1, default: 1 },
+      },
+    ],
+    default: [],
+  })
+  bundleItems: Array<{
+    product: Types.ObjectId;
+    quantity: number;
+  }>;
+
   // Thuộc tính chuyên sâu cho ngành Sách (TT-028)
   @Prop()
   pages: number;

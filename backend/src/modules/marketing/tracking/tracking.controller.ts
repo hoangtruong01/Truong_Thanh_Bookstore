@@ -50,4 +50,33 @@ export class TrackingController {
   ) {
     return this.trackingService.getSummary({ campaign, startDate, endDate });
   }
+
+  @Get('funnel')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Phễu chuyển đổi & Đối soát Doanh thu Đặt vs Thực thu (TRK-03)',
+  })
+  async getConversionFunnel(
+    @Query('campaign') campaign?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.trackingService.getConversionFunnel({ campaign, startDate, endDate });
+  }
+
+  @Get('dashboard')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Báo cáo tổng hợp Marketing Analytics & Kênh lưu lượng (MKT-03)',
+  })
+  async getDashboard(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.trackingService.getDashboardOverview({ startDate, endDate });
+  }
 }

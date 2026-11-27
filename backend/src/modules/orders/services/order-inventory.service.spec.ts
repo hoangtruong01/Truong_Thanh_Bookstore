@@ -164,4 +164,36 @@ describe('OrderInventoryService — Multi-line Invariants & Defective Quarantine
       );
     });
   });
+
+  describe('OPT-02 Invariant: B2B Combo Bundles Inventory Integrity', () => {
+    it('deducts inventory of all component products when ordering a combo bundle', async () => {
+      const comboProduct = {
+        _id: 'combo_1',
+        name: 'Combo Học Tập Lớp 1',
+        isCombo: true,
+        bundleItems: [
+          { product: 'comp_pen', quantity: 2 },
+          { product: 'comp_ruler', quantity: 1 },
+        ],
+      };
+
+      mockProductsService.findById = jest.fn().mockImplementation((id: string) => {
+        if (id === 'combo_1') return Promise.resolve(comboProduct);
+        return Promise.resolve(null);
+      });
+      mockProductsService.deductStock.mockResolvedValue(undefined);
+      mockProductsService.incrementSold.mockResolvedValue(undefined);
+
+      const items = [{ product: 'combo_1', quantity: 3 }];
+      const deducted = await service.deductOrderStock(items, undefined, 'ORD-COMBO-01');
+
+      expect(deducted).toHaveLength(1);
+      // Component pen: 2 per combo * 3 combos = 6
+      expect(mockProductsService.deductStock).toHaveBeenCalledWith('comp_pen', 6);
+      // Component ruler: 1 per combo * 3 combos = 3
+      expect(mockProductsService.deductStock).toHaveBeenCalledWith('comp_ruler', 3);
+      // Sold count for combo itself
+      expect(mockProductsService.incrementSold).toHaveBeenCalledWith('combo_1', 3);
+    });
+  });
 });

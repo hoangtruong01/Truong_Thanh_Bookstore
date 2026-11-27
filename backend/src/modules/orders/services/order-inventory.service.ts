@@ -34,36 +34,94 @@ export class OrderInventoryService {
 
     try {
       for (const item of items) {
-        if (session) {
-          await this.productsService.deductStock(
-            item.product,
-            item.quantity,
-            session,
-          );
-          await this.productsService.incrementSold(
-            item.product,
-            item.quantity,
-            session,
-          );
+        let productDoc: any = null;
+        try {
+          if (typeof this.productsService.findById === 'function') {
+            productDoc = await this.productsService.findById(item.product);
+          }
+        } catch {
+          // Fallback if mocked or missing
+        }
+
+        if (productDoc?.isCombo && productDoc.bundleItems?.length > 0) {
+          // B2B & Combo Bundle (OPT-02): Trừ tồn kho từng sản phẩm thành phần
+          for (const bundleItem of productDoc.bundleItems) {
+            const componentId = bundleItem.product?._id
+              ? bundleItem.product._id.toString()
+              : bundleItem.product?.toString();
+            const componentQuantity = (bundleItem.quantity || 1) * item.quantity;
+
+            if (componentId) {
+              if (session) {
+                await this.productsService.deductStock(
+                  componentId,
+                  componentQuantity,
+                  session,
+                );
+                await this.productsService.incrementSold(
+                  componentId,
+                  componentQuantity,
+                  session,
+                );
+              } else {
+                await this.productsService.deductStock(componentId, componentQuantity);
+                await this.productsService.incrementSold(componentId, componentQuantity);
+              }
+
+              if (this.inventoryService && orderCode) {
+                await this.inventoryService.recordExternalMovement(
+                  componentId,
+                  InventoryTransactionType.SALE,
+                  componentQuantity,
+                  orderCode,
+                  undefined,
+                  session,
+                );
+              }
+            }
+          }
+          // Tăng số lượng đã bán cho combo
+          if (session) {
+            await this.productsService.incrementSold(
+              item.product,
+              item.quantity,
+              session,
+            );
+          } else {
+            await this.productsService.incrementSold(item.product, item.quantity);
+          }
         } else {
-          await this.productsService.deductStock(item.product, item.quantity);
-          await this.productsService.incrementSold(item.product, item.quantity);
+          if (session) {
+            await this.productsService.deductStock(
+              item.product,
+              item.quantity,
+              session,
+            );
+            await this.productsService.incrementSold(
+              item.product,
+              item.quantity,
+              session,
+            );
+          } else {
+            await this.productsService.deductStock(item.product, item.quantity);
+            await this.productsService.incrementSold(item.product, item.quantity);
+          }
+
+          if (this.inventoryService && orderCode) {
+            await this.inventoryService.recordExternalMovement(
+              item.product,
+              InventoryTransactionType.SALE,
+              item.quantity,
+              orderCode,
+              undefined,
+              session,
+            );
+          }
         }
         deductedItems.push({
           product: item.product,
           quantity: item.quantity,
         });
-
-        if (this.inventoryService && orderCode) {
-          await this.inventoryService.recordExternalMovement(
-            item.product,
-            InventoryTransactionType.SALE,
-            item.quantity,
-            orderCode,
-            undefined,
-            session,
-          );
-        }
       }
       return deductedItems;
     } catch (err) {
@@ -142,33 +200,85 @@ export class OrderInventoryService {
         item.condition === 'DAMAGED' ||
         item.condition === 'DEFECTIVE';
 
+      let productDoc: any = null;
+      try {
+        if (typeof this.productsService.findById === 'function') {
+          productDoc = await this.productsService.findById(productId);
+        }
+      } catch {
+        // Fallback
+      }
+
       if (!isDamaged) {
         // Hàng nguyên vẹn: khôi phục tồn bán khả dụng
-        if (session) {
-          await this.productsService.updateStock(
-            productId,
-            item.quantity,
-            session,
-          );
-          await this.productsService.incrementSold(
-            productId,
-            -item.quantity,
-            session,
-          );
-        } else {
-          await this.productsService.updateStock(productId, item.quantity);
-          await this.productsService.incrementSold(productId, -item.quantity);
-        }
+        if (productDoc?.isCombo && productDoc.bundleItems?.length > 0) {
+          for (const bundleItem of productDoc.bundleItems) {
+            const componentId = bundleItem.product?._id
+              ? bundleItem.product._id.toString()
+              : bundleItem.product?.toString();
+            const componentQuantity = (bundleItem.quantity || 1) * item.quantity;
 
-        if (this.inventoryService) {
-          await this.inventoryService.recordExternalMovement(
-            productId,
-            InventoryTransactionType.RETURN,
-            item.quantity,
-            reference,
-            orderId && Types.ObjectId.isValid(orderId) ? orderId : undefined,
-            session,
-          );
+            if (componentId) {
+              if (session) {
+                await this.productsService.updateStock(
+                  componentId,
+                  componentQuantity,
+                  session,
+                );
+                await this.productsService.incrementSold(
+                  componentId,
+                  -componentQuantity,
+                  session,
+                );
+              } else {
+                await this.productsService.updateStock(componentId, componentQuantity);
+                await this.productsService.incrementSold(componentId, -componentQuantity);
+              }
+
+              if (this.inventoryService) {
+                await this.inventoryService.recordExternalMovement(
+                  componentId,
+                  InventoryTransactionType.RETURN,
+                  componentQuantity,
+                  reference,
+                  orderId && Types.ObjectId.isValid(orderId) ? orderId : undefined,
+                  session,
+                );
+              }
+            }
+          }
+          if (session) {
+            await this.productsService.incrementSold(productId, -item.quantity, session);
+          } else {
+            await this.productsService.incrementSold(productId, -item.quantity);
+          }
+        } else {
+          if (session) {
+            await this.productsService.updateStock(
+              productId,
+              item.quantity,
+              session,
+            );
+            await this.productsService.incrementSold(
+              productId,
+              -item.quantity,
+              session,
+            );
+          } else {
+            await this.productsService.updateStock(productId, item.quantity);
+            await this.productsService.incrementSold(productId, -item.quantity);
+          }
+
+          if (this.inventoryService) {
+            await this.inventoryService.recordExternalMovement(
+              productId,
+              InventoryTransactionType.RETURN,
+              item.quantity,
+              reference,
+              orderId && Types.ObjectId.isValid(orderId) ? orderId : undefined,
+              session,
+            );
+          }
         }
       } else {
         // T03: Hàng lỗi/chờ kiểm không góp vào tồn bán

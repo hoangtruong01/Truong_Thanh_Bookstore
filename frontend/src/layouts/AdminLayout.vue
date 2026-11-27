@@ -858,6 +858,7 @@ const navGroups = computed<NavGroup[]>(() => {
         { name: 'AdminCampaigns', label: isEn ? 'Marketing Campaigns' : 'Chiến dịch Marketing', to: '/admin/marketing/campaigns', icon: 'promotions', permission: 'MANAGE_BANNERS' },
         { name: 'AdminSocialPosts', label: isEn ? 'Social & Ads (R2)' : 'Mạng xã hội & Ads', to: '/admin/marketing/social', icon: 'promotions', permission: 'MANAGE_BANNERS' },
         { name: 'AdminSalesChannels', label: isEn ? 'TikTok Shop & Channels (R3)' : 'Kênh bán & TikTok Shop', to: '/admin/sales-channels', icon: 'promotions', permission: 'MANAGE_BANNERS' },
+        { name: 'AdminOptimization', label: isEn ? 'Optimization & A/B (R4)' : 'Tối ưu & Tăng trưởng', to: '/admin/marketing/optimization', icon: 'promotions', permission: 'MANAGE_BANNERS' },
         { name: 'AdminBanners', label: isEn ? 'Homepage Banners' : 'Banner trang chủ', to: '/admin/banners', icon: 'banners', permission: 'MANAGE_BANNERS' },
         { name: 'AdminLandingPages', label: isEn ? 'Quick Landing Pages' : 'Trang đích (Landing Page)', to: '/admin/landing-pages', icon: 'landingPages', permission: 'MANAGE_LANDING_PAGES' },
         { name: 'AdminReviews', label: isEn ? 'Customer Reviews' : 'Đánh giá từ khách', to: '/admin/reviews', icon: 'reviews', permission: 'MANAGE_PRODUCTS' },

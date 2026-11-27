@@ -293,6 +293,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Personalized Recommendations (OPT-01) -->
+    <ProductRecommendations type="personalized" title="Có thể bạn cũng thích" :limit="4" />
   </div>
 </template>
 
@@ -308,6 +311,7 @@ import type { CartItem, Promotion } from '@/types'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import ProductRecommendations from '@/components/ProductRecommendations.vue'
 import { useDoubleSubmit } from '@/composables/useDoubleSubmit'
 import { useCoupon } from '@/composables/useCoupon'
 

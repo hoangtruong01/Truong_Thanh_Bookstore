@@ -45,6 +45,9 @@
       <!-- Reviews & Ratings Section (reviews are keyed by _id, never the URL slug) -->
       <ProductReviews :product-id="product._id" @summary-change="reviewSummary = $event" />
 
+      <!-- Frequently Bought Together (OPT-01) -->
+      <ProductRecommendations :product-id="product._id" type="frequently_bought_together" />
+
       <!-- Recommended / Related Products -->
       <RelatedProducts :products="relatedProducts" :category="product.category" @add-to-cart="addRelatedToCart" />
     </div>
@@ -72,6 +75,7 @@ import ProductPurchasePanel from '@/components/customer/product/ProductPurchaseP
 import ProductSpecsTable from '@/components/customer/product/ProductSpecsTable.vue'
 import ProductReviews from '@/components/customer/product/ProductReviews.vue'
 import RelatedProducts from '@/components/customer/product/RelatedProducts.vue'
+import ProductRecommendations from '@/components/ProductRecommendations.vue'
 import PolicyModal, { type PolicyKey } from '@/components/customer/product/PolicyModal.vue'
 import { EMPTY_RATING_SUMMARY, type RatingSummary } from '@/components/customer/product/reviewSummary'
 import { useSeoMeta, INDEX_ROBOTS, NOINDEX_ROBOTS } from '@/composables/useSeoMeta'

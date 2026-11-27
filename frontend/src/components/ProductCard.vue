@@ -121,8 +121,11 @@
         <div v-else class="text-slate-400 font-medium">
           Chưa có đánh giá
         </div>
-        <div>
-          Đã bán {{ formatNumber(product.sold || 0) }}
+        <div v-if="product.sold && product.sold > 0">
+          Đã bán {{ formatNumber(product.sold) }}
+        </div>
+        <div v-else class="text-slate-300 font-medium">
+          Mới về
         </div>
       </div>
     </div>

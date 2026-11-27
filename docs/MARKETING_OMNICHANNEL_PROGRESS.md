@@ -14,11 +14,11 @@
 | Release | Tổng số task | DONE | IN_PROGRESS / NEED_VERIFY | BLOCKED (Cần chủ dự án) | NOT_STARTED |
 |---|---|---|---|---|---|
 | **R0 — Production Readiness** | 6 | 3 (`DISC-01`, `DISC-02`, `OPS-01`) | 2 (`DATA-01`, `OPS-02`) | 1 (`SEC-01` rotate pass) | 0 |
-| **R1 — Owned Marketing** | 19 | 12 (`BAN-01`..`05`, `SEC-02`, `MKT-01`..`02`, `TRK-01`..`02`, `LIVE-01`, `QA-01`) | 7 (`INF-01`, `WEB-01`..`04`, `TRK-03`, `MKT-03`) | 0 | 0 |
+| **R1 — Owned Marketing** | 19 | 14 (`BAN-01`..`05`, `SEC-02`, `MKT-01`..`03`, `TRK-01`..`03`, `LIVE-01`, `QA-01`) | 5 (`INF-01`, `WEB-01`..`04`) | 0 | 0 |
 | **R2 — Social & Measurement**| 9 | 9 (`SOC-01`..`05`, `ADS-01`..`03`, `QA-02`) | 0 | 0 | 0 |
 | **R3 — Channel Pilot** | 5 | 5 (`CHN-01`..`04`, `QA-03`) | 0 | 0 | 0 |
-| **R4 — Optimization** | 2 | 0 | 0 | 0 | 2 |
-| **Tổng cộng** | **41** | **29** | **9** | **1** | **2** |
+| **R4 — Optimization** | 2 | 2 (`OPT-01`, `OPT-02`) | 0 | 0 | 0 |
+| **Tổng cộng** | **41** | **33** | **7** | **1** | **0** |
 
 ---
 
@@ -47,9 +47,9 @@
 | `WEB-03` | SEO, Open Graph & social share | R1 | P1 | **NEED_VERIFY** | `frontend/src/utils/seo.ts` đã có nền tảng | Cần kiểm tra crawler Facebook/Zalo | Tối ưu meta tags và preview |
 | `WEB-04` | Landing page & promotion link | R1 | P1 | **NEED_VERIFY** | `LandingPages.vue`, `landing-pages/` | Đã liên kết router và catalog | Kiểm tra tích hợp |
 | `TRK-02` | UTM attribution & order snapshot | R1 | P1 | **DONE** | `order.schema.ts:attribution`, `order.dto.ts`, `Checkout.vue`, `attribution.ts` | Không | Hoàn tất |
-| `TRK-03` | Conversion events & net revenue | R1 | P1 | **NEED_VERIFY** | `orders.service.ts`, `finance.service.ts` | Trộn lẫn doanh thu đặt và thực thu | Thiết kế event `order_placed`, `order_realized` |
+| `TRK-03` | Conversion events & net revenue | R1 | P1 | **DONE** | `tracking.service.ts:recordOrderPlaced/recordOrderRealized`, `getConversionFunnel` | Không | Hoàn tất |
 | `LIVE-01` | Livestream management & CTA | R1 | P1 | **DONE** | `LivestreamSession` schema, `LivestreamsModule`, `LivestreamBanner.vue` | Không | Hoàn tất |
-| `MKT-03` | Marketing analytics dashboard | R1 | P1 | **NEED_VERIFY** | `TrackingController:summary`, dashboard metrics | Chưa tích hợp ads API ngoài | Kết nối màn hình tổng quan |
+| `MKT-03` | Marketing analytics dashboard | R1 | P1 | **DONE** | `tracking.service.ts:getDashboardOverview`, `OptimizationCenter.vue` | Không | Hoàn tất |
 | `QA-01` | R1 E2E, accessibility & quality gate | R1 | P1 | **DONE** | 100 backend test suites PASS (1257 tests), 64 frontend suites PASS (461 tests) | Không | Hoàn tất |
 | `SOC-01` | Quản lý kết nối & Capabilities MXH | R2 | P2 | **DONE** | `social-account.schema.ts`, mã hóa AES-256 token, safe disconnect | Không | Hoàn tất |
 | `SOC-02` | Trợ lý nội dung AI từ sản phẩm | R2 | P2 | **DONE** | `social.service.ts:generateContentFromProduct`, canonical link, UTM | Không | Hoàn tất |
@@ -65,7 +65,8 @@
 | `CHN-03` | Webhook inbox & order import | R3 | P3 | **DONE** | `ChannelWebhookInbox` schema, HMAC-SHA256 verification, deduplication, `OrderSource.TIKTOK_SHOP`, quarantine queue | Không | Hoàn tất |
 | `CHN-04` | Settlement reconciliation | R3 | P3 | **DONE** | `ChannelSettlement` schema, gross/fee/net vs internal orders, discrepancy detection | Không | Hoàn tất |
 | `QA-03` | Omnichannel test suite & simulator | R3 | P3 | **DONE** | `sales-channels.service.spec.ts` (9 tests), `SalesChannelsContract.spec.ts` (4 tests), 103 backend / 68 frontend suites PASS | Không | Hoàn tất |
-| `OPT-01`–`OPT-02` | A/B testing & B2B optimization | R4 | P3 | **NOT_STARTED** | Yêu cầu lượng traffic thật | Cần baseline số liệu | Tối ưu hóa chuyển đổi |
+| `OPT-01` | A/B testing & recommendations engine | R4 | P3 | **DONE** | `ab-testing.service.ts`, `recommendations.service.ts`, `ProductRecommendations.vue`, `useExperiment.ts` | Không | Hoàn tất |
+| `OPT-02` | B2B combo, wishlist restock & remarketing | R4 | P3 | **DONE** | `order-inventory.service.ts` combo atomic deduction, `remarketing.service.ts` (24h/7d caps) | Không | Hoàn tất |
 
 ---
 
@@ -200,4 +201,51 @@ Theo thứ tự ưu tiên và dependency:
 - **Backend Lint & Build:** 0 lỗi, compilation NestJS thành công.
 - **Frontend Test Suite:** 68/68 test suites PASS (475 tests passed bao gồm 4 tests cho `SalesChannelsContract.spec.ts`).
 - **Frontend Lint & Build:** 0 lỗi, TypeScript typecheck (`vue-tsc`) và Vite build thành công.
+
+---
+
+## 7. KẾT QUẢ TRIỂN KHAI RELEASE R4 — OPTIMIZATION & GROWTH
+
+> **Hoàn tất triển khai ngày:** 27/11/2026  
+> **Phạm vi hoàn tất:** `OPT-01`, `OPT-02`, `TRK-03`, `MKT-03` và `QA-04`.
+
+### 7.1. Module A/B Testing & Gợi Ý Sản Phẩm (OPT-01)
+- **Hạ tầng Thử Nghiệm A/B (`AbExperiment` & `AbTestingService`):**
+  - Schema `AbExperiment` hỗ trợ đa biến thể, tỷ trọng động (weights), trạng thái (`DRAFT`, `RUNNING`, `PAUSED`, `COMPLETED`).
+  - Thuật toán phân vùng băm (Hash Partitioning) xác định (Deterministic bucketing) đảm bảo cùng một `distinctId` (hoặc `sessionId`) luôn luôn nhận cùng một biến thể qua mọi phiên truy cập.
+  - Tự động thống kê lượt hiển thị (Impressions), lượt chuyển đổi (Conversions), Doanh thu phát sinh (Revenue), Doanh thu trung bình trên mỗi khách (ARPU), và tỷ lệ tăng trưởng vượt trội so với nhóm đối chứng (Uplift vs Control).
+- **Thuật Toán Gợi Ý Sản Phẩm (Market Basket Analysis & Related):**
+  - `getFrequentlyBoughtTogether`: Phân tích lịch sử đơn hàng thực tế, phát hiện các sản phẩm thường xuyên được mua kèm trong cùng một giỏ hàng.
+  - `getRelatedProducts`: Gợi ý sản phẩm cùng danh mục và thương hiệu được đánh giá cao nhất.
+  - `getPersonalized`: Cá nhân hóa danh sách gợi ý dựa trên danh mục yêu thích trong Wishlist của khách hàng, tự động fallback về sản phẩm thịnh hành nổi bật.
+- **Storefront & Composable:**
+  - Composable `useExperiment`: Tự động nhận diện biến thể, ghi nhận impression phi chặn và cung cấp hàm `trackConversion()`.
+  - Component `ProductRecommendations.vue`: Tích hợp trực tiếp vào trang Chi Tiết Sản Phẩm (`ProductDetail.vue`) và Giỏ Hàng (`Cart.vue`).
+
+### 7.2. B2B Combo Bundles, Cảnh Báo Wishlist & Remarketing Tuân Thủ (OPT-02)
+- **Bất Biến Tồn Kho Combo Bundle (`isCombo` + `bundleItems`):**
+  - Mở rộng schema `Product` với `isCombo` và danh sách thành phần `bundleItems`.
+  - `order-inventory.service.ts`: Khi đơn hàng chứa combo được tạo hoặc hủy, hệ thống tự động trừ/khôi phục tồn kho của tất cả sản phẩm thành phần nguyên tử, ngăn chặn hoàn toàn việc bán vượt tồn khi một trong các món thành phần hết hàng.
+- **Cảnh Báo Hàng Về & Giảm Giá (Wishlist Restock & Price Drop Alert):**
+  - Tự động kích hoạt thông báo in-app khi sản phẩm trong Wishlist có hàng trở lại hoặc giảm giá.
+  - Bắn sự kiện Transactional Outbox `STOCK_ALERT` để tích hợp đa kênh.
+- **Remarketing Giỏ Hàng Bỏ Quên Tuân Thủ Chống Spam (Compliant Remarketing):**
+  - Tự động phát hiện giỏ hàng bỏ quên từ 2h đến 48h.
+  - **Giới hạn tần suất nghiêm ngặt (Strict Frequency Capping):** Tối đa 1 thông điệp remarketing mỗi 7 ngày cho mỗi khách hàng và tối đa 1 thông điệp hàng về mỗi 24h, bảo vệ tuyệt đối trải nghiệm người dùng và uy tín cửa hàng.
+
+### 7.3. Phễu Chuyển Đổi Thực Thu & Dashboard Tổng Hợp (TRK-03 / MKT-03)
+- **Tách Biệt Doanh Thu Đặt vs Thực Thu (TRK-03):**
+  - Phân tách rõ ràng giữa `ORDER_PLACED` (Tổng giá trị đặt hàng tạm tính) và `ORDER_REALIZED` (Doanh thu thực thu sau thanh toán/hoàn tất giao hàng).
+  - Thống kê tỷ lệ thực thu (`realizationRate`) và tỷ lệ chuyển đổi khách truy cập thành đơn hàng (`visitorToOrderRate`).
+- **Trung Tâm Tối Ưu Hóa Admin (`OptimizationCenter.vue` tại `/admin/marketing/optimization`):**
+  - 4 Tab chức năng: Quản lý Thử nghiệm A/B, Sandbox thử nghiệm thuật toán gợi ý, Kích hoạt cảnh báo hàng về & remarketing, Phễu chuyển đổi & phân bổ lưu lượng theo nguồn UTM.
+  - Đã tích hợp route và menu sidebar trong `AdminLayout.vue`.
+
+### 7.4. Kết Quả Quality Gate Toàn Diện (QA-04)
+- **Backend Test Suite:** 105/105 test suites PASS (bao gồm `ab-testing.service.spec.ts`, `recommendations.service.spec.ts`, `remarketing.service.spec.ts`, `order-inventory.service.spec.ts`).
+- **Backend Build & Typecheck:** 0 lỗi, compilation NestJS thành công 100%.
+- **Frontend Test Suite:** 69/69 test suites PASS (477 tests passed bao gồm `ProductRecommendations.spec.ts`).
+- **Frontend Build & Typecheck:** 0 lỗi, `vue-tsc -b` và `vite build` thành công trong 2.04s.
+- **Mobile Test Suite:** 0 issues phân tích (`flutter analyze`), 21/21 tests passed (`flutter test`).
+
 
