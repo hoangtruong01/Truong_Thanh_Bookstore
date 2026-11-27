@@ -579,4 +579,63 @@ describe('WarehousesService (INV-02: Multi-Warehouse & Stock Transfers)', () => 
       ).rejects.toThrow(ConflictException);
     });
   });
+
+  describe('INV-02-T13: Single-Warehouse Mode enforcement (TASK-016)', () => {
+    const originalEnv = process.env.SINGLE_WAREHOUSE_MODE;
+
+    afterEach(() => {
+      process.env.SINGLE_WAREHOUSE_MODE = originalEnv;
+    });
+
+    it('should return warehouse mode configuration', async () => {
+      process.env.SINGLE_WAREHOUSE_MODE = 'true';
+
+      const mockDefaultWh: any = {
+        _id: mockWarehouseAId,
+        code: 'KHO-TONG',
+        name: 'Kho Tổng Trường Thành',
+        type: WarehouseType.MAIN,
+      };
+
+      jest
+        .spyOn(service, 'ensureDefaultWarehouses')
+        .mockResolvedValue(mockDefaultWh);
+
+      const mode = await service.getWarehouseMode();
+      expect(mode.singleWarehouseMode).toBe(true);
+      expect(mode.defaultWarehouse.code).toBe('KHO-TONG');
+      expect(mode.message).toContain('chế độ Đơn kho');
+    });
+
+    it('should reject createWarehouse when SINGLE_WAREHOUSE_MODE is enabled', async () => {
+      process.env.SINGLE_WAREHOUSE_MODE = 'true';
+
+      await expect(
+        service.createWarehouse(
+          {
+            code: 'KHO-TEST',
+            name: 'Kho Test Mới',
+            type: WarehouseType.STORE,
+            address: '123 Đường Sách, Q.1, TP.HCM',
+          },
+          mockUserId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject createTransfer when SINGLE_WAREHOUSE_MODE is enabled', async () => {
+      process.env.SINGLE_WAREHOUSE_MODE = 'true';
+
+      await expect(
+        service.createTransfer(
+          {
+            fromWarehouse: mockWarehouseAId.toString(),
+            toWarehouse: mockWarehouseBId.toString(),
+            items: [{ product: mockProductId.toString(), requestedQty: 5 }],
+          },
+          mockUserId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
 });

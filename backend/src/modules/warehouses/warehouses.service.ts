@@ -4,7 +4,9 @@ import {
   BadRequestException,
   ConflictException,
   Logger,
+  Optional,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Types, Connection, ClientSession } from 'mongoose';
 import { Warehouse, WarehouseDocument } from './schemas/warehouse.schema';
@@ -53,7 +55,43 @@ export class WarehousesService {
     private readonly productModel: Model<ProductDocument>,
     @InjectConnection()
     private readonly connection: Connection,
+    @Optional()
+    private readonly configService?: ConfigService,
   ) {}
+
+  /**
+   * Kiểm tra hệ thống có đang cấu hình chế độ Đơn kho (TASK-016) hay không.
+   */
+  isSingleWarehouseMode(): boolean {
+    const fromConfig =
+      this.configService?.get<boolean | string>('singleWarehouseMode') ??
+      this.configService?.get<boolean | string>('SINGLE_WAREHOUSE_MODE');
+    if (fromConfig !== undefined && fromConfig !== null) {
+      return fromConfig === true || fromConfig === 'true' || fromConfig === '1';
+    }
+    const envVal = process.env.SINGLE_WAREHOUSE_MODE;
+    return envVal === 'true' || envVal === '1';
+  }
+
+  /**
+   * Lấy cấu hình chế độ kho và kho mặc định của hệ thống.
+   */
+  async getWarehouseMode() {
+    const singleWarehouseMode = this.isSingleWarehouseMode();
+    const defaultWarehouse = await this.ensureDefaultWarehouses();
+    return {
+      singleWarehouseMode,
+      defaultWarehouse: {
+        _id: defaultWarehouse._id,
+        code: defaultWarehouse.code,
+        name: defaultWarehouse.name,
+        type: defaultWarehouse.type,
+      },
+      message: singleWarehouseMode
+        ? 'Hệ thống đang hoạt động ở chế độ Đơn kho (Single Warehouse Mode). Toàn bộ nghiệp vụ tập trung tại Kho Tổng.'
+        : 'Hệ thống đang hoạt động ở chế độ Đa kho (Multi-Warehouse Mode). Hỗ trợ điều chuyển liên kho.',
+    };
+  }
 
   /**
    * Khởi tạo các kho mặc định nếu hệ thống chưa có kho nào.
@@ -97,6 +135,12 @@ export class WarehousesService {
     dto: CreateWarehouseDto,
     _userId?: Types.ObjectId,
   ): Promise<WarehouseDocument> {
+    if (this.isSingleWarehouseMode()) {
+      throw new BadRequestException(
+        'Hệ thống đang hoạt động ở chế độ Đơn kho (SINGLE_WAREHOUSE_MODE). Không hỗ trợ tạo thêm kho mới.',
+      );
+    }
+
     const existing = await this.warehouseModel
       .findOne({ code: dto.code.trim().toUpperCase() })
       .exec();
@@ -373,6 +417,12 @@ export class WarehousesService {
     dto: CreateStockTransferDto,
     userId: Types.ObjectId,
   ): Promise<StockTransferDocument> {
+    if (this.isSingleWarehouseMode()) {
+      throw new BadRequestException(
+        'Hệ thống đang hoạt động ở chế độ Đơn kho (SINGLE_WAREHOUSE_MODE). Không hỗ trợ lập phiếu điều chuyển kho.',
+      );
+    }
+
     if (dto.fromWarehouse === dto.toWarehouse) {
       throw new BadRequestException(
         'Kho xuất và kho nhập không được trùng nhau.',

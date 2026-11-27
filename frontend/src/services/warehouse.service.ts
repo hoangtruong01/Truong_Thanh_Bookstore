@@ -86,6 +86,12 @@ export const warehouseService = {
   getTransfers: (params?: Record<string, unknown>): Promise<{ data: StockTransfer[]; total: number }> =>
     api.get('/warehouses/transfers/list', { params }).then((r) => r.data?.data ?? r.data),
 
+  getMode: (): Promise<{
+    singleWarehouseMode: boolean;
+    defaultWarehouse?: { _id: string; code: string; name: string; type: string };
+    message?: string;
+  }> => api.get('/warehouses/mode').then((r) => r.data?.data ?? r.data),
+
   createTransfer: (data: CreateStockTransferPayload): Promise<StockTransfer> =>
     api.post('/warehouses/transfers', data).then((r) => r.data?.data ?? r.data),
 

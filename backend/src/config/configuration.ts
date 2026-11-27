@@ -15,6 +15,9 @@ export default () => ({
   cors: {
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   },
+  singleWarehouseMode:
+    process.env.SINGLE_WAREHOUSE_MODE === 'true' ||
+    process.env.SINGLE_WAREHOUSE_MODE === '1',
   cookie: {
     sameSite: process.env.COOKIE_SAME_SITE || 'lax',
     secure:

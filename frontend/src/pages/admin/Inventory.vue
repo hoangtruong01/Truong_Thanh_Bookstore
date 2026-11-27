@@ -3,7 +3,16 @@
     <!-- Header -->
     <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div class="space-y-1">
-        <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Quản lý kho hàng</h2>
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Quản lý kho hàng</h2>
+          <span
+            v-if="isSingleWarehouse"
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Đơn kho: {{ defaultWarehouseInfo?.name || 'Kho Tổng Trường Thành' }}
+          </span>
+        </div>
         <p class="text-[11px] text-slate-400 font-semibold">Kiểm soát mức kho tối thiểu/tối đa, điều chỉnh kiểm kê hoặc xuất nhập kho nhanh chóng.</p>
       </div>
       <div class="flex items-center gap-2">
@@ -397,12 +406,14 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { inventoryService } from '@/services/inventory.service'
+import { useWarehouseMode } from '@/composables/useWarehouseMode'
 import type { Inventory } from '@/types'
 import FilterBar from '@/components/FilterBar.vue'
 import DataTable, { type TableColumn } from '@/components/DataTable.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 
 const toast = useToast()
+const { isSingleWarehouse, defaultWarehouseInfo, fetchWarehouseMode } = useWarehouseMode()
 
 const activeTab = ref<'stock' | 'history'>('stock')
 
@@ -451,6 +462,7 @@ const historyColumns: TableColumn[] = [
 ]
 
 onMounted(() => {
+  fetchWarehouseMode()
   fetchStocks()
   fetchTransactions()
 })

@@ -52,6 +52,14 @@ export class WarehousesController {
     return this.warehousesService.findAll(query);
   }
 
+  @Get('mode')
+  @ApiOperation({
+    summary: 'Lấy trạng thái cấu hình Đơn kho / Đa kho (TASK-016)',
+  })
+  async getWarehouseMode() {
+    return this.warehousesService.getWarehouseMode();
+  }
+
   @Get('sellable/:productId')
   @ApiOperation({
     summary:

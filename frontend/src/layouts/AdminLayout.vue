@@ -547,10 +547,12 @@ import ProfileModal from '@/components/ProfileModal.vue'
 import AdminHelpModal from '@/components/AdminHelpModal.vue'
 import AdminNavIcon from '@/components/AdminNavIcon.vue'
 import { useI18n } from 'vue-i18n'
+import { useWarehouseMode } from '@/composables/useWarehouseMode'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+const { isSingleWarehouse, fetchWarehouseMode } = useWarehouseMode()
 
 const showProfile = ref(false)
 const showHelp = ref(false)
@@ -750,6 +752,7 @@ function formatTimeAgo(dateStr: string) {
 }
 
 onMounted(() => {
+  fetchWarehouseMode()
   isDarkMode.value = localStorage.getItem('theme') === 'dark'
   document.documentElement.classList.toggle('dark', isDarkMode.value)
 
@@ -834,7 +837,9 @@ const navGroups = computed<NavGroup[]>(() => {
         { name: 'AdminCombos', label: isEn ? 'Combo Bundles' : 'Gói quà & Combo', to: '/admin/combos', icon: 'combos', permission: 'MANAGE_PRODUCTS' },
         { name: 'AdminPricing', label: isEn ? 'Pricing Policies' : 'Chính sách giá & Lợi nhuận', to: '/admin/pricing', icon: 'pricing', permission: 'MANAGE_PRICING' },
         { name: 'AdminInventory', label: isEn ? 'Inventory Stock' : 'Quản lý kho', to: '/admin/inventory', icon: 'inventory', permission: 'MANAGE_INVENTORY' },
-        { name: 'AdminWarehouses', label: isEn ? 'Warehouses & Transfer' : 'Kho & Điều chuyển', to: '/admin/warehouses', icon: 'warehouses', permission: 'MANAGE_INVENTORY' },
+        ...(isSingleWarehouse.value ? [] : [
+          { name: 'AdminWarehouses', label: isEn ? 'Warehouses & Transfer' : 'Kho & Điều chuyển', to: '/admin/warehouses', icon: 'warehouses', permission: 'MANAGE_INVENTORY' },
+        ]),
         { name: 'AdminPurchases', label: isEn ? 'Procurement & PO' : 'Mua hàng & Nhập kho', to: '/admin/purchases', icon: 'purchases', permission: 'MANAGE_INVENTORY' },
         { name: 'AdminQuotations', label: isEn ? 'Supplier RFQ' : 'Báo giá NCC & So sánh', to: '/admin/quotations', icon: 'quotations', permission: 'MANAGE_INVENTORY' },
         { name: 'AdminStockAudits', label: isEn ? 'Stock Audits' : 'Kiểm kê kho', to: '/admin/stock-audits', icon: 'stockAudits', permission: 'MANAGE_INVENTORY' },

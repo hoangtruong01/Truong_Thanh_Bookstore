@@ -14,7 +14,7 @@
 
       <div class="flex items-center gap-3">
         <button
-          v-if="activeTab === 'warehouses'"
+          v-if="activeTab === 'warehouses' && !isSingleWarehouse"
           class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-xs cursor-pointer"
           @click="openCreateWarehouseModal"
         >
@@ -25,7 +25,7 @@
         </button>
 
         <button
-          v-if="activeTab === 'transfers'"
+          v-if="activeTab === 'transfers' && !isSingleWarehouse"
           class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors shadow-xs cursor-pointer"
           @click="openCreateTransferModal"
         >
@@ -34,6 +34,41 @@
           </svg>
           Lập Phiếu Chuyển Kho
         </button>
+      </div>
+    </div>
+
+    <!-- Single Warehouse Mode Info Banner (TASK-016) -->
+    <div
+      v-if="isSingleWarehouse"
+      class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
+    >
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🏢</span>
+        <div>
+          <div class="flex items-center gap-2">
+            <h4 class="text-xs font-bold text-amber-950 dark:text-amber-200">Chế độ Đơn kho đang hoạt động (TASK-016)</h4>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
+              {{ defaultWarehouseInfo?.name || 'Kho Tổng Trường Thành' }}
+            </span>
+          </div>
+          <p class="text-[11px] text-amber-800 dark:text-amber-300/80 mt-0.5">
+            Nhà sách đang vận hành tinh gọn tại 1 kho duy nhất. Chức năng tạo thêm chi nhánh kho và điều chuyển liên kho đã được khóa an toàn.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <router-link
+          to="/admin/inventory"
+          class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition-colors shadow-xs"
+        >
+          Quản lý tồn kho
+        </router-link>
+        <router-link
+          to="/admin/stock-audits"
+          class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 font-bold rounded-xl text-xs hover:bg-amber-50 dark:hover:bg-slate-700 transition-colors"
+        >
+          Kiểm kê kho
+        </router-link>
       </div>
     </div>
 
@@ -434,12 +469,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import warehouseService, { type Warehouse, type StockTransfer } from '@/services/warehouse.service'
+import { useWarehouseMode } from '@/composables/useWarehouseMode'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import FormModal from '@/components/FormModal.vue'
 import { useToast } from 'vue-toastification'
 
 const toast = useToast()
+const { isSingleWarehouse, defaultWarehouseInfo, fetchWarehouseMode } = useWarehouseMode()
 
 const activeTab = ref<'warehouses' | 'transfers' | 'quarantine'>('warehouses')
 const loading = ref(false)
@@ -513,6 +550,10 @@ async function fetchTransfers() {
 }
 
 function openCreateWarehouseModal() {
+  if (isSingleWarehouse.value) {
+    toast.warning('Hệ thống đang ở chế độ Đơn kho (SINGLE_WAREHOUSE_MODE). Không thể tạo thêm kho mới.')
+    return
+  }
   warehouseForm.value = {
     code: '',
     name: '',
@@ -523,6 +564,10 @@ function openCreateWarehouseModal() {
 }
 
 function openCreateTransferModal() {
+  if (isSingleWarehouse.value) {
+    toast.warning('Hệ thống đang ở chế độ Đơn kho (SINGLE_WAREHOUSE_MODE). Không cần điều chuyển liên kho.')
+    return
+  }
   transferForm.value = {
     fromWarehouse: '',
     toWarehouse: '',
@@ -716,6 +761,7 @@ function formatDate(dateStr?: string): string {
 }
 
 onMounted(() => {
+  fetchWarehouseMode()
   fetchWarehouses()
   fetchTransfers()
 })

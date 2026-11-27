@@ -141,6 +141,13 @@ export class EnvironmentVariables {
   @IsOptional()
   COOKIE_SECURE?: boolean;
 
+  @Type(() => Boolean)
+  @IsBoolean({
+    message: 'SINGLE_WAREHOUSE_MODE phải là boolean (true/false)',
+  })
+  @IsOptional()
+  SINGLE_WAREHOUSE_MODE?: boolean;
+
   @IsString({ message: 'TRUST_PROXY phải là một chuỗi' })
   @Matches(TRUST_PROXY_PATTERN, {
     message:

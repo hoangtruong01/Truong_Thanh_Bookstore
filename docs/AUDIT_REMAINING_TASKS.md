@@ -103,7 +103,7 @@
 | TASK-013 | Ẩn sao/"Đã bán" khi chưa có đánh giá thật | — | |
 | TASK-014 | Ẩn khối combo sai thành phần ("-92%") | — | |
 | TASK-015 | Combo trừ kho thành phần | D-2 | |
-| TASK-016 | Đa kho: ẩn (A) hoặc làm thật (B) | D-1 | |
+| ~~TASK-016~~ ✅ | Đa kho: cờ cấu hình SINGLE_WAREHOUSE_MODE (Phương án A) | D-1 | Xong 27/11: cờ cấu hình backend + env validation, guard API tạo kho & chuyển kho, composable `useWarehouseMode`, banner thông báo & badge đơn kho |
 | TASK-017 | Một định nghĩa + một hàm tính KPI doanh thu | D-3 | BUG-012 đã sửa tạm trong `reports/`; logic "doanh thu đã ghi nhận" đang trùng giữa `reports` và `orders`, cần gộp |
 | TASK-019 | Upload ảnh lên Cloudinary thay base64 (endpoint `POST /uploads/images` kiểm magic bytes, `ImageUploader`, `ProductForm`, `Banners`, DTO `@IsUrl`) | D-5 | Thứ tự an toàn: endpoint → frontend → migration ảnh cũ → siết DTO |
 | TASK-027 | Giao diện mobile 390px (header tràn, nút "+" giỏ hàng bị đẩy ra ngoài) | — | Thuộc phiên refactor web↔mobile |
